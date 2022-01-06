@@ -14,11 +14,23 @@ import datetime
 import os
 import time
 from collections import defaultdict, deque
+from itertools import chain
 from pathlib import Path
 
 import torch
 import torch.distributed as dist
 from torch._six import inf
+
+try:
+    import torch_xla.core.xla_model as xm
+    import torch_xla.distributed.xla_multiprocessing as xmp
+    import torch_xla.distributed.parallel_loader as pl
+    import torch_xla.utils.utils as xu
+except ImportError:
+    xm = xmp = pl = xu = None
+
+
+XLA_CFG = {"is_xla": False, "logging_interval": 20}
 
 
 class SmoothedValue(object):
@@ -43,6 +55,12 @@ class SmoothedValue(object):
         """
         Warning: does not synchronize the deque!
         """
+        if XLA_CFG["is_xla"]:
+            t = torch.tensor([self.count, self.total], device=xm.xla_device())
+            t = xm.all_reduce(xm.REDUCE_SUM, t).tolist()
+            self.count = int(t[0])
+            self.total = t[1]
+            return
         if not is_dist_avail_and_initialized():
             return
         t = torch.tensor([self.count, self.total], dtype=torch.float64, device='cuda')
@@ -137,7 +155,7 @@ class MetricLogger(object):
             'time: {time}',
             'data: {data}'
         ]
-        if torch.cuda.is_available():
+        if not XLA_CFG["is_xla"] and torch.cuda.is_available():
             log_msg.append('max mem: {memory:.0f}')
         log_msg = self.delimiter.join(log_msg)
         MB = 1024.0 * 1024.0
@@ -148,7 +166,7 @@ class MetricLogger(object):
             if i % print_freq == 0 or i == len(iterable) - 1:
                 eta_seconds = iter_time.global_avg * (len(iterable) - i)
                 eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
-                if torch.cuda.is_available():
+                if not XLA_CFG["is_xla"] and torch.cuda.is_available():
                     print(log_msg.format(
                         i, len(iterable), eta=eta_string,
                         meters=str(self),
@@ -175,7 +193,16 @@ def setup_for_distributed(is_master):
 
     def print(*args, **kwargs):
         force = kwargs.pop('force', False)
-        force = force or (get_world_size() > 8)
+        if args == ('torch_xla.core.xla_model::mark_step',):
+            # XLA server step tracking
+            if is_master:
+                builtin_print(*args, **kwargs)
+            return
+        elif args == ('torch_xla.core.xla_model::mark_step\n',):
+            # XLA server step tracking (after https://github.com/pytorch/xla/pull/3546)
+            builtin_print(*args, **kwargs)
+            return
+        force = force or (not XLA_CFG["is_xla"] and get_world_size() > 8)
         if is_master or force:
             now = datetime.datetime.now().time()
             builtin_print('[{}] '.format(now), end='')  # print with time stamp
@@ -185,6 +212,8 @@ def setup_for_distributed(is_master):
 
 
 def is_dist_avail_and_initialized():
+    if XLA_CFG["is_xla"]:
+        raise Exception("This function should not be called in XLA")
     if not dist.is_available():
         return False
     if not dist.is_initialized():
@@ -193,12 +222,16 @@ def is_dist_avail_and_initialized():
 
 
 def get_world_size():
+    if XLA_CFG["is_xla"]:
+        return xm.xrt_world_size()
     if not is_dist_avail_and_initialized():
         return 1
     return dist.get_world_size()
 
 
 def get_rank():
+    if XLA_CFG["is_xla"]:
+        return xm.get_ordinal()
     if not is_dist_avail_and_initialized():
         return 0
     return dist.get_rank()
@@ -209,11 +242,19 @@ def is_main_process():
 
 
 def save_on_master(*args, **kwargs):
+    if XLA_CFG["is_xla"]:
+        xm.save(*args, **kwargs, global_master=True)
+        return
     if is_main_process():
         torch.save(*args, **kwargs)
 
 
 def init_distributed_mode(args):
+    if XLA_CFG["is_xla"]:
+        args.rank = xm.get_ordinal()
+        args.distributed = True
+        setup_for_distributed(args.rank == 0)
+        return
     if args.dist_on_itp:
         args.rank = int(os.environ['OMPI_COMM_WORLD_RANK'])
         args.world_size = int(os.environ['OMPI_COMM_WORLD_SIZE'])
@@ -246,6 +287,25 @@ def init_distributed_mode(args):
                                          world_size=args.world_size, rank=args.rank)
     torch.distributed.barrier()
     setup_for_distributed(args.rank == 0)
+
+
+def broadcast_xla_master_model_param(model, args):
+    """
+    Broadcast the model parameters from master process to other processes
+    """
+    parameters_and_buffers = []
+    is_master = xm.is_master_ordinal(local=False)
+    for p in chain(model.parameters(), model.buffers()):
+        # Set all params in non-master devices to zero so that all_reduce is
+        # equivalent to broadcasting parameters from master to other devices.
+        scale = 1 if is_master else 0
+        scale = torch.tensor(scale, dtype=p.data.dtype, device=p.data.device)
+        p.data.mul_(scale)
+        parameters_and_buffers.append(p.data)
+    xm.wait_device_ops()
+    xm.all_reduce(xm.REDUCE_SUM, parameters_and_buffers)
+    xm.mark_step()
+    xm.rendezvous("broadcast_xla_master_model_param")
 
 
 class NativeScalerWithGradNormCount:
@@ -317,6 +377,16 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
         if args.resume.startswith('https'):
             checkpoint = torch.hub.load_state_dict_from_url(
                 args.resume, map_location='cpu', check_hash=True)
+        elif args.resume == "automatic":
+            last_ckpt = None
+            for e in range(args.epochs):
+                ckpt_path = os.path.join(args.output_dir, f'checkpoint-{e}.pth')
+                if os.path.exists(ckpt_path):
+                    last_ckpt = ckpt_path
+            if last_ckpt is None:
+                return
+            print(f"Found last checkpoint {last_ckpt}")
+            checkpoint = torch.load(last_ckpt, map_location='cpu')
         else:
             checkpoint = torch.load(args.resume, map_location='cpu')
         model_without_ddp.load_state_dict(checkpoint['model'])
@@ -332,6 +402,9 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
 def all_reduce_mean(x):
     world_size = get_world_size()
     if world_size > 1:
+        if XLA_CFG["is_xla"]:
+            x_reduce = torch.tensor(x, device=xm.xla_device())
+            return xm.all_reduce(xm.REDUCE_SUM, x_reduce, scale=1.0 / world_size).item()
         x_reduce = torch.tensor(x).cuda()
         dist.all_reduce(x_reduce)
         x_reduce /= world_size

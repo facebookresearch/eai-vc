@@ -149,7 +149,7 @@ By fine-tuning these pre-trained models, we rank #1 in these classification task
 
 ### Pre-training
 
-The pre-training instruction is in [PRETRAIN.md](PRETRAIN.md).
+The pre-training instruction is in [PRETRAIN.md](PRETRAIN.md). You can also run pretraining on TPUs following [PRETRAIN_TPU.md](PRETRAIN_TPU.md).
 
 ### License
 

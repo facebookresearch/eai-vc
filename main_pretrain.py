@@ -34,6 +34,14 @@ import models_mae
 
 from engine_pretrain import train_one_epoch
 
+try:
+    import torch_xla.core.xla_model as xm
+    import torch_xla.distributed.xla_multiprocessing as xmp
+    import torch_xla.distributed.parallel_loader as pl
+    import torch_xla.utils.utils as xu
+except ImportError:
+    xm = xmp = pl = xu = None
+
 
 def get_args_parser():
     parser = argparse.ArgumentParser('MAE pre-training', add_help=False)
@@ -101,6 +109,11 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
 
+    # PyTorch XLA parameters
+    parser.add_argument('--use_xla', action='store_true',
+                        help='Use PyTorch XLA on TPUs')
+    parser.set_defaults(use_xla=False)
+
     return parser
 
 
@@ -110,7 +123,10 @@ def main(args):
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
 
-    device = torch.device(args.device)
+    if misc.XLA_CFG["is_xla"]:
+        device = xm.xla_device()
+    else:
+        device = torch.device(args.device)
 
     # fix the seed for reproducibility
     seed = args.seed + misc.get_rank()
@@ -150,7 +166,11 @@ def main(args):
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
         drop_last=True,
+        persistent_workers=True,
     )
+    data_loader_train_sampler = data_loader_train.sampler
+    if misc.XLA_CFG["is_xla"]:
+        data_loader_train = pl.MpDeviceLoader(data_loader_train, device)
     
     # define the model
     model = models_mae.__dict__[args.model](norm_pix_loss=args.norm_pix_loss)
@@ -171,7 +191,9 @@ def main(args):
     print("accumulate grad iterations: %d" % args.accum_iter)
     print("effective batch size: %d" % eff_batch_size)
 
-    if args.distributed:
+    if misc.XLA_CFG["is_xla"]:
+        misc.broadcast_xla_master_model_param(model, args)
+    elif args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
         model_without_ddp = model.module
     
@@ -187,7 +209,7 @@ def main(args):
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
-            data_loader_train.sampler.set_epoch(epoch)
+            data_loader_train_sampler.set_epoch(epoch)
         train_stats = train_one_epoch(
             model, data_loader_train,
             optimizer, device, epoch, loss_scaler,
@@ -213,9 +235,17 @@ def main(args):
     print('Training time {}'.format(total_time_str))
 
 
+def xla_main(index, args):
+    misc.XLA_CFG["is_xla"] = True
+    main(args)
+
+
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    main(args)
+    if args.use_xla:
+        xmp.spawn(xla_main, args=(args,))
+    else:
+        main(args)
