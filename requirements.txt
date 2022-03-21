@@ -1,0 +1,7 @@
+ifcfg
+torch==1.10.2
+torchvision==0.11.3
+tensorboard
+webdataset
+# habitat>=0.2.1
+# habitat-sim==0.2.1

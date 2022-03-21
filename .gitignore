@@ -1,0 +1,16 @@
+# python
+__pycache__/
+*.egg-info/
+
+# jupyter
+.ipynb_checkpoints
+
+# development
+*.vscode
+
+# data directory
+data/datasets
+data/scene_datasets
+
+# misc
+.DS_Store
