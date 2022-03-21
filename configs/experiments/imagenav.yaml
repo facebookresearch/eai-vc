@@ -29,7 +29,7 @@ RL:
   SUCCESS_MEASURE: "success"
 
   POLICY:
-    name: "PointNavResNetPolicy"
+    name: "EAIPolicy"
 
   PPO:
     # ppo params
