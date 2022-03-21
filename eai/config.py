@@ -108,7 +108,7 @@ _CONFIG.EVAL.USE_CKPT_CONFIG = True
 _CONFIG.RL.REWARD_MEASURE = "simple_reward"
 _CONFIG.RL.SUCCESS_MEASURE = "success"
 
-_CONFIG.RL.POLICY.name = "PointNavResNetPolicy"
+_CONFIG.RL.POLICY.name = "EAIPolicy"
 
 _CONFIG.RL.PPO.clip_param = 0.2
 _CONFIG.RL.PPO.ppo_epoch = 2
@@ -161,7 +161,7 @@ def get_config(
 
     if config.NUM_PROCESSES != -1:
         warnings.warn(
-            "NUM_PROCESSES is depricated and will be removed in a future version."
+            "NUM_PROCESSES is deprecated and will be removed in a future version."
             "  Use NUM_ENVIRONMENTS instead."
             "  Overwriting NUM_ENVIRONMENTS with NUM_PROCESSES for backwards compatibility."
         )
