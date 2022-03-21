@@ -29,5 +29,6 @@ transforms = T.Compose([T.Resize(256),
 image = np.random.randint(0, 255, (500, 500, 3))
 preprocessed_image = transforms(Image.fromarray(image.astype(np.uint8))).reshape(-1, 3, 224, 224)
 preprocessed_image.to(device) 
-embedding = r3m(preprocessed_image * 255.0) ## R3M expects image input to be [0-255]
+with torch.no_grad():
+  embedding = r3m(preprocessed_image * 255.0) ## R3M expects image input to be [0-255]
 print(embedding.shape) # [1, 2048]
