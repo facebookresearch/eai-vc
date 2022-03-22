@@ -28,6 +28,7 @@ class EAINet(Net):
         num_recurrent_layers: int,
         use_augmentations: bool,
         pretrained_encoder: Optional[str],
+        freeze_backbone: bool,
         run_type: str,
     ):
         super().__init__()
@@ -102,6 +103,13 @@ class EAINet(Net):
             msg = load_encoder(self.goal_visual_encoder, pretrained_encoder)
             logger.info("Using weights from {}: {}".format(pretrained_encoder, msg))
 
+        # freeze backbone
+        if freeze_backbone:
+            for p in self.visual_encoder.backbone.parameters():
+                p.requires_grad = False
+            for p in self.goal_visual_encoder.backbone.parameters():
+                p.requires_grad = False
+
         # save configuration
         self._hidden_size = hidden_size
 
@@ -175,6 +183,7 @@ class EAIPolicy(Policy):
         num_recurrent_layers: int = 1,
         use_augmentations: bool = False,
         pretrained_encoder: Optional[str] = None,
+        freeze_backbone: bool = False,
         run_type: str = "train",
         **kwargs
     ):
@@ -190,6 +199,7 @@ class EAIPolicy(Policy):
                 num_recurrent_layers=num_recurrent_layers,
                 use_augmentations=use_augmentations,
                 pretrained_encoder=pretrained_encoder,
+                freeze_backbone=freeze_backbone,
                 run_type=run_type,
             ),
             dim_actions=action_space.n,  # for action distribution
@@ -208,5 +218,6 @@ class EAIPolicy(Policy):
             num_recurrent_layers=config.RL.POLICY.num_recurrent_layers,
             use_augmentations=config.RL.POLICY.use_augmentations,
             pretrained_encoder=config.RL.POLICY.pretrained_encoder,
+            freeze_backbone=config.RL.POLICY.freeze_backbone,
             run_type=config.RUN_TYPE,
         )

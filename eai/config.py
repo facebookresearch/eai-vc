@@ -117,6 +117,7 @@ _CONFIG.RL.POLICY.rnn_type = "GRU"
 _CONFIG.RL.POLICY.num_recurrent_layers = 2
 _CONFIG.RL.POLICY.use_augmentations = True
 _CONFIG.RL.POLICY.pretrained_encoder = None
+_CONFIG.RL.POLICY.freeze_backbone = False
 
 _CONFIG.RL.PPO.clip_param = 0.2
 _CONFIG.RL.PPO.ppo_epoch = 2
