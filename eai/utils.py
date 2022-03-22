@@ -1,10 +1,10 @@
 import os
 
 import torch
+from timm.models.vision_transformer import resize_pos_embed
 
 from eai.models.resnet_gn import ResNet
 from eai.models.vit import VisionTransformer
-from timm.models.vision_transformer import resize_pos_embed
 
 
 def load_encoder(encoder, path):
@@ -25,4 +25,4 @@ def load_encoder(encoder, path):
             )
         return model.load_state_dict(state_dict=state_dict, strict=False)
     else:
-        raise ValueError(f"unknown encoder backbone")
+        raise ValueError("unknown encoder backbone")
