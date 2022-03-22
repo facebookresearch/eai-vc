@@ -22,12 +22,13 @@ class EAINet(Net):
         action_space,
         backbone: str,
         baseplanes: int,
+        mask_ratio: float,
         hidden_size: int,
         rnn_type: str,
         num_recurrent_layers: int,
         use_augmentations: bool,
+        pretrained_encoder: Optional[str],
         run_type: str,
-        pretrained_encoder: Optional[str] = None,
     ):
         super().__init__()
 
@@ -46,6 +47,7 @@ class EAINet(Net):
             input_channels=3,
             baseplanes=baseplanes,
             ngroups=baseplanes // 2,
+            mask_ratio=mask_ratio,
             spatial_size=128,
         )
 
@@ -69,6 +71,7 @@ class EAINet(Net):
                 input_channels=3,
                 baseplanes=baseplanes,
                 ngroups=baseplanes // 2,
+                mask_ratio=mask_ratio,
                 spatial_size=128,
             )
 
@@ -166,12 +169,13 @@ class EAIPolicy(Policy):
         action_space,
         backbone: str = "resnet18",
         baseplanes: int = 32,
+        mask_ratio: float = 0.5,
         hidden_size: int = 512,
         rnn_type: str = "GRU",
         num_recurrent_layers: int = 1,
         use_augmentations: bool = False,
-        run_type: str = "train",
         pretrained_encoder: Optional[str] = None,
+        run_type: str = "train",
         **kwargs
     ):
         super().__init__(
@@ -180,12 +184,13 @@ class EAIPolicy(Policy):
                 action_space=action_space,  # for previous action
                 backbone=backbone,
                 baseplanes=baseplanes,
+                mask_ratio=mask_ratio,
                 hidden_size=hidden_size,
                 rnn_type=rnn_type,
                 num_recurrent_layers=num_recurrent_layers,
                 use_augmentations=use_augmentations,
-                run_type=run_type,
                 pretrained_encoder=pretrained_encoder,
+                run_type=run_type,
             ),
             dim_actions=action_space.n,  # for action distribution
         )
@@ -197,10 +202,11 @@ class EAIPolicy(Policy):
             action_space=action_space,
             backbone=config.RL.POLICY.backbone,
             baseplanes=config.RL.POLICY.baseplanes,
+            mask_ratio=config.RL.POLICY.mask_ratio,
             hidden_size=config.RL.POLICY.hidden_size,
             rnn_type=config.RL.POLICY.rnn_type,
             num_recurrent_layers=config.RL.POLICY.num_recurrent_layers,
             use_augmentations=config.RL.POLICY.use_augmentations,
-            run_type=config.RUN_TYPE,
             pretrained_encoder=config.RL.POLICY.pretrained_encoder,
+            run_type=config.RUN_TYPE,
         )

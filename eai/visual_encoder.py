@@ -14,6 +14,7 @@ class VisualEncoder(nn.Module):
         input_channels: int = 3,
         baseplanes: int = 32,
         ngroups: int = 32,
+        mask_ratio: float = 0.5,
         spatial_size: int = 128,
         normalize_visual_inputs: bool = True,
     ):
@@ -54,7 +55,10 @@ class VisualEncoder(nn.Module):
         elif "vit" in backbone:
             make_backbone = getattr(vit, backbone)
             self.backbone = make_backbone(
-                img_size=spatial_size, use_head=False, global_pool=True
+                img_size=spatial_size,
+                use_head=False,
+                global_pool=True,
+                mask_ratio=mask_ratio,
             )
             self.compression = nn.Identity()
             self.output_size = self.backbone.embed_dim
