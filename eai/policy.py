@@ -122,9 +122,12 @@ class EAINet(Net):
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         x = []
 
+        # number of environments
+        N = rnn_hidden_states.size(0)
+
         # visual encoder
         rgb = observations["rgb"]
-        rgb = self.visual_transform(rgb)
+        rgb = self.visual_transform(rgb, N)
         rgb = self.visual_encoder(rgb)
         rgb = self.visual_fc(rgb)
         x.append(rgb)
@@ -132,7 +135,7 @@ class EAINet(Net):
         # goal embedding
         if ImageGoalSensor.cls_uuid in observations:
             goal = observations[ImageGoalSensor.cls_uuid]
-            goal = self.goal_transform(goal)
+            goal = self.goal_transform(goal, N)
             goal = self.goal_visual_encoder(goal)
             goal = self.goal_visual_fc(goal)
             x.append(goal)

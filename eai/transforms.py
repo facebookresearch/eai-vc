@@ -43,30 +43,30 @@ class Transform:
     def __call__(
         self,
         x: torch.Tensor,
-        T: Optional[int] = None,
         N: Optional[int] = None,
-        V: Optional[int] = None,
-        skip_one_T: bool = True,
     ):
-        if not self.is_random:
+        if not self.is_random or N is None:
             return self.apply(x)
 
-        if None in (T, N, V):
-            return self.apply(x)
+        # shapes
+        TN = x.size(0)
+        T = TN // N
 
-        if T == 1 and skip_one_T:
+        # apply the same augmentation when t == 1 for speed
+        # typically, t == 1 during policy rollout
+        if T == 1:
             return self.apply(x)
 
         # put environment (n) first
         _, A, B, C = x.shape
-        x = torch.einsum("tnvabc->ntvabc", x.view(T, N, V, A, B, C)).flatten(1, 2)
+        x = torch.einsum("tnabc->ntabc", x.view(T, N, A, B, C))
 
         # apply the same transform within each environment
         x = torch.cat([self.apply(imgs) for imgs in x])
 
         # put timestep (t) first
         _, A, B, C = x.shape
-        x = torch.einsum("ntvabc->tnvabc", x.view(N, T, V, A, B, C)).flatten(0, 2)
+        x = torch.einsum("ntabc->tnabc", x.view(N, T, A, B, C)).flatten(0, 1)
 
         return x
 
