@@ -52,9 +52,6 @@ class VisualEncoder(nn.Module):
         self.output_size = np.prod(self.output_shape)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore
-        x = x.permute(0, 3, 1, 2)
-        x = x.float() / 255.0  # normalize
-        x = F.avg_pool2d(x, 2)  # TODO: remove
         x = self.running_mean_and_var(x)
         x = self.backbone(x)
         x = self.compression(x)

@@ -12,6 +12,7 @@ from torch import nn as nn
 
 from eai.utils import load_encoder
 from eai.visual_encoder import VisualEncoder
+from eai.transforms import get_transform
 
 
 class EAINet(Net):
@@ -24,6 +25,8 @@ class EAINet(Net):
         hidden_size: int,
         rnn_type: str,
         num_recurrent_layers: int,
+        use_augmentations: bool,
+        run_type: str,
         pretrained_encoder: Optional[str] = None,
     ):
         super().__init__()
@@ -32,6 +35,11 @@ class EAINet(Net):
 
         # visual encoder
         assert "rgb" in observation_space.spaces
+
+        name = "resize"
+        if use_augmentations and run_type == "train":
+            name = "shift+jitter"
+        self.visual_transform = get_transform(name, size=128)
 
         self.visual_encoder = VisualEncoder(
             backbone=backbone,
@@ -55,6 +63,11 @@ class EAINet(Net):
 
         # goal embedding
         if ImageGoalSensor.cls_uuid in observation_space.spaces:
+            name = "resize"
+            if use_augmentations and run_type == "train":
+                name = "shift+jitter"
+            self.goal_transform = get_transform(name, size=128)
+
             self.goal_visual_encoder = VisualEncoder(
                 backbone=backbone,
                 input_channels=3,
@@ -111,6 +124,7 @@ class EAINet(Net):
 
         # visual encoder
         rgb = observations["rgb"]
+        rgb = self.visual_transform(rgb)
         rgb = self.visual_encoder(rgb)
         rgb = self.visual_fc(rgb)
         x.append(rgb)
@@ -118,6 +132,7 @@ class EAINet(Net):
         # goal embedding
         if ImageGoalSensor.cls_uuid in observations:
             goal = observations[ImageGoalSensor.cls_uuid]
+            goal = self.goal_transform(goal)
             goal = self.goal_visual_encoder(goal)
             goal = self.goal_visual_fc(goal)
             x.append(goal)
@@ -148,6 +163,8 @@ class EAIPolicy(Policy):
         hidden_size: int = 512,
         rnn_type: str = "GRU",
         num_recurrent_layers: int = 1,
+        use_augmentations: bool = False,
+        run_type: str = "train",
         pretrained_encoder: Optional[str] = None,
         **kwargs
     ):
@@ -160,6 +177,8 @@ class EAIPolicy(Policy):
                 hidden_size=hidden_size,
                 rnn_type=rnn_type,
                 num_recurrent_layers=num_recurrent_layers,
+                use_augmentations=use_augmentations,
+                run_type=run_type,
                 pretrained_encoder=pretrained_encoder,
             ),
             dim_actions=action_space.n,  # for action distribution
@@ -175,5 +194,7 @@ class EAIPolicy(Policy):
             hidden_size=config.RL.POLICY.hidden_size,
             rnn_type=config.RL.POLICY.rnn_type,
             num_recurrent_layers=config.RL.POLICY.num_recurrent_layers,
+            use_augmentations=config.RL.POLICY.use_augmentations,
+            run_type=config.RUN_TYPE,
             pretrained_encoder=config.RL.POLICY.pretrained_encoder,
         )

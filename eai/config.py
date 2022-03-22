@@ -114,6 +114,7 @@ _CONFIG.RL.POLICY.baseplanes = 32
 _CONFIG.RL.POLICY.hidden_size = 512
 _CONFIG.RL.POLICY.rnn_type = "GRU"
 _CONFIG.RL.POLICY.num_recurrent_layers = 2
+_CONFIG.RL.POLICY.use_augmentations = True
 _CONFIG.RL.POLICY.pretrained_encoder = None
 
 _CONFIG.RL.PPO.clip_param = 0.2
