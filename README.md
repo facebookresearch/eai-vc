@@ -19,7 +19,9 @@ r3m = load_r3m("resnet50") # resnet18, resnet34
 r3m.eval()
 ```
 
-Further example code to use a pre-trained representation is located in the example [here](https://github.com/fairinternal/robolang_rep/blob/clean/r3m/example.py)
+Further example code to use a pre-trained representation is located in the example [here](https://github.com/fairinternal/robolang_rep/blob/clean/r3m/example.py).
+
+If you have any issue accessing or downloading R3M please contact Suraj Nair: surajn (at) stanford (dot) edu
 
 ## Training the representation
 
