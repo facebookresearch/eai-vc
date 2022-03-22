@@ -1,4 +1,5 @@
 ifcfg
+timm==0.4.12
 torch==1.10.2
 torchvision==0.11.3
 tensorboard
