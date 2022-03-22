@@ -80,6 +80,7 @@ class ResizeTransform(Transform):
         x = TF.resize(x, self.size)
         x = TF.center_crop(x, output_size=self.size)
         x = x.float() / 255.0
+        x = TF.normalize(x, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         return x
 
 
@@ -94,6 +95,7 @@ class ShiftAndJitterTransform(Transform):
         x = TF.resize(x, self.size)
         x = TF.center_crop(x, output_size=self.size)
         x = x.float() / 255.0
+        x = TF.normalize(x, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         x = RandomShiftsAug(4)(x)
         x = RandomApply([ColorJitter(0.3, 0.3, 0.3, 0.3)], p=1.0)(x)
         return x
