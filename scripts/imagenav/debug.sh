@@ -14,3 +14,6 @@ run.py \
 --exp-config configs/experiments/imagenav.yaml \
 --run-type train \
 LOG_INTERVAL 1 \
+RL.POLICY.backbone vit_base_patch16 \
+RL.POLICY.pretrained_encoder data/models/mae_pretrain_vit_base_full.pth \
+RL.POLICY.freeze_backbone False \
