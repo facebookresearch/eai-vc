@@ -10,9 +10,9 @@ from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encode
 from habitat_baselines.rl.ppo import Net, Policy
 from torch import nn as nn
 
+from eai.transforms import get_transform
 from eai.utils import load_encoder
 from eai.visual_encoder import VisualEncoder
-from eai.transforms import get_transform
 
 
 class EAINet(Net):
