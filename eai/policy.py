@@ -49,10 +49,6 @@ class EAINet(Net):
             spatial_size=128,
         )
 
-        if pretrained_encoder is not None:
-            msg = load_encoder(self.visual_encoder, pretrained_encoder)
-            logger.info("Using weights from {}: {}".format(pretrained_encoder, msg))
-
         self.visual_fc = nn.Sequential(
             nn.Flatten(),
             nn.Linear(self.visual_encoder.output_size, hidden_size),
@@ -95,6 +91,13 @@ class EAINet(Net):
             rnn_type=rnn_type,
             num_layers=num_recurrent_layers,
         )
+
+        # pretrained weights
+        if pretrained_encoder is not None:
+            msg = load_encoder(self.visual_encoder, pretrained_encoder)
+            logger.info("Using weights from {}: {}".format(pretrained_encoder, msg))
+            msg = load_encoder(self.goal_visual_encoder, pretrained_encoder)
+            logger.info("Using weights from {}: {}".format(pretrained_encoder, msg))
 
         # save configuration
         self._hidden_size = hidden_size
