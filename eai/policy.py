@@ -1,7 +1,8 @@
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import torch
 from gym import spaces
+from habitat import logger
 from habitat.config import Config
 from habitat.tasks.nav.nav import ImageGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -9,6 +10,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encode
 from habitat_baselines.rl.ppo import Net, Policy
 from torch import nn as nn
 
+from eai.utils import load_encoder
 from eai.visual_encoder import VisualEncoder
 
 
@@ -18,10 +20,11 @@ class EAINet(Net):
         observation_space: spaces.Dict,
         action_space,
         backbone: str,
-        resnet_baseplanes: int,
+        baseplanes: int,
         hidden_size: int,
         rnn_type: str,
         num_recurrent_layers: int,
+        pretrained_encoder: Optional[str] = None,
     ):
         super().__init__()
 
@@ -33,10 +36,14 @@ class EAINet(Net):
         self.visual_encoder = VisualEncoder(
             backbone=backbone,
             input_channels=3,
-            baseplanes=resnet_baseplanes,
-            ngroups=resnet_baseplanes // 2,
+            baseplanes=baseplanes,
+            ngroups=baseplanes // 2,
             spatial_size=128,
         )
+
+        if pretrained_encoder is not None:
+            msg = load_encoder(self.visual_encoder, pretrained_encoder)
+            logger.info("Using weights from {}: {}".format(pretrained_encoder, msg))
 
         self.visual_fc = nn.Sequential(
             nn.Flatten(),
@@ -51,8 +58,8 @@ class EAINet(Net):
             self.goal_visual_encoder = VisualEncoder(
                 backbone=backbone,
                 input_channels=3,
-                baseplanes=resnet_baseplanes,
-                ngroups=resnet_baseplanes // 2,
+                baseplanes=baseplanes,
+                ngroups=baseplanes // 2,
                 spatial_size=128,
             )
 
@@ -137,10 +144,11 @@ class EAIPolicy(Policy):
         observation_space: spaces.Dict,
         action_space,
         backbone: str = "resnet18",
-        resnet_baseplanes: int = 32,
+        baseplanes: int = 32,
         hidden_size: int = 512,
         rnn_type: str = "GRU",
         num_recurrent_layers: int = 1,
+        pretrained_encoder: Optional[str] = None,
         **kwargs
     ):
         super().__init__(
@@ -148,10 +156,11 @@ class EAIPolicy(Policy):
                 observation_space=observation_space,
                 action_space=action_space,  # for previous action
                 backbone=backbone,
-                resnet_baseplanes=resnet_baseplanes,
+                baseplanes=baseplanes,
                 hidden_size=hidden_size,
                 rnn_type=rnn_type,
                 num_recurrent_layers=num_recurrent_layers,
+                pretrained_encoder=pretrained_encoder,
             ),
             dim_actions=action_space.n,  # for action distribution
         )
@@ -161,8 +170,10 @@ class EAIPolicy(Policy):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
-            hidden_size=config.RL.PPO.hidden_size,
-            backbone=config.RL.DDPPO.backbone,
-            rnn_type=config.RL.DDPPO.rnn_type,
-            num_recurrent_layers=config.RL.DDPPO.num_recurrent_layers,
+            backbone=config.RL.POLICY.backbone,
+            baseplanes=config.RL.POLICY.baseplanes,
+            hidden_size=config.RL.POLICY.hidden_size,
+            rnn_type=config.RL.POLICY.rnn_type,
+            num_recurrent_layers=config.RL.POLICY.num_recurrent_layers,
+            pretrained_encoder=config.RL.POLICY.pretrained_encoder,
         )

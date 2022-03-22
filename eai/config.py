@@ -109,6 +109,12 @@ _CONFIG.RL.REWARD_MEASURE = "simple_reward"
 _CONFIG.RL.SUCCESS_MEASURE = "success"
 
 _CONFIG.RL.POLICY.name = "EAIPolicy"
+_CONFIG.RL.POLICY.backbone = "resnet50"
+_CONFIG.RL.POLICY.baseplanes = 32
+_CONFIG.RL.POLICY.hidden_size = 512
+_CONFIG.RL.POLICY.rnn_type = "GRU"
+_CONFIG.RL.POLICY.num_recurrent_layers = 2
+_CONFIG.RL.POLICY.pretrained_encoder = None
 
 _CONFIG.RL.PPO.clip_param = 0.2
 _CONFIG.RL.PPO.ppo_epoch = 2
