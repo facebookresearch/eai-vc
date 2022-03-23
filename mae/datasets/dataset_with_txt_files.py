@@ -95,18 +95,6 @@ class DatasetWithTxtFiles(Dataset):
 
 if __name__ == "__main__":
     dataset = DatasetWithTxtFiles(
-        data_root="/checkpoint/karmeshyadav/places205",
-        transform=transforms.RandomHorizontalFlip(p=0.5),
-        dataset_type='full')
-
-    print(len(dataset.places_names))
-
-    idx = 4250 * 102
-
-    im, label = dataset[idx]
-    print(label, " ", dataset.scenes[label])
-
-    dataset = DatasetWithTxtFiles(
         data_root="/checkpoint/karmeshyadav/imagenet_full_size",
         transform=transforms.RandomHorizontalFlip(p=0.5),
         dataset_type='full')
