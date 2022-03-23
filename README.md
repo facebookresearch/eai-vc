@@ -42,6 +42,10 @@
    cd habitat-lab-v0.2.1
    ```
    ```
+   # patch requirements file
+   head -2 habitat_baselines/rl/requirements.txt > tmp && mv tmp habitat_baselines/rl/requirements.txt
+   ```
+   ```
    pip install -r requirements.txt
    ```
    ```
