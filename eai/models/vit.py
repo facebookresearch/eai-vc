@@ -1,5 +1,4 @@
-""" code adapted from: https://github.com/facebookresearch/mae/blob/main/models_vit.py
-"""
+# adapted from: https://github.com/facebookresearch/mae/blob/main/models_vit.py
 from functools import partial
 
 import torch
