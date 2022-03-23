@@ -1,9 +1,4 @@
 ## Installation
-1. Download this repositiory:
-   ```
-   git clone git@github.com:arjunmajum/mae-for-eai.git
-   ```
-
 1. Create a conda environment:
    ```
    conda create -n eai python=3.8 cmake=3.22.1
