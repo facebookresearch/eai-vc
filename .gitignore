@@ -15,3 +15,7 @@ data/models
 
 # misc
 .DS_Store
+
+# wandb
+wandb/
+mae/wandb
