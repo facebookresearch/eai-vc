@@ -6,7 +6,7 @@ This project studies how to learn generalizable visual representation for roboti
 
 To install R3M from an existing conda environment, simply run `pip install -e .` from this directory. 
 
-You can alternatively build a fresh conda env from the r3m_base.yaml file [here](https://github.com/fairinternal/robolang_rep/blob/clean/r3m/r3m_base.yaml) and then install from this directory with `pip install -e .`
+You can alternatively build a fresh conda env from the r3m_base.yaml file [here](https://github.com/facebookresearch/r3m/blob/main/r3m/r3m_base.yaml) and then install from this directory with `pip install -e .`
 
 You can test if it has installed correctly by running `import r3m` from a python shell.
 
@@ -19,7 +19,7 @@ r3m = load_r3m("resnet50") # resnet18, resnet34
 r3m.eval()
 ```
 
-Further example code to use a pre-trained representation is located in the example [here](https://github.com/fairinternal/robolang_rep/blob/clean/r3m/example.py).
+Further example code to use a pre-trained representation is located in the example [here](https://github.com/facebookresearch/r3m/blob/main/r3m/example.py).
 
 If you have any issue accessing or downloading R3M please contact Suraj Nair: surajn (at) stanford (dot) edu
 
