@@ -1,6 +1,6 @@
 # R3M: A Universal Visual Representation for Robot Manipulation
 
-This project studies how to learn generalizable visual representation for robotics from videos of humans and natural language. It contains pre-trained representation on the Ego4D dataset trained in the R3M paper
+This project studies how to learn generalizable visual representation for robotics from videos of humans and natural language. It contains pre-trained representation on the Ego4D dataset trained in the [R3M paper](https://arxiv.org/abs/2203.12601)
 
 ## Installation
 
