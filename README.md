@@ -2,6 +2,8 @@
 
 This project studies how to learn generalizable visual representation for robotics from videos of humans and natural language. It contains pre-trained representation on the Ego4D dataset trained in the [R3M paper](https://arxiv.org/abs/2203.12601)
 
+![](https://cs.stanford.edu/~surajn/images/r3m_robot_teaser.gif)
+
 ## Installation
 
 To install R3M from an existing conda environment, simply run `pip install -e .` from this directory. 
