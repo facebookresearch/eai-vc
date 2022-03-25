@@ -1,3 +1,4 @@
 from eai import environment  # noqa
 from eai import policy  # noqa
+from eai import ppo_trainer  # noqa
 from eai import reward  # noqa

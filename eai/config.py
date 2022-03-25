@@ -81,7 +81,7 @@ _CONFIG.VERBOSE = True
 
 _CONFIG.BASE_TASK_CONFIG_PATH = "configs/tasks/imagenav.yaml"
 
-_CONFIG.TRAINER_NAME = "ppo"
+_CONFIG.TRAINER_NAME = "mppo"
 _CONFIG.ENV_NAME = "SimpleRLEnv"
 _CONFIG.SENSORS = ["RGB_SENSOR"]
 
@@ -127,6 +127,7 @@ _CONFIG.RL.PPO.num_mini_batch = 2
 _CONFIG.RL.PPO.value_loss_coef = 0.5
 _CONFIG.RL.PPO.entropy_coef = 0.01
 _CONFIG.RL.PPO.lr = 1.25e-4
+_CONFIG.RL.PPO.wd = 1e-6
 _CONFIG.RL.PPO.eps = 1e-5
 _CONFIG.RL.PPO.max_grad_norm = 0.2
 _CONFIG.RL.PPO.num_steps = 64

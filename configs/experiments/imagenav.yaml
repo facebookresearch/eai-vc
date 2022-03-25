@@ -2,7 +2,7 @@ VERBOSE: True
 
 BASE_TASK_CONFIG_PATH: "configs/tasks/imagenav.yaml"
 
-TRAINER_NAME: "ddppo"
+TRAINER_NAME: "mddppo"
 ENV_NAME: "SimpleRLEnv"
 SENSORS: ["RGB_SENSOR"]
 
@@ -39,6 +39,7 @@ RL:
     value_loss_coef: 0.5
     entropy_coef: 0.01
     lr: 1.25e-4
+    wd: 1e-6
     eps: 1e-5
     max_grad_norm: 0.2
     num_steps: 64
