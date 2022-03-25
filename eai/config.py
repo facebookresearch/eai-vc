@@ -117,6 +117,7 @@ _CONFIG.RL.POLICY.rnn_type = "GRU"
 _CONFIG.RL.POLICY.num_recurrent_layers = 2
 _CONFIG.RL.POLICY.use_augmentations = True
 _CONFIG.RL.POLICY.use_augmentations_test_time = True
+_CONFIG.RL.POLICY.randomize_augmentations_over_envs = False
 _CONFIG.RL.POLICY.pretrained_encoder = None
 _CONFIG.RL.POLICY.freeze_backbone = False
 

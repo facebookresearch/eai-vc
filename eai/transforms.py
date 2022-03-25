@@ -35,7 +35,7 @@ class RandomShiftsAug(nn.Module):
 
 
 class Transform:
-    is_random: bool = False
+    randomize_environments: bool = False
 
     def apply(self, x: torch.Tensor):
         raise NotImplementedError
@@ -45,7 +45,7 @@ class Transform:
         x: torch.Tensor,
         N: Optional[int] = None,
     ):
-        if not self.is_random or N is None:
+        if not self.randomize_environments or N is None:
             return self.apply(x)
 
         # shapes
@@ -84,8 +84,6 @@ class ResizeTransform(Transform):
 
 
 class ShiftAndJitterTransform(Transform):
-    is_random: bool = True
-
     def __init__(self, size):
         self.size = size
 
