@@ -246,7 +246,7 @@ class MaskedAutoencoderViT(nn.Module):
         loss1 = self.forward_loss(imgs1, pred1, mask1)
         loss2 = self.forward_loss(imgs2, pred2, mask2)
 
-        return loss1 + loss2, (pred1, pred2), (mask1, mask2)
+        return (loss1, loss2), (pred1, pred2), (mask1, mask2)
 
 
 def mae_vit_base_patch16_dec512d8b(**kwargs):
@@ -288,7 +288,8 @@ if __name__ == "__main__":
     offsets = torch.randint(0, 16, (N,), device=device)
     model = mae_vit_base_patch16().to(device=device)
     tic = time.time()
-    loss, _, _  = model(imgs1, imgs2, offsets)
+    (loss1, loss2), _, _  = model(imgs1, imgs2, offsets)
+    loss = loss1 + loss2
     loss.backward()
     toc = time.time()
     print("[{:0.2f}s] loss: {}".format(toc - tic, loss))
