@@ -25,28 +25,25 @@ class MPPO(PPO):
         use_normalized_advantage: bool = True,
     ) -> None:
 
-        super().__init__()
-
-        self.actor_critic = actor_critic
-
-        self.clip_param = clip_param
-        self.ppo_epoch = ppo_epoch
-        self.num_mini_batch = num_mini_batch
-
-        self.value_loss_coef = value_loss_coef
-        self.entropy_coef = entropy_coef
-
-        self.max_grad_norm = max_grad_norm
-        self.use_clipped_value_loss = use_clipped_value_loss
-
+        super().__init__(
+            actor_critic=actor_critic,
+            clip_param=clip_param,
+            ppo_epoch=ppo_epoch,
+            num_mini_batch=num_mini_batch,
+            value_loss_coef=value_loss_coef,
+            entropy_coef=entropy_coef,
+            lr=lr,
+            eps=eps,
+            max_grad_norm=max_grad_norm,
+            use_clipped_value_loss=use_clipped_value_loss,
+            use_normalized_advantage=use_normalized_advantage,
+        )
         self.optimizer = optim.Adam(
             list(filter(lambda p: p.requires_grad, actor_critic.parameters())),
             lr=lr,
             weight_decay=wd,
             eps=eps,
         )
-        self.device = next(actor_critic.parameters()).device
-        self.use_normalized_advantage = use_normalized_advantage
 
 
 class MDDPPO(DecentralizedDistributedMixin, MPPO):
