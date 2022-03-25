@@ -29,6 +29,7 @@ import timm.optim.optim_factory as optim_factory
 
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
+from util.path_dataset import PathDataset
 
 import models_mae
 
@@ -50,8 +51,14 @@ def get_args_parser():
     parser.add_argument('--input_size', default=224, type=int,
                         help='images input size')
 
-    parser.add_argument('--mask_ratio', default=0.75, type=float,
-                        help='Masking ratio (percentage of removed patches).')
+    parser.add_argument('--max_offset', default=16, type=int,
+                        help='Maximum offset between samples')
+    parser.add_argument('--mask_ratio1', default=0.75, type=float,
+                        help='Masking ratio 1 (percentage of removed patches).')
+    parser.add_argument('--mask_ratio1', default=0.95, type=float,
+                        help='Masking ratio 2 (percentage of removed patches).')
+    parser.add_argument('--loss_weight', default=0.5, type=float,
+                        help='loss balancing')
 
     parser.add_argument('--norm_pix_loss', action='store_true',
                         help='Use (per-patch) normalized pixels as targets for computing loss')
@@ -125,7 +132,12 @@ def main(args):
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-    dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
+    # dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
+    dataset_train = PathDataset(
+        root=os.path.join(args.data_path, 'train'),
+        transform=transform_train,
+        max_offset=args.max_offset,
+    )
     print(dataset_train)
 
     if True:  # args.distributed:
@@ -151,9 +163,9 @@ def main(args):
         pin_memory=args.pin_mem,
         drop_last=True,
     )
-    
+
     # define the model
-    model = models_mae.__dict__[args.model](norm_pix_loss=args.norm_pix_loss)
+    model = models_mae.__dict__[args.model](decoder_max_offset=args.max_offset, norm_pix_loss=args.norm_pix_loss)
 
     model.to(device)
 
@@ -161,7 +173,7 @@ def main(args):
     print("Model = %s" % str(model_without_ddp))
 
     eff_batch_size = args.batch_size * args.accum_iter * misc.get_world_size()
-    
+
     if args.lr is None:  # only base_lr is specified
         args.lr = args.blr * eff_batch_size / 256
 
@@ -174,7 +186,7 @@ def main(args):
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
         model_without_ddp = model.module
-    
+
     # following timm: set wd as 0 for bias and norm layers
     param_groups = optim_factory.add_weight_decay(model_without_ddp, args.weight_decay)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95))
