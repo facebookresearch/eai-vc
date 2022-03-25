@@ -3,12 +3,12 @@ from typing import Optional
 from habitat_baselines.rl.ddppo.algo.ddppo import DecentralizedDistributedMixin
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.rl.ppo.ppo import PPO
-from torch import nn as nn
 from torch import optim as optim
 
 
 class MPPO(PPO):
-    """ PPO with weight decay. """
+    """PPO with weight decay."""
+
     def __init__(
         self,
         actor_critic: Policy,
@@ -47,6 +47,7 @@ class MPPO(PPO):
         )
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
+
 
 class MDDPPO(DecentralizedDistributedMixin, MPPO):
     pass
