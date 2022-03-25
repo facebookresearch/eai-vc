@@ -15,7 +15,7 @@ CONFIG_FILE_SEPARATOR = ","
 _TASK_CONFIG = _HABITAT_CONFIG.clone()
 _TASK_CONFIG.defrost()
 
-_TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = 500
+_TASK_CONFIG.ENVIRONMENT.MAX_EPISODE_STEPS = 1000
 _TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS = 50000
 
 _TASK_CONFIG.SIMULATOR.FORWARD_STEP_SIZE = 0.25
@@ -81,7 +81,7 @@ _CONFIG.VERBOSE = True
 
 _CONFIG.BASE_TASK_CONFIG_PATH = "configs/tasks/imagenav.yaml"
 
-_CONFIG.TRAINER_NAME = "ppo"
+_CONFIG.TRAINER_NAME = "mppo"
 _CONFIG.ENV_NAME = "SimpleRLEnv"
 _CONFIG.SENSORS = ["RGB_SENSOR"]
 
@@ -116,6 +116,8 @@ _CONFIG.RL.POLICY.hidden_size = 512
 _CONFIG.RL.POLICY.rnn_type = "GRU"
 _CONFIG.RL.POLICY.num_recurrent_layers = 2
 _CONFIG.RL.POLICY.use_augmentations = True
+_CONFIG.RL.POLICY.use_augmentations_test_time = True
+_CONFIG.RL.POLICY.randomize_augmentations_over_envs = False
 _CONFIG.RL.POLICY.pretrained_encoder = None
 _CONFIG.RL.POLICY.freeze_backbone = False
 
@@ -125,6 +127,7 @@ _CONFIG.RL.PPO.num_mini_batch = 2
 _CONFIG.RL.PPO.value_loss_coef = 0.5
 _CONFIG.RL.PPO.entropy_coef = 0.01
 _CONFIG.RL.PPO.lr = 1.25e-4
+_CONFIG.RL.PPO.wd = 1e-6
 _CONFIG.RL.PPO.eps = 1e-5
 _CONFIG.RL.PPO.max_grad_norm = 0.2
 _CONFIG.RL.PPO.num_steps = 64

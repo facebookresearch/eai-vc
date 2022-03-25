@@ -27,6 +27,8 @@ class EAINet(Net):
         rnn_type: str,
         num_recurrent_layers: int,
         use_augmentations: bool,
+        use_augmentations_test_time: bool,
+        randomize_augmentations_over_envs: bool,
         pretrained_encoder: Optional[str],
         freeze_backbone: bool,
         run_type: str,
@@ -41,7 +43,10 @@ class EAINet(Net):
         name = "resize"
         if use_augmentations and run_type == "train":
             name = "shift+jitter"
+        if use_augmentations_test_time and run_type == "eval":
+            name = "shift+jitter"
         self.visual_transform = get_transform(name, size=128)
+        self.visual_transform.randomize_environments = randomize_augmentations_over_envs
 
         self.visual_encoder = VisualEncoder(
             backbone=backbone,
@@ -65,7 +70,12 @@ class EAINet(Net):
             name = "resize"
             if use_augmentations and run_type == "train":
                 name = "shift+jitter"
+            if use_augmentations_test_time and run_type == "eval":
+                name = "shift+jitter"
             self.goal_transform = get_transform(name, size=128)
+            self.goal_transform.randomize_environments = (
+                randomize_augmentations_over_envs
+            )
 
             self.goal_visual_encoder = VisualEncoder(
                 backbone=backbone,
@@ -182,6 +192,8 @@ class EAIPolicy(Policy):
         rnn_type: str = "GRU",
         num_recurrent_layers: int = 1,
         use_augmentations: bool = False,
+        use_augmentations_test_time: bool = False,
+        randomize_augmentations_over_envs: bool = False,
         pretrained_encoder: Optional[str] = None,
         freeze_backbone: bool = False,
         run_type: str = "train",
@@ -198,6 +210,8 @@ class EAIPolicy(Policy):
                 rnn_type=rnn_type,
                 num_recurrent_layers=num_recurrent_layers,
                 use_augmentations=use_augmentations,
+                use_augmentations_test_time=use_augmentations_test_time,
+                randomize_augmentations_over_envs=randomize_augmentations_over_envs,
                 pretrained_encoder=pretrained_encoder,
                 freeze_backbone=freeze_backbone,
                 run_type=run_type,
@@ -217,6 +231,8 @@ class EAIPolicy(Policy):
             rnn_type=config.RL.POLICY.rnn_type,
             num_recurrent_layers=config.RL.POLICY.num_recurrent_layers,
             use_augmentations=config.RL.POLICY.use_augmentations,
+            use_augmentations_test_time=config.RL.POLICY.use_augmentations_test_time,
+            randomize_augmentations_over_envs=config.RL.POLICY.randomize_augmentations_over_envs,
             pretrained_encoder=config.RL.POLICY.pretrained_encoder,
             freeze_backbone=config.RL.POLICY.freeze_backbone,
             run_type=config.RUN_TYPE,

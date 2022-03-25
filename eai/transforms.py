@@ -35,7 +35,7 @@ class RandomShiftsAug(nn.Module):
 
 
 class Transform:
-    is_random: bool = False
+    randomize_environments: bool = False
 
     def apply(self, x: torch.Tensor):
         raise NotImplementedError
@@ -45,7 +45,7 @@ class Transform:
         x: torch.Tensor,
         N: Optional[int] = None,
     ):
-        if not self.is_random or N is None:
+        if not self.randomize_environments or N is None:
             return self.apply(x)
 
         # shapes
@@ -80,13 +80,10 @@ class ResizeTransform(Transform):
         x = TF.resize(x, self.size)
         x = TF.center_crop(x, output_size=self.size)
         x = x.float() / 255.0
-        x = TF.normalize(x, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         return x
 
 
 class ShiftAndJitterTransform(Transform):
-    is_random: bool = True
-
     def __init__(self, size):
         self.size = size
 
@@ -95,9 +92,8 @@ class ShiftAndJitterTransform(Transform):
         x = TF.resize(x, self.size)
         x = TF.center_crop(x, output_size=self.size)
         x = x.float() / 255.0
-        x = TF.normalize(x, (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
-        x = RandomShiftsAug(4)(x)
         x = RandomApply([ColorJitter(0.3, 0.3, 0.3, 0.3)], p=1.0)(x)
+        x = RandomShiftsAug(4)(x)
         return x
 
 
