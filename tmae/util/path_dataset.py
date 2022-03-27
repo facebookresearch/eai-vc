@@ -35,7 +35,7 @@ class PathDataset(VisionDataset):
     def __getitem__(self, idx) -> Tuple[np.ndarray, np.ndarray]:
         folder = self.folders[self.idx_to_folder[idx]]
         images = self.files[folder]
-        offset = np.random.randint(0, self.max_offset)
+        offset = np.random.randint(0, self.max_offset) + 1
         img1_idx = np.random.randint(0, len(images) - offset)
         img2_idx = min(img1_idx + offset, len(images) - 1)
         img1 = self._get_image(folder, img1_idx)
