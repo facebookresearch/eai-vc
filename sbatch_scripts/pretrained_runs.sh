@@ -21,10 +21,24 @@ TEST_EPISODE_COUNT=4200
 RUN_TRAIN_SCRIPT=true
 RUN_EVAL_SCRIPT=false
 
-EXP_NAME="pretrained_omnidata3_6m_MOCO_01_finetuned_01"
-WEIGHTS_NAME="omnidata3_6m_MOCO_01.pth.tar"
-BACKBONE="resnet50_gn"
-EXTRA_CMDS="RL.DDPPO.pretrained_encoder True \
-            RL.DDPPO.freeze_backbone True"
+# EXP_NAME="DINO_reproduce"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True"
+# SPLIT="train_extra"
+# run_training 0
+
+# EXP_NAME="mae_frozen_first_experiment"
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True"
+# SPLIT="train_extra"
+# run_training 0
+
+EXP_NAME="mae_finetuned_first_experiment"
+WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+BACKBONE="vit_base_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone False"
 SPLIT="train_extra"
+NUM_ENV=6
 run_training 0

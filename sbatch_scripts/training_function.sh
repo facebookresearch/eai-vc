@@ -25,9 +25,9 @@ run_training() {
         CHECKPOINT_FOLDER ${CHKP_DIR} \
         TENSORBOARD_DIR ${LOG_DIR} \
         VIDEO_DIR ${VIDEO_DIR} \
-        RL.DDPPO.pretrained_weights ${REPO_PATH}/data/ddppo-models/${WEIGHTS_NAME} \
+        RL.POLICY.pretrained_encoder ${REPO_PATH}/data/ddppo-models/${WEIGHTS_NAME} \
+        RL.POLICY.backbone ${BACKBONE} \
         TASK_CONFIG.DATASET.SCENES_DIR ${REPO_PATH}/data/scene_datasets \
-        RL.DDPPO.backbone ${BACKBONE} \
         TASK_CONFIG.SEED ${SEED} \
         TOTAL_NUM_STEPS ${NUM_STEPS} \
         VIDEO_OPTION ${VIDEO_OPTION} \
