@@ -24,7 +24,7 @@ import torchvision.datasets as datasets
 
 import timm
 
-assert timm.__version__ == "0.3.2"  # version check
+assert timm.__version__ == "0.4.12"  # version check
 import timm.optim.optim_factory as optim_factory
 
 import util.misc as misc
@@ -55,7 +55,7 @@ def get_args_parser():
                         help='Maximum offset between samples')
     parser.add_argument('--mask_ratio1', default=0.75, type=float,
                         help='Masking ratio 1 (percentage of removed patches).')
-    parser.add_argument('--mask_ratio1', default=0.95, type=float,
+    parser.add_argument('--mask_ratio2', default=0.95, type=float,
                         help='Masking ratio 2 (percentage of removed patches).')
     parser.add_argument('--loss_weight', default=0.5, type=float,
                         help='loss balancing')
