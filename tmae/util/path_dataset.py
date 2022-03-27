@@ -36,7 +36,7 @@ class PathDataset(VisionDataset):
         folder = self.folders[self.idx_to_folder[idx]]
         images = self.files[folder]
         offset = np.random.randint(0, self.max_offset) + 1
-        img1_idx = np.random.randint(0, len(images) - offset)
+        img1_idx = np.random.randint(0, len(images) - offset + 1)
         img2_idx = min(img1_idx + offset, len(images) - 1)
         img1 = self._get_image(folder, img1_idx)
         img2 = self._get_image(folder, img2_idx)

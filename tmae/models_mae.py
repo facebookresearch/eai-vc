@@ -51,7 +51,7 @@ class MaskedAutoencoderViT(nn.Module):
         self.decoder_pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
 
         # time embedding ** NEW **
-        self.decoder_time_embed = nn.Parameter(torch.zeros(decoder_max_offset, 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
+        self.decoder_time_embed = nn.Parameter(torch.zeros(decoder_max_offset + 1, 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
 
         self.decoder_blocks = nn.ModuleList([
             Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer)
