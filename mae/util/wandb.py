@@ -26,30 +26,25 @@ def setup_wandb_args(args: Namespace):
 
 
 def setup_wandb(args, project="mae_training"):
-    os.makedirs(args.output_dir, exist_ok=True)
+    resume = None
     wandb_filename = os.path.join(args.output_dir, "wandb_id.txt")
-    # if file exists, then we are resuming from a previous eval
     if os.path.exists(wandb_filename):
+        # if file exists, then we are resuming from a previous eval
         with open(wandb_filename, "r") as file:
             wandb_id = file.read().rstrip("\n")
-
-        wandb.init(
-            id=wandb_id,
-            project=project,
-            config=args,
-            mode=args.wandb_mode,
-            resume="must",
-        )
+        resume = "must"
     else:
         wandb_id = wandb.util.generate_id()
+        os.makedirs(os.path.dirname(wandb_filename), exist_ok=True)
         with open(wandb_filename, "w") as file:
             file.write(wandb_id)
-        wandb.init(
-            id=wandb_id,
-            project=project,
-            config=args,
-            mode=args.wandb_mode,
-        )
 
+    wandb.init(
+        id=wandb_id,
+        project=project,
+        config=args,
+        mode=args.wandb_mode,
+        resume=resume,
+    )
     wandb.run.name = args.wandb_name
     wandb.run.save()
