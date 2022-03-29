@@ -1,28 +1,15 @@
 import os
-from argparse import ArgumentParser, Namespace
+from argparse import Namespace
 
 import wandb
 
 
-def setup_wandb_parser(parser: ArgumentParser):
-    parser.add_argument(
-        "--wandb_name",
-        default="",
-        type=str,
-        help="name to be used for wandb logging",
-    )
-    parser.add_argument(
-        "--wandb_mode",
-        default="online",
-        type=str,
-        help="wandb mode to use for storing data,"
-        "choose online, offline and disabled",
-    )
-
-
-def setup_wandb_args(args: Namespace):
-    if args.output_dir is not None:
-        args.output_dir = os.path.join(args.output_dir, args.wandb_name)
+def setup_wandb_output_dir(args: Namespace):
+    if args.wandb_mode == "disabled":
+        return
+    # if wandb is enabled setup output directory
+    assert args.output_dir is not None
+    args.output_dir = os.path.join(args.output_dir, args.wandb_name)
 
 
 def setup_wandb(args, project="mae_training"):

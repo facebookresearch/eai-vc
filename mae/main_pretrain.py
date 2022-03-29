@@ -28,7 +28,7 @@ import timm.optim.optim_factory as optim_factory
 
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
-from util.wandb import setup_wandb, setup_wandb_parser, setup_wandb_args
+from util.wandb import setup_wandb, setup_wandb_output_dir
 from datasets.dataset_with_txt_files import DatasetWithTxtFiles
 from datasets.omni_dataset import OmniDataset
 
@@ -102,17 +102,21 @@ def get_args_parser():
                         help='url used to set up distributed training')
 
     # dataset arguments ** NEW **
-    parser.add_argument('--dataset_type', default='none', type=str,
-                        choices=['imagenet', 'omnidata', "none"],
-                        help="""Name of the dataset to train on.""")
-    parser.add_argument('--omnidata_datasets', default="all", type=str,
-                        help="""Which omnidata datasets to use""")
-    parser.add_argument('--dataset_size', default="12m", type=str,
-                        choices=['14_5m', '3_6m', '1_45m', '145k'],
-                        help="""Which habitat data type to use""")
+    parser.add_argument("--dataset_type", default="none", type=str,
+                        choices=["imagenet", "omnidata", "none"],
+                        help="Name of the dataset to train on.")
+    parser.add_argument("--omnidata_datasets", default="all", type=str,
+                        help="Which omnidata datasets to use")
+    parser.add_argument("--dataset_size", default="12m", type=str,
+                        choices=["14_5m", "3_6m", "1_45m", "145k"],
+                        help="Which dataset size to use")
 
     # wandb arguments ** NEW **
-    setup_wandb_parser(parser)
+    parser.add_argument("--wandb_name", default="", type=str,
+                        help="name to be used for wandb logging")
+    parser.add_argument("--wandb_mode", default="online", type=str,
+                        help="wandb mode to use for storing data, choose"
+                        "online, offline or disabled")
 
     return parser
 
@@ -244,8 +248,8 @@ def main(args):
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
-    setup_wandb_args(args)
 
+    setup_wandb_output_dir(args)
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
