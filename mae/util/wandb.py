@@ -41,6 +41,7 @@ def setup_wandb(args, project="mae_training"):
 
     wandb.init(
         id=wandb_id,
+        dir=args.output_dir,
         project=project,
         config=args,
         mode=args.wandb_mode,
