@@ -14,27 +14,27 @@ import json
 import numpy as np
 import os
 import time
+from pathlib import Path
 
 import torch
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-from datasets.dataset_with_txt_files import DatasetWithTxtFiles
-from datasets.omni_dataset import OmniDataset
 
 import timm
 
-#assert timm.__version__ == "0.3.2"  # version check
+assert timm.__version__ == "0.4.12"  # version check
 import timm.optim.optim_factory as optim_factory
 
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
+from util.wandb import setup_wandb, setup_wandb_output_dir
+from datasets.dataset_with_txt_files import DatasetWithTxtFiles
+from datasets.omni_dataset import OmniDataset
 
-from models import models_mae
+import models_mae
 
-from engine.engine_pretrain import train_one_epoch
-
-import wandb
+from engine_pretrain import train_one_epoch
 
 
 def get_args_parser():
@@ -77,7 +77,7 @@ def get_args_parser():
     parser.add_argument('--data_path', default='/datasets01/imagenet_full_size/061417/', type=str,
                         help='dataset path')
 
-    parser.add_argument('--output_dir', default='/checkpoint/karmeshyadav/mae_training/',
+    parser.add_argument('--output_dir', default='./output_dir',
                         help='path where to save, empty for no saving')
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
@@ -100,17 +100,24 @@ def get_args_parser():
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
-    
-    # new arguments
-    parser.add_argument("--wandb_name", default="", type=str, help="""name to be used for wandb logging""")
-    parser.add_argument("--wandb_mode", default="online", type=str, help="""wandb mode to use for storing data,
-        choose online, offline and disabled""")
-    parser.add_argument('--dataset_type', default='imagenet', type=str,
-        choices=['imagenet', 'omnidata', "none"], help="""Name of the dataset to train on.""")
-    parser.add_argument('--omnidata_datasets', default="all", type=str, help="""Which omnidata datasets to use""")
-    parser.add_argument('--dataset_size', default="12m", \
-        choices=['14_5m', '3_6m', '1_45m', '145k'], \
-        type=str, help="""Which habitat data type to use""")
+
+    # dataset arguments ** NEW **
+    parser.add_argument("--dataset_type", default="none", type=str,
+                        choices=["imagenet", "omnidata", "none"],
+                        help="Name of the dataset to train on.")
+    parser.add_argument("--omnidata_datasets", default="all", type=str,
+                        help="Which omnidata datasets to use")
+    parser.add_argument("--dataset_size", default="12m", type=str,
+                        choices=["14_5m", "3_6m", "1_45m", "145k"],
+                        help="Which dataset size to use")
+
+    # wandb arguments ** NEW **
+    parser.add_argument("--wandb_name", default="", type=str,
+                        help="name to be used for wandb logging")
+    parser.add_argument("--wandb_mode", default="online", type=str,
+                        help="wandb mode to use for storing data, choose"
+                        "online, offline or disabled")
+
     return parser
 
 
@@ -153,11 +160,11 @@ def main(args):
         )
     else:
         dataset_train = datasets.ImageFolder(
-            args.data_path, 
+            args.data_path,
             transform=transform_train
         )
 
-    print("train_dataset size: ", len(dataset_train))
+    print("train_dataset size: {:,}".format(len(dataset_train)))
 
     if True:  # args.distributed:
         num_tasks = misc.get_world_size()
@@ -170,32 +177,7 @@ def main(args):
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
 
     if global_rank == 0:
-        wandb_filename = os.path.join(args.output_dir, "wandb_id.txt") 
-        # if file exists, then we are resuming from a previous eval
-        if os.path.exists(wandb_filename):
-            with open(wandb_filename, 'r') as file:
-                wandb_id = file.read().rstrip('\n')
-
-            wandb.init(
-                id=wandb_id,
-                project='mae_training', 
-                config=args,
-                mode=args.wandb_mode,
-                resume="must"
-            )
-        else:
-            wandb_id=wandb.util.generate_id()
-            with open(wandb_filename, 'w') as file:
-                file.write(wandb_id)
-            wandb.init(
-                id=wandb_id,
-                project='mae_training',
-                config=args,
-                mode=args.wandb_mode,
-            )
-
-        wandb.run.name = args.wandb_name
-        wandb.run.save()
+        setup_wandb(args)
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
@@ -204,7 +186,7 @@ def main(args):
         pin_memory=args.pin_mem,
         drop_last=True,
     )
-    
+
     # define the model
     model = models_mae.__dict__[args.model](norm_pix_loss=args.norm_pix_loss)
 
@@ -214,7 +196,7 @@ def main(args):
     print("Model = %s" % str(model_without_ddp))
 
     eff_batch_size = args.batch_size * args.accum_iter * misc.get_world_size()
-    
+
     if args.lr is None:  # only base_lr is specified
         args.lr = args.blr * eff_batch_size / 256
 
@@ -227,7 +209,7 @@ def main(args):
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
         model_without_ddp = model.module
-    
+
     # following timm: set wd as 0 for bias and norm layers
     param_groups = optim_factory.add_weight_decay(model_without_ddp, args.weight_decay)
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95))
@@ -266,10 +248,7 @@ def main(args):
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
-
-    args.output_dir = os.path.join(args.output_dir, args.wandb_name)
-    # create output directory
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-
+    setup_wandb_output_dir(args)
+    if args.output_dir:
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     main(args)
