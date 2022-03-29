@@ -11,7 +11,9 @@ __pycache__/
 # data directory
 data/datasets
 data/scene_datasets
+data/image_datasets
 data/models
+tmae/data
 
 # misc
 .DS_Store

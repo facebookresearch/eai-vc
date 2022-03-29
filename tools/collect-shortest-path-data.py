@@ -19,8 +19,10 @@ AGENT_RADIUS = 0.1
 STEP_SIZE = 0.25
 TURN_ANGLE = 30
 NUM_RETRIES = 100
-LONG_DISTANCE = 5.0
-SHORT_DISTANCE = 3.0
+LONG_DISTANCE = 6.0
+SHORT_DISTANCE = 4.0
+MIN_STEPS = 16
+MAX_STEPS = 500
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-n",
         "--num-samples",
-        default=3000,
+        default=1500,
         type=int,
         help="approximate number of samples per environment (default: 3,000)",
     )
@@ -55,8 +57,9 @@ def parse_args() -> argparse.Namespace:
     args = parser.parse_args()
 
     args.scene_directory = "data/scene_datasets/"
+    dataset_name = "hm3d+gibson" if args.dataset == "all" else args.dataset
     args.output_directory = os.path.join(
-        "data", "image_datasets", "tmae", args.dataset, VERSION, args.split
+        "tmae", "data", "datasets", dataset_name, VERSION, args.split
     )
 
     return args
@@ -126,11 +129,17 @@ def sample_random_rotation():
     return [0.0, np.sin(angle / 2), 0.0, np.cos(angle / 2)]
 
 
+def scene_id_to_scene(scene_id):
+    if "hm3d" in scene_id:
+        return os.path.basename(os.path.dirname(scene_id))
+    return os.path.basename(scene_id).replace(".basis", "").replace(".glb", "")
+
+
 def collect_data(inputs):
     scene_id, args = inputs
 
     # make output folder
-    scene = os.path.basename(scene_id).replace(".basis", "").replace(".glb", "")
+    scene = scene_id_to_scene(scene_id)
     output_folder = os.path.join(args.output_directory, scene)
     os.makedirs(output_folder, exist_ok=True)
 
@@ -168,8 +177,8 @@ def collect_data(inputs):
         agent.set_state(state)
 
         # follow path
-        step_count = 0
         follower.reset()
+        step_count, images = 0, []
         while True:
             try:
                 action = follower.next_action_along(tgt)
@@ -177,21 +186,25 @@ def collect_data(inputs):
                 break
             if action is None:
                 break
-            obs = sim.step(action)
-            path = os.path.join(folder, f"{image_count:04d}.jpg")
-            Image.fromarray(obs["rgb"]).convert("RGB").save(path)
-            image_count += 1
+            images.append(sim.step(action)["rgb"])
             step_count += 1
+            if step_count == MAX_STEPS:
+                break
 
-        if step_count > 0:
-            path_count += 1
-        else:
-            message("Warning: no steps {} in {} to {}".format(scene, src, tgt))
+        if step_count < MIN_STEPS:
+            continue
+
+        for img in images:
+            path = os.path.join(folder, f"{image_count:04d}.jpg")
+            Image.fromarray(img).convert("RGB").save(path)
+            image_count += 1
+
+        path_count += 1
 
     message(
-        "done with {} collected {} images from {} paths".format(
-            scene_id, image_count, path_count
-        )
+        f"done with {scene_id}",
+        f"collected {image_count} images",
+        f"from {path_count} paths",
     )
 
 
@@ -207,8 +220,8 @@ def main():
             pass
 
 
-def message(msg):
-    print("***\n" + msg + "\n***")
+def message(*msg):
+    print("***\n" + " ".join(msg) + "\n***")
 
 
 # fmt: off
