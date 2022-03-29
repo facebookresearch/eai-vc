@@ -2,7 +2,7 @@
 
 NGPUS=$(nvidia-smi --list-gpus | wc -l)
 
-DATA="data/datasets/hm3d+gibson/v1"
+DATA="data/datasets/hm3d+gibson/v1/train"
 
 set -x
 torchrun \
@@ -21,3 +21,5 @@ main_pretrain.py \
 --blr 1.5e-4 \
 --warmup_epochs 40 \
 --data_path $DATA \
+--wandb_name "debug-tmae" \
+--wandb_mode "online" \

@@ -164,7 +164,7 @@ def main(args):
             transform=transform_train
         )
 
-    print("train_dataset size: ", len(dataset_train))
+    print("train_dataset size: {:,}".format(len(dataset_train)))
 
     if True:  # args.distributed:
         num_tasks = misc.get_world_size()
@@ -248,9 +248,7 @@ def main(args):
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
-
     setup_wandb_output_dir(args)
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-
     main(args)

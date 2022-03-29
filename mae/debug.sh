@@ -18,5 +18,5 @@ main_pretrain.py \
 --blr 1.5e-4 \
 --warmup_epochs 40 \
 --data_path $DATA \
---wandb_name "debug" \
+--wandb_name "debug-mae" \
 --wandb_mode "online" \
