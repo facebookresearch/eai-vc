@@ -11,6 +11,7 @@
 
 DATA="data/datasets/hm3d+gibson/v1/train"
 
+cd mae
 source activate eai
 
 set -x
