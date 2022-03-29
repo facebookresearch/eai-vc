@@ -48,6 +48,8 @@ def train_one_epoch(model: torch.nn.Module,
             (loss1, loss2), _, _ = model(imgs1, imgs2, offsets, args.mask_ratio1, args.mask_ratio2)
             loss = (1 - args.loss_weight) * loss1 + args.loss_weight * loss2
 
+        loss1_value = loss1.item()
+        loss2_value = loss2.item()
         loss_value = loss.item()
 
         if not math.isfinite(loss_value):
@@ -62,18 +64,22 @@ def train_one_epoch(model: torch.nn.Module,
 
         torch.cuda.synchronize()
 
-        metric_logger.update(loss=loss_value)
+        metric_logger.update(loss1=loss1_value, loss2=loss2_value, loss=loss_value)
 
         lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(lr=lr)
 
+        loss1_value_reduce = misc.all_reduce_mean(loss1_value)
+        loss2_value_reduce = misc.all_reduce_mean(loss2_value)
         loss_value_reduce = misc.all_reduce_mean(loss_value)
         if (data_iter_step + 1) % accum_iter == 0 and misc.get_rank() == 0:
             """ We use epoch_1000x as the x-axis in tensorboard.
             This calibrates different curves when batch size changes.
             """
             epoch_1000x = int((data_iter_step / len(data_loader) + epoch) * 1000)
-            wandb.log({"train_loss": loss_value_reduce,
+            wandb.log({"train_loss1": loss1_value_reduce,
+                       "train_loss2": loss2_value_reduce,
+                       "train_loss": loss_value_reduce,
                        "lr": lr}, epoch_1000x)
 
 
