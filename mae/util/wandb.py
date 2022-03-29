@@ -31,8 +31,7 @@ def setup_wandb(args, project="mae_training"):
         dir=args.output_dir,
         project=project,
         config=args,
+        name=args.wandb_name,
         mode=args.wandb_mode,
         resume=resume,
     )
-    wandb.run.name = args.wandb_name
-    wandb.run.save()
