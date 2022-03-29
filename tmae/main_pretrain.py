@@ -29,7 +29,7 @@ import timm.optim.optim_factory as optim_factory
 
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
-from util.path_dataset import PathDataset
+from datasets.path_dataset import PathDataset
 
 import models_mae
 
