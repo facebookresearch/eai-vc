@@ -21,7 +21,7 @@ def setup_wandb_parser(parser: ArgumentParser):
 
 
 def setup_wandb_args(args: Namespace):
-    if args.output_dir:
+    if args.output_dir is not None:
         args.output_dir = os.path.join(args.output_dir, args.wandb_name)
 
 

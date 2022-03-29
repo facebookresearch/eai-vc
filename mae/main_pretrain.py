@@ -37,7 +37,6 @@ import models_mae
 from engine_pretrain import train_one_epoch
 
 
-
 def get_args_parser():
     parser = argparse.ArgumentParser('MAE pre-training', add_help=False)
     parser.add_argument('--batch_size', default=64, type=int,
@@ -102,15 +101,17 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
 
-    # new arguments
-    parser.add_argument('--dataset_type', default='imagenet', type=str,
-        choices=['imagenet', 'omnidata', "none"], help="""Name of the dataset to train on.""")
-    parser.add_argument('--omnidata_datasets', default="all", type=str, help="""Which omnidata datasets to use""")
-    parser.add_argument('--dataset_size', default="12m", \
-        choices=['14_5m', '3_6m', '1_45m', '145k'], \
-        type=str, help="""Which habitat data type to use""")
+    # dataset arguments ** NEW **
+    parser.add_argument('--dataset_type', default='none', type=str,
+                        choices=['imagenet', 'omnidata', "none"],
+                        help="""Name of the dataset to train on.""")
+    parser.add_argument('--omnidata_datasets', default="all", type=str,
+                        help="""Which omnidata datasets to use""")
+    parser.add_argument('--dataset_size', default="12m", type=str,
+                        choices=['14_5m', '3_6m', '1_45m', '145k'],
+                        help="""Which habitat data type to use""")
 
-    # wandb
+    # wandb arguments ** NEW **
     setup_wandb_parser(parser)
 
     return parser
