@@ -2,7 +2,7 @@
 
 NGPUS=$(nvidia-smi --list-gpus | wc -l)
 
-DATA="data/datasets/imagenet/train"
+DATA="data/datasets/hm3d+gibson/v1/train"
 
 set -x
 torchrun \
