@@ -58,36 +58,6 @@ class ModifiedPPOTrainer(PPOTrainer):
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
 
-        if (
-            self.config.RL.DDPPO.pretrained_encoder
-            or self.config.RL.DDPPO.pretrained
-        ):
-            pretrained_state = torch.load(
-                self.config.RL.DDPPO.pretrained_weights, map_location="cpu"
-            )
-
-        if self.config.RL.DDPPO.pretrained:
-            self.actor_critic.load_state_dict(
-                {
-                    k[len("actor_critic.") :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                }
-            )
-        elif self.config.RL.DDPPO.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
-            self.actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
-                }
-            )
-
-        if not self.config.RL.DDPPO.train_encoder:
-            self._static_encoder = True
-            for param in self.actor_critic.net.visual_encoder.parameters():
-                param.requires_grad_(False)
-
         if self.config.RL.DDPPO.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
