@@ -21,6 +21,7 @@ class VisualEncoder(nn.Module):
         avgpooled_image: bool = False,
     ):
         super().__init__()
+        self.avgpooled_image = avgpooled_image
 
         if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(input_channels)
@@ -32,7 +33,7 @@ class VisualEncoder(nn.Module):
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
             spatial_size = image_size
-            if avgpooled_image:    
+            if self.avgpooled_image:    
                 spatial_size = image_size // 2
 
             final_spatial = int(spatial_size * self.backbone.final_spatial_compress)
@@ -72,6 +73,8 @@ class VisualEncoder(nn.Module):
             raise ValueError("unknown backbone {}".format(backbone))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore
+        if self.avgpooled_image:  # For compatibility with the habitat_baselines implementation
+            x = F.avg_pool2d(x, 2)
         x = self.running_mean_and_var(x)
         x = self.backbone(x)
         x = self.compression(x)

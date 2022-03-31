@@ -46,7 +46,7 @@ class EAINet(Net):
             name = "shift+jitter"
         if use_augmentations_test_time and run_type == "eval":
             name = "shift+jitter"
-        self.visual_transform = get_transform(name, size=128, avgpooled_image=avgpooled_image)
+        self.visual_transform = get_transform(name, size=128)
         self.visual_transform.randomize_environments = randomize_augmentations_over_envs
 
         self.visual_encoder = VisualEncoder(
@@ -74,7 +74,7 @@ class EAINet(Net):
                 name = "shift+jitter"
             if use_augmentations_test_time and run_type == "eval":
                 name = "shift+jitter"
-            self.goal_transform = get_transform(name, size=128, avgpooled_image=avgpooled_image)
+            self.goal_transform = get_transform(name, size=128)
             self.goal_transform.randomize_environments = (
                 randomize_augmentations_over_envs
             )
