@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import RunningMeanAndVar
 from torch import nn as nn
+from torch.nn import functional as F
 
 from eai.models import resnet_gn as resnet
 from eai.models import vit
@@ -16,8 +17,8 @@ class VisualEncoder(nn.Module):
         baseplanes: int = 32,
         ngroups: int = 32,
         mask_ratio: float = 0.5,
-        spatial_size: int = 128,
         normalize_visual_inputs: bool = True,
+        avgpooled_image: bool = False,
     ):
         super().__init__()
 
@@ -30,7 +31,9 @@ class VisualEncoder(nn.Module):
             make_backbone = getattr(resnet, backbone)
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
 
-            spatial_size = image_size // 2
+            spatial_size = image_size
+            if avgpooled_image:    
+                spatial_size = image_size // 2
 
             final_spatial = int(spatial_size * self.backbone.final_spatial_compress)
             after_compression_flat_size = 2048

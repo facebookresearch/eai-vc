@@ -36,12 +36,21 @@ EXTRA_CMDS="RL.POLICY.freeze_backbone False \
 SPLIT="train_extra"
 run_training 0
 
-EXP_NAME="DINO_reproduce_finetuned_GRU"
-WEIGHTS_NAME="omnidata_DINO_02.pth"
-BACKBONE="resnet50"
-EXTRA_CMDS="RL.POLICY.freeze_backbone False"
-SPLIT="train_extra"
-run_training 0
+# EXP_NAME="DINO_reproduce_finetuned_LSTM_with_avgpool"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.avgpooled_image True"
+# SPLIT="train_extra"
+# run_training 0
+
+# EXP_NAME="DINO_reproduce_finetuned_GRU"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False"
+# SPLIT="train_extra"
+# run_training 0
 
 
 # EXP_NAME="mae_frozen_first_experiment"

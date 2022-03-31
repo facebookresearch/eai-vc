@@ -32,6 +32,7 @@ class EAINet(Net):
         pretrained_encoder: Optional[str],
         freeze_backbone: bool,
         run_type: str,
+        avgpooled_image: bool,
     ):
         super().__init__()
 
@@ -45,7 +46,7 @@ class EAINet(Net):
             name = "shift+jitter"
         if use_augmentations_test_time and run_type == "eval":
             name = "shift+jitter"
-        self.visual_transform = get_transform(name, size=128)
+        self.visual_transform = get_transform(name, size=128, avgpooled_image=avgpooled_image)
         self.visual_transform.randomize_environments = randomize_augmentations_over_envs
 
         self.visual_encoder = VisualEncoder(
@@ -55,6 +56,7 @@ class EAINet(Net):
             baseplanes=baseplanes,
             ngroups=baseplanes // 2,
             mask_ratio=mask_ratio,
+            avgpooled_image=avgpooled_image,
         )
 
         self.visual_fc = nn.Sequential(
@@ -72,7 +74,7 @@ class EAINet(Net):
                 name = "shift+jitter"
             if use_augmentations_test_time and run_type == "eval":
                 name = "shift+jitter"
-            self.goal_transform = get_transform(name, size=128)
+            self.goal_transform = get_transform(name, size=128, avgpooled_image=avgpooled_image)
             self.goal_transform.randomize_environments = (
                 randomize_augmentations_over_envs
             )
@@ -84,6 +86,7 @@ class EAINet(Net):
                 baseplanes=baseplanes,
                 ngroups=baseplanes // 2,
                 mask_ratio=mask_ratio,
+                avgpooled_image=avgpooled_image,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -197,6 +200,7 @@ class EAIPolicy(Policy):
         pretrained_encoder: Optional[str] = None,
         freeze_backbone: bool = False,
         run_type: str = "train",
+        avgpooled_image: bool = False,
         **kwargs
     ):
         super().__init__(
@@ -215,6 +219,7 @@ class EAIPolicy(Policy):
                 pretrained_encoder=pretrained_encoder,
                 freeze_backbone=freeze_backbone,
                 run_type=run_type,
+                avgpooled_image=avgpooled_image,
             ),
             dim_actions=action_space.n,  # for action distribution
         )
@@ -236,4 +241,5 @@ class EAIPolicy(Policy):
             pretrained_encoder=config.RL.POLICY.pretrained_encoder,
             freeze_backbone=config.RL.POLICY.freeze_backbone,
             run_type=config.RUN_TYPE,
+            avgpooled_image=config.RL.POLICY.avgpooled_image,
         )

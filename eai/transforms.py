@@ -72,33 +72,39 @@ class Transform:
 
 
 class ResizeTransform(Transform):
-    def __init__(self, size):
+    def __init__(self, size, avgpooled_image):
         self.size = size
+        self.avgpooled_image = avgpooled_image
 
     def apply(self, x):
         x = x.permute(0, 3, 1, 2)
         x = TF.resize(x, self.size)
         x = TF.center_crop(x, output_size=self.size)
         x = x.float() / 255.0
+        if self.avgpooled_image:
+            x = F.avg_pool2d(x, 2)
         return x
 
 
 class ShiftAndJitterTransform(Transform):
-    def __init__(self, size):
+    def __init__(self, size, avgpooled_image):
         self.size = size
+        self.avgpooled_image = avgpooled_image
 
     def apply(self, x):
         x = x.permute(0, 3, 1, 2)
         x = TF.resize(x, self.size)
         x = TF.center_crop(x, output_size=self.size)
         x = x.float() / 255.0
+        if self.avgpooled_image:
+            x = F.avg_pool2d(x, 2)
         x = RandomApply([ColorJitter(0.3, 0.3, 0.3, 0.3)], p=1.0)(x)
         x = RandomShiftsAug(4)(x)
         return x
 
 
-def get_transform(name, size):
+def get_transform(name, size, avgpooled_image):
     if name == "resize":
-        return ResizeTransform(size)
+        return ResizeTransform(size, avgpooled_image)
     elif name == "shift+jitter":
-        return ShiftAndJitterTransform(size)
+        return ShiftAndJitterTransform(size, avgpooled_image)
