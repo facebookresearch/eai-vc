@@ -49,12 +49,12 @@ class EAINet(Net):
         self.visual_transform.randomize_environments = randomize_augmentations_over_envs
 
         self.visual_encoder = VisualEncoder(
+            image_size=128,
             backbone=backbone,
             input_channels=3,
             baseplanes=baseplanes,
             ngroups=baseplanes // 2,
             mask_ratio=mask_ratio,
-            spatial_size=128,
         )
 
         self.visual_fc = nn.Sequential(
@@ -78,12 +78,12 @@ class EAINet(Net):
             )
 
             self.goal_visual_encoder = VisualEncoder(
+                image_size=128,
                 backbone=backbone,
                 input_channels=3,
                 baseplanes=baseplanes,
                 ngroups=baseplanes // 2,
                 mask_ratio=mask_ratio,
-                spatial_size=128,
             )
 
             self.goal_visual_fc = nn.Sequential(

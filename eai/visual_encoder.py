@@ -10,6 +10,7 @@ from eai.models import vit
 class VisualEncoder(nn.Module):
     def __init__(
         self,
+        image_size: int,
         backbone: str,
         input_channels: int = 3,
         baseplanes: int = 32,
@@ -28,6 +29,8 @@ class VisualEncoder(nn.Module):
         if "resnet" in backbone:
             make_backbone = getattr(resnet, backbone)
             self.backbone = make_backbone(input_channels, baseplanes, ngroups)
+
+            spatial_size = image_size // 2
 
             final_spatial = int(spatial_size * self.backbone.final_spatial_compress)
             after_compression_flat_size = 2048
@@ -55,7 +58,7 @@ class VisualEncoder(nn.Module):
         elif "vit" in backbone:
             make_backbone = getattr(vit, backbone)
             self.backbone = make_backbone(
-                img_size=spatial_size,
+                img_size=image_size,
                 use_head=False,
                 global_pool=True,
                 mask_ratio=mask_ratio,
