@@ -83,6 +83,8 @@ _CONFIG.BASE_TASK_CONFIG_PATH = "configs/tasks/imagenav.yaml"
 
 _CONFIG.TRAINER_NAME = "mppo"
 _CONFIG.ENV_NAME = "SimpleRLEnv"
+_CONFIG.WANDB_NAME = "mae-for-eai"
+_CONFIG.WANDB_MODE = "online"
 _CONFIG.SENSORS = ["RGB_SENSOR"]
 
 _CONFIG.VIDEO_OPTION = []
@@ -104,6 +106,7 @@ _CONFIG.RUN_TYPE = None
 
 _CONFIG.EVAL.SPLIT = "val"
 _CONFIG.EVAL.USE_CKPT_CONFIG = True
+_CONFIG.EVAL.EVAL_FREQ = 10
 
 _CONFIG.RL.REWARD_MEASURE = "simple_reward"
 _CONFIG.RL.SUCCESS_MEASURE = "success"
@@ -120,6 +123,7 @@ _CONFIG.RL.POLICY.use_augmentations_test_time = True
 _CONFIG.RL.POLICY.randomize_augmentations_over_envs = False
 _CONFIG.RL.POLICY.pretrained_encoder = None
 _CONFIG.RL.POLICY.freeze_backbone = False
+_CONFIG.RL.POLICY.avgpooled_image = False
 
 _CONFIG.RL.PPO.clip_param = 0.2
 _CONFIG.RL.PPO.ppo_epoch = 2
