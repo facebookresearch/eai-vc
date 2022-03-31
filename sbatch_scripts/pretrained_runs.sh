@@ -28,6 +28,22 @@ RUN_EVAL_SCRIPT=false
 # SPLIT="train_extra"
 # run_training 0
 
+EXP_NAME="DINO_reproduce_finetuned_LSTM"
+WEIGHTS_NAME="omnidata_DINO_02.pth"
+BACKBONE="resnet50"
+EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+            RL.POLICY.rnn_type LSTM"
+SPLIT="train_extra"
+run_training 0
+
+EXP_NAME="DINO_reproduce_finetuned_GRU"
+WEIGHTS_NAME="omnidata_DINO_02.pth"
+BACKBONE="resnet50"
+EXTRA_CMDS="RL.POLICY.freeze_backbone False"
+SPLIT="train_extra"
+run_training 0
+
+
 # EXP_NAME="mae_frozen_first_experiment"
 # WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
 # BACKBONE="vit_base_patch16"
@@ -35,10 +51,18 @@ RUN_EVAL_SCRIPT=false
 # SPLIT="train_extra"
 # run_training 0
 
-EXP_NAME="mae_finetuned_first_experiment"
-WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
-BACKBONE="vit_base_patch16"
-EXTRA_CMDS="RL.POLICY.freeze_backbone False"
-SPLIT="train_extra"
-NUM_ENV=6
-run_training 0
+# EXP_NAME="mae_finetuned_first_experiment"
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False"
+# SPLIT="train_extra"
+# NUM_ENV=6
+# run_training 0
+
+# EXP_NAME="mae_scratch_first_experiment"
+# WEIGHTS_NAME=""
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False"
+# SPLIT="train_extra"
+# NUM_ENV=6
+# run_training 0

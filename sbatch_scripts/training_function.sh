@@ -18,6 +18,12 @@ run_training() {
         EVAL_CKPT_PATH_DIR="${CHKP_DIR}/${CHKP_NAME}"
     fi
 
+    if [ -z "${WEIGHTS_NAME}" ]; then
+        WEIGHTS_PATH="None"
+    else
+        WEIGHTS_PATH="${REPO_PATH}/data/ddppo-models/${WEIGHTS_NAME}"
+    fi
+
     # Write commands to file
     CMD_COMMON_OPTS="--exp-config $EXP_CONFIG_PATH \
         BASE_TASK_CONFIG_PATH $BASE_TASK_CONFIG_PATH \
@@ -25,7 +31,7 @@ run_training() {
         CHECKPOINT_FOLDER ${CHKP_DIR} \
         TENSORBOARD_DIR ${LOG_DIR} \
         VIDEO_DIR ${VIDEO_DIR} \
-        RL.POLICY.pretrained_encoder ${REPO_PATH}/data/ddppo-models/${WEIGHTS_NAME} \
+        RL.POLICY.pretrained_encoder ${WEIGHTS_PATH} \
         RL.POLICY.backbone ${BACKBONE} \
         TASK_CONFIG.DATASET.SCENES_DIR ${REPO_PATH}/data/scene_datasets \
         TASK_CONFIG.SEED ${SEED} \
@@ -79,6 +85,7 @@ run_training() {
             --error=$LOG_DIR/log_${VAL_SPLIT}.err \
             --partition=$PARTITION \
             --nodes 1 \
+            --ntasks-per-node 1 \
             --time $TIME \
             sbatch_scripts/sbatch_file.sh
     fi
