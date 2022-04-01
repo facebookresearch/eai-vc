@@ -113,8 +113,10 @@ _CONFIG.RL.SUCCESS_MEASURE = "success"
 
 _CONFIG.RL.POLICY.name = "EAIPolicy"
 _CONFIG.RL.POLICY.backbone = "resnet50"
-_CONFIG.RL.POLICY.baseplanes = 32
-_CONFIG.RL.POLICY.mask_ratio = 0.5
+_CONFIG.RL.POLICY.resnet_baseplanes = 32
+_CONFIG.RL.POLICY.vit_use_fc_norm = True
+_CONFIG.RL.POLICY.vit_global_pool = True
+_CONFIG.RL.POLICY.vit_mask_ratio = 0.5
 _CONFIG.RL.POLICY.hidden_size = 512
 _CONFIG.RL.POLICY.rnn_type = "GRU"
 _CONFIG.RL.POLICY.num_recurrent_layers = 2

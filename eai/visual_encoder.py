@@ -14,9 +14,11 @@ class VisualEncoder(nn.Module):
         image_size: int,
         backbone: str,
         input_channels: int = 3,
-        baseplanes: int = 32,
-        ngroups: int = 32,
-        mask_ratio: float = 0.5,
+        resnet_baseplanes: int = 32,
+        resnet_ngroups: int = 32,
+        vit_use_fc_norm: bool = False,
+        vit_global_pool: bool = False,
+        vit_mask_ratio: float = 0.5,
         normalize_visual_inputs: bool = True,
         avgpooled_image: bool = False,
     ):
@@ -30,10 +32,10 @@ class VisualEncoder(nn.Module):
 
         if "resnet" in backbone:
             make_backbone = getattr(resnet, backbone)
-            self.backbone = make_backbone(input_channels, baseplanes, ngroups)
+            self.backbone = make_backbone(input_channels, resnet_baseplanes, resnet_ngroups)
 
             spatial_size = image_size
-            if self.avgpooled_image:    
+            if self.avgpooled_image:
                 spatial_size = image_size // 2
 
             final_spatial = int(spatial_size * self.backbone.final_spatial_compress)
@@ -63,9 +65,9 @@ class VisualEncoder(nn.Module):
             make_backbone = getattr(vit, backbone)
             self.backbone = make_backbone(
                 img_size=image_size,
-                use_head=False,
-                global_pool=True,
-                mask_ratio=mask_ratio,
+                use_fc_norm=vit_use_fc_norm,
+                global_pool=vit_global_pool,
+                mask_ratio=vit_mask_ratio,
             )
             self.compression = nn.Identity()
             self.output_size = self.backbone.embed_dim
