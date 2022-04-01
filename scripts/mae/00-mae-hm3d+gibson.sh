@@ -19,7 +19,7 @@ srun python -u \
 main_pretrain.py \
 --batch_size 128 \
 --epochs 800 \
---accum_iter 8 \
+--accum_iter 4 \
 --model mae_vit_base_patch16 \
 --mask_ratio 0.75 \
 --norm_pix_loss \
