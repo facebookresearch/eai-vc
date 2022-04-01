@@ -3,7 +3,7 @@
 #SBATCH --output log.out
 #SBATCH --error log.err
 #SBATCH --gres gpu:8
-#SBATCH --nodes 2
+#SBATCH --nodes 1
 #SBATCH --cpus-per-task 7
 #SBATCH --ntasks-per-node 8
 #SBATCH --partition short
