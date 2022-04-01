@@ -6,7 +6,7 @@
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 7
 #SBATCH --ntasks-per-node 8
-#SBATCH --partition short
+#SBATCH --partition long
 #SBATCH --constraint a40
 
 DATA="data/datasets/hm3d+gibson/v1/train"
@@ -19,7 +19,7 @@ srun python -u \
 main_pretrain.py \
 --batch_size 128 \
 --epochs 800 \
---accum_iter 2 \
+--accum_iter 8 \
 --model mae_vit_base_patch16 \
 --mask_ratio 0.75 \
 --norm_pix_loss \
