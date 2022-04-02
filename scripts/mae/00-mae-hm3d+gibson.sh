@@ -9,13 +9,13 @@
 #SBATCH --partition long
 #SBATCH --constraint a40
 
-DATA="data/datasets/hm3d+gibson/v1/train"
-
 MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
 export MASTER_ADDR
 
 cd mae
 source activate eai
+
+DATA="data/datasets/hm3d+gibson/v1/train"
 
 set -x
 srun python -u \
