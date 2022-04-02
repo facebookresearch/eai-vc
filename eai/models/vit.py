@@ -10,25 +10,21 @@ import torch.nn as nn
 class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
     """ Vision Transformer with support for global average pooling
     """
-    def __init__(self, use_head=False, global_pool=False, mask_ratio=None, **kwargs):
+    def __init__(self, use_fc_norm=False, global_pool=False, mask_ratio=None, **kwargs):
         super(VisionTransformer, self).__init__(**kwargs)
 
-        self.use_head = use_head
-        if not self.use_head:
-            del self.head
+        del self.head  # don't use prediction head
 
-        self.global_pool = global_pool
-        if self.global_pool:
+        self.use_fc_norm = use_fc_norm
+        if self.use_fc_norm:
             norm_layer = kwargs['norm_layer']
             embed_dim = kwargs['embed_dim']
             self.fc_norm = norm_layer(embed_dim)
 
             del self.norm  # remove the original norm
 
+        self.global_pool = global_pool
         self.mask_ratio = mask_ratio
-        if self.mask_ratio is not None:
-            # masking currently works with global pooling
-            assert self.global_pool
 
     def random_masking(self, x, mask_ratio):
         """
@@ -61,29 +57,37 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         B = x.shape[0]
         x = self.patch_embed(x)
 
-        cls_tokens = self.cls_token.expand(B, -1, -1)  # stole cls_tokens impl from Phil Wang, thanks
-        x = torch.cat((cls_tokens, x), dim=1)
-        x = x + self.pos_embed
-        x = self.pos_drop(x)
+        # add pos embed w/o cls token
+        x = x + self.pos_embed[:, 1:, :]
 
+        # masking: length -> length * mask_ratio
         if self.mask_ratio is not None:
             x, _, _ = self.random_masking(x, mask_ratio=self.mask_ratio)
 
+        # append cls token
+        cls_token = self.cls_token + self.pos_embed[:, :1, :]
+        cls_tokens = cls_token.expand(x.shape[0], -1, -1)
+        x = torch.cat((cls_tokens, x), dim=1)
+
+        # apply Transformer blocks
         for blk in self.blocks:
             x = blk(x)
+        if not self.use_fc_norm:
+            x = self.norm(x)
 
+        # global pooling or cls token
         if self.global_pool:
             x = x[:, 1:, :].mean(dim=1)  # global pool without cls token
-            outcome = self.fc_norm(x)
         else:
-            x = self.norm(x)
-            outcome = x[:, 0]
+            x = x[:, 0]  # cls token
 
-        return outcome
+        # use fc_norm layer
+        if self.use_fc_norm:
+            x = self.fc_norm(x)
+
+        return x
 
     def forward(self, x):
-        if self.use_head:
-            return super(VisionTransformer, self).forward(x)
         return self.forward_features(x)
 
 
