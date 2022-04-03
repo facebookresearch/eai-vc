@@ -4,13 +4,10 @@
 #SBATCH --error log.err
 #SBATCH --gres gpu:8
 #SBATCH --nodes 1
-#SBATCH --cpus-per-task 7
-#SBATCH --ntasks-per-node 8
+#SBATCH --cpus-per-task 56
+#SBATCH --ntasks-per-node 1
 #SBATCH --partition long
 #SBATCH --constraint a40
-
-MASTER_ADDR=$(srun --ntasks=1 hostname 2>&1 | tail -n1)
-export MASTER_ADDR
 
 cd mae
 source activate eai
@@ -18,7 +15,8 @@ source activate eai
 DATA="data/datasets/hm3d+gibson/v1/train"
 
 set -x
-srun python -u \
+srun torchrun \
+--nproc_per_node 8 \
 main_pretrain.py \
 --batch_size 128 \
 --epochs 800 \
@@ -32,5 +30,5 @@ main_pretrain.py \
 --data_path $DATA \
 --seed $RANDOM \
 --num_workers 5 \
---wandb_name "mae-%j" \
+--wandb_name "mae-$SLURM_JOB_ID" \
 --wandb_mode "online" \
