@@ -6,7 +6,7 @@
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 56
 #SBATCH --ntasks-per-node 1
-#SBATCH --partition short
+#SBATCH --partition long
 #SBATCH --constraint a40
 
 cd tmae
