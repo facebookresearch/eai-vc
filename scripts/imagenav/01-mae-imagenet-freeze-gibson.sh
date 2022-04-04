@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name mae
+#SBATCH --job-name imagenav
 #SBATCH --output log.out
 #SBATCH --error log.err
-#SBATCH --gres gpu:8
+#SBATCH --gres gpu:4
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 7
 #SBATCH --ntasks-per-node 8
@@ -23,6 +23,9 @@ srun \
 python -u run.py \
 --exp-config configs/experiments/imagenav.yaml \
 --run-type train \
+NUM_ENVIRONMENTS 20 \
 RL.POLICY.backbone vit_base_patch16 \
-RL.POLICY.pretrained_encoder data/models/mae_pretrain_vit_base_full.pth \
+RL.POLICY.vit_use_fc_norm False \
+RL.POLICY.vit_global_pool True \
+RL.POLICY.pretrained_encoder data/models/osd_1_45m_mae_base_01.pth \
 RL.POLICY.freeze_backbone True \
