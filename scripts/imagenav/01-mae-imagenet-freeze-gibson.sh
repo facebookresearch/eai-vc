@@ -5,10 +5,11 @@
 #SBATCH --gres gpu:4
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 7
-#SBATCH --ntasks-per-node 8
+#SBATCH --ntasks-per-node 4
 #SBATCH --signal USR1@600
 #SBATCH --partition short
 #SBATCH --constraint a40
+#SBATCH --requeue
 
 export GLOG_minloglevel=2
 export MAGNUM_LOG=quiet
