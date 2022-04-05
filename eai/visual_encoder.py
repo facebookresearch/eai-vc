@@ -1,3 +1,4 @@
+from typing import Optional
 import numpy as np
 import torch
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import RunningMeanAndVar
@@ -18,7 +19,7 @@ class VisualEncoder(nn.Module):
         resnet_ngroups: int = 32,
         vit_use_fc_norm: bool = False,
         vit_global_pool: bool = False,
-        vit_mask_ratio: float = 0.5,
+        vit_mask_ratio: Optional[float] = None,
         normalize_visual_inputs: bool = True,
         avgpooled_image: bool = False,
     ):
