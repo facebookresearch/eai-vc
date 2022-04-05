@@ -198,7 +198,7 @@ class EAIPolicy(Policy):
         resnet_baseplanes: int = 32,
         vit_use_fc_norm: bool = False,
         vit_global_pool: bool = False,
-        vit_mask_ratio: float = 0.5,
+        vit_mask_ratio: Optional[float] = None,
         hidden_size: int = 512,
         rnn_type: str = "GRU",
         num_recurrent_layers: int = 1,
