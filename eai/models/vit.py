@@ -79,7 +79,7 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         if self.global_pool:
             x = x[:, 1:, :].mean(dim=1)  # global pool without cls token
         else:
-            x = x[:, 1:, :]  # remove cls token
+            x = x[:, 1:]  # remove cls token
 
         # use fc_norm layer
         if self.use_fc_norm:
