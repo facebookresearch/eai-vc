@@ -25,8 +25,5 @@ python -u run.py \
 --exp-config configs/experiments/imagenav.yaml \
 --run-type train \
 RL.POLICY.backbone vit_base_patch16 \
-RL.POLICY.vit_use_fc_norm False \
-RL.POLICY.vit_global_pool False \
-RL.POLICY.vit_mask_ratio None \
 RL.POLICY.pretrained_encoder data/models/osd_1_45m_mae_base_01.pth \
 RL.POLICY.freeze_backbone False \
