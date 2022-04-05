@@ -1,4 +1,5 @@
 from typing import Optional
+
 import numpy as np
 import torch
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import RunningMeanAndVar
