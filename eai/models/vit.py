@@ -54,7 +54,6 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         return x_masked, mask, ids_restore
 
     def forward_features(self, x):
-        B = x.shape[0]
         x = self.patch_embed(x)
 
         # add pos embed w/o cls token
