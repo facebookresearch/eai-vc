@@ -18,10 +18,10 @@ set -x
 srun torchrun \
 --nproc_per_node 8 \
 main_pretrain.py \
---batch_size 128 \
+--batch_size 512 \
 --epochs 800 \
---accum_iter 4 \
---model mae_vit_base_patch16 \
+--accum_iter 1 \
+--model mae_vit_small_patch16 \
 --mask_ratio 0.75 \
 --norm_pix_loss \
 --weight_decay 0.05 \
