@@ -45,12 +45,21 @@ RUN_EVAL_SCRIPT=false
 # SPLIT="train_extra"
 # run_training 0
 
-EXP_NAME="DINO_reproduce_finetuned_GRU"
-WEIGHTS_NAME="omnidata_DINO_02.pth"
-BACKBONE="resnet50"
-EXTRA_CMDS="RL.POLICY.freeze_backbone False"
-SPLIT="train_extra"
-run_training 0
+# EXP_NAME="DINO_reproduce_finetuned_LSTM_diverse_augs"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True"
+# SPLIT="train_extra"
+# run_training 0
+
+# EXP_NAME="DINO_reproduce_finetuned_GRU"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False"
+# SPLIT="train_extra"
+# run_training 0
 
 
 # EXP_NAME="mae_frozen_first_experiment"
@@ -60,12 +69,109 @@ run_training 0
 # SPLIT="train_extra"
 # run_training 0
 
+# EXP_NAME="mae_frozen_old_masking"
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+#             RL.POLICY.vit_use_fc_norm False \
+#             RL.POLICY.vit_global_pool True"
+# SPLIT="train_extra"
+# run_training 0
+
+# EXP_NAME="mae_frozen_without_augmentations"
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+#             RL.POLICY.use_augmentations False \
+#             RL.POLICY.use_augmentations_test_time False"
+# SPLIT="train_extra"
+# run_training 0
+
 # EXP_NAME="mae_finetuned_first_experiment"
 # WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
 # BACKBONE="vit_base_patch16"
 # EXTRA_CMDS="RL.POLICY.freeze_backbone False"
 # SPLIT="train_extra"
 # NUM_ENV=6
+# run_training 0
+
+# EXP_NAME="mae_finetuned_LSTM_" #randomised_envs
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="mae_finetuned_GRU" #randomised_envs
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type GRU \
+#             RL.POLICY.randomize_augmentations_over_envs False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="mae_finetuned_LSTM" #randomised_envs
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# run_training 0
+
+# EXP_NAME="tmae_finetuned_LSTM_randomised_envs"
+# WEIGHTS_NAME="tmae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_finetuned_masking_0_75"
+# WEIGHTS_NAME="tmae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True \
+#             RL.POLICY.vit_mask_ratio 0.75"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# run_training 0
+
+# EXP_NAME="tmae_finetuned_masking_0_25"
+# WEIGHTS_NAME="tmae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True \
+#             RL.POLICY.vit_mask_ratio 0.25"
+# SPLIT="train_extra"
+# NUM_ENV=5
+# NODES=8
+# run_training 0
+
+# EXP_NAME="tmae_finetuned_masking_0"
+# WEIGHTS_NAME="tmae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True \
+#             RL.POLICY.vit_mask_ratio 0.0"
+# SPLIT="train_extra"
+# NUM_ENV=5
+# NODES=8
 # run_training 0
 
 # EXP_NAME="mae_scratch_first_experiment"

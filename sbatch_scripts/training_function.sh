@@ -67,7 +67,7 @@ run_training() {
         EVAL.SPLIT ${VAL_SPLIT} \
         TASK_CONFIG.DATASET.CONTENT_SCENES [\"*\"] \
         TEST_EPISODE_COUNT ${TEST_EPISODE_COUNT} \
-        NUM_ENVIRONMENTS 10 \
+        NUM_ENVIRONMENTS 14 \
         RL.PPO.num_mini_batch 1 \
         TASK_CONFIG.DATASET.DATA_PATH ${REPO_PATH}/data/datasets/pointnav/${ENVIRONMENT}/v1/${VAL_SPLIT}/${VAL_SPLIT}.json.gz \
         TASK_CONFIG.TASK.TOP_DOWN_MAP.MAP_RESOLUTION 1024 \
