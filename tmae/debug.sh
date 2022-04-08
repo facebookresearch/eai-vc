@@ -8,10 +8,10 @@ set -x
 torchrun \
 --nproc_per_node $NGPUS \
 main_pretrain.py \
---batch_size 128 \
+--batch_size 64 \
 --epochs 800 \
 --accum_iter 4 \
---model mae_vit_base_patch16 \
+--model mae_vit_small_patch16 \
 --max_offset 16 \
 --mask_ratio1 0.75 \
 --mask_ratio2 0.95 \
@@ -22,4 +22,4 @@ main_pretrain.py \
 --warmup_epochs 40 \
 --data_path $DATA \
 --wandb_name "debug-tmae" \
---wandb_mode "online" \
+--wandb_mode "disabled" \
