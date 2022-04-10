@@ -198,7 +198,7 @@ class ModifiedPPOTrainer(PPOTrainer):
                 current_ckpt = None
                 while current_ckpt is None:
                     current_ckpt, current_ckpt_idx = utils.poll_checkpoint_folder(
-                        self.config.EVAL_CKPT_PATH_DIR, prev_ckpt_ind, self.config.EVAL.EVAL_FREQ
+                        self.config.EVAL_CKPT_PATH_DIR, prev_ckpt_ind, self.config.EVAL.EVAL_FREQ, self.config.NUM_CHECKPOINTS
                     )
                     time.sleep(2)  # sleep for 2 secs before polling again
                 

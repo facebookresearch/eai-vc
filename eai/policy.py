@@ -35,6 +35,7 @@ class EAINet(Net):
         freeze_backbone: bool,
         run_type: str,
         avgpooled_image: bool,
+        augmentations_name: str,
     ):
         super().__init__()
 
@@ -45,9 +46,9 @@ class EAINet(Net):
 
         name = "resize"
         if use_augmentations and run_type == "train":
-            name = "shift+jitter"
+            name = augmentations_name
         if use_augmentations_test_time and run_type == "eval":
-            name = "shift+jitter"
+            name = augmentations_name
         self.visual_transform = get_transform(name, size=128)
         self.visual_transform.randomize_environments = randomize_augmentations_over_envs
 
@@ -75,9 +76,9 @@ class EAINet(Net):
         if ImageGoalSensor.cls_uuid in observation_space.spaces:
             name = "resize"
             if use_augmentations and run_type == "train":
-                name = "shift+jitter"
+                name = augmentations_name
             if use_augmentations_test_time and run_type == "eval":
-                name = "shift+jitter"
+                name = augmentations_name
             self.goal_transform = get_transform(name, size=128)
             self.goal_transform.randomize_environments = (
                 randomize_augmentations_over_envs
@@ -209,6 +210,7 @@ class EAIPolicy(Policy):
         freeze_backbone: bool = False,
         run_type: str = "train",
         avgpooled_image: bool = False,
+        augmentations_name: str = "",
         **kwargs
     ):
         super().__init__(
@@ -230,6 +232,7 @@ class EAIPolicy(Policy):
                 freeze_backbone=freeze_backbone,
                 run_type=run_type,
                 avgpooled_image=avgpooled_image,
+                augmentations_name=augmentations_name,
             ),
             dim_actions=action_space.n,  # for action distribution
         )
@@ -254,4 +257,5 @@ class EAIPolicy(Policy):
             freeze_backbone=config.RL.POLICY.freeze_backbone,
             run_type=config.RUN_TYPE,
             avgpooled_image=config.RL.POLICY.avgpooled_image,
+            augmentations_name=config.RL.POLICY.augmentations_name,
         )

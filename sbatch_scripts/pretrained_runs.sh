@@ -78,6 +78,14 @@ RUN_EVAL_SCRIPT=false
 # SPLIT="train_extra"
 # run_training 0
 
+# EXP_NAME="mae_frozen_with_compression"
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
+# run_training 0
+
 # EXP_NAME="mae_frozen_without_augmentations"
 # WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
 # BACKBONE="vit_base_patch16"
@@ -106,7 +114,7 @@ RUN_EVAL_SCRIPT=false
 # NODES=5
 # run_training 0
 
-# EXP_NAME="mae_finetuned_GRU" #randomised_envs
+# EXP_NAME="mae_finetuned_GRU"
 # WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
 # BACKBONE="vit_base_patch16"
 # EXTRA_CMDS="RL.POLICY.freeze_backbone False \
@@ -117,7 +125,7 @@ RUN_EVAL_SCRIPT=false
 # NODES=5
 # run_training 0
 
-# EXP_NAME="mae_finetuned_LSTM" #randomised_envs
+# EXP_NAME="mae_finetuned_LSTM"
 # WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
 # BACKBONE="vit_base_patch16"
 # EXTRA_CMDS="RL.POLICY.freeze_backbone False \
@@ -173,6 +181,36 @@ RUN_EVAL_SCRIPT=false
 # NUM_ENV=5
 # NODES=8
 # run_training 0
+
+EXP_NAME="tmae_small_finetuned_LSTM"
+WEIGHTS_NAME="tmae_small_01.pth"
+BACKBONE="vit_small_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+            RL.POLICY.rnn_type LSTM \
+            RL.PPO.lr 2.5e-4"
+SPLIT="train_extra"
+run_training 0
+
+EXP_NAME="tmae_small_finetuned_LSTM_no_augs"
+WEIGHTS_NAME="tmae_small_01.pth"
+BACKBONE="vit_small_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+            RL.POLICY.rnn_type LSTM \
+            RL.POLICY.use_augmentations_test_time False \
+            RL.POLICY.use_augmentations False \
+            RL.PPO.lr 2.5e-4"
+SPLIT="train_extra"
+run_training 0
+
+EXP_NAME="tmae_small_finetuned_LSTM_no_cj"
+WEIGHTS_NAME="tmae_small_01.pth"
+BACKBONE="vit_small_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+            RL.POLICY.rnn_type LSTM \
+            RL.PPO.lr 2.5e-4 \
+            RL.POLICY.augmentations_name shift"
+SPLIT="train_extra"
+run_training 0
 
 # EXP_NAME="mae_scratch_first_experiment"
 # WEIGHTS_NAME=""

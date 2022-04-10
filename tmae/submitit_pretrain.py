@@ -22,7 +22,6 @@ def parse_args():
     parser.add_argument("--ngpus", default=8, type=int, help="Number of gpus to request on each node")
     parser.add_argument("--nodes", default=2, type=int, help="Number of nodes to request")
     parser.add_argument("--timeout", default=4320, type=int, help="Duration of the job")
-    parser.add_argument("--job_dir", default="", type=str, help="Job dir. Leave empty for automatic.")
 
     parser.add_argument("--partition", default="learnfair", type=str, help="Partition where to submit")
     parser.add_argument("--use_volta32", action='store_true', help="Request 32G V100 GPUs")
@@ -76,7 +75,6 @@ class Trainer(object):
 
         job_env = submitit.JobEnvironment()
         self.args.output_dir = Path(str(self.args.output_dir).replace("%j", str(job_env.job_id)))
-        self.args.log_dir = self.args.output_dir
         self.args.gpu = job_env.local_rank
         self.args.rank = job_env.global_rank
         self.args.world_size = job_env.num_tasks
@@ -85,11 +83,14 @@ class Trainer(object):
 
 def main():
     args = parse_args()
-    if args.job_dir == "":
-        args.job_dir = get_shared_folder() / "%j"
+    if args.output_dir == "":
+        args.output_dir = get_shared_folder() / "%j"
+    else:
+        args.output_dir = os.path.join(args.output_dir, args.wandb_name)
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     # Note that the folder will depend on the job_id, to easily track experiments
-    executor = submitit.AutoExecutor(folder=args.job_dir, slurm_max_num_timeout=30)
+    executor = submitit.AutoExecutor(folder=args.output_dir, slurm_max_num_timeout=30)
 
     num_gpus_per_node = args.ngpus
     nodes = args.nodes
@@ -118,13 +119,12 @@ def main():
     executor.update_parameters(name="mae")
 
     args.dist_url = get_init_file().as_uri()
-    args.output_dir = args.job_dir
 
     trainer = Trainer(args)
     job = executor.submit(trainer)
 
-    # print("Submitted job_id:", job.job_id)
-    print(job.job_id)
+    print(f"Submitted job_id: {job.job_id}")
+    print(f"Logs and checkpoints will be saved at: {args.output_dir}")
 
 
 if __name__ == "__main__":

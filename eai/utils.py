@@ -85,7 +85,7 @@ def setup_wandb(config, train):
     wandb.run.save()
 
 def poll_checkpoint_folder(
-    checkpoint_folder: str, previous_ckpt_ind: int, suggested_interval: int
+    checkpoint_folder: str, previous_ckpt_ind: int, suggested_interval: int, max_ckpts: int
 ) -> Optional[str]:
     r"""Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
     (sorted by time of last modification).
@@ -114,7 +114,7 @@ def poll_checkpoint_folder(
 
     if ind < len(models_paths):
         return models_paths[ind], ind
-    elif previous_ckpt_ind + 1 < len(models_paths):
+    elif ind == max_ckpts and len(models_paths) == max_ckpts:
         return models_paths[-1], len(models_paths) - 1
 
     return None, previous_ckpt_ind

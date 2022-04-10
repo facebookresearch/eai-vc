@@ -126,6 +126,7 @@ _CONFIG.RL.POLICY.randomize_augmentations_over_envs = False
 _CONFIG.RL.POLICY.pretrained_encoder = None
 _CONFIG.RL.POLICY.freeze_backbone = False
 _CONFIG.RL.POLICY.avgpooled_image = False
+_CONFIG.RL.POLICY.augmentations_name = "jitter+shift"
 
 _CONFIG.RL.PPO.clip_param = 0.2
 _CONFIG.RL.PPO.ppo_epoch = 2

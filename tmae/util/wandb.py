@@ -12,7 +12,7 @@ def setup_wandb_output_dir(args: Namespace):
     args.output_dir = os.path.join(args.output_dir, args.wandb_name)
 
 
-def setup_wandb(args, project="tmae_training"):
+def setup_wandb(args, project="mae_training"):
     resume = None
     wandb_filename = os.path.join(args.output_dir, "wandb_id.txt")
     if os.path.exists(wandb_filename):

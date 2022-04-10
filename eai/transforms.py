@@ -84,21 +84,25 @@ class ResizeTransform(Transform):
 
 
 class ShiftAndJitterTransform(Transform):
-    def __init__(self, size):
+    def __init__(self, augmentations_name, size):
         self.size = size
+        self.augmentations_name = augmentations_name
 
     def apply(self, x):
         x = x.permute(0, 3, 1, 2)
         x = TF.resize(x, self.size)
         x = TF.center_crop(x, output_size=self.size)
         x = x.float() / 255.0
-        x = RandomApply([ColorJitter(0.3, 0.3, 0.3, 0.3)], p=1.0)(x)
-        x = RandomShiftsAug(4)(x)
+        if "jitter" in self.augmentations_name:
+            x = RandomApply([ColorJitter(0.3, 0.3, 0.3, 0.3)], p=1.0)(x)
+        if "shift" in self.augmentations_name:
+            x = RandomShiftsAug(4)(x)
         return x
-
 
 def get_transform(name, size):
     if name == "resize":
         return ResizeTransform(size)
-    elif name == "shift+jitter":
-        return ShiftAndJitterTransform(size)
+    elif "shift" in name or "jitter" in name:
+        return ShiftAndJitterTransform(name, size)
+    else:
+        raise ValueError(f"Unknown transform {name}")
