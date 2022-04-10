@@ -67,3 +67,18 @@ python submitit_pretrain.py \
     --data_path /checkpoint/karmeshyadav/hm3d+gibson/v1/train \
     --output_dir /checkpoint/karmeshyadav/mae_training/ \
     --partition learnlab --use_volta32
+
+python submitit_pretrain.py \
+    --wandb_name mae_vit_small_02 \
+    --nodes 1 \
+    --batch_size 512 \
+    --accum_iter 1 \
+    --model mae_vit_small_patch16 \
+    --norm_pix_loss \
+    --mask_ratio 0.75 \
+    --epochs 800 \
+    --warmup_epochs 40 \
+    --blr 1.5e-4 --weight_decay 0.05 \
+    --data_path /checkpoint/karmeshyadav/hm3d+gibson/v1/train \
+    --output_dir /checkpoint/karmeshyadav/mae_training/ \
+    --partition learnlab --use_volta32

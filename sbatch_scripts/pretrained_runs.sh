@@ -95,6 +95,14 @@ RUN_EVAL_SCRIPT=false
 # SPLIT="train_extra"
 # run_training 0
 
+# EXP_NAME="mae_frozen_with_compression"
+# WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
+# run_training 0
+
 # EXP_NAME="mae_finetuned_first_experiment"
 # WEIGHTS_NAME="osd_1_45m_mae_base_01.pth"
 # BACKBONE="vit_base_patch16"
@@ -133,6 +141,15 @@ RUN_EVAL_SCRIPT=false
 #             RL.POLICY.randomize_augmentations_over_envs False"
 # SPLIT="train_extra"
 # NUM_ENV=10
+# run_training 0
+
+# EXP_NAME="mae_small_finetuned_LSTM"
+# WEIGHTS_NAME="mae_small_01.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
 # run_training 0
 
 # EXP_NAME="tmae_finetuned_LSTM_randomised_envs"
@@ -182,35 +199,55 @@ RUN_EVAL_SCRIPT=false
 # NODES=8
 # run_training 0
 
-EXP_NAME="tmae_small_finetuned_LSTM"
-WEIGHTS_NAME="tmae_small_01.pth"
-BACKBONE="vit_small_patch16"
+EXP_NAME="tmae_base_finetuned_LSTM_compression_layer"
+WEIGHTS_NAME="tmae_base_01.pth"
+BACKBONE="vit_base_patch16"
 EXTRA_CMDS="RL.POLICY.freeze_backbone False \
             RL.POLICY.rnn_type LSTM \
             RL.PPO.lr 2.5e-4"
 SPLIT="train_extra"
 run_training 0
 
-EXP_NAME="tmae_small_finetuned_LSTM_no_augs"
-WEIGHTS_NAME="tmae_small_01.pth"
-BACKBONE="vit_small_patch16"
-EXTRA_CMDS="RL.POLICY.freeze_backbone False \
-            RL.POLICY.rnn_type LSTM \
-            RL.POLICY.use_augmentations_test_time False \
-            RL.POLICY.use_augmentations False \
-            RL.PPO.lr 2.5e-4"
-SPLIT="train_extra"
-run_training 0
+# EXP_NAME="tmae_small_finetuned_LSTM"
+# WEIGHTS_NAME="tmae_small_01.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
+# run_training 0
 
-EXP_NAME="tmae_small_finetuned_LSTM_no_cj"
+# EXP_NAME="tmae_small_finetuned_LSTM_no_augs"
+# WEIGHTS_NAME="tmae_small_01.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.use_augmentations_test_time False \
+#             RL.POLICY.use_augmentations False \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
+# run_training 0
+
+# EXP_NAME="tmae_small_finetuned_LSTM_no_cj"
+# WEIGHTS_NAME="tmae_small_01.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.PPO.lr 2.5e-4 \
+#             RL.POLICY.augmentations_name shift"
+# SPLIT="train_extra"
+# run_training 0
+
+EXP_NAME="tmae_small_finetuned_LSTM_randomized_envs"
 WEIGHTS_NAME="tmae_small_01.pth"
 BACKBONE="vit_small_patch16"
 EXTRA_CMDS="RL.POLICY.freeze_backbone False \
             RL.POLICY.rnn_type LSTM \
             RL.PPO.lr 2.5e-4 \
-            RL.POLICY.augmentations_name shift"
+            RL.POLICY.randomize_augmentations_over_envs True"
 SPLIT="train_extra"
 run_training 0
+
 
 # EXP_NAME="mae_scratch_first_experiment"
 # WEIGHTS_NAME=""
