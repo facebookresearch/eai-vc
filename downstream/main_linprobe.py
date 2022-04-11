@@ -38,6 +38,7 @@ import models_vit
 
 from engine_finetune import train_one_epoch, evaluate
 
+from datasets.places_dataset import PlacesIndoor  # ** NEW **
 
 def get_args_parser():
     parser = argparse.ArgumentParser('MAE linear probing for image classification', add_help=False)
@@ -73,6 +74,10 @@ def get_args_parser():
     parser.set_defaults(global_pool=False)
     parser.add_argument('--cls_token', action='store_false', dest='global_pool',
                         help='Use class token instead of global pool for classification')
+
+    # Dataset type ** NEW **
+    parser.add_argument('--dataset', default='imagenet', type=str, choices=['imagenet', 'places-indoor'],
+                        help='dataset path')
 
     # Dataset parameters
     parser.add_argument('--data_path', default='/datasets01/imagenet_full_size/061417/', type=str,
@@ -139,8 +144,15 @@ def main(args):
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
-    dataset_train = datasets.ImageFolder(os.path.join(args.data_path, 'train'), transform=transform_train)
-    dataset_val = datasets.ImageFolder(os.path.join(args.data_path, 'val'), transform=transform_val)
+    # dataset type ** NEW **
+    if args.dataset == "imagenet":
+        dataset_class = datasets.ImageFolder
+    elif args.dataset == "places-indoor":
+        dataset_class = PlacesIndoor
+    else:
+        raise ValueError("invalid dataset type: {}".format(args.dataset))
+    dataset_train = dataset_class(os.path.join(args.data_path, 'train'), transform=transform_train)
+    dataset_val = dataset_class(os.path.join(args.data_path, 'val'), transform=transform_val)
     print(dataset_train)
     print(dataset_val)
 
