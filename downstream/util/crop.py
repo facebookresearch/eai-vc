@@ -21,7 +21,7 @@ class RandomResizedCrop(transforms.RandomResizedCrop):
     """
     @staticmethod
     def get_params(img, scale, ratio):
-        width, height = F._get_image_size(img)
+        width, height = F.get_image_size(img)
         area = height * width
 
         target_area = area * torch.empty(1).uniform_(scale[0], scale[1]).item()
