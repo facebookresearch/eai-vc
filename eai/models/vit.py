@@ -10,8 +10,9 @@ import torch.nn as nn
 class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
     """ Vision Transformer with support for global average pooling
     """
-    def __init__(self, use_fc_norm=False, global_pool=False, mask_ratio=None, **kwargs):
+    def __init__(self, use_fc_norm=False, global_pool=False, use_cls=False, mask_ratio=None, **kwargs):
         super(VisionTransformer, self).__init__(**kwargs)
+        assert not (global_pool and use_cls)
 
         del self.head  # don't use prediction head
 
@@ -24,6 +25,7 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
             del self.norm  # remove the original norm
 
         self.global_pool = global_pool
+        self.use_cls = use_cls
         self.mask_ratio = mask_ratio
 
     def random_masking(self, x, mask_ratio):
@@ -77,6 +79,8 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         # global pooling or remove cls token
         if self.global_pool:
             x = x[:, 1:, :].mean(dim=1)  # global pool without cls token
+        elif self.use_cls:
+            x = x[:, 0]  # use cls token
         else:
             x = x[:, 1:]  # remove cls token
 

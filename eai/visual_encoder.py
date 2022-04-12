@@ -20,6 +20,7 @@ class VisualEncoder(nn.Module):
         resnet_ngroups: int = 32,
         vit_use_fc_norm: bool = False,
         vit_global_pool: bool = False,
+        vit_use_cls: bool = False,
         vit_mask_ratio: Optional[float] = None,
         normalize_visual_inputs: bool = True,
         avgpooled_image: bool = False,
@@ -71,10 +72,11 @@ class VisualEncoder(nn.Module):
                 img_size=image_size,
                 use_fc_norm=vit_use_fc_norm,
                 global_pool=vit_global_pool,
+                use_cls=vit_use_cls,
                 mask_ratio=vit_mask_ratio,
             )
 
-            if self.backbone.global_pool:
+            if self.backbone.global_pool or self.backbone.use_cls:
                 self.compression = nn.Identity()
                 self.output_size = self.backbone.embed_dim
             else:

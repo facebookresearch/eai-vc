@@ -116,6 +116,7 @@ _CONFIG.RL.POLICY.backbone = "resnet50"
 _CONFIG.RL.POLICY.resnet_baseplanes = 32
 _CONFIG.RL.POLICY.vit_use_fc_norm = False
 _CONFIG.RL.POLICY.vit_global_pool = False
+_CONFIG.RL.POLICY.vit_use_cls = False
 _CONFIG.RL.POLICY.vit_mask_ratio = None
 _CONFIG.RL.POLICY.hidden_size = 512
 _CONFIG.RL.POLICY.rnn_type = "GRU"
