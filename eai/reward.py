@@ -32,8 +32,8 @@ class SimpleReward(Measure):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
-                Success.cls_uuid,
                 DistanceToGoal.cls_uuid,
+                Success.cls_uuid,
                 AngleToGoal.cls_uuid,
                 AngleSuccess.cls_uuid,
             ],
