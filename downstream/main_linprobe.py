@@ -19,7 +19,6 @@ from pathlib import Path
 
 import torch
 import torch.backends.cudnn as cudnn
-from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
@@ -31,6 +30,7 @@ from timm.models.layers import trunc_normal_
 import util.misc as misc
 from util.pos_embed import interpolate_pos_embed
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
+from util.wandb import setup_wandb, setup_wandb_output_dir
 from util.lars import LARS
 from util.crop import RandomResizedCrop
 
@@ -115,6 +115,12 @@ def get_args_parser():
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
 
+    # wandb arguments ** NEW **
+    parser.add_argument("--wandb_name", default="", type=str,
+                        help="name to be used for wandb logging")
+    parser.add_argument("--wandb_mode", default="online", type=str,
+                        help="wandb mode to use for storing data, choose"
+                        "online, offline or disabled")
     return parser
 
 
@@ -153,8 +159,8 @@ def main(args):
         raise ValueError("invalid dataset type: {}".format(args.dataset))
     dataset_train = dataset_class(os.path.join(args.data_path, 'train'), transform=transform_train)
     dataset_val = dataset_class(os.path.join(args.data_path, 'val'), transform=transform_val)
-    print(dataset_train)
-    print(dataset_val)
+    print("train_dataset size: {:,}".format(len(dataset_train)))
+    print("train_dataset size: {:,}".format(len(dataset_val)))
 
     if True:  # args.distributed:
         num_tasks = misc.get_world_size()
@@ -176,11 +182,8 @@ def main(args):
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
         sampler_val = torch.utils.data.SequentialSampler(dataset_val)
 
-    if global_rank == 0 and args.log_dir is not None and not args.eval:
-        os.makedirs(args.log_dir, exist_ok=True)
-        log_writer = SummaryWriter(log_dir=args.log_dir)
-    else:
-        log_writer = None
+    if global_rank == 0:
+        setup_wandb(args)
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
@@ -286,7 +289,6 @@ def main(args):
             model, criterion, data_loader_train,
             optimizer, device, epoch, loss_scaler,
             max_norm=None,
-            log_writer=log_writer,
             args=args
         )
         if args.output_dir:
@@ -299,10 +301,10 @@ def main(args):
         max_accuracy = max(max_accuracy, test_stats["acc1"])
         print(f'Max accuracy: {max_accuracy:.2f}%')
 
-        if log_writer is not None:
-            log_writer.add_scalar('perf/test_acc1', test_stats['acc1'], epoch)
-            log_writer.add_scalar('perf/test_acc5', test_stats['acc5'], epoch)
-            log_writer.add_scalar('perf/test_loss', test_stats['loss'], epoch)
+        # if log_writer is not None:
+        #     log_writer.add_scalar('perf/test_acc1', test_stats['acc1'], epoch)
+        #     log_writer.add_scalar('perf/test_acc5', test_stats['acc5'], epoch)
+        #     log_writer.add_scalar('perf/test_loss', test_stats['loss'], epoch)
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                         **{f'test_{k}': v for k, v in test_stats.items()},
@@ -310,8 +312,6 @@ def main(args):
                         'n_parameters': n_parameters}
 
         if args.output_dir and misc.is_main_process():
-            if log_writer is not None:
-                log_writer.flush()
             with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
                 f.write(json.dumps(log_stats) + "\n")
 
@@ -323,6 +323,7 @@ def main(args):
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
+    setup_wandb_output_dir(args)
     if args.output_dir:
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     main(args)
