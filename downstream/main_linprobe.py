@@ -160,7 +160,7 @@ def main(args):
     dataset_train = dataset_class(os.path.join(args.data_path, 'train'), transform=transform_train)
     dataset_val = dataset_class(os.path.join(args.data_path, 'val'), transform=transform_val)
     print("train_dataset size: {:,}".format(len(dataset_train)))
-    print("train_dataset size: {:,}".format(len(dataset_val)))
+    print("val_dataset size: {:,}".format(len(dataset_val)))
 
     if True:  # args.distributed:
         num_tasks = misc.get_world_size()
