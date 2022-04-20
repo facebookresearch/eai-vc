@@ -85,9 +85,9 @@
 
 python submitit_pretrain.py \
     --wandb_name mae_vit_base_01 \
-    --nodes 4 \
-    --batch_size 128 \
-    --model mae_vit_large_patch16 \
+    --nodes 2 \
+    --batch_size 256 \
+    --model mae_vit_base_patch16 \
     --norm_pix_loss \
     --mask_ratio 0.75 \
     --epochs 800 \
@@ -99,9 +99,9 @@ python submitit_pretrain.py \
 
 python submitit_pretrain.py \
     --wandb_name mae_vit_base_02 \
-    --nodes 4 \
-    --batch_size 128 \
-    --model mae_vit_large_patch16 \
+    --nodes 2 \
+    --batch_size 256 \
+    --model mae_vit_base_patch16 \
     --norm_pix_loss \
     --mask_ratio 0.75 \
     --epochs 400 \
