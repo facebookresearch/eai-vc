@@ -8,8 +8,8 @@ set -x
 torchrun \
 --nproc_per_node $NGPUS \
 main_pretrain.py \
---batch_size 64 \
---epochs 800 \
+--batch_size 256 \
+--epochs 400 \
 --accum_iter 4 \
 --model mae_vit_small_patch16 \
 --max_offset 16 \
@@ -21,5 +21,7 @@ main_pretrain.py \
 --blr 1.5e-4 \
 --warmup_epochs 40 \
 --data_path $DATA \
+--num_workers 7 \
 --wandb_name "debug-tmae" \
 --wandb_mode "disabled" \
+--color_jitter \

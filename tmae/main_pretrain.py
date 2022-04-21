@@ -111,8 +111,8 @@ def get_args_parser():
     parser.add_argument("--wandb_mode", default="online", type=str,
                         help="wandb mode to use for storing data, choose"
                         "online, offline or disabled")
-    
-    # Augmentation parameters
+
+    # Augmentation parameters ** NEW **
     parser.add_argument('--color_jitter', action='store_true', default=False,
                         help='apply color jitter')
 
@@ -135,25 +135,24 @@ def main(args):
     cudnn.benchmark = True
 
     # simple augmentation
+    transform_train = transforms.Compose(
+        [
+            transforms.RandomResizedCrop(args.input_size, scale=(0.2, 1.0), interpolation=3),  # 3 is bicubic
+            transforms.RandomHorizontalFlip(),
+        ]
+    )
+    extra_transform = None
     if args.color_jitter:
-        transform_train = transforms.Compose([
-                transforms.RandomResizedCrop(args.input_size, scale=(0.2, 1.0), interpolation=3),  # 3 is bicubic
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomApply(
-                    [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
-                    p=0.8
-                ),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])    
-    else:
-        transform_train = transforms.Compose([
-                transforms.RandomResizedCrop(args.input_size, scale=(0.2, 1.0), interpolation=3),  # 3 is bicubic
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+        extra_transform = transforms.RandomApply(
+            [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
+            p=0.8,
+        )
     dataset_train = PathDataset(
         args.data_path,
         transform=transform_train,
+        extra_transform=extra_transform,
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225],
         max_offset=args.max_offset,
     )
 
