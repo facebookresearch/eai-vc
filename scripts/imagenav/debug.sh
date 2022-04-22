@@ -17,5 +17,5 @@ LOG_INTERVAL 1 \
 RL.POLICY.backbone vit_small_patch16 \
 RL.POLICY.pretrained_encoder data/models/tmae_small_01.pth \
 RL.POLICY.freeze_backbone False \
-RL.POLICY.vit_use_cls True \
+RL.POLICY.vit_global_pool True \
 WANDB_MODE "disabled" \

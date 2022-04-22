@@ -4,12 +4,12 @@ import torch
 from gym import spaces
 from habitat import logger
 from habitat.config import Config
-from habitat.tasks.nav.nav import ImageGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
 from habitat_baselines.rl.ppo import Net, Policy
 from torch import nn as nn
 
+from eai.sensors import ImageGoalRotationSensor
 from eai.transforms import get_transform
 from eai.utils import load_encoder
 from eai.visual_encoder import VisualEncoder
@@ -75,7 +75,7 @@ class EAINet(Net):
         rnn_input_size += hidden_size
 
         # goal embedding
-        if ImageGoalSensor.cls_uuid in observation_space.spaces:
+        if ImageGoalRotationSensor.cls_uuid in observation_space.spaces:
             name = "resize"
             if use_augmentations and run_type == "train":
                 name = augmentations_name
@@ -170,8 +170,8 @@ class EAINet(Net):
         x.append(rgb)
 
         # goal embedding
-        if ImageGoalSensor.cls_uuid in observations:
-            goal = observations[ImageGoalSensor.cls_uuid]
+        if ImageGoalRotationSensor.cls_uuid in observations:
+            goal = observations[ImageGoalRotationSensor.cls_uuid]
             goal = self.goal_transform(goal, N)
             goal = self.goal_visual_encoder(goal)
             goal = self.goal_visual_fc(goal)
