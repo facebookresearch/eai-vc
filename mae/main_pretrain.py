@@ -16,6 +16,8 @@ import os
 import time
 from pathlib import Path
 
+from yaml import parse
+
 import torch
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
@@ -31,6 +33,7 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from util.wandb import setup_wandb, setup_wandb_output_dir
 from datasets.dataset_with_txt_files import DatasetWithTxtFiles
 from datasets.omni_dataset import OmniDataset
+from datasets.path_dataset import PathDataset
 
 import models_mae
 
@@ -102,8 +105,8 @@ def get_args_parser():
                         help='url used to set up distributed training')
 
     # dataset arguments ** NEW **
-    parser.add_argument("--dataset_type", default="none", type=str,
-                        choices=["imagenet", "omnidata", "none"],
+    parser.add_argument("--dataset_type", default="hm3d+gibson", type=str,
+                        choices=["imagenet", "omnidata", "hm3d+gibson"],
                         help="Name of the dataset to train on.")
     parser.add_argument("--omnidata_datasets", default="all", type=str,
                         help="Which omnidata datasets to use")
@@ -117,6 +120,8 @@ def get_args_parser():
     parser.add_argument("--wandb_mode", default="online", type=str,
                         help="wandb mode to use for storing data, choose"
                         "online, offline or disabled")
+    parser.add_argument('--color_jitter', action='store_true', default=False,
+                        help='apply color jitter')
 
     return parser
 
@@ -137,16 +142,27 @@ def main(args):
     cudnn.benchmark = True
 
     # simple augmentation
-    transform_train = transforms.Compose([
+    transform_train = transforms.Compose(
+        [
             transforms.RandomResizedCrop(args.input_size, scale=(0.2, 1.0), interpolation=3),  # 3 is bicubic
             transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
+        ]
+    )
+    extra_transform = None
+    if args.color_jitter:
+        extra_transform = transforms.RandomApply(
+            [transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)],
+            p=0.8,
+        )
+
 
     if args.dataset_type == "imagenet":
         dataset_train = DatasetWithTxtFiles(
             args.data_path,
             transform=transform_train,
+            extra_transform=extra_transform,
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
             mode="train",
             dataset_type='full'
         )
@@ -154,15 +170,23 @@ def main(args):
         dataset_train = OmniDataset(
             args.data_path,
             transform=transform_train,
+            extra_transform=extra_transform,
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
             mode="train",
             datasets=args.omnidata_datasets,
             data_type=args.dataset_size
         )
-    else:
-        dataset_train = datasets.ImageFolder(
+    elif args.dataset_type == "hm3d+gibson":
+        dataset_train = PathDataset(
             args.data_path,
-            transform=transform_train
+            transform=transform_train,
+            extra_transform=extra_transform,
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
         )
+    else:
+        raise ValueError("Unknown dataset type: {}".format(args.dataset_type))
 
     print("train_dataset size: {:,}".format(len(dataset_train)))
 

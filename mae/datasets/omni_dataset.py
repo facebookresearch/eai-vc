@@ -5,6 +5,9 @@ from PIL import Image
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
+from typing import List, Optional
+import torchvision.transforms.functional as TF
+
 from torchvision import transforms
 from torch.utils.data import Dataset
 
@@ -12,20 +15,25 @@ class OmniDataset(Dataset):
     def __init__(
             self,
             data_root,
-            transform,
-            mode="train",
-            num_points=None,
-            datasets="all",
-            data_type="14_5m",
+            transform: Optional[str] = None,
+            extra_transform: Optional[str] = None,
+            mean: Optional[List[float]] = None,
+            std: Optional[List[float]] = None,
+            mode: Optional[str] = "train",
+            datasets: Optional[str] = "all",
+            data_type: Optional[str] = "14_5m",
     ):
         super().__init__()
         self.data_root = data_root
         self.data_type = data_type
         self.transform = transform
         self.mode = mode
-        self.data = self._load_text_files(datasets)
-        self.num_dataset_points = num_points or len(self.data)
-        self.meta_data = self.data[:self.num_dataset_points]
+        self.meta_data = self._load_text_files(datasets)
+
+        self.extra_transform = extra_transform
+        self.mean = mean
+        self.std = std
+        assert (mean is None) == (std is None)
     
     def _load_text_files(self, datasets):
         data = []
@@ -48,23 +56,53 @@ class OmniDataset(Dataset):
         meta = self.meta_data[index]
 
         path = meta.strip()
-        item = Image.open(path).convert('RGB')
+        img = Image.open(path).convert('RGB')
 
-        item = self.transform(item)
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.extra_transform is not None:
+            extra_img = self.extra_transform(img)
+        else:
+            extra_img = img.copy()
 
-        return item, 0
+        img, extra_img = TF.to_tensor(img), TF.to_tensor(extra_img)
+        if self.mean is not None and self.std is not None:
+            img = TF.normalize(img, self.mean, self.std)
+            extra_img = TF.normalize(extra_img, self.mean, self.std)
+
+        return img, extra_img, 0
 
     def __len__(self):
-        return self.num_dataset_points
+        return len(self.meta_data)
 
 if __name__ == '__main__':
+    from torch.utils.data import DataLoader
+    from torchvision.transforms import (
+        ColorJitter,
+        Compose,
+        RandomApply,
+        RandomHorizontalFlip,
+        RandomResizedCrop,
+    )
+
     dataset = OmniDataset(
         data_root="/checkpoint/karmeshyadav/omnidataset",
-        transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.RandomCrop(224)
-        ]),
-        datasets="hm3d",
+        transform=Compose(
+            [
+                RandomResizedCrop(224, (0.2, 1.0), interpolation=3),
+                RandomHorizontalFlip(),
+            ]
+        ),
+        extra_transform=RandomApply(
+            [ColorJitter(brightness=0.4, contrast=0.4, saturation=0.2, hue=0.1)], p=0.8
+        ),
+        mean=[0.485, 0.456, 0.406],
+        std=[0.229, 0.224, 0.225],
+        datasets="all",
     )
+    loader = DataLoader(dataset, batch_size=2, shuffle=True)
+    for imgs, extra_imgs, _ in loader:
+        print(imgs.shape, extra_imgs.shape)
+        break
     print("Dataset Len: {}".format(dataset.__len__()))
     n = dataset.__len__()

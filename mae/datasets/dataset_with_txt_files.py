@@ -1,6 +1,8 @@
 from glob import glob
 import os
 from PIL import Image
+from typing import List, Optional
+import torchvision.transforms.functional as TF
 
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -36,15 +38,23 @@ class DatasetWithTxtFiles(Dataset):
     def __init__(
         self,
         data_root,
-        transform,
-        mode="train",
-        dataset_type='full',
-        return_index=False
+        transform: Optional[str] = None,
+        extra_transform: Optional[str] = None,
+        mean: Optional[List[float]] = None,
+        std: Optional[List[float]] = None,
+        mode: Optional[str] = "train",
+        dataset_type: Optional[str] = 'full',
+        return_index: Optional[bool] = False
     ):
         self.data_root = data_root
         self.mode = mode
         self.return_index = return_index
         self.transform = transform
+
+        self.extra_transform = extra_transform
+        self.mean = mean
+        self.std = std
+        assert (mean is None) == (std is None)
 
         if dataset_type == 'full':
             base_path = os.path.join(self.data_root, 'classes.txt')
@@ -83,14 +93,24 @@ class DatasetWithTxtFiles(Dataset):
 
     def __getitem__(self, index):
         path, label = self.samples[index]
-        im = Image.open(path.strip()).convert('RGB')
+        img = Image.open(path.strip()).convert('RGB')
 
-        im = self.transform(im)
+        if self.transform is not None:
+            img = self.transform(img)
+        if self.extra_transform is not None:
+            extra_img = self.extra_transform(img)
+        else:
+            extra_img = img.copy()
+
+        img, extra_img = TF.to_tensor(img), TF.to_tensor(extra_img)
+        if self.mean is not None and self.std is not None:
+            img = TF.normalize(img, self.mean, self.std)
+            extra_img = TF.normalize(extra_img, self.mean, self.std)
 
         if self.return_index:
-            return im, index
+            return img, extra_img, index
         else:
-            return im, label
+            return img, extra_img, label
 
 
 if __name__ == "__main__":
@@ -103,5 +123,5 @@ if __name__ == "__main__":
 
     idx = 4250 * 102
 
-    im, label = dataset[idx]
+    im, xtra_im, label = dataset[idx]
     print(label, " ", dataset.scenes[label])

@@ -2,7 +2,7 @@
 
 NGPUS=$(nvidia-smi --list-gpus | wc -l)
 
-DATA="data/datasets/hm3d+gibson/v1/train"
+DATA="/checkpoint/karmeshyadav/hm3d+gibson/v1/train"
 
 set -x
 torchrun \
@@ -20,3 +20,5 @@ main_pretrain.py \
 --data_path $DATA \
 --wandb_name "debug-mae" \
 --wandb_mode "disabled" \
+--output_dir /checkpoint/karmeshyadav/mae_training/ \
+--color_jitter
