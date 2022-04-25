@@ -20,3 +20,5 @@ main_linprobe.py \
 --num_workers 6 \
 --data_path $DATA \
 --dataset "places-indoor" \
+--wandb_name "debug-places55" \
+--wandb_mode "online" \
