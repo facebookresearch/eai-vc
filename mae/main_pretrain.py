@@ -16,8 +16,6 @@ import os
 import time
 from pathlib import Path
 
-from yaml import parse
-
 import torch
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
