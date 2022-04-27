@@ -16,7 +16,7 @@ import torch.nn as nn
 
 from timm.models.vision_transformer import PatchEmbed, Block
 
-from util.pos_embed import get_1d_sincos_pos_embed, get_2d_sincos_pos_embed
+from util.pos_embed import get_2d_sincos_pos_embed, get_3d_sincos_pos_embed
 
 
 class MaskedAutoencoderViT(nn.Module):
@@ -48,10 +48,8 @@ class MaskedAutoencoderViT(nn.Module):
 
         self.mask_token = nn.Parameter(torch.zeros(1, 1, decoder_embed_dim))
 
-        self.decoder_pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
-
-        # time embedding ** NEW **
-        self.decoder_time_embed = nn.Parameter(torch.zeros(decoder_max_offset + 1, 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
+        # 3d pos embedding ** NEW **
+        self.decoder_pos_embed = nn.Parameter(torch.zeros(decoder_max_offset + 1, num_patches + 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
 
         self.decoder_blocks = nn.ModuleList([
             Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, norm_layer=norm_layer)
@@ -71,12 +69,11 @@ class MaskedAutoencoderViT(nn.Module):
         pos_embed = get_2d_sincos_pos_embed(self.pos_embed.shape[-1], int(self.patch_embed.num_patches**.5), cls_token=True)
         self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
 
-        decoder_pos_embed = get_2d_sincos_pos_embed(self.decoder_pos_embed.shape[-1], int(self.patch_embed.num_patches**.5), cls_token=True)
-        self.decoder_pos_embed.data.copy_(torch.from_numpy(decoder_pos_embed).float().unsqueeze(0))
-
-        # time embedding ** NEW **
-        decoder_time_embed = get_1d_sincos_pos_embed(self.decoder_time_embed.shape[-1], self.decoder_time_embed.shape[-2], cls_token=False)
-        self.decoder_time_embed.data.copy_(torch.from_numpy(decoder_time_embed).float().unsqueeze(1))
+        # initialize (and freeze) 3D decoder_pos_embed by sin-cos embedding ** NEW **
+        grid_size = int(self.patch_embed.num_patches**.5)
+        time_size = self.decoder_pos_embed.shape[0]
+        decoder_pos_embed = get_3d_sincos_pos_embed(self.decoder_pos_embed.shape[-1], grid_size, time_size, cls_token=True)
+        self.decoder_pos_embed.data.copy_(torch.from_numpy(decoder_pos_embed).float())
 
         # initialize patch_embed like nn.Linear (instead of nn.Conv2d)
         w = self.patch_embed.proj.weight.data
@@ -192,15 +189,9 @@ class MaskedAutoencoderViT(nn.Module):
         x2_ = torch.gather(x2_, dim=1, index=ids_restore2.unsqueeze(-1).repeat(1, 1, x2.shape[2]))  # unshuffle
         x2 = torch.cat([x2[:, :1, :], x2_], dim=1)  # append cls token
 
-        # add pos embed
-        x1 = x1 + self.decoder_pos_embed
-        x2 = x2 + self.decoder_pos_embed
-
-        # add time embed ** NEW **
-        decoder_time_embed1 = self.decoder_time_embed.index_select(0, torch.zeros_like(offsets))
-        x1 = x1 + decoder_time_embed1
-        decoder_time_embed2 = self.decoder_time_embed.index_select(0, offsets)
-        x2 = x2 + decoder_time_embed2
+        # add pos embed ** NEW **
+        x1 = x1 + self.decoder_pos_embed.index_select(0, torch.zeros_like(offsets))
+        x2 = x2 + self.decoder_pos_embed.index_select(0, offsets)
 
         x = torch.cat([x1, x2], dim=1)
 
@@ -212,10 +203,12 @@ class MaskedAutoencoderViT(nn.Module):
         # predictor projection
         x = self.decoder_pred(x)
 
-        # remove cls tokens
-        L = x.size(1) // 2
-        x1 = x[:, 1:L, :]
-        x2 = x[:, L+1:, :]
+        # split x1 and x2
+        x1, x2 = x.chunk(2, dim=1)
+
+        # remove cls token
+        x1 = x1[:, 1:, :]
+        x2 = x2[:, 1:, :]
 
         return x1, x2
 

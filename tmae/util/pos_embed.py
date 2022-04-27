@@ -11,6 +11,58 @@ import numpy as np
 
 import torch
 
+
+def _split_embed_dim_3d(embed_dim):
+    assert embed_dim % 2 == 0
+    if embed_dim % 6 == 0:
+        return (embed_dim // 3, embed_dim // 3, embed_dim // 3)
+    for val in range(embed_dim // 3, 0, -1):
+        rem = embed_dim - val
+        if rem % 4 == 0:
+            return (rem // 2, rem // 2, val)
+    raise ValueError("invalid dim: {}".format(embed_dim))
+
+
+def get_3d_sincos_pos_embed(embed_dim, grid_size, time_size, cls_token=False):
+    """
+    return:
+    pos_embed:
+      [grid_size_t, grid_size*grid_size, embed_dim] w/o cls_token
+      -- or --
+      [grid_size_t, 1+grid_size*grid_size, embed_dim] w/ cls_token
+    """
+    grid_h = np.arange(grid_size, dtype=np.float32)
+    grid_w = np.arange(grid_size, dtype=np.float32)
+    grid_t = np.arange(time_size, dtype=np.float32)
+
+    grid = np.meshgrid(grid_w, grid_h, grid_t)
+    grid = np.stack(grid, axis=0)
+    grid = grid.reshape(3, grid_size, grid_size, time_size)
+
+    embed_dim_h, embed_dim_w, embed_dim_t = _split_embed_dim_3d(embed_dim)
+    pos_embed = get_3d_sincos_pos_embed_from_grid(
+        embed_dim_h, embed_dim_w, embed_dim_t, grid
+    )
+
+    pos_embed = pos_embed.reshape(grid_size * grid_size, time_size, embed_dim)
+    pos_embed = np.einsum("ijk->jik", pos_embed)
+
+    if cls_token:
+        cls_embed = np.zeros((time_size, 1, embed_dim))
+        cls_embed[:, :1, -embed_dim_t:] = pos_embed[:, :1, -embed_dim_t:]
+        pos_embed = np.concatenate([cls_embed, pos_embed], axis=1)
+    return pos_embed
+
+
+def get_3d_sincos_pos_embed_from_grid(embed_dim_h, embed_dim_w, embed_dim_t, grid):
+    emb_h = get_1d_sincos_pos_embed_from_grid(embed_dim_h, grid[0])
+    emb_w = get_1d_sincos_pos_embed_from_grid(embed_dim_w, grid[1])
+    emb_t = get_1d_sincos_pos_embed_from_grid(embed_dim_t, grid[2])
+
+    emb = np.concatenate([emb_h, emb_w, emb_t], axis=1)
+    return emb
+
+
 # --------------------------------------------------------
 # 2D sine-cosine position embedding
 # References:
