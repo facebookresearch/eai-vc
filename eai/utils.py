@@ -46,7 +46,10 @@ def setup_wandb(config, train):
     else:
         file_name = "wandb_id_eval_" + str(config.EVAL.SPLIT) + ".txt"
         project_name = "imagenav_testing"
-        run_name = config.WANDB_NAME + "_" + str(config.EVAL.SPLIT) + "_" + \
+        ckpt_str = "_"
+        if os.path.isfile(config.EVAL_CKPT_PATH_DIR):
+            ckpt_str = "_" + config.EVAL_CKPT_PATH_DIR.split("/")[-1].split(".")[1] + "_"
+        run_name = config.WANDB_NAME + "_" + str(config.EVAL.SPLIT) + ckpt_str + \
             str(config.TASK_CONFIG.SEED)
 
     wandb_filepath = os.path.join(config.TENSORBOARD_DIR, file_name)
