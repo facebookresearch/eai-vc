@@ -20,25 +20,25 @@ def show_image(image, title=''):
     plt.axis('off')
     return
 
-def prepare_model(chkpt_dir, arch='mae_vit_large_patch16', decoder_max_offset=16):
+def prepare_model(chkpt_dir, arch='mae_vit_large_patch16'):
     # build model
-    model = getattr(models_mae, arch)(decoder_max_offset=decoder_max_offset)
+    model = getattr(models_mae, arch)()
     # load model
     checkpoint = torch.load(chkpt_dir, map_location='cpu')
     msg = model.load_state_dict(checkpoint['model'], strict=False)
     print(msg)
     return model
 
-def pre_forward(img):
+def run_one_image(img, model, image_name):
     x = torch.tensor(img)
 
     # make it a batch-like
     x = x.unsqueeze(dim=0)
     x = torch.einsum('nhwc->nchw', x)
 
-    return x
-
-def post_forward(x, y, mask, model):
+    # run MAE
+    loss, y, mask = model(x.float(), x.float(), mask_ratio=0.75)
+    print("Loss on {}: {}".format(image_name, loss.item()))
     y = model.unpatchify(y)
     y = torch.einsum('nchw->nhwc', y).detach().cpu()
 
@@ -56,67 +56,33 @@ def post_forward(x, y, mask, model):
     # MAE reconstruction pasted with visible patches
     im_paste = x * (1 - mask) + y * mask
 
-    return x, y, im_masked, im_paste
-
-def run_one_example(imgs, idx, offset, model, img_paths):
-    idx_1 = idx
-    idx_2 = idx_1 + offset
-
-    path_1 = img_paths[idx_1].split('/')[-1]
-    path_2 = img_paths[idx_2].split('/')[-1]
-
-    x1 = pre_forward(imgs[idx_1])
-    x2 = pre_forward(imgs[idx_2])
-
-    # run MAE
-    loss, y, mask = model(x1.float(), x1.float(), x2.float(), x2.float(), offsets=torch.tensor(offset), mask_ratio1=0.75, mask_ratio2=0.95)
-    print("Loss 1 on {}: {} \nLoss 2 on {}: {}".format(path_1, loss[0].item(), path_2, loss[1].item()))
-
-    # post-process
-    x1, y1, im_masked1, im_paste1 = post_forward(x1, y[0], mask[0], model)
-    x2, y2, im_masked2, im_paste2 = post_forward(x2, y[1], mask[1], model)
-
     # make the plt figure larger
     plt.rcParams['figure.figsize'] = [24, 24]
-    plt.subplot(2, 4, 1)
-    show_image(x1[0], "original")
 
-    plt.subplot(2, 4, 2)
-    show_image(im_masked1[0], "masked")
+    plt.subplot(1, 4, 1)
+    show_image(x[0], "original")
 
-    plt.subplot(2, 4, 3)
-    show_image(y1[0], "reconstruction")
+    plt.subplot(1, 4, 2)
+    show_image(im_masked[0], "masked")
 
-    plt.subplot(2, 4, 4)
-    show_image(im_paste1[0], "reconstruction + visible")
+    plt.subplot(1, 4, 3)
+    show_image(y[0], "reconstruction")
 
-    plt.subplot(2, 4, 5)
-    show_image(x2[0], "original")
-
-    plt.subplot(2, 4, 6)
-    show_image(im_masked2[0], "masked")
-
-    plt.subplot(2, 4, 7)
-    show_image(y2[0], "reconstruction")
-
-    plt.subplot(2, 4, 8)
-    show_image(im_paste2[0], "reconstruction + visible")
+    plt.subplot(1, 4, 4)
+    show_image(im_paste[0], "reconstruction + visible")
 
     folder_name = "examples/output/"
     if not os.path.isdir(folder_name):
         os.mkdir(folder_name)
-    plt.savefig("{}/{}_{}.jpg".format(folder_name, path_1.split(".")[0], path_2.split(".")[0]))
+    plt.savefig("{}/{}".format(folder_name, image_name))
 
 if __name__ == '__main__':
-    chkpt_dir = '../data/ddppo-models/tmae_small_offset_4_viz.pth'
-    model_mae = prepare_model(chkpt_dir, 'mae_vit_small_patch16', decoder_max_offset=4)
+    chkpt_dir = '../data/ddppo-models/mae_small_01.pth'
+    model_mae = prepare_model(chkpt_dir, 'mae_vit_small_patch16')
     print('Model loaded.')
 
-    img_paths = glob.glob('examples/hm3d_trajectory/*.jpg')
+    img_paths = glob.glob('examples/*.*')
     assert len(img_paths) > 0
-    # sort the images by name
-    img_paths = sorted(img_paths)
-
     # load images
     imgs = []
     
@@ -132,13 +98,10 @@ if __name__ == '__main__':
         img = img - imagenet_mean
         img = img / imagenet_std
 
-        imgs.append(img)
-
-    for offset in range(5):
         # make random mask reproducible (comment out to make it change)
         torch.manual_seed(2)
         print('MAE with pixel reconstruction:')
-        run_one_example(imgs, 0, offset, model_mae, img_paths)
+        run_one_image(img, model_mae, path.split('/')[-1])
 
 
 
