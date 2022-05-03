@@ -214,37 +214,37 @@ RUN_EVAL_SCRIPT=true
 # NODES=5
 # run_training 0
 
-EXP_NAME="tmae_base_finetuned_LSTM_global_pool_masking_v2"
-WEIGHTS_NAME="tmae_base_01.pth"
-BACKBONE="vit_base_patch16"
-EXTRA_CMDS="RL.POLICY.freeze_backbone False \
-            RL.POLICY.rnn_type LSTM \
-            RL.PPO.lr 2.5e-4 \
-            RL.POLICY.vit_global_pool True \
-            RL.POLICY.vit_mask_ratio 0.5 \
-            RL.POLICY.vit_use_fc_norm True \
-            RL.POLICY.vit_use_cls False \
-            RL.POLICY.randomize_augmentations_over_envs True"
-SPLIT="train_extra"
-NUM_ENV=8
-NODES=5
-run_training 0
+# EXP_NAME="tmae_base_finetuned_LSTM_global_pool_masking_v2"
+# WEIGHTS_NAME="tmae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.PPO.lr 2.5e-4 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True \
+#             RL.POLICY.vit_use_cls False \
+#             RL.POLICY.randomize_augmentations_over_envs True"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
 
-EXP_NAME="tmae_base_finetuned_LSTM_global_pool_masking_v2_no_random_aug"
-WEIGHTS_NAME="tmae_base_01.pth"
-BACKBONE="vit_base_patch16"
-EXTRA_CMDS="RL.POLICY.freeze_backbone False \
-            RL.POLICY.rnn_type LSTM \
-            RL.PPO.lr 2.5e-4 \
-            RL.POLICY.vit_global_pool True \
-            RL.POLICY.vit_mask_ratio 0.5 \
-            RL.POLICY.vit_use_fc_norm True \
-            RL.POLICY.vit_use_cls False \
-            RL.POLICY.randomize_augmentations_over_envs False"
-SPLIT="train_extra"
-NUM_ENV=8
-NODES=5
-run_training 0
+# EXP_NAME="tmae_base_finetuned_LSTM_global_pool_masking_v2_no_random_aug"
+# WEIGHTS_NAME="tmae_base_01.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.PPO.lr 2.5e-4 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True \
+#             RL.POLICY.vit_use_cls False \
+#             RL.POLICY.randomize_augmentations_over_envs False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
 
 # EXP_NAME="tmae_base_finetuned_LSTM_compression_layer"
 # WEIGHTS_NAME="tmae_base_01.pth"
@@ -350,3 +350,212 @@ run_training 0
 # SPLIT="train_extra"
 # NUM_ENV=6
 # run_training 0
+
+# EXP_NAME="mae_base_399_finetuned_new_data_nozer"
+# WEIGHTS_NAME="mae_base_02_399_ckpt.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="mae_base_799_finetuned_new_data"
+# WEIGHTS_NAME="mae_base_01_799_ckpt.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="mae_small_finetuned_new_data"
+# WEIGHTS_NAME="mae_small_01.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# run_training 0
+
+# EXP_NAME="tmae_improved_embedding"
+# WEIGHTS_NAME="tmae_small_02.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# run_training 0
+
+# EXP_NAME="mae_improved_cj"
+# WEIGHTS_NAME="mae_base_01_cj.pth"
+# BACKBONE="vit_base_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_1_100"
+# WEIGHTS_NAME="tmae_small_offset_1_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_1_400"
+# WEIGHTS_NAME="tmae_small_offset_1_399.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool True \
+#             RL.POLICY.vit_mask_ratio 0.5 \
+#             RL.POLICY.vit_use_fc_norm True"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# run_training 0
+
+# EXP_NAME="tmae_improved_embedding_frozen"
+# WEIGHTS_NAME="tmae_small_02.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# run_training 0
+
+# EXP_NAME="tmae_improved_embedding_compression_layer"
+# WEIGHTS_NAME="tmae_small_02.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_improved_embedding_frozen_no_aug"
+# WEIGHTS_NAME="tmae_small_02.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.POLICY.use_augmentations False \
+#             RL.POLICY.use_augmentations_test_time False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# TEST_EPISODE_COUNT=30
+# VIDEO_OPTION="[\"wandb\"]"
+# WANDB_MODE="offline"
+# CHKP_NAME="ckpt.99.pth"
+# run_training 0
+
+# EXP_NAME="mae_improved_embedding_frozen"
+# WEIGHTS_NAME="mae_small_01.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=10
+# NODES=4
+# run_training 0
+
+EXP_NAME="tmae_small_offset_1_100_frozen"
+WEIGHTS_NAME="tmae_small_offset_1_100.pth"
+BACKBONE="vit_small_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+            RL.POLICY.rnn_type LSTM \
+            RL.POLICY.randomize_augmentations_over_envs False \
+            RL.PPO.lr 6.25e-5 \
+            RL.POLICY.vit_global_pool False \
+            RL.POLICY.vit_use_fc_norm False"
+SPLIT="train_extra"
+NUM_ENV=10
+NODES=4
+run_training 0
+
+EXP_NAME="tmae_small_offset_1_400_frozen"
+WEIGHTS_NAME="tmae_small_offset_1_399.pth"
+BACKBONE="vit_small_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+            RL.POLICY.rnn_type LSTM \
+            RL.POLICY.randomize_augmentations_over_envs False \
+            RL.PPO.lr 6.25e-5 \
+            RL.POLICY.vit_global_pool False \
+            RL.POLICY.vit_use_fc_norm False"
+SPLIT="train_extra"
+NUM_ENV=10
+NODES=4
+run_training 0
+
+EXP_NAME="mae_base_improved_cj_frozen"
+WEIGHTS_NAME="mae_base_01_cj.pth"
+BACKBONE="vit_base_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone True \
+            RL.POLICY.rnn_type LSTM \
+            RL.POLICY.randomize_augmentations_over_envs False \
+            RL.PPO.lr 6.25e-5 \
+            RL.POLICY.vit_global_pool False \
+            RL.POLICY.vit_use_fc_norm False"
+SPLIT="train_extra"
+NUM_ENV=10
+NODES=4
+run_training 0

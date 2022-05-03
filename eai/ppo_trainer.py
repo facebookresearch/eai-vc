@@ -8,7 +8,6 @@ from torch import nn
 import wandb
 
 from habitat import Config, logger
-from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -417,16 +416,17 @@ class ModifiedPPOTrainer(PPOTrainer):
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
+                            fps=5
                         )
-
                         rgb_frames[i] = []
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
-                    frame = observations_to_image(
+                    frame = utils.observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
+                    frame = utils.add_info_to_image(frame, infos[i])
                     rgb_frames[i].append(frame)
 
             not_done_masks = not_done_masks.to(device=self.device)
