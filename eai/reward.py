@@ -1,5 +1,6 @@
 from typing import Any, Optional
 
+import numpy as np
 from habitat.config import Config
 from habitat.core.embodied_task import EmbodiedTask, Measure
 from habitat.core.registry import registry
@@ -58,11 +59,15 @@ class SimpleReward(Measure):
 
         # angle-to-goal
         atg = task.measurements.measures[AngleToGoal.cls_uuid].get_metric()
+        add_atg = self._config.USE_ATG_REWARD
+        if self._config.USE_ATG_FIX:
+            if dtg > self._config.ATG_REWARD_DISTANCE:
+                atg = np.pi
+        else:
+            if dtg > self._config.ATG_REWARD_DISTANCE:
+                add_atg = False
         if self._previous_atg is None:
             self._previous_atg = atg
-        add_atg = (
-            self._config.USE_ATG_REWARD and dtg <= self._config.ATG_REWARD_DISTANCE
-        )
         atg_reward = self._previous_atg - atg if add_atg else 0.0
         self._previous_atg = atg
 
