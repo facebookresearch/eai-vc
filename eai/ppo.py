@@ -38,7 +38,7 @@ class MPPO(PPO):
             use_clipped_value_loss=use_clipped_value_loss,
             use_normalized_advantage=use_normalized_advantage,
         )
-        self.optimizer = optim.Adam(
+        self.optimizer = optim.AdamW(
             list(filter(lambda p: p.requires_grad, actor_critic.parameters())),
             lr=lr,
             weight_decay=wd,

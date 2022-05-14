@@ -17,6 +17,7 @@ tmae/data
 mae/data
 tmae/examples/output
 mae/examples/output
+goal_images/
 
 # misc
 .DS_Store
