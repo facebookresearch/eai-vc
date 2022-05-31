@@ -1,0 +1,9 @@
+arch: 'resnet50'
+moco_dim: 128
+moco_k: 65536
+moco_m: 0.999
+moco_t: 0.07
+mlp: True
+pretrained: False
+load_path: ''
+sync_bn: False
