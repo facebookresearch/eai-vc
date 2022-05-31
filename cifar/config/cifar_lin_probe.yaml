@@ -1,0 +1,22 @@
+default:
+    - override hydra/launcher: local
+    - override hydra/output: local
+
+model             :   resnet50
+seed              :   12345                   # global seed for the experiment
+num_epochs        :   25                      # number of epochs for fine-tuning
+batch_size        :   32
+lr                :   1e-3
+device            :   cuda
+log_frequency     :   10
+
+# logging
+wandb_user        :   aravraj
+wandb_project     :   rep_eval_cifar
+
+# general outputs
+job_name          :   'job'
+
+hydra:
+    job:
+        name: rep_eval_runs
