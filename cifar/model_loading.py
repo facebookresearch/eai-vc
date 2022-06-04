@@ -3,7 +3,6 @@ import torchvision.models as models
 from PIL import Image
 from torchvision.transforms import InterpolationMode
 from torch.nn.modules.linear import Identity
-from vrl.vision_model_loader import moco_conv5_model, moco_conv4_compression_model, moco_conv3_compression_model
 import clip
 sys.path.append('/private/home/aravraj/work/Projects/rep_learning/mae/')
 import models_mae
@@ -140,13 +139,118 @@ def load_pvr_model(embedding_name, *args, **kwargs):
         embedding_dim = 2048
         transforms = _r3m_transforms
     elif embedding_name == 'moco_ego4d_100k':
-        model, embedding_dim = moco_conv5_model(CHECKPOINT_DIR + '/moco_ego4d_100k.pth')
+        # model, embedding_dim = moco_conv5_model(CHECKPOINT_DIR + '/moco_ego4d_100k.pth')
+        model, embedding_dim = moco_conv5_model('/checkpoint/aravraj/moco_diff_aug/ego4d_100k/checkpoints/ego4d_100k/checkpoint_0190.pth')
         transforms = _resnet_transforms
     elif embedding_name == 'moco_ego4d_5m':
-        model, embedding_dim = moco_conv5_model(CHECKPOINT_DIR + '/moco_ego4d_5m.pth')
+        # model, embedding_dim = moco_conv5_model(CHECKPOINT_DIR + '/moco_ego4d_5m.pth')
+        model, embedding_dim = moco_conv5_model('/checkpoint/aravraj/moco_diff_aug/ego4d_5m/checkpoints/ego4d_5m/checkpoint_0010.pth')
         transforms = _resnet_transforms
     else:
         print("Model not implemented.")
         raise NotImplementedError
     model = model.eval()
     return model, embedding_dim, transforms
+
+
+def moco_conv5_model(checkpoint_path):
+    model = models.resnet50(pretrained=False, progress=False)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+    # rename moco pre-trained keys
+    state_dict = checkpoint['state_dict']
+    for k in list(state_dict.keys()):
+        # retain only encoder_q up to before the embedding layer
+        if k.startswith('module.encoder_q'
+                        ) and not k.startswith('module.encoder_q.fc'):
+            # remove prefix
+            state_dict[k[len("module.encoder_q."):]] = state_dict[k]
+        # delete renamed or unused k
+        del state_dict[k]
+    msg = model.load_state_dict(state_dict, strict=False)
+    assert set(msg.missing_keys) == {"fc.weight", "fc.bias"}
+    model.fc = Identity()
+    return model, 2048
+
+
+def moco_conv4_compression_model(checkpoint_path):
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+    state_dict = checkpoint['state_dict']
+    # construct the compressed model
+    model = models.resnet.resnet50(pretrained=False, progress=False)
+    downsample = nn.Sequential(
+                    nn.Conv2d(2048,
+                    42,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    groups=1,
+                    dilation=1), model._norm_layer(42))
+    model.layer4 = nn.Sequential(
+                    model.layer4,
+                    models.resnet.BasicBlock(2048,
+                        42,
+                        stride=1,
+                        norm_layer=model._norm_layer,
+                        downsample=downsample))
+    # Remove the avgpool layer
+    model.avgpool = nn.Sequential()
+    model.fc = nn.Sequential()
+
+    for k in list(state_dict.keys()):
+        # retain only encoder_q up to before the embedding layer
+        if k.startswith('module.encoder_q'
+                        ) and not k.startswith('module.encoder_q.fc'):
+            # remove prefix
+            state_dict[k[len("module.encoder_q."):]] = state_dict[k]
+        # delete renamed or unused k
+        del state_dict[k]
+
+    msg = model.load_state_dict(state_dict, strict=False)
+    assert all(['fc.' in n or 'layer4.2' in n  for n in msg.unexpected_keys])
+    assert len(msg.missing_keys)==0
+    # manually computed the embedding dimension to be 2058
+    return model, 2058
+
+
+def moco_conv3_compression_model(checkpoint_path):
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+    state_dict = checkpoint['state_dict']
+    # construct the compressed model
+    model = models.resnet.resnet50(pretrained=False, progress=False)
+    downsample1 = nn.Sequential(
+        nn.Conv2d(1024,
+                  11,
+                  kernel_size=3,
+                  stride=1,
+                  padding=1,
+                  groups=1,
+                  dilation=1), model._norm_layer(11))
+
+    model.layer3 = nn.Sequential(
+        model.layer3,
+        models.resnet.BasicBlock(1024,
+                                 11,
+                                 stride=1,
+                                 norm_layer=model._norm_layer,
+                                 downsample=downsample1)
+    )
+
+    # Remove the avgpool layer
+    model.layer4 = nn.Sequential()
+    model.avgpool = nn.Sequential()
+    model.fc = nn.Sequential()
+
+    for k in list(state_dict.keys()):
+        # retain only encoder_q up to before the embedding layer
+        if k.startswith('module.encoder_q'
+                        ) and not k.startswith('module.encoder_q.fc'):
+            # remove prefix
+            state_dict[k[len("module.encoder_q."):]] = state_dict[k]
+        # delete renamed or unused k
+        del state_dict[k]
+
+    msg = model.load_state_dict(state_dict, strict=False)
+    assert all(['fc.' in n or 'layer4.' in n or 'layer3.2' in n for n in msg.unexpected_keys])
+    assert len(msg.missing_keys)==0
+    # manually computed the embedding dimension to be 2156
+    return model, 2156
