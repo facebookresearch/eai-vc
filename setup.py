@@ -21,11 +21,11 @@ setup(
     long_description=read('README.md'),
     author='Suraj Nair (Meta AI)',
     install_requires=[
-        'gdown==4.4.0', 
-        'torch==1.7.1',
-        'torchvision==0.8.2',
-        'omegaconf==2.1.1',
-        'hydra-core==1.1.1',
-        'pillow==9.0.1', 
+        'gdown>=4.4.0',
+        'torch>=1.7.1',
+        'torchvision>=0.8.2',
+        'omegaconf>=2.1.1',
+        'hydra-core>=1.1.1',
+        'pillow>=9.0.1',
     ],
 )
