@@ -274,14 +274,14 @@ class ReplayBuffer():
 	def __init__(self, cfg):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
-		self.capacity = (cfg.num_tasks if cfg.multitask else 1)*990*500
+		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*990*500
 		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
 		obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
 		self._obs = torch.empty((self.capacity+1, *obs_shape), dtype=dtype, device=self.device)
 		self._last_obs = torch.empty((self.capacity//cfg.episode_length, *cfg.obs_shape), dtype=dtype, device=self.device)
 		self._action = torch.empty((self.capacity, cfg.action_dim), dtype=torch.float32, device=self.device)
 		self._reward = torch.empty((self.capacity,), dtype=torch.float32, device=self.device)
-		self._task_vec = torch.empty((self.capacity, cfg.num_tasks), dtype=torch.uint8, device=self.device) if cfg.multitask else None
+		self._task_vec = torch.empty((self.capacity, cfg.num_tasks), dtype=torch.uint8, device=self.device) if cfg.get('multitask', False) else None
 		self._priorities = torch.ones((self.capacity,), dtype=torch.float32, device=self.device)
 		self._eps = 1e-6
 		self._full = False

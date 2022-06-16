@@ -10,11 +10,12 @@ import gym
 gym.logger.set_level(40)
 from pathlib import Path
 from PIL import Image
-from cfg import parse_cfg
+from cfg import parse_hydra
 from env import make_env
 from algorithm.tdmpc import TDMPC
 from logger import make_dir
-from train import parallel, set_seed
+from train import set_seed
+import hydra
 import wandb
 torch.backends.cudnn.benchmark = True
 __CONFIG__, __LOGS__ = 'cfgs', 'logs'
@@ -49,9 +50,12 @@ def evaluate(env, agent, num_episodes, step):
 	return np.nanmean(episode_rewards), episodes
 
 
+@hydra.main(config_path="../cfgs", config_name="default")
 def generate(cfg):
 	"""Script for generating data using pretrained TD-MPC."""
 	assert torch.cuda.is_available()
+	cfg = parse_hydra(cfg)
+	cfg.demo = True
 	set_seed(cfg.seed)
 	env, agent = make_env(cfg), TDMPC(cfg)
 
@@ -60,54 +64,51 @@ def generate(cfg):
 	run = wandb.init(job_type='demo', entity=__ENTITY__, project=__PROJECT__, name=run_name, tags='demo')
 	
 	for identifier in range(0, int(cfg.train_steps*cfg.action_repeat)+1, cfg.eval_freq):
-		try:
+		# try:
 			# Load model
-			artifact_dir = None
-			for version in range(0, 2):
-				name = f'{__ENTITY__}/{__PROJECT__}/{cfg.task}-state-v1-{cfg.seed}-{identifier}:v{version}'
-				try:
-					artifact = run.use_artifact(name, type='model')
-					artifact_dir = artifact.download()
-					break
-				except Exception as e:
-					print(e)
-			run.join()
-			if artifact_dir is None and identifier > 0:
-				raise Exception('No model found')
-			elif artifact_dir is None and identifier == 0:
-				print('No model found for identifier 0, using random initialization')
-			else:
-				agent.load(os.path.join(artifact_dir, f'{identifier}.pt'))
+		artifact_dir = None
+		for version in range(0, 2):
+			name = f'{__ENTITY__}/{__PROJECT__}/{cfg.task}-state-v1-{cfg.seed}-{identifier}:v{version}'
+			try:
+				artifact = run.use_artifact(name, type='model')
+				artifact_dir = artifact.download()
+				break
+			except Exception as e:
+				print(e)
+		run.join()
+		if artifact_dir is None and identifier > 0:
+			raise Exception('No model found')
+		elif artifact_dir is None and identifier == 0:
+			print('No model found for identifier 0, using random initialization')
+		else:
+			agent.load(os.path.join(artifact_dir, f'{identifier}.pt'))
 
-			# Evaluate
-			reward, episodes = evaluate(env, agent, cfg.eval_episodes, int(1e6))
-			print(f'Name: {name}, Reward:', reward)
+		# Evaluate
+		reward, episodes = evaluate(env, agent, cfg.eval_episodes, int(1e6))
+		print(f'Name: {name}, Reward:', reward)
 
-			# Save transitions to disk
-			data_dir = make_dir(Path().cwd() / 'data' / cfg.task / str(identifier))
-			frames_dir = make_dir(data_dir / 'frames')
-			for episode in range(cfg.eval_episodes):
-				data = episodes[episode]
-				frames, fps = data['frames'], []
-				for i in range(len(frames)):
-					fp = f'frames/{cfg.seed:03d}_{episode:03d}_{i:03d}.png'
-					Image.fromarray(frames[i]).save(data_dir / fp)
-					fps.append(fp)
-				data['frames'] = fps
-				data.update({'metadata': {
-					'cfg': cfg,
-					'name': name,
-					'run_name': run_name,
-					'episode': episode,
-					'reward': reward,
-				}})
-				torch.save(data, data_dir / f'{cfg.seed:03d}_{episode:03d}.pt')
-		except Exception as e:
-			print('Failed to run {}'.format(name))
-			print(e)
-
+		# Save transitions to disk
+		data_dir = make_dir(Path().cwd() / 'data' / cfg.task / str(identifier))
+		frames_dir = make_dir(data_dir / 'frames')
+		for episode in range(cfg.eval_episodes):
+			data = episodes[episode]
+			frames, fps = data['frames'], []
+			for i in range(len(frames)):
+				fp = f'{cfg.seed:03d}_{episode:03d}_{i:03d}.png'
+				Image.fromarray(frames[i]).save(frames_dir / fp)
+				fps.append(fp)
+			data['frames'] = fps
+			data.update({'metadata': {
+				'cfg': cfg,
+				'name': name,
+				'run_name': run_name,
+				'episode': episode,
+				'reward': reward,
+			}})
+			torch.save(data, data_dir / f'{cfg.seed:03d}_{episode:03d}.pt')
+		# except Exception as e:
+		# 	print('Failed to run {}'.format(name))
+		# 	print(e)
 
 if __name__ == '__main__':
-	cfg = parse_cfg(Path().cwd() / __CONFIG__)
-	cfg.demo = True
-	parallel(generate, cfg, wait=1)
+	generate()

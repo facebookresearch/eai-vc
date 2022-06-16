@@ -67,7 +67,7 @@ def evaluate(env, agent, cfg):
 	"""Evaluate a trained agent."""
 	episode_rewards = []
 	for i in range(cfg.eval_episodes):
-		if cfg.multitask:
+		if cfg.get('multitask', False):
 			env.unwrapped.task_id = i % len(env.unwrapped.tasks)
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
 		while not done:
@@ -94,7 +94,7 @@ def train(cfg):
 	print(agent.model)
 
 	# Prepare buffer
-	tasks = env.unwrapped.tasks if cfg.multitask else [cfg.task]
+	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
 	dataset = DMControlDataset(cfg, Path().cwd() / __DATA__, tasks=tasks, fraction=cfg.fraction, buffer=buffer)
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary

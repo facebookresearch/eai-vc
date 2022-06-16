@@ -1,5 +1,0 @@
-train_steps: 5000000/${action_repeat}
-iterations: 8
-latent_dim: 100
-batch_size: 2048
-lr: 3e-4

@@ -40,7 +40,7 @@ for (( i=0; i<${NUM_TASKS}; i++ )); do
     for ((j=0; j<=${MAX_ITERATIONS}; j++)); do
 
         # CUDA_VISIBLE_DEVICES=${GPUS[${i%NUM_GPUS}]} python src/get_demos.py \
-        CUDA_VISIBLE_DEVICES=2 python src/get_demos.py \
+        CUDA_VISIBLE_DEVICES=0 python src/get_demos.py \
             task=${TASKS[$i]} \
             action_repeat=2 \
             exp_name=demo \

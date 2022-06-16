@@ -398,7 +398,7 @@ def make_env(cfg):
 	domain, task = cfg.task.replace('-', '_').split('_', 1)
 	domain = dict(cup='ball_in_cup').get(domain, domain)
 
-	if cfg.multitask:
+	if cfg.get('multitask', False):
 		env = MultitaskEnv(cfg)
 	elif cfg.get('distractors', False):
 		from distracting_control import suite as dc_suite
