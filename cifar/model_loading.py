@@ -4,10 +4,10 @@ from PIL import Image
 from torchvision.transforms import InterpolationMode
 from torch.nn.modules.linear import Identity
 import clip
-sys.path.append('/private/home/aravraj/work/Projects/rep_learning/mae/')
+sys.path.append('/home/aryanjain/mae')
 import models_mae
 
-CHECKPOINT_DIR = '/checkpoint/aravraj/models/'    # hard-coded path for FAIR cluster
+CHECKPOINT_DIR = '/home/aryanjain/representation_networks/'    # hard-coded path for FAIR cluster
 
 clip_vit_model, _clip_vit_preprocess = clip.load("ViT-B/32", device='cpu')
 clip_rn50_model, _clip_rn50_preprocess = clip.load("RN50x16", device='cpu')
@@ -20,14 +20,14 @@ _resnet_transforms = T.Compose([
                         ])
 
 _mae_transforms = T.Compose([
-                        T.Resize(256, interpolation=3),
+                        T.Resize(256, interpolation=InterpolationMode.BICUBIC),
                         T.CenterCrop(224),
                         T.ToTensor(),
                         T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
                         ])
 
 _r3m_transforms = T.Compose([
-                        T.Resize(256, interpolation=3),
+                        T.Resize(256, interpolation=InterpolationMode.BICUBIC),
                         T.CenterCrop(224),
                         T.ToTensor(),  # this divides by 255
                         T.Normalize(mean=[0.0, 0.0, 0.0], std=[1/255, 1/255, 1/255]), # this will scale bact to [0-255]
@@ -50,7 +50,7 @@ class MAE_embedding_model(torch.nn.Module):
         model = getattr(models_mae, arch)()
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
         msg = model.load_state_dict(checkpoint['model'], strict=False)
-        print(msg)
+        # print(msg)
         self.mae_model = model
     
     def forward(self, imgs, mask_ratio=0.0):
