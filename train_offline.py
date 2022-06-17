@@ -13,7 +13,7 @@ from copy import deepcopy
 import multiprocessing
 from multiprocessing import set_start_method
 from pathlib import Path
-from cfg import parse_cfg
+from cfg_parse import parse_cfg
 from env import make_env
 from algorithm.tdmpc import TDMPC
 from algorithm.bc import BC

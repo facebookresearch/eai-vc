@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from pathlib import Path
 from PIL import Image
-from cfg import parse_cfg
+from cfg_parse import parse_cfg
 from dataloader import DMControlDataset
 from termcolor import colored
 from logger import make_dir

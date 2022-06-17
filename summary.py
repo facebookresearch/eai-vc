@@ -10,7 +10,7 @@ gym.logger.set_level(40)
 import random
 from multiprocessing import Process
 from pathlib import Path
-from cfg import parse_cfg
+from cfg_parse import parse_cfg
 from env import make_env
 from dataloader import DMControlDataset, summary_stats
 from termcolor import colored

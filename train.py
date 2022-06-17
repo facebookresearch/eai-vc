@@ -12,7 +12,7 @@ import random
 from copy import deepcopy
 from multiprocessing import Process
 from pathlib import Path
-from cfg import parse_cfg
+from cfg_parse import parse_cfg
 from env import make_env
 from algorithm.tdmpc import TDMPC
 from algorithm.helper import Episode, ReplayBuffer

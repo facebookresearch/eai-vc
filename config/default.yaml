@@ -1,3 +1,7 @@
+default:
+    - override hydra/launcher: local
+    - override hydra/output: local
+
 # dataset
 fraction: 1.0
 
@@ -48,6 +52,9 @@ use_wandb: true
 wandb_project: tdmpc
 wandb_entity: nicklashansen
 
+# dirs
+data_dir: /private/home/nihansen/data/tdmpc2
+
 # misc
 seed: 1
 exp_name: default
@@ -67,17 +74,6 @@ action_dim: ???
 demo: false
 
 # hydra
-# hydra:
-#   run:
-#     dir: ./exp_local/${now:%Y.%m.%d}/${now:%H%M%S}_${hydra.job.override_dirname}
-#   sweep:
-#     dir: ./exp/${now:%Y.%m.%d}/${now:%H%M}_${agent_cfg.experiment}
-#     subdir: ${hydra.job.num}
-#   launcher:
-#     timeout_min: 4300
-#     cpus_per_task: 10
-#     gpus_per_node: 1
-#     tasks_per_node: 1
-#     mem_gb: 32
-#     nodes: 1
-#     submitit_folder: ./exp/${now:%Y.%m.%d}/${now:%H%M%S}_${agent_cfg.experiment}/.slurm
+hydra:
+    job:
+        name: test-run

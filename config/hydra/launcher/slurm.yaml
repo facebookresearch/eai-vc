@@ -1,0 +1,12 @@
+# @package _global_
+hydra:
+    launcher:
+        cpus_per_task: 8
+        gpus_per_node: 1
+        tasks_per_node: 1
+        timeout_min: 120
+        mem_gb: 24
+        name: ${hydra.job.name}
+        # array_parallelism: 256
+        _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+        submitit_folder: ${hydra.sweep.dir}/.submitit/%j

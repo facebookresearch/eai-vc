@@ -8,9 +8,9 @@ import torch
 import numpy as np
 import gym
 gym.logger.set_level(40)
-from pathlib import Path
 from PIL import Image
-from cfg import parse_hydra
+from pathlib import Path
+from cfg_parse import parse_cfg
 from env import make_env
 from algorithm.tdmpc import TDMPC
 from logger import make_dir
@@ -18,8 +18,6 @@ from train import set_seed
 import hydra
 import wandb
 torch.backends.cudnn.benchmark = True
-__CONFIG__, __LOGS__ = 'cfgs', 'logs'
-__ENTITY__, __PROJECT__ = 'nicklashansen', 'tdmpc'
 
 
 def evaluate(env, agent, num_episodes, step):
@@ -50,28 +48,32 @@ def evaluate(env, agent, num_episodes, step):
 	return np.nanmean(episode_rewards), episodes
 
 
-@hydra.main(config_path="../cfgs", config_name="default")
-def generate(cfg):
+@hydra.main(config_name='default', config_path='config')
+def generate(cfg: dict):
 	"""Script for generating data using pretrained TD-MPC."""
-	assert torch.cuda.is_available()
-	cfg = parse_hydra(cfg)
+	assert torch.cuda.is_available()	
+	print(f'Configuration:\n{cfg}')
+	cfg = parse_cfg(cfg)
 	cfg.demo = True
+	cfg.exp_name = 'v1'
+	cfg.eval_freq = 50_000
+	cfg.eval_episodes = 50
 	set_seed(cfg.seed)
 	env, agent = make_env(cfg), TDMPC(cfg)
 
 	# Load from wandb
 	run_name = 'demo' + str(np.random.randint(0, int(1e6)))
-	run = wandb.init(job_type='demo', entity=__ENTITY__, project=__PROJECT__, name=run_name, tags='demo')
+	run = wandb.init(job_type='demo', entity=cfg.wandb_entity, project=cfg.wandb_project, name=run_name, tags='demo')
 	
 	for identifier in range(0, int(cfg.train_steps*cfg.action_repeat)+1, cfg.eval_freq):
 		# try:
 			# Load model
 		artifact_dir = None
 		for version in range(0, 2):
-			name = f'{__ENTITY__}/{__PROJECT__}/{cfg.task}-state-v1-{cfg.seed}-{identifier}:v{version}'
+			name = f'{cfg.wandb_entity}/{cfg.wandb_project}/{cfg.task}-state-{cfg.exp_name}-{cfg.seed}-{identifier}:v{version}'
 			try:
 				artifact = run.use_artifact(name, type='model')
-				artifact_dir = artifact.download()
+				artifact_dir = Path(artifact.download())
 				break
 			except Exception as e:
 				print(e)
@@ -81,14 +83,15 @@ def generate(cfg):
 		elif artifact_dir is None and identifier == 0:
 			print('No model found for identifier 0, using random initialization')
 		else:
-			agent.load(os.path.join(artifact_dir, f'{identifier}.pt'))
+			agent.load(artifact_dir / f'{identifier}.pt')
 
 		# Evaluate
+		print(f'Evaluating model at step {identifier}')
 		reward, episodes = evaluate(env, agent, cfg.eval_episodes, int(1e6))
 		print(f'Name: {name}, Reward:', reward)
 
 		# Save transitions to disk
-		data_dir = make_dir(Path().cwd() / 'data' / cfg.task / str(identifier))
+		data_dir = make_dir(Path(cfg.data_dir) / 'dmcontrol' / cfg.task / str(identifier))
 		frames_dir = make_dir(data_dir / 'frames')
 		for episode in range(cfg.eval_episodes):
 			data = episodes[episode]

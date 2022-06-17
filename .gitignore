@@ -1,9 +1,8 @@
-# Log files
-logs/
-outputs/
-
 # Misc
 *.pth
+logs/
+outputs/
+multirun/
 partnet-mobility-dataset/
 results/drqv2/
 results/drq/
