@@ -10,7 +10,14 @@ from omegaconf import OmegaConf
 
 
 CONSOLE_FORMAT = [('episode', 'E', 'int'), ('env_step', 'S', 'int'), ('episode_reward', 'R', 'float'), ('total_time', 'T', 'time')]
+OFFLINE_CONSOLE_FORMAT = [('iteration', 'I', 'int'), ('reward', 'R', 'float'), ('total_time', 'T', 'time')]
 AGENT_METRICS = ['consistency_loss', 'reward_loss', 'value_loss', 'total_loss', 'weighted_loss', 'pi_loss', 'grad_norm']
+
+CAT_TO_COLOR = {
+	'train': 'blue',
+	'eval': 'green',
+	'offline': 'yellow',
+}
 
 
 def make_dir(dir_path):
@@ -85,13 +92,13 @@ class Logger(object):
 		self._eval = []
 		print_run(cfg)
 		project, entity = cfg.get('wandb_project', 'none'), cfg.get('wandb_entity', 'none')
-		run_offline = not cfg.get('use_wandb', False) or project == 'none' or entity == 'none'
+		run_offline = project == 'none' or entity == 'none'
 		if run_offline:
 			print(colored('Logs will be saved locally.', 'yellow', attrs=['bold']))
 			self._wandb = None
 		else:
 			try:
-				os.environ["WANDB_SILENT"] = "true"
+				# os.environ["WANDB_SILENT"] = "true"
 				import wandb
 				wandb.init(project=project,
 						entity=entity,
@@ -103,7 +110,7 @@ class Logger(object):
 				print(colored('Logs will be synced with wandb.', 'blue', attrs=['bold']))
 				self._wandb = wandb
 			except:
-				print(colored('Warning: failed to init wandb. Logs will be saved locally.', 'yellow'), attrs=['bold'])
+				print(colored('Warning: failed to init wandb. Logs will be saved locally.', 'yellow', attrs=['bold']))
 				self._wandb = None
 		self._video = VideoRecorder(log_dir, self._wandb) if self._wandb and cfg.save_video else None
 
@@ -120,7 +127,7 @@ class Logger(object):
 				artifact.add_file(fp)
 				self._wandb.log_artifact(artifact)
 
-	def finish(self, agent):
+	def finish(self):
 		if self._wandb:
 			self._wandb.finish()
 
@@ -136,17 +143,22 @@ class Logger(object):
 			raise f'invalid log format type: {ty}'
 
 	def _print(self, d, category):
-		category = colored(category, 'blue' if category == 'train' else 'green')
+		category = colored(category, CAT_TO_COLOR[category])
 		pieces = [f' {category:<14}']
-		for k, disp_k, ty in CONSOLE_FORMAT:
+		_format = OFFLINE_CONSOLE_FORMAT if category == 'offline' else CONSOLE_FORMAT
+		for k, disp_k, ty in _format:
 			pieces.append(f'{self._format(disp_k, d.get(k, 0), ty):<26}')
 		print('   '.join(pieces))
 
 	def log(self, d, category='train'):
-		assert category in {'train', 'eval'}
+		assert category in CAT_TO_COLOR.keys(), f'invalid category: {category}'
 		if self._wandb is not None:
+			if category in {'train', 'eval'}:
+				xkey = 'env_step'
+			elif category == 'offline':
+				xkey = 'iteration'
 			for k,v in d.items():
-				self._wandb.log({category + '/' + k: v}, step=d['env_step'])
+				self._wandb.log({category + '/' + k: v}, step=d[xkey])
 		if category == 'eval':
 			keys = ['env_step', 'episode_reward']
 			self._eval.append(np.array([d[keys[0]], d[keys[1]]]))

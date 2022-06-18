@@ -13,19 +13,12 @@ from copy import deepcopy
 from multiprocessing import Process
 from pathlib import Path
 from cfg_parse import parse_cfg
-from env import make_env
+from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.helper import Episode, ReplayBuffer
 import logger
 torch.backends.cudnn.benchmark = True
-__CONFIG__, __LOGS__, __MODELS__ = 'cfgs', 'logs', 'models'
-
-
-def set_seed(seed):
-	random.seed(seed)
-	np.random.seed(seed)
-	torch.manual_seed(seed)
-	torch.cuda.manual_seed_all(seed)
+__CONFIG__, __MODELS__ = 'cfgs', 'models'
 
 
 def parallel(fn, cfg, wait=5, verbose=False):
@@ -130,7 +123,7 @@ def train(cfg):
 			if cfg.save_model:
 				L.save_model(agent, env_step)
 
-	L.finish(agent)
+	L.finish()
 	print('\nTraining completed successfully')
 
 

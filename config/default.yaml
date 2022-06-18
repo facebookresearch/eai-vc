@@ -2,8 +2,9 @@ default:
     - override hydra/launcher: local
     - override hydra/output: local
 
-# dataset
+# offline training
 fraction: 1.0
+train_iter: 500000
 
 # environment
 task: quadruped-run
@@ -47,10 +48,13 @@ enc_dim: 256
 mlp_dim: 512
 latent_dim: 50
 
-# wandb (insert your own)
-use_wandb: true
-wandb_project: tdmpc
-wandb_entity: nicklashansen
+# wandb (fb)
+wandb_project: tdmpc2
+wandb_entity: nihansen
+
+# wandb (personal)
+# wandb_project: tdmpc
+# wandb_entity: nicklashansen
 
 # dirs
 data_dir: /checkpoint/nihansen/data/tdmpc2
@@ -58,7 +62,7 @@ data_dir: /checkpoint/nihansen/data/tdmpc2
 # misc
 seed: 1
 exp_name: default
-eval_freq: 10000
+eval_freq: 5000
 eval_episodes: 10
 save_video: false
 save_model: false

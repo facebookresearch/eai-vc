@@ -8,30 +8,18 @@ import numpy as np
 import gym
 gym.logger.set_level(40)
 import time
-import random
-from copy import deepcopy
-import multiprocessing
-from multiprocessing import set_start_method
 from pathlib import Path
 from cfg_parse import parse_cfg
-from env import make_env
+from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.bc import BC
 from algorithm.helper import ReplayBuffer
-from dataloader import DMControlDataset, summary_stats
+from dataloader import DMControlDataset
 from termcolor import colored
-from logger import make_dir
+import logger
 import hydra
-import wandb
 torch.backends.cudnn.benchmark = True
-__LOGS__, __DATA__ = 'logs', 'data'
-
-
-def set_seed(seed):
-	random.seed(seed)
-	np.random.seed(seed)
-	torch.manual_seed(seed)
-	torch.cuda.manual_seed_all(seed)
+__LOGS__ = 'logs'
 
 
 def evaluate(env, agent, cfg):
@@ -43,10 +31,11 @@ def evaluate(env, agent, cfg):
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
 		while not done:
 			action = agent.plan(obs, env.unwrapped.task_vec, eval_mode=True, step=int(1e6), t0=t==0)
-			obs, reward, done, info = env.step(action.cpu().numpy())
+			obs, reward, done, _ = env.step(action.cpu().numpy())
 			ep_reward += reward
 			t += 1
 		episode_rewards.append(ep_reward)
+	episode_rewards = np.array(episode_rewards)
 	return np.nanmean(episode_rewards), episode_rewards
 
 
@@ -59,17 +48,14 @@ def make_agent(cfg):
 def train(cfg: dict):
 	"""Training script for offline TD-MPC/BC."""
 	assert torch.cuda.is_available()
-	print(f'Configuration:\n{cfg}')
 	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
-
-	# Prepare objects
-	work_dir = make_dir(Path().cwd() / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed))
+	work_dir = Path().cwd() / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
 	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
 	env, agent, buffer = make_env(cfg), make_agent(cfg), ReplayBuffer(cfg)
 	print(agent.model)
 
-	# Prepare buffer
+	# Load dataset
 	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
 	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, buffer=buffer)
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
@@ -78,35 +64,38 @@ def train(cfg: dict):
 
 	# Run training
 	print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))
-	t = time.time()
-	best = None
-	all_rewards = []
-	iterations = 500_000
-	for iteration in range(iterations+1):
+	L = logger.Logger(work_dir, cfg)
+	train_metrics, start_time, t = {}, time.time(), time.time()
+	for iteration in range(cfg.train_iter+1):
+
+		# Update model
+		train_metrics = agent.update(buffer, int(1e6))
+
 		if iteration % cfg.eval_freq == 0:
+
+			# Evaluate agent
 			mean_reward, rewards = evaluate(env, agent, cfg)
-			print(f'I: {iteration:<6d}   R: {mean_reward:<6.1f}   D: {(time.time()-t)/60:<6.1f}')
-			last = {'iteration': iteration,
-					'mean_reward': mean_reward,
-					'rewards': rewards,
-					'time': time.time()-t,
-					'cfg': cfg.__dict__,
-					'work_dir': work_dir,
-					'num_transitions': buffer.idx,
-					'dataset_summary': dataset_summary,
-					'agent': agent.state_dict()}
-			if best is None or mean_reward > best.get('mean_reward', 0):
-				best = last
-			all_rewards.append(rewards)
-			torch.save({'best': best, 'last': last, 'all_rewards': all_rewards}, work_dir / f'{cfg.fraction}.pt')
+
+			# Log results
+			common_metrics = {
+				'iteration': iteration,
+				'total_time': time.time() - start_time,
+				'duration': time.time() - t,
+				'reward': mean_reward,
+			}
+			common_metrics.update(train_metrics)
+			if cfg.get('multitask', False):
+				task_idxs = np.array([i % len(tasks) for i in range(cfg.eval_episodes)])
+				task_rewards = np.empty((len(tasks), cfg.eval_episodes//len(tasks)))
+				for i in range(len(tasks)):
+					task_rewards[i] = rewards[task_idxs==i]
+				task_rewards = task_rewards.mean(axis=1)
+				common_metrics.update({f'task_reward/{task}': task_rewards[i] for i, task in enumerate(tasks)})
+			L.log(common_metrics, category='offline')
 			t = time.time()
-		agent.update(buffer, int(1e6))
 	
-	# Finish
-	best_summary = summary_stats(torch.tensor(best['rewards'], dtype=torch.float))
-	last_summary = summary_stats(torch.tensor(last['rewards'], dtype=torch.float))
-	print(f'{colored("Best:", "yellow")}\n{best_summary}\n')
-	print(f'{colored("Last:", "yellow")}\n{last_summary}\n')
+	L.finish()
+	print('\nTraining completed successfully')
 
 
 if __name__ == '__main__':

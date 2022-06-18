@@ -3,6 +3,7 @@ from typing import Any, NamedTuple
 import dm_env
 import numpy as np
 import torch
+import random
 from tasks import walker, cheetah
 from dm_control import suite
 suite.ALL_TASKS = suite.ALL_TASKS + suite._get_tasks('custom')
@@ -13,6 +14,13 @@ import gym
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 from encode_dataset import encode_clip
+
+
+def set_seed(seed):
+	random.seed(seed)
+	np.random.seed(seed)
+	torch.manual_seed(seed)
+	torch.cuda.manual_seed_all(seed)
 
 
 class ExtendedTimeStep(NamedTuple):
