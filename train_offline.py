@@ -21,9 +21,10 @@ from algorithm.helper import ReplayBuffer
 from dataloader import DMControlDataset, summary_stats
 from termcolor import colored
 from logger import make_dir
-from tqdm import tqdm
+import hydra
+import wandb
 torch.backends.cudnn.benchmark = True
-__CONFIG__, __LOGS__, __DATA__ = 'cfgs', 'logs', 'data'
+__LOGS__, __DATA__ = 'logs', 'data'
 
 
 def set_seed(seed):
@@ -31,36 +32,6 @@ def set_seed(seed):
 	np.random.seed(seed)
 	torch.manual_seed(seed)
 	torch.cuda.manual_seed_all(seed)
-
-
-def parallel(fn, cfg, wait=5, verbose=False):
-	assert cfg.seed is not None, 'No seed(s) given'
-	assert cfg.task is not None, 'No task(s) given'
-	seeds = cfg.seed
-	tasks = cfg.task
-	if isinstance(seeds, int) and isinstance(tasks, str) and ',' not in tasks:
-		return fn(cfg)
-	seeds = [int(seed) for seed in seeds.split(',')] if not isinstance(seeds, int) else [int(seeds)]
-	tasks = [task.strip() for task in tasks.split(',')]
-	assert len(seeds) == 1 or len(tasks) == 1, 'Cannot run multiple seeds *and* multiple tasks'
-	is_seeds = len(seeds) > 1
-
-	cfgs = []
-	for v in (seeds if is_seeds else tasks):
-		_cfg = deepcopy(cfg)
-		if is_seeds:
-			_cfg.seed = v
-		else:
-			_cfg.task = v
-		cfgs.append(_cfg)
-		if verbose:
-			print(f'Created config for {"seed" if is_seeds else "task"} {v}')
-
-	set_start_method("spawn")
-	pool = multiprocessing.Pool(processes=len(cfgs))
-	pool.map(fn, cfgs)
-	pool.close()
-	exit(0)
 
 
 def evaluate(env, agent, cfg):
@@ -84,10 +55,15 @@ def make_agent(cfg):
 	return algorithm2class[cfg.algorithm](cfg)
 
 
-def train(cfg):
+@hydra.main(config_name='default', config_path='config')
+def train(cfg: dict):
 	"""Training script for offline TD-MPC/BC."""
 	assert torch.cuda.is_available()
+	print(f'Configuration:\n{cfg}')
+	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
+
+	# Prepare objects
 	work_dir = make_dir(Path().cwd() / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed))
 	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
 	env, agent, buffer = make_env(cfg), make_agent(cfg), ReplayBuffer(cfg)
@@ -95,7 +71,7 @@ def train(cfg):
 
 	# Prepare buffer
 	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
-	dataset = DMControlDataset(cfg, Path().cwd() / __DATA__, tasks=tasks, fraction=cfg.fraction, buffer=buffer)
+	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, buffer=buffer)
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}')
@@ -134,4 +110,4 @@ def train(cfg):
 
 
 if __name__ == '__main__':
-	parallel(train, parse_cfg(Path().cwd() / __CONFIG__), verbose=True)
+	train()

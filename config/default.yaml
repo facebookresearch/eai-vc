@@ -53,7 +53,7 @@ wandb_project: tdmpc
 wandb_entity: nicklashansen
 
 # dirs
-data_dir: /private/home/nihansen/data/tdmpc2
+data_dir: /checkpoint/nihansen/data/tdmpc2
 
 # misc
 seed: 1
@@ -73,7 +73,16 @@ action_shape: ???
 action_dim: ???
 demo: false
 
-# hydra
+# cluster
 hydra:
     job:
-        name: test-run
+        name: ${exp_name}
+    launcher:
+        cpus_per_task: 8
+        gpus_per_node: 1
+        tasks_per_node: 1
+        timeout_min: 900
+        mem_gb: 24
+        name: ${hydra.job.name}
+        # array_parallelism: 256
+        submitit_folder: ${hydra.sweep.dir}/.submitit/%j

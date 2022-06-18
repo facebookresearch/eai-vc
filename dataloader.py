@@ -37,10 +37,7 @@ class DMControlDataset(Dataset):
         self._data_dir = data_dir
         self._tasks = tasks if tasks != '*' else sorted(os.listdir(data_dir))
         self._transform = transform
-        self._fps = []
-        for fp in glob.iglob(os.path.join(data_dir, '**', '*.pt'), recursive=True):
-            self._fps.append(fp)
-        self._fps = sorted(self._fps)
+        self._fps = sorted(glob.glob(str(data_dir / '*/*/*.pt')))
         print('Found {} episodes before filtering'.format(len(self._fps)))
         if tasks != '*':
             self._fps = [fp for fp in self._fps if np.any([f'/{t}/' in fp for t in tasks])]
