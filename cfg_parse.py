@@ -1,5 +1,5 @@
-import os
 import re
+import time
 from omegaconf import OmegaConf
 
 
@@ -31,7 +31,10 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 	# Convenience
 	cfg.task_title = cfg.task.replace('-', ' ').title()
 	cfg.device = 'cpu' if cfg.modality == 'pixels' else 'cuda'
-	cfg.exp_name = str(cfg.get('exp_name', 'default'))
+	cfg.exp_name = f'{time.strftime("%m%d")}-{cfg.get("exp_name", "default")}'
+
+	# Hardcoded for now
+	cfg.exp_name = f'{cfg.exp_name}-b{cfg.batch_size}-e{cfg.enc_dim}-h{cfg.mlp_dim}-lr{cfg.lr}'
 
 	# Multi-task
 	cfg.multitask = bool(re.search(r'(mt\d+)', cfg.task))
