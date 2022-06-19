@@ -98,7 +98,7 @@ class Logger(object):
 			self._wandb = None
 		else:
 			try:
-				# os.environ["WANDB_SILENT"] = "true"
+				os.environ["WANDB_SILENT"] = "true"
 				import wandb
 				wandb.init(project=project,
 						entity=entity,
@@ -143,9 +143,9 @@ class Logger(object):
 			raise f'invalid log format type: {ty}'
 
 	def _print(self, d, category):
+		_format = OFFLINE_CONSOLE_FORMAT if category == 'offline' else CONSOLE_FORMAT
 		category = colored(category, CAT_TO_COLOR[category])
 		pieces = [f' {category:<14}']
-		_format = OFFLINE_CONSOLE_FORMAT if category == 'offline' else CONSOLE_FORMAT
 		for k, disp_k, ty in _format:
 			pieces.append(f'{self._format(disp_k, d.get(k, 0), ty):<26}')
 		print('   '.join(pieces))

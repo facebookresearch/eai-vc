@@ -30,7 +30,7 @@ def evaluate(env, agent, cfg):
 			env.unwrapped.task_id = i % len(env.unwrapped.tasks)
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
 		while not done:
-			action = agent.plan(obs, env.unwrapped.task_vec, eval_mode=True, step=int(1e6), t0=t==0)
+			action = agent.plan(obs, env.unwrapped.task_vec if cfg.get('multitask', False) else None, eval_mode=True, step=int(1e6), t0=t==0)
 			obs, reward, done, _ = env.step(action.cpu().numpy())
 			ep_reward += reward
 			t += 1
@@ -45,7 +45,7 @@ def make_agent(cfg):
 
 
 @hydra.main(config_name='default', config_path='config')
-def train(cfg: dict):
+def train_offline(cfg: dict):
 	"""Training script for offline TD-MPC/BC."""
 	assert torch.cuda.is_available()
 	cfg = parse_cfg(cfg)
@@ -99,4 +99,4 @@ def train(cfg: dict):
 
 
 if __name__ == '__main__':
-	train()
+	train_offline()
