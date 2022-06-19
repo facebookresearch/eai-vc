@@ -1,3 +1,4 @@
+modality: features
 train_steps: 3000000/${action_repeat}
 frame_stack: 3
 img_size: 84

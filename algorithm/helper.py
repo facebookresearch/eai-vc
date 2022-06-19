@@ -297,7 +297,8 @@ class ReplayBuffer():
 
 	def add(self, episode: Episode):
 		self._obs[self.idx:self.idx+self.cfg.episode_length] = episode.obs[:-1, -3:] if self.cfg.modality == 'pixels' else episode.obs[:-1]
-		self._last_obs[self.idx//self.cfg.episode_length] = episode.obs[-1]
+		self._last_obs[self.idx//self.cfg.episode_length] = episode.obs[-3:].view(self.cfg.frame_stack*3, *self.cfg.obs_shape[-2:]) \
+			if self.cfg.modality == 'pixels' and episode.obs.shape[1] == 3 else episode.obs[-1]
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
 		if self.cfg.multitask:

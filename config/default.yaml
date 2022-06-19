@@ -1,4 +1,5 @@
-default:
+defaults:
+    - modality@_global_: state
     - override hydra/launcher: local
     - override hydra/output: local
 
@@ -8,7 +9,7 @@ train_iter: 500000
 
 # environment
 task: quadruped-run
-modality: 'state'
+# modality: 'state'
 action_repeat: 2
 discount: 0.99
 episode_length: 1000/${action_repeat}

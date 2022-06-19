@@ -2,11 +2,14 @@ import os
 import glob
 import numpy as np
 import torch
+from pathlib import Path
 from collections import deque
+from PIL import Image
 from torch.utils.data import Dataset
 import torchvision
 import torchvision.transforms as TF
 from algorithm.helper import Episode
+from tqdm import tqdm
 
 __PARTITIONS__ = ['iterations=0', 'iterations=1', 'iterations=2',
 				  'iterations=3', 'iterations=4', 'iterations=5',
@@ -51,7 +54,7 @@ class DMControlDataset(Dataset):
         self._cumulative_rewards = []
         self._modality = 'frames' if cfg.modality == 'pixels' else 'states'
 
-        for fp in self._fps:
+        for fp in tqdm(self._fps):
             data = torch.load(fp)
             if cfg.modality == 'features' and cfg.get('features', None) is not None:
                 obs = data['features'][cfg.features]
@@ -60,10 +63,10 @@ class DMControlDataset(Dataset):
             else:
                 obs = data[self._modality]
             if self._modality == 'frames':
-                raise NotImplementedError('frames not yet implemented for new dataset')
-                obs = obs.transpose(0, 3, 1, 2)
-                _obs = np.empty((obs.shape[0], cfg.frame_stack*obs.shape[1], obs.shape[2], obs.shape[3]), dtype=obs.dtype)
-                obs = stack_frames(obs, _obs, cfg.frame_stack)
+                frames_dir = Path(os.path.dirname(fp)) / 'frames'
+                assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
+                frame_fps = [frames_dir / fn for fn in data['frames']]
+                obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
             actions = np.array([v['expert_action'] for v in data['infos']] if cfg.get('expert_actions', False) else data['actions'], dtype=np.float32).clip(-1, 1)
             episode = Episode.from_trajectory(cfg, obs, actions, data['rewards'])
             episode.info = data['infos']
