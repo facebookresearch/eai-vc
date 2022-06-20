@@ -7,9 +7,12 @@ defaults:
 fraction: 1.0
 train_iter: 500000
 
+# encoder
+encoder:
+    pretrained: false
+
 # environment
 task: quadruped-run
-# modality: 'state'
 action_repeat: 2
 discount: 0.99
 episode_length: 1000/${action_repeat}
@@ -59,6 +62,7 @@ wandb_entity: nihansen
 
 # dirs
 data_dir: /checkpoint/nihansen/data/tdmpc2
+encoder_dir: /checkpoint/nihansen/data/tdmpc2/encoders
 
 # misc
 seed: 1
@@ -83,11 +87,11 @@ hydra:
     job:
         name: ${exp_name}
     launcher:
-        cpus_per_task: 8
+        cpus_per_task: 10
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 1200
-        mem_gb: 32
+        timeout_min: 3000
+        mem_gb: 64
         name: ${hydra.job.name}
         # array_parallelism: 256
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

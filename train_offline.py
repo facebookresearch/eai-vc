@@ -91,6 +91,8 @@ def train_offline(cfg: dict):
 					task_rewards[i] = rewards[task_idxs==i]
 				task_rewards = task_rewards.mean(axis=1)
 				common_metrics.update({f'task_reward/{task}': task_rewards[i] for i, task in enumerate(tasks)})
+			else:
+				common_metrics.update({f'task_reward/{cfg.task}': mean_reward})
 			L.log(common_metrics, category='offline')
 			t = time.time()
 	

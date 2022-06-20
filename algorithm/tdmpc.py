@@ -10,6 +10,7 @@ class TOLD(nn.Module):
 	def __init__(self, cfg):
 		super().__init__()
 		self.cfg = cfg
+		self._pre_encoder = h.pre_enc(cfg)
 		self._encoder = h.enc(cfg)
 		self._task_encoder = h.task_enc(cfg)
 		self._dynamics = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, cfg.latent_dim)
@@ -28,6 +29,8 @@ class TOLD(nn.Module):
 
 	def h(self, obs):
 		"""Encodes an observation into its latent representation (h)."""
+		with torch.no_grad():
+			obs = self._pre_encoder(obs)
 		return self._encoder(obs)
 
 	def next(self, z, a, task_vec=None):
@@ -96,7 +99,7 @@ class TDMPC():
 		return G
 
 	@torch.no_grad()
-	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True): #, demo_std_fraction=0):
+	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True):
 		"""
 		Plan next action using TD-MPC inference.
 		obs: raw input observation.
@@ -127,8 +130,6 @@ class TDMPC():
 		std = 2*torch.ones(horizon, self.cfg.action_dim, device=self.device)
 		if not t0 and hasattr(self, '_prev_mean'):
 			mean[:-1] = self._prev_mean[1:]
-		# if self.cfg.get('demo', False):
-			# action_list = torch.empty(self.cfg.iterations, self.cfg.action_dim, device=self.device)
 
 		# Iterate CEM
 		for i in range(self.cfg.iterations):
@@ -150,9 +151,7 @@ class TDMPC():
 			_std = torch.sqrt(torch.sum(score.unsqueeze(0) * (elite_actions - _mean.unsqueeze(1)) ** 2, dim=1) / (score.sum(0) + 1e-9))
 			_std = _std.clamp_(self.std, 2)
 			mean, std = self.cfg.momentum * mean + (1 - self.cfg.momentum) * _mean, _std
-			# if self.cfg.get('demo', False):
-			# 	action_list[i] = torch.clamp(mean[0] + demo_std_fraction * self.std * torch.randn(self.cfg.action_dim, device=std.device), -1, 1)
-
+		
 		# Outputs
 		score = score.squeeze(1).cpu().numpy()
 		actions = elite_actions[:, np.random.choice(np.arange(score.shape[0]), p=score)]
@@ -161,8 +160,6 @@ class TDMPC():
 		a = mean
 		if not eval_mode:
 			a += std * torch.randn(self.cfg.action_dim, device=std.device)
-		# if self.cfg.get('demo', False):
-		# 	return mean, std, action_list
 		return a.clamp_(-1, 1)
 
 	def update_pi(self, zs, task_vec):
@@ -197,6 +194,7 @@ class TDMPC():
 		self.optim.zero_grad(set_to_none=True)
 		self.std = h.linear_schedule(self.cfg.std_schedule, step)
 		self.model.train()
+		self.model._pre_encoder.eval()
 
 		# Representation
 		z = self.model.h(self.aug(obs))
