@@ -42,7 +42,8 @@ class MoveCubePolicy:
         finger_urdf_path = os.path.join(robot_properties_path, "urdf", urdf_file)
 
         # initial joint positions (lifting the fingers up)
-        self.joint_positions = np.array([0, 0.9, -1.7] * 3)
+        self.joint_positions = np.array([-0.08, 0.84, -1.2] * 3) # "down" position
+        #self.joint_positions = np.array([0, 1.2, -1.7] * 3)
 
         # set platform (robot)
         self.platform = platform
