@@ -1,9 +1,11 @@
+from email.policy import default
 import os
 import re
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from collections import defaultdict
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
 import torchvision.models as models
@@ -123,27 +125,31 @@ class FeatureFuse(nn.Module):
 	def __init__(self, cfg):
 		super().__init__()
 		assert cfg.modality == 'features'
-		features_to_dim = {
+		features_to_dim = defaultdict(lambda: 2048) # default to resnet50
+		features_to_dim.update({
 			'clip': 512,
-			'rn50': 2048,
-		}
-		fuse = cfg.get('fuse', 'cat')
-		if fuse == 'bn':
-			layers = [nn.BatchNorm1d(cfg.obs_shape[0]),
-					  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-					  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		elif fuse == 'flare':
-			layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack),
-					  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-					  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		elif fuse == 'flare+bn':
-			layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack),
-					  nn.BatchNorm1d(cfg.obs_shape[0]),
-					  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-					  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		else:
-			layers = [nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-					  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+			'random18': 1024,
+		})
+		layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack), # default to flare w/o batchnorm
+				  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+		# fuse = cfg.get('fuse', 'cat')
+		# if fuse == 'bn':
+		# 	layers = [nn.BatchNorm1d(cfg.obs_shape[0]),
+		# 			  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+		# elif fuse == 'flare':
+		# 	layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack),
+		# 			  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+		# elif fuse == 'flare+bn':
+		# 	layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack),
+		# 			  nn.BatchNorm1d(cfg.obs_shape[0]),
+		# 			  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+		# else:
+		# 	layers = [nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
 		self.layers = nn.Sequential(*layers)
 
 	def forward(self, x):

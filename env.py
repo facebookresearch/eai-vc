@@ -13,7 +13,7 @@ from dm_env import StepType, specs
 import gym
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-from encode_dataset import encode_clip
+from encode_dataset import encode_clip, encode_resnet
 
 
 def set_seed(seed):
@@ -125,16 +125,17 @@ class FrameStackWrapper(dm_env.Environment):
 
 
 class FeaturesWrapper(dm_env.Environment):
-	def __init__(self, env, num_frames, features=None):
-		assert features is not None
+	def __init__(self, env, cfg):
+		assert cfg.get('features', None) is not None, 'Features must be specified'
 		self._env = env
-		self._num_frames = num_frames
-		self._features = features
-		features_to_dim = {
+		self._cfg = cfg
+		self._features = cfg.features
+		features_to_dim = defaultdict(lambda: 2048) # default to resnet50
+		features_to_dim.update({
 			'clip': 512,
-			'rn50': 2048,
-		}
-		self._obs_spec = specs.BoundedArray(shape=np.array([num_frames*features_to_dim[features],]),
+			'random18': 1024,
+		})
+		self._obs_spec = specs.BoundedArray(shape=np.array([cfg.get('frame_stack', 1)*features_to_dim[cfg.features],]),
 											dtype=np.float32,
 											minimum=-np.inf,
 											maximum=np.inf,
@@ -147,12 +148,9 @@ class FeaturesWrapper(dm_env.Environment):
 		return self._env.action_spec()
 
 	def _encode(self, time_step):
-		if self._features is None:
-			return time_step
 		_obs = torch.from_numpy(time_step.observation).unsqueeze(0)
-		_obs = _obs.view(-1, 3, 84, 84).permute(0, 2, 3, 1)
-		_obs = encode_clip(_obs).view(-1)
-		
+		_obs = _obs.view(-1, 3, 84, 84)
+		_obs = (encode_clip if self._features == 'clip' else encode_resnet)(_obs, self._cfg).view(-1)
 		return ExtendedTimeStep(observation=_obs.cpu().numpy(),
 								step_type=time_step.step_type,
 								action=time_step.action,
@@ -439,7 +437,7 @@ def make_env(cfg):
 		env = FrameStackWrapper(env, cfg.get('frame_stack', 1))
 	env = ExtendedTimeStepWrapper(env)
 	if cfg.modality == 'features':
-		env = FeaturesWrapper(env, cfg.get('frame_stack', 1), cfg.get('features', None))
+		env = FeaturesWrapper(env, cfg)
 	env = TimeStepToGymWrapper(env, domain, task, cfg)
 
 	env = DefaultDictWrapper(env)

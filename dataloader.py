@@ -11,10 +11,6 @@ import torchvision.transforms as TF
 from algorithm.helper import Episode
 from tqdm import tqdm
 
-__PARTITIONS__ = ['iterations=0', 'iterations=1', 'iterations=2',
-				  'iterations=3', 'iterations=4', 'iterations=5',
-				  'iterations=6', 'variable_std=0.3', 'variable_std=0.5']
-
 
 def stack_frames(source, target, num_frames):
     frames = deque([], maxlen=num_frames)
@@ -52,21 +48,23 @@ class DMControlDataset(Dataset):
         else:
             self._episodes = []
         self._cumulative_rewards = []
-        self._modality = 'frames' if cfg.modality == 'pixels' else 'states'
 
         for fp in tqdm(self._fps):
             data = torch.load(fp)
-            if cfg.modality == 'features' and cfg.get('features', None) is not None:
-                obs = data['features'][cfg.features]
+            if cfg.modality == 'features':
+                assert cfg.get('features', None) is not None, 'Features must be specified'
+                features_dir = Path(os.path.dirname(fp)) / 'features' / cfg.features
+                assert features_dir.exists(), 'No features directory found for {}'.format(fp)
+                obs = torch.load(features_dir / os.path.basename(fp))
                 _obs = np.empty((obs.shape[0], cfg.frame_stack*obs.shape[1]), dtype=np.float32)
                 obs = stack_frames(obs, _obs, cfg.frame_stack)
-            else:
-                obs = data[self._modality]
-            if self._modality == 'frames':
+            elif cfg.modality == 'pixels':
                 frames_dir = Path(os.path.dirname(fp)) / 'frames'
                 assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
                 frame_fps = [frames_dir / fn for fn in data['frames']]
                 obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
+            else:
+                obs = data['states']
             actions = np.array([v['expert_action'] for v in data['infos']] if cfg.get('expert_actions', False) else data['actions'], dtype=np.float32).clip(-1, 1)
             episode = Episode.from_trajectory(cfg, obs, actions, data['rewards'])
             episode.info = data['infos']

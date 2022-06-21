@@ -63,11 +63,11 @@ def encode_clip(obs, cfg):
 	if obs.ndim == 4:
 		obses = []
 		for _obs in obs:
-			_obs = __PREPROCESS__(Image.fromarray(_obs))
+			_obs = __PREPROCESS__(Image.fromarray(_obs.permute(0, 2, 3, 1)))
 			obses.append(_obs)
 		obs = torch.stack(obses).cuda()
 	else:
-		obs = __PREPROCESS__(Image.fromarray(obs)).cuda().unsqueeze(0)
+		obs = __PREPROCESS__(Image.fromarray(obs.permute(0, 2, 3, 1))).cuda().unsqueeze(0)
 
 	# Encode
 	with torch.no_grad():
@@ -88,7 +88,7 @@ def encode_resnet(obs, cfg):
 	# Prepare
 	if obs.ndim == 3:
 		obs = obs.unsqueeze(0)
-	obs = obs.permute(0, 3, 1, 2).cuda()
+	obs = obs.cuda()
 
 	# Encode
 	with torch.no_grad():
@@ -117,7 +117,7 @@ def encode(cfg: dict):
 	for episode in tqdm(dataset.episodes):
 		
 		# Compute features
-		features = fn(episode.obs.permute(0, 2, 3, 1), cfg).cpu().numpy()
+		features = fn(episode.obs, cfg).cpu().numpy()
 
 		# Save features
 		feature_dir = make_dir(Path(os.path.dirname(episode.filepath)) / 'features' / cfg.features)
