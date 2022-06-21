@@ -29,23 +29,12 @@ class ImpedanceController:
 
         self._dx_mag_avg = np.ones(self.Nf) # Init linear velocity mag average for moving average per finger
 
-        # For logging
+        # For observation
         self.x_des  = np.ones(9) * np.nan
         self.dx_des = np.ones(9) * np.nan
         self.x_cur  = np.ones(9) * np.nan
         self.dx_cur = np.ones(9) * np.nan
         self.torque = np.ones(9) * np.nan
-
-        self.log = {
-                    "x_des":       [],
-                    "dx_des":      [],
-                    "x_cur":       [],
-                    "dx_cur":      [],
-                    "kp":          [],
-                    "kv":          [],
-                    "max_x_err": [],
-                    "torque":      [],
-                    }
 
     def get_command_torque(self, x_des, dx_des, q_cur, dq_cur, f_des=None):
         """
@@ -103,13 +92,12 @@ class ImpedanceController:
         if f_des is not None:
             torque += J_lin.T @ f_des
 
-        # For logging
+        # For observation
         self.x_des  = np.squeeze(x_des)
         self.dx_des = np.squeeze(dx_des)
         self.x_cur  = np.squeeze(x_cur)
         self.dx_cur = np.squeeze(dx_cur)
         self.torque = np.squeeze(torque)
-        self.update_log()
 
         return torque
     
@@ -133,20 +121,19 @@ class ImpedanceController:
 
         return all_fingers_converged
 
-    def update_log(self):
-        """ Log current controller state to self.log """
+    def get_observation(self):
+        """ Create and return observation  """
 
-        log = {
-               "x_des":       self.x_des,
-               "dx_des":      self.dx_des,
-               "x_cur":       self.x_cur,
-               "dx_cur":      self.dx_cur,
+        obs = {
+               "ft_pos_des":  self.x_des,
+               "ft_vel_des":  self.dx_des,
+               "ft_pos_cur":  self.x_cur,
+               "ft_vel_cur":  self.dx_cur,
                "kp":          self.kp,
                "kv":          self.kv,
-               "max_x_err": self.max_x_err,
+               "max_x_err":   self.max_x_err,
                "torque":      self.torque,
               }
 
-        for key in self.log:
-            self.log[key].append(log[key])
+        return obs
 

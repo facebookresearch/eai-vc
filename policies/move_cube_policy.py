@@ -42,8 +42,7 @@ class MoveCubePolicy:
         finger_urdf_path = os.path.join(robot_properties_path, "urdf", urdf_file)
 
         # initial joint positions (lifting the fingers up)
-        self.joint_positions = np.array([-0.08, 0.84, -1.2] * 3) # "down" position
-        #self.joint_positions = np.array([0, 1.2, -1.7] * 3)
+        self.joint_positions = np.array([-0.08, 1.2, -1.2] * 3) # "down and out" position
 
         # set platform (robot)
         self.platform = platform
@@ -68,13 +67,6 @@ class MoveCubePolicy:
         self.init_x = self.get_ft_pos(self.joint_positions) # initial fingertip pos
         self.ft_pos_traj = np.expand_dims(self.init_x, 0)
         self.ft_vel_traj = np.zeros((1,9))
-
-        self.obj_log = {
-                        "pos_des":       [],
-                        "ori_des":       [],
-                        "pos_cur":       [],
-                        "ori_cur":       [],
-                        }
 
         self.done = False
 
@@ -179,8 +171,6 @@ class MoveCubePolicy:
         dq_cur = observation["robot_observation"]["velocity"]
         torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
 
-        self.update_log(observation)
-
         return self.clip_to_space(torque)
 
     def clip_to_space(self, action):
@@ -194,21 +184,9 @@ class MoveCubePolicy:
         ft_pos = np.array(self.kinematics.forward_kinematics(q)).reshape(self.Nq)
         return ft_pos
 
-    def update_log(self, observation):
+    def get_observation(self):
 
-        log = {
-              "pos_des": observation["desired_goal"]["position"],
-              "ori_des": observation["desired_goal"]["orientation"],
-              "pos_cur": observation["object_observation"]["position"],
-              "ori_cur": observation["object_observation"]["orientation"],
-              }
+        obs = {"controller": self.controller.get_observation()}
 
-        for key in self.obj_log:
-            self.obj_log[key].append(log[key])
-
-    def get_sim_log(self):
-
-        sim_log = {"robot": self.controller.log, "object": self.obj_log}
-
-        return sim_log
+        return obs
 

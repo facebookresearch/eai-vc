@@ -18,8 +18,6 @@ from envs.cube_env import SimCubeEnv, ActionType
 from policies.move_cube_policy import MoveCubePolicy
 
 
-DEBUG_EPISODE_LENGTH = 10000 
-
 def main(args):
     env = SimCubeEnv(
         goal_pose=None,  # passing None to sample a random trajectory
@@ -27,7 +25,11 @@ def main(args):
         visualization=args.visualize,
         no_collisions=args.no_collisions,
         difficulty=1,
+        enable_cameras=True,
+        finger_type="trifingeredu",
     )
+
+    observation_list = []
 
     is_done = False
     observation = env.reset()
@@ -40,13 +42,19 @@ def main(args):
         observation, reward, is_done, info = env.step(action)
         t = info["time_index"]
 
+        policy_observation = policy.get_observation()
+
         is_done = policy.done
+    
+        full_observation = {**observation, **policy_observation}
+
+        if args.log: observation_list.append(full_observation)
 
     if args.log:
         log_dir = "logs"
         if not os.path.exists(log_dir): os.makedirs(log_dir)
         filename = os.path.join(log_dir, "sim_log.npz")
-        np.savez_compressed(filename, data=policy.get_sim_log())
+        np.savez_compressed(filename, data=observation_list)
 
 def parse_args():
     parser = argparse.ArgumentParser()

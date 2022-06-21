@@ -3,11 +3,11 @@ import typing
 import gym
 import numpy as np
 import pybullet
+from scipy.spatial.transform import Rotation
 
 import trifinger_simulation
 import trifinger_simulation.visual_objects
 from trifinger_simulation import trifingerpro_limits
-
 import trifinger_simulation.tasks.move_cube as task
 
 try:
@@ -226,7 +226,16 @@ class BaseCubeEnv(gym.Env):
         camera_observation = self.platform.get_camera_observation(t)
         object_observation = camera_observation.filtered_object_pose
         
+        position_error = np.linalg.norm(object_observation.position - self.goal["position"])
+
+        # From trifinger_simulation tasks/move_cube/__init__.py evaluate_state()
+        goal_rot = Rotation.from_quat(self.goal["orientation"])
+        actual_rot = Rotation.from_quat(object_observation.orientation)
+        error_rot = goal_rot.inv() * actual_rot
+        orientation_error = error_rot.magnitude()
+
         observation = {
+            "t": t,
             "robot_observation": {
                 "position": robot_observation.position,
                 "velocity": robot_observation.velocity,
@@ -241,8 +250,24 @@ class BaseCubeEnv(gym.Env):
             "achieved_goal": {
                 "position": object_observation.position,
                 "orientation": object_observation.orientation,
+                "position_error": position_error,
+                "orientation_error": orientation_error,
             },
         }
+
+        # Save camera observation images
+        if self.enable_cameras:
+            camera_observation_dict = {
+                                        "camera60": {"image"    : camera_observation.cameras[0].image,
+                                                     "timestamp": camera_observation.cameras[0].timestamp},
+                                        "camera180": {"image"    : camera_observation.cameras[1].image,
+                                                     "timestamp": camera_observation.cameras[1].timestamp},
+                                        "camera300": {"image"    : camera_observation.cameras[2].image,
+                                                     "timestamp": camera_observation.cameras[2].timestamp},
+                                      }
+
+            observation["camera_observation"] = camera_observation_dict
+
         return observation
 
     def _gym_action_to_robot_action(self, gym_action):
@@ -272,6 +297,8 @@ class SimCubeEnv(BaseCubeEnv):
         difficulty: int = 1,
         visualization: bool = False,
         no_collisions: bool = False,
+        enable_cameras: bool = False,
+        finger_type: str = "trifingerpro",
     ):
         """Initialize.
 
@@ -291,8 +318,11 @@ class SimCubeEnv(BaseCubeEnv):
             step_size=step_size,
             difficulty=difficulty,
         )
+
         self.visualization = visualization
         self.no_collisions = no_collisions
+        self.enable_cameras = enable_cameras
+        self.finger_type = finger_type
 
 
     def step(self, action):
@@ -387,6 +417,8 @@ class SimCubeEnv(BaseCubeEnv):
             visualization=self.visualization,
             initial_robot_position=initial_robot_position,
             initial_object_pose=initial_object_pose,
+            enable_cameras=self.enable_cameras,
+            finger_type=self.finger_type,
         )
 
         # Set pybullet GUI params
@@ -432,5 +464,5 @@ class SimCubeEnv(BaseCubeEnv):
             pybullet.setCollisionFilterPair(robot_id, obj_id, link_id, obj_link_id, enableCollision=0)
 
         # Make object invisible 
-        pybullet.changeVisualShape(obj_id, obj_link_id, rgbaColor=[0,0,0,0])
+        #pybullet.changeVisualShape(obj_id, obj_link_id, rgbaColor=[0,0,0,0])
 
