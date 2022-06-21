@@ -5,7 +5,8 @@ from scipy.spatial.transform import Rotation
 from trifinger_simulation.tasks import move_cube as move_cube_task
 from control.finger_utils import *
 
-CUBE_HALF_SIZE = move_cube_task._CUBE_WIDTH/2 + 0.01 # This offset can be tuned
+CUBE_HALF_SIZE = move_cube_task._CUBE_WIDTH/2 + 0.007 # This offset can be tuned
+#CUBE_HALF_SIZE = move_cube_task._CUBE_WIDTH/2 + 0.01 # This offset can be tuned
 
 # Information about object faces given face_id
 OBJ_FACES_INFO = {
