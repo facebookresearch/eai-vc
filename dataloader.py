@@ -7,7 +7,6 @@ from collections import deque
 from PIL import Image
 from torch.utils.data import Dataset
 import torchvision
-import torchvision.transforms as TF
 from algorithm.helper import Episode
 from tqdm import tqdm
 

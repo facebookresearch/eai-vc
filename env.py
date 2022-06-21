@@ -428,12 +428,11 @@ def make_env(cfg):
 	env = action_scale.Wrapper(env, minimum=-1.0, maximum=+1.0)
 
 	if cfg.modality in {'pixels', 'features'}:
-		if (domain, task) in suite.ALL_TASKS:
-			camera_id = dict(quadruped=2).get(domain, 0)
-			render_kwargs = dict(height=84, width=84, camera_id=camera_id)
-			env = pixels.Wrapper(env,
-								pixels_only=True,
-								render_kwargs=render_kwargs)
+		camera_id = dict(quadruped=2).get(domain, 0)
+		render_kwargs = dict(height=84, width=84, camera_id=camera_id)
+		env = pixels.Wrapper(env,
+							pixels_only=True,
+							render_kwargs=render_kwargs)
 		env = FrameStackWrapper(env, cfg.get('frame_stack', 1))
 	env = ExtendedTimeStepWrapper(env)
 	if cfg.modality == 'features':
