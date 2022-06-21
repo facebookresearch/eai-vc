@@ -90,7 +90,7 @@ hydra:
         cpus_per_task: 10
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 3000
+        timeout_min: 300 # 3000
         mem_gb: 64
         name: ${hydra.job.name}
         # array_parallelism: 256

@@ -14,15 +14,17 @@ from logger import make_dir
 from tqdm import tqdm
 import torch.nn as nn
 import torchvision
+import hydra
+import kornia.augmentation as K
+from kornia.constants import Resample
 torch.backends.cudnn.benchmark = True
-__CONFIG__, __LOGS__, __DATA__ = 'cfgs', 'logs', 'data'
 
 
 __ENCODER__ = None
 __PREPROCESS__ = None
 
 
-def encode_clip(obs):
+def encode_clip(obs, cfg):
 	"""Encode one or more observations using CLIP."""
 	global __ENCODER__, __PREPROCESS__
 	assert torch.cuda.is_available(), 'CUDA is not available'
@@ -51,62 +53,68 @@ def encode_clip(obs):
 	return features
 
 
-def encode_rn50(obs):
-	"""Encode one or more observations using RN50."""
+def encode_moco(obs, cfg):
+	"""Encode one or more observations using MoCo-v2."""
 	global __ENCODER__, __PREPROCESS__
 	assert torch.cuda.is_available(), 'CUDA is not available'
 	if __ENCODER__ is None:
-		__ENCODER__ = torchvision.models.resnet50(pretrained=True).cuda() # 24M params
+		__ENCODER__ = torchvision.models.__dict__['resnet50']().cuda() # 24M params
+		state_dict = torch.load(os.path.join(cfg.encoder_dir, 'moco_v2_800ep_pretrain.pth.tar'))['state_dict']
+		state_dict = {k.replace('module.encoder_q.', ''): v for k,v in state_dict.items() if not k.startswith('fc.')}
+		__ENCODER__.load_state_dict(state_dict, strict=False)
 		__ENCODER__.fc = nn.Identity()
 		__ENCODER__.eval()
-		__PREPROCESS__ = torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+		__PREPROCESS__ = nn.Sequential(
+			K.Resize((252, 252), resample=Resample.BILINEAR),
+			K.RandomCrop((224, 224)),
+			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+		).cuda()
 	assert isinstance(obs, (torch.Tensor, np.ndarray)), 'Observation must be a tensor or numpy array'
 	if isinstance(obs, np.ndarray):
 		obs = torch.from_numpy(obs)
 	assert obs.ndim >= 3, 'Observation must be at least 3D'
 
-	# Preprocess
+	# Prepare
 	if obs.ndim == 3:
 		obs = obs.unsqueeze(0)
-	obs = obs.permute(0, 3, 1, 2).cuda() / 255.
-	obs = __PREPROCESS__(obs)
+	obs = obs.permute(0, 3, 1, 2).cuda()
 
 	# Encode
 	with torch.no_grad():
-		features = __ENCODER__(obs)
+		features = __ENCODER__(__PREPROCESS__(obs / 255.))
 	return features
 
 
-def encode(cfg):
+@hydra.main(config_name='default', config_path='config')
+def encode(cfg: dict):
 	"""Encoding an image dataset using a pretrained model."""
 	assert torch.cuda.is_available()
-	assert cfg.modality == 'pixels'
+	assert 'features' in cfg, 'Features must be specified'
+	cfg.modality = 'pixels'
+	cfg = parse_cfg(cfg)
 	from env import make_env
 	_env = make_env(cfg)
 	print(colored(f'\nTask: {cfg.task}', 'blue', attrs=['bold']))
 
 	# Load dataset
-	partitions = ['iterations=0', 'iterations=1', 'iterations=2',
-				  'iterations=3', 'iterations=4', 'iterations=5',
-				  'iterations=6', 'variable_std=0.3', 'variable_std=0.5']
-	dataset = DMControlDataset(cfg, Path().cwd() / __DATA__, tasks=[cfg.task], partitions=partitions)
+	tasks = _env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
+	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction)
 	features_to_fn = {
 		'clip': encode_clip,
-		'rn50': encode_rn50
+		'moco': encode_moco
 	}
 	fn = features_to_fn[cfg.features]
 	
 	# Encode dataset
 	for episode in tqdm(dataset.episodes):
-		obs = episode.obs[:, -3:].permute(0, 2, 3, 1)
-		features = fn(obs).cpu().numpy()
-		data = torch.load(episode.filepath)
-		if 'features' not in data:
-			data['features'] = {}
-		data['features'][cfg.features] = features
-		torch.save(data, episode.filepath)
+		
+		# Compute features
+		features = fn(episode.obs.permute(0, 2, 3, 1), cfg).cpu().numpy()
+
+		# Save features
+		feature_dir = make_dir(Path(os.path.dirname(episode.filepath)) / 'features' / cfg.features)
+		torch.save(features, feature_dir / os.path.basename(episode.filepath))
 
 
 if __name__ == '__main__':
-	cfg = parse_cfg(Path().cwd() / __CONFIG__)
-	encode(cfg)
+	encode()
