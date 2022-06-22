@@ -150,7 +150,7 @@ class FeaturesWrapper(dm_env.Environment):
 	def _encode(self, time_step):
 		_obs = torch.from_numpy(time_step.observation).unsqueeze(0)
 		_obs = _obs.view(-1, 3, 84, 84)
-		_obs = (encode_clip if self._features == 'clip' else encode_resnet)(_obs, self._cfg).view(-1)
+		_obs = (encode_clip if self._features == 'clip' else encode_resnet)(_obs, self._cfg, eval=True).view(-1)
 		return ExtendedTimeStep(observation=_obs.cpu().numpy(),
 								step_type=time_step.step_type,
 								action=time_step.action,

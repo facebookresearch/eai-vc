@@ -24,6 +24,7 @@ torch.backends.cudnn.benchmark = True
 
 __ENCODER__ = None
 __PREPROCESS__ = None
+__PREPROCESS_EVAL__ = None
 
 
 def make_encoder(cfg):
@@ -36,8 +37,15 @@ def make_encoder(cfg):
 	# resnet50: 24M params
 	# resnet18: 11M params
 	encoder = torchvision.models.__dict__['resnet' + str(18 if '18' in cfg.features else 50)](pretrained=False).cuda()
-	if cfg.features == 'moco':
-		state_dict = torch.load(os.path.join(cfg.encoder_dir, 'moco_v2_800ep_pretrain.pth.tar'))['state_dict']
+	if 'moco' in cfg.features:
+		if cfg.features == 'moco':
+			fn = 'moco_v2_800ep_pretrain.pth.tar'
+		elif cfg.features == 'mocodmcontrol':
+			fn = 'moco_v2_100ep_pretrain_dmcontrol.pth.tar'
+		else:
+			raise ValueError('Unknown MOCO model')
+		print(colored('Loading MOCO pretrained model: {}'.format(fn), 'green'))
+		state_dict = torch.load(os.path.join(cfg.encoder_dir, fn))['state_dict']
 		state_dict = {k.replace('module.encoder_q.', ''): v for k,v in state_dict.items() if not k.startswith('fc.')}
 		encoder.load_state_dict(state_dict, strict=False)
 	encoder.fc = nn.Identity()
@@ -45,29 +53,33 @@ def make_encoder(cfg):
 	preprocess = nn.Sequential(
 		K.Resize((252, 252), resample=Resample.BILINEAR), K.RandomCrop((224, 224)),
 		K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
+	preprocess_eval = nn.Sequential(
+		K.Resize((252, 252), resample=Resample.BILINEAR), K.CenterCrop((224, 224)),
+		K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
 
-	return encoder, preprocess
+	return encoder, preprocess, preprocess_eval
 
 
-def encode_clip(obs, cfg):
+def encode_clip(obs, cfg, eval=False):
 	"""Encode one or more observations using CLIP."""
-	global __ENCODER__, __PREPROCESS__
+	global __ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__
 	if __ENCODER__ is None:
-		__ENCODER__, __PREPROCESS__ = make_encoder(cfg)
+		__ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__ = make_encoder(cfg)
 	assert isinstance(obs, (torch.Tensor, np.ndarray)), 'Observation must be a tensor or numpy array'
 	if isinstance(obs, torch.Tensor):
 		obs = obs.cpu().numpy()
 	assert obs.ndim >= 3, 'Observation must be at least 3D'
-	
+
 	# Preprocess
+	prep_fn = __PREPROCESS_EVAL__ if eval else __PREPROCESS__
 	if obs.ndim == 4:
 		obses = []
 		for _obs in obs:
-			_obs = __PREPROCESS__(Image.fromarray(_obs.permute(0, 2, 3, 1)))
+			_obs = prep_fn(Image.fromarray(_obs.permute(0, 2, 3, 1)))
 			obses.append(_obs)
 		obs = torch.stack(obses).cuda()
 	else:
-		obs = __PREPROCESS__(Image.fromarray(obs.permute(0, 2, 3, 1))).cuda().unsqueeze(0)
+		obs = prep_fn(Image.fromarray(obs.permute(0, 2, 3, 1))).cuda().unsqueeze(0)
 
 	# Encode
 	with torch.no_grad():
@@ -75,11 +87,11 @@ def encode_clip(obs, cfg):
 	return features
 
 
-def encode_resnet(obs, cfg):
+def encode_resnet(obs, cfg, eval=False):
 	"""Encode one or more observations using a ResNet model."""
-	global __ENCODER__, __PREPROCESS__
+	global __ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__
 	if __ENCODER__ is None:
-		__ENCODER__, __PREPROCESS__ = make_encoder(cfg)
+		__ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__ = make_encoder(cfg)
 	assert isinstance(obs, (torch.Tensor, np.ndarray)), 'Observation must be a tensor or numpy array'
 	if isinstance(obs, np.ndarray):
 		obs = torch.from_numpy(obs)
@@ -91,8 +103,9 @@ def encode_resnet(obs, cfg):
 	obs = obs.cuda()
 
 	# Encode
+	prep_fn = __PREPROCESS_EVAL__ if eval else __PREPROCESS__
 	with torch.no_grad():
-		features = __ENCODER__(__PREPROCESS__(obs / 255.))
+		features = __ENCODER__(prep_fn(obs / 255.))
 	return features
 
 

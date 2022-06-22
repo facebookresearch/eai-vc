@@ -132,6 +132,7 @@ class FeatureFuse(nn.Module):
 		})
 		layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack), # default to flare w/o batchnorm
 				  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+				  nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
 				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
 		# fuse = cfg.get('fuse', 'cat')
 		# if fuse == 'bn':

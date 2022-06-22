@@ -3,5 +3,4 @@ train_steps: 3000000/${action_repeat}
 frame_stack: 3
 img_size: 84
 features: clip
-lr: 3e-4
-batch_size: 256
+batch_size: 512
