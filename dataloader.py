@@ -48,6 +48,10 @@ class DMControlDataset(Dataset):
             self._episodes = []
         self._cumulative_rewards = []
 
+        dump_filelist = cfg.get('dump_filelist', None)
+        if dump_filelist:
+            filelist = []
+
         for fp in tqdm(self._fps):
             data = torch.load(fp)
             if cfg.modality == 'features':
@@ -61,7 +65,11 @@ class DMControlDataset(Dataset):
                 frames_dir = Path(os.path.dirname(fp)) / 'frames'
                 assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
                 frame_fps = [frames_dir / fn for fn in data['frames']]
-                obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
+                if dump_filelist:
+                    obs = np.empty((len(frame_fps), 3*cfg.frame_stack, 84, 84), dtype=np.float32)
+                    filelist.extend(frame_fps)
+                else:
+                    obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
             else:
                 obs = data['states']
             actions = np.array([v['expert_action'] for v in data['infos']] if cfg.get('expert_actions', False) else data['actions'], dtype=np.float32).clip(-1, 1)
@@ -76,6 +84,17 @@ class DMControlDataset(Dataset):
             else:
                 self._episodes.append(episode)
             self._cumulative_rewards.append(episode.cumulative_reward)
+        
+        if dump_filelist:
+            # randomly drop some frames to reduce size
+            keep_num = 5_000_000
+            idxs = np.random.choice(len(filelist), keep_num, replace=False)
+            filelist = [filelist[i] for i in idxs]
+            with open(dump_filelist, 'w') as f:
+                for fp in filelist:
+                    f.write(str(fp) + '\n')
+            print('Dumped {} frames to {}'.format(len(filelist), dump_filelist))
+            exit(0)
 
     @property
     def tasks(self):
