@@ -9,6 +9,7 @@ train_iter: 500000
 
 # encoder
 encoder:
+    arch: default
     pretrained: false
 
 # environment

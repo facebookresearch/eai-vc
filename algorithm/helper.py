@@ -212,7 +212,24 @@ def enc(cfg):
 					  nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU()]
 			out_shape = _get_out_shape((C, 6, 6), layers)
 			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
-		else:
+		elif 'resnet' in cfg.encoder.arch:
+			C = int(3*cfg.frame_stack)
+			layers = models.__dict__[cfg.encoder.arch]()
+			layers.conv1.weight.data = layers.conv1.weight.data.repeat(1, cfg.frame_stack, 1, 1)
+			layers = list(layers.children())[:-2]
+			out_shape = _get_out_shape((C, cfg.img_size, cfg.img_size), layers)
+			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
+		elif cfg.encoder.arch == 'default+':
+			C = int(3*cfg.frame_stack)
+			layers = [NormalizeImg(),
+					nn.Conv2d(C, cfg.num_channels, 3, stride=2), nn.ReLU(),
+					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU()
+			]
+			out_shape = _get_out_shape((C, cfg.img_size, cfg.img_size), layers)
+			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
+		elif cfg.encoder.arch == 'default':
 			C = int(3*cfg.frame_stack)
 			layers = [NormalizeImg(),
 					nn.Conv2d(C, cfg.num_channels, 7, stride=2), nn.ReLU(),
@@ -221,6 +238,8 @@ def enc(cfg):
 					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=2), nn.ReLU()]
 			out_shape = _get_out_shape((C, cfg.img_size, cfg.img_size), layers)
 			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
+		else:
+			raise ValueError('Unknown encoder arch: {}'.format(cfg.encoder.arch))
 	elif cfg.modality == 'features':
 		layers = [FeatureFuse(cfg)]
 	else:
