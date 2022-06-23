@@ -10,7 +10,6 @@ class TOLD(nn.Module):
 	def __init__(self, cfg):
 		super().__init__()
 		self.cfg = cfg
-		self._pre_encoder = h.pre_enc(cfg)
 		self._encoder = h.enc(cfg)
 		self._task_encoder = h.task_enc(cfg)
 		self._dynamics = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, cfg.latent_dim)
@@ -29,8 +28,6 @@ class TOLD(nn.Module):
 
 	def h(self, obs):
 		"""Encodes an observation into its latent representation (h)."""
-		with torch.no_grad():
-			obs = self._pre_encoder(obs)
 		return self._encoder(obs)
 
 	def next(self, z, a, task_vec=None):
@@ -194,7 +191,6 @@ class TDMPC():
 		self.optim.zero_grad(set_to_none=True)
 		self.std = h.linear_schedule(self.cfg.std_schedule, step)
 		self.model.train()
-		self.model._pre_encoder.eval()
 
 		# Representation
 		z = self.model.h(self.aug(obs))

@@ -157,52 +157,6 @@ class FeatureFuse(nn.Module):
 		return self.layers(x)
 
 
-class PretrainedWrapper(nn.Module):
-	"""Wraps a pretrained model with normalization + 2D Flare module."""
-	def __init__(self, cfg, model, out_shape=(1024, 6, 6), normalize=True):
-		super().__init__()
-		self.cfg = cfg
-		self.model = model
-		self.out_shape = out_shape
-		self.normalize = normalize
-		if normalize: # imagenet normalization
-			self.mean = torch.tensor([0.485, 0.456, 0.406]).cuda().view(1, 3, 1, 1).repeat(1, cfg.frame_stack, 1, 1)
-			self.std = torch.tensor([0.229, 0.224, 0.225]).cuda().view(1, 3, 1, 1).repeat(1, cfg.frame_stack, 1, 1)
-
-	def forward(self, x):
-		# normalize by imagenet mean and std
-		if self.normalize:
-			x = (x - self.mean) / self.std
-		# split into frames
-		x = x.split(self.cfg.frame_stack, dim=1)
-		# run model on each frame
-		x = [self.model(frame) for frame in x]
-		# stack frames
-		x = torch.stack(x, dim=1)
-		# compute difference between frames
-		deltas = x[:, 1:] - x[:, :-1]
-		# replace frames with deltas
-		x = torch.cat([x[:, -1:], deltas], dim=1)
-		# reshape to output shape
-		x = x.view(x.size(0), self.cfg.frame_stack*self.out_shape[0], *self.out_shape[1:])
-		return x
-
-
-def pre_enc(cfg):
-	"""Returns a (frozen) pre-encoder."""
-	if cfg.encoder.pretrained:
-		model = models.__dict__['resnet50']()
-		state_dict = torch.load(os.path.join(cfg.encoder_dir, 'moco_v2_800ep_pretrain.pth.tar'))['state_dict']
-		state_dict = {k.replace('module.encoder_q.', ''): v for k,v in state_dict.items() if not k.startswith('fc.')}
-		model.load_state_dict(state_dict, strict=False)
-		model = nn.Sequential(*list(model.children())[:-3])
-		model = PretrainedWrapper(cfg, model)
-		model.eval()
-	else:
-		model = nn.Identity()
-	return model
-
-
 def enc(cfg):
 	"""Returns a TOLD encoder."""
 	if cfg.modality == 'pixels':
@@ -246,6 +200,7 @@ def enc(cfg):
 	else:
 		layers = [nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
 				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+	print('Encoder parameters: {}'.format(sum(p.numel() for p in nn.Sequential(*layers).parameters())))
 	return nn.Sequential(*layers)
 
 
@@ -267,6 +222,7 @@ def mlp(in_dim, mlp_dim, out_dim, act_fn=nn.ELU()):
 		nn.Linear(in_dim, mlp_dim[0]), act_fn,
 		nn.Linear(mlp_dim[0], mlp_dim[1]), act_fn,
 		nn.Linear(mlp_dim[1], out_dim))
+
 
 def q(cfg, act_fn=nn.ELU()):
 	"""Returns a Q-function that uses Layer Normalization."""

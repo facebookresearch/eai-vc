@@ -3,4 +3,3 @@ train_steps: 3000000/${action_repeat}
 frame_stack: 3
 num_channels: 32
 img_size: 84
-batch_size: 512
