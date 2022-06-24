@@ -1,0 +1,51 @@
+default:
+    - override hydra/launcher: local
+    - override hydra/output: local
+
+# general inputs
+env               :   None
+algorithm         :   BC
+pixel_based       :   True                    # pixel based (True) or state based (False) experiment
+embedding         :   resnet50                # choice of embedding network
+camera            :   None                    # choice of camera to use for image generation
+device            :   cuda
+
+# experiment and evaluation
+seed              :   123                     # used as base_seed for rolling out policy for eval in sample_paths
+epochs            :   100                     # number of outer epochs
+eval_frequency    :   1                       # frequency of epochs for evaluation and logging
+save_frequency    :   10                      # frequency of epochs for saving policies
+eval_num_traj     :   20                      # number of rollouts to eval
+num_cpu           :   1                       # for rolling out paths when evaluating                 
+num_demos         :   200                     # path to demo file auto-inferred from other inputs
+exp_notes         :   'Basic BC config'
+
+# environment related kwargs
+env_kwargs:
+    env_name      :   ${env}                
+    device        :   ${device}               # device to use for representation network (policy clamped to CPU for now)
+    image_width   :   256
+    image_height  :   256
+    camera_name   :   ${camera}
+    embedding_name :  ${embedding}                
+    pixel_based   :   ${pixel_based}
+    render_gpu_id :   0
+    seed          :   ${seed}     
+
+# demo reparsing arguments (states -> image embeddings)
+reparse_kwargs:
+    visualize     :   False                   # store videos (.mp4) of the trajectory while reparsing
+    save_frames   :   False                   # save the generated images in the trajectory (can increase storage space dramatically)
+
+# BC agent setup
+bc_kwargs:
+  loss_type       :   'MSE'
+  batch_size      :   64
+  lr              :   1e-3
+
+# general outputs
+job_name          :   'job'
+
+hydra:
+    job:
+        name: VIL_conv_comp_runs
