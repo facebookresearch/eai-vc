@@ -42,7 +42,7 @@ class MoveCubePolicy:
         finger_urdf_path = os.path.join(robot_properties_path, "urdf", urdf_file)
 
         # initial joint positions (lifting the fingers up)
-        self.joint_positions = np.array([-0.08, 1.2, -1.2] * 3) # "down and out" position
+        self.joint_positions = np.array([-0.08, 0.9, -1.2] * 3) # "down and out" position
 
         # set platform (robot)
         self.platform = platform
@@ -67,6 +67,26 @@ class MoveCubePolicy:
         self.init_x = self.get_ft_pos(self.joint_positions) # initial fingertip pos
         self.ft_pos_traj = np.expand_dims(self.init_x, 0)
         self.ft_vel_traj = np.zeros((1,9))
+
+        self.done = False
+
+        self.t = 0
+
+    def reset(self):
+        # initial joint positions (lifting the fingers up)
+        self.joint_positions = self.joint_positions
+
+        # mode and trajectory initializations
+        self.mode = Mode.INIT
+        self.prev_mode = None
+        self.traj_counter = 0
+
+        # Initial ft pos and vel trajectories
+        self.init_x = self.get_ft_pos(self.joint_positions) # initial fingertip pos
+        self.ft_pos_traj = np.expand_dims(self.init_x, 0)
+        self.ft_vel_traj = np.zeros((1,9))
+
+        self.t = 0
 
         self.done = False
 
@@ -124,10 +144,10 @@ class MoveCubePolicy:
             ft_pos = c_utils.get_cp_pos_wf_from_cp_params(self.cp_params, obj_pose)
             ft_pos = np.concatenate(ft_pos)
 
-            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 5)
+            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 2)
         elif self.mode == Mode.MOVE_CUBE:
             # Get object trajectory
-            o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 5)
+            o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 3)
 
             # Get ft pos trajectory from object trajectory
             ft_pos_traj = np.zeros((o_traj.shape[0], 9))
@@ -145,7 +165,7 @@ class MoveCubePolicy:
         # Reset traj counter
         self.traj_counter = 0
 
-    def predict(self, observation, t):
+    def predict(self, observation):
         """
         Returns torques to command to robot
         1. Call state_machine() to determine mode
@@ -153,6 +173,7 @@ class MoveCubePolicy:
         3. Get current waypoints for finger tips
         4. Get torques from controller
         """
+        t = self.t
 
         #print(observation["desired_goal"]["position"])
         
@@ -170,6 +191,8 @@ class MoveCubePolicy:
         q_cur = observation["robot_observation"]["position"]
         dq_cur = observation["robot_observation"]["velocity"]
         torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
+    
+        self.t += 1
 
         return self.clip_to_space(torque)
 
@@ -186,7 +209,10 @@ class MoveCubePolicy:
 
     def get_observation(self):
 
-        obs = {"controller": self.controller.get_observation()}
+        obs = {"policy": 
+                {"controller": self.controller.get_observation(),
+                "t" : self.t}
+              }
 
         return obs
 

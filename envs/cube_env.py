@@ -324,6 +324,12 @@ class SimCubeEnv(BaseCubeEnv):
         self.enable_cameras = enable_cameras
         self.finger_type = finger_type
 
+        self.platform = trifinger_simulation.TriFingerPlatform(
+            visualization=self.visualization,
+            enable_cameras=self.enable_cameras,
+            finger_type=self.finger_type,
+        )
+
 
     def step(self, action):
         """Run one timestep of the environment's dynamics.
@@ -401,25 +407,20 @@ class SimCubeEnv(BaseCubeEnv):
 
         return observation, reward, is_done, self.info
 
-    def reset(self):
+    def reset(self, goal=None):
         """ Reset the environment. """
 
         # hard-reset simulation
-        del self.platform
+        #del self.platform
 
         # initialize simulation
         initial_robot_position = trifingerpro_limits.robot_position.default
         # initialize cube at the centre
         initial_object_pose = task.sample_goal(difficulty=-1)
-        initial_object_pose.position = [0,0,task._CUBE_WIDTH/2] # TODO hardcoded intial cube pose to middle of table
+        initial_object_pose.position = [0,0,task._CUBE_WIDTH/2] # TODO hardcoded intial cube pose to arena center
 
-        self.platform = trifinger_simulation.TriFingerPlatform(
-            visualization=self.visualization,
-            initial_robot_position=initial_robot_position,
-            initial_object_pose=initial_object_pose,
-            enable_cameras=self.enable_cameras,
-            finger_type=self.finger_type,
-        )
+        # Reset platform; reset object to initial_object_pose
+        self.platform.reset(initial_object_pose=initial_object_pose)
 
         # Set pybullet GUI params
         self._set_sim_params()
@@ -428,8 +429,8 @@ class SimCubeEnv(BaseCubeEnv):
             self.disable_collisions()
 
         # if no goal is given, sample one randomly
-        if self.goal is None:
-            self.goal = task.sample_goal().to_dict()
+        if goal is None:
+            self.goal = task.sample_goal(self.difficulty).to_dict()
 
         # visualize the goal
         if self.visualization:
@@ -444,7 +445,7 @@ class SimCubeEnv(BaseCubeEnv):
 
         self.step_count = 0
 
-        return self._create_observation(0, self._initial_action)
+        return
 
     def _set_sim_params(self):
         """ Set pybullet GUI params """

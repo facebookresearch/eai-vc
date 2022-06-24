@@ -24,43 +24,53 @@ def main(args):
         action_type=ActionType.TORQUE,
         visualization=args.visualize,
         no_collisions=args.no_collisions,
-        difficulty=1,
+        difficulty=args.difficulty,
         enable_cameras=True,
-        finger_type="trifingeredu",
+        finger_type="trifingerpro",
     )
 
-    observation_list = []
-
-    is_done = False
-    observation = env.reset()
-    t = 0
-
     policy = MoveCubePolicy(env.action_space, env.platform)
+      
+    if args.log_paths:
+        num_episodes = len(args.log_paths)
+    else:
+        num_episodes = 6
 
-    while not is_done:
-        action = policy.predict(observation, t)
-        observation, reward, is_done, info = env.step(action)
-        t = info["time_index"]
+    t = 0
+    for i in range(num_episodes):
+        print(f"Running episode {i}")
 
-        policy_observation = policy.get_observation()
+        is_done = False
+        env.reset()
+        policy.reset()
 
-        is_done = policy.done
-    
-        full_observation = {**observation, **policy_observation}
+        observation_list = []
+        observation = env._create_observation(t, env._initial_action)
 
-        if args.log: observation_list.append(full_observation)
+        while not is_done:
+            action = policy.predict(observation)
+            observation, reward, episode_done, info = env.step(action)
+            t = info["time_index"]
 
-    if args.log:
-        log_dir = "logs"
-        if not os.path.exists(log_dir): os.makedirs(log_dir)
-        filename = os.path.join(log_dir, "sim_log.npz")
-        np.savez_compressed(filename, data=observation_list)
+            policy_observation = policy.get_observation()
+
+            is_done = policy.done or episode_done
+        
+            full_observation = {**observation, **policy_observation}
+
+            if args.log_paths is not None: observation_list.append(full_observation)
+
+        if args.log_paths is not None:
+            log_path = args.log_paths[i]
+            np.savez_compressed(log_path, data=observation_list)
+            print(f"Saved episode {i} to {log_path}")
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--difficulty", "-d", type=int, choices=[1,2,3], help="Difficulty level", default=1)
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
     parser.add_argument("--no_collisions", "-nc", action="store_true", help="Visualize sim")
-    parser.add_argument("--log", "-l", action="store_true", help="Save sim log")
+    parser.add_argument("--log_paths", "-l", nargs="*", type=str, help="Save sim log")
     return parser.parse_args()
 
 if __name__ == "__main__":
