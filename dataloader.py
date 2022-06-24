@@ -59,8 +59,10 @@ class DMControlDataset(Dataset):
                 features_dir = Path(os.path.dirname(fp)) / 'features' / cfg.features
                 assert features_dir.exists(), 'No features directory found for {}'.format(fp)
                 obs = torch.load(features_dir / os.path.basename(fp))
-                _obs = np.empty((obs.shape[0], cfg.frame_stack*obs.shape[1]), dtype=np.float32)
-                obs = stack_frames(obs, _obs, cfg.frame_stack)
+                if not cfg.features in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
+                    _obs = np.empty((obs.shape[0], cfg.frame_stack*obs.shape[1]), dtype=np.float32)
+                    obs = stack_frames(obs, _obs, cfg.frame_stack)
+                data['metadata']['states'] = data['states']
             elif cfg.modality == 'pixels':
                 frames_dir = Path(os.path.dirname(fp)) / 'frames'
                 assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
@@ -70,6 +72,7 @@ class DMControlDataset(Dataset):
                     filelist.extend(frame_fps)
                 else:
                     obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
+                    data['metadata']['states'] = data['states']
             else:
                 obs = data['states']
             actions = np.array([v['expert_action'] for v in data['infos']] if cfg.get('expert_actions', False) else data['actions'], dtype=np.float32).clip(-1, 1)

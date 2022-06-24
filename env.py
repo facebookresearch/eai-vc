@@ -293,6 +293,11 @@ class TimeStepToGymWrapper(object):
 class DefaultDictWrapper(gym.Wrapper):
 	def __init__(self, env):
 		gym.Wrapper.__init__(self, env)
+		self.env = env
+
+	@property
+	def unwrapped(self):
+		return self.env.unwrapped
 
 	def step(self, action):
 		obs, reward, done, info = self.env.step(action)
@@ -302,8 +307,14 @@ class DefaultDictWrapper(gym.Wrapper):
 class FrameEmitterWrapper(gym.Wrapper):
 	def __init__(self, env, domain, enabled=False):
 		gym.Wrapper.__init__(self, env)
+		self.env = env
+		self._domain = domain
 		self._enabled = enabled
 		self._frames = []
+
+	@property
+	def unwrapped(self):
+		return self.env.unwrapped
 	
 	@property
 	def frames(self):
@@ -315,7 +326,7 @@ class FrameEmitterWrapper(gym.Wrapper):
 				mode='rgb_array',
 				height=84,
 				width=84,
-				camera_id=dict(quadruped=2).get(self.domain, 0)
+				camera_id=dict(quadruped=2).get(self._domain, 0)
 			))
 	
 	def reset(self):
@@ -433,7 +444,11 @@ def make_env(cfg):
 		env = pixels.Wrapper(env,
 							pixels_only=True,
 							render_kwargs=render_kwargs)
-		env = FrameStackWrapper(env, cfg.get('frame_stack', 1))
+		if cfg.modality == 'features' and cfg.get('features', None) in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
+			fs = 3
+		else:
+			fs = cfg.get('frame_stack', 1)
+		env = FrameStackWrapper(env, fs)
 	env = ExtendedTimeStepWrapper(env)
 	if cfg.modality == 'features':
 		env = FeaturesWrapper(env, cfg)

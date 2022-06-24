@@ -14,6 +14,7 @@ from dataloader import DMControlDataset
 from termcolor import colored
 from logger import make_dir
 from tqdm import tqdm
+from collections import deque
 import torch.nn as nn
 import torchvision
 import hydra
@@ -25,6 +26,17 @@ torch.backends.cudnn.benchmark = True
 __ENCODER__ = None
 __PREPROCESS__ = None
 __PREPROCESS_EVAL__ = None
+
+
+def stack_frames(source, target, num_frames):
+    frames = deque([], maxlen=num_frames)
+    for _ in range(num_frames):
+        frames.append(source[0])
+    target[0] = torch.cat(list(frames), dim=0)
+    for i in range(1, target.shape[0]):
+        frames.append(source[i])
+        target[i] = torch.cat(list(frames), dim=0)
+    return target
 
 
 def make_encoder(cfg):
@@ -42,6 +54,14 @@ def make_encoder(cfg):
 			fn = 'moco_v2_800ep_pretrain.pth.tar'
 		elif cfg.features == 'mocodmcontrol':
 			fn = 'moco_v2_100ep_pretrain_dmcontrol.pth.tar'
+		elif cfg.features == 'mocodmcontrolmini':
+			fn = 'moco_v2_80ep_pretrain_dmcontrolmini.pth.tar'
+			encoder.conv1.weight.data = encoder.conv1.weight.data.repeat(1, 3, 1, 1)
+			encoder.conv1.in_channels = encoder.conv1.in_channels * 3
+		elif cfg.features == 'mocodmcontrol5m':
+			fn = 'moco_v2_20ep_pretrain_dmcontrol_5m.pth.tar'
+			encoder.conv1.weight.data = encoder.conv1.weight.data.repeat(1, 3, 1, 1)
+			encoder.conv1.in_channels = encoder.conv1.in_channels * 3
 		else:
 			raise ValueError('Unknown MOCO model')
 		print(colored('Loading MOCO pretrained model: {}'.format(fn), 'green'))
@@ -50,12 +70,16 @@ def make_encoder(cfg):
 		encoder.load_state_dict(state_dict, strict=False)
 	encoder.fc = nn.Identity()
 	encoder.eval()
-	preprocess = nn.Sequential(
-		K.Resize((252, 252), resample=Resample.BILINEAR), K.RandomCrop((224, 224)),
-		K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
-	preprocess_eval = nn.Sequential(
-		K.Resize((252, 252), resample=Resample.BILINEAR), K.CenterCrop((224, 224)),
-		K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
+	if cfg.features in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
+		preprocess = K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+		preprocess_eval = preprocess
+	else:
+		preprocess = nn.Sequential(
+			K.Resize((252, 252), resample=Resample.BILINEAR), K.RandomCrop((224, 224)),
+			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
+		preprocess_eval = nn.Sequential(
+			K.Resize((252, 252), resample=Resample.BILINEAR), K.CenterCrop((224, 224)),
+			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
 
 	return encoder, preprocess, preprocess_eval
 
@@ -96,16 +120,26 @@ def encode_resnet(obs, cfg, eval=False):
 	if isinstance(obs, np.ndarray):
 		obs = torch.from_numpy(obs)
 	assert obs.ndim >= 3, 'Observation must be at least 3D'
-
-	# Prepare
 	if obs.ndim == 3:
 		obs = obs.unsqueeze(0)
-	obs = obs.cuda()
-
-	# Encode
 	prep_fn = __PREPROCESS_EVAL__ if eval else __PREPROCESS__
+	
+	# Encode frame-stacked input
+	if __ENCODER__.conv1.in_channels == 9:
+		obs = prep_fn(obs / 255.)
+		if eval:
+			obs = obs.view(1, 3*obs.shape[1], *obs.shape[-2:])
+		else:
+			_obs = torch.empty((obs.shape[0], __ENCODER__.conv1.in_channels, *obs.shape[-2:]), dtype=torch.float32)
+			obs = stack_frames(obs, _obs, cfg.frame_stack)
+		obs = obs.cuda()
+		with torch.no_grad():
+			features = __ENCODER__(obs)
+		return features
+	
+	# Encode single frame input
 	with torch.no_grad():
-		features = __ENCODER__(prep_fn(obs / 255.))
+		features = __ENCODER__(prep_fn(obs.cuda() / 255.))
 	return features
 
 
