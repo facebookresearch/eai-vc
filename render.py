@@ -21,6 +21,7 @@ from torchvision.utils import make_grid, save_image
 import torchvision.transforms.functional as TF
 from tqdm import tqdm
 import logger
+from logger import make_dir
 import hydra
 torch.backends.cudnn.benchmark = True
 __LOGS__ = 'logs'
@@ -57,7 +58,7 @@ def render(cfg: dict):
 	work_dir = Path().cwd() / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
 	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
 	env, agent, buffer = make_env(cfg), make_agent(cfg), ReplayBuffer(cfg)
-	print(agent.model)
+	print(agent.latent2state)
 
 	# Load dataset
 	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
@@ -66,68 +67,32 @@ def render(cfg: dict):
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}')
 
-	# for i in range(200):
+	# Run training (state2pixels)
+	# num_images = 8
+	# for i in tqdm(range(50_000)):
 	# 	metrics = agent.update(buffer)
-	# 	if i % 200 == 0:
+	# 	if i % 500 == 0:
 	# 		print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
+	# 		obs, _, _, _, state, _, _, _ = buffer.sample()
+	# 		obs_pred = agent.render(state[:num_images])
+	# 		obs_target = agent._resize(obs[:num_images, -3:]/255.).cpu()
+	# 		save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'/private/home/nihansen/code/tdmpc2/recon/recon_{i}.png')
+	# 		if i % 1000 == 0:
+	# 			agent.save(f'/private/home/nihansen/code/tdmpc2/recon/renderer_{i}.pt')
 
-	# obs, _, _, _, state, _, _, _ = buffer.sample()
-	# obses = torch.cat([torch.stack([agent.render(state[i]), agent.render_from_latent(obs[i])], dim=0) for i in range(8)], dim=0)
+	# Run training (latent2state)
 	num_images = 8
-	
-	obs = buffer._obs[:num_images]
-	# state = buffer._state[:num_images]
-
-	agent.render(None)
-
-	breakpoint()
-
-	obs_resized = TF.resize(obs, (384, 384)) / 255.
-
-	# obses = torch.cat([torch.stack([agent.render(state[i]) for i in range(num_images)], dim=0), torch.stack([agent.render_from_latent(obs[i]) for i in range(num_images)], dim=0)], dim=0)
-	obses = torch.cat([torch.stack([agent.render(state[i]) for i in range(num_images)], dim=0), obs_resized], dim=0)
-
-	# Save images
-	obses = make_grid(obses, nrow=8)
-	save_image(obses, '/private/home/nihansen/code/tdmpc2/obses.png')
-	print(colored('Saved obses.png', 'green'))
-
-	# # Run training
-	# print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))
-	# L = logger.Logger(work_dir, cfg)
-	# train_metrics, start_time, t = {}, time.time(), time.time()
-	# for iteration in range(cfg.train_iter+1):
-
-	# 	# Update model
-	# 	train_metrics = agent.update(buffer, int(1e6))
-
-	# 	if iteration % cfg.eval_freq == 0:
-
-	# 		# Evaluate agent
-	# 		mean_reward, rewards = evaluate(env, agent, cfg)
-
-	# 		# Log results
-	# 		common_metrics = {
-	# 			'iteration': iteration,
-	# 			'total_time': time.time() - start_time,
-	# 			'duration': time.time() - t,
-	# 			'reward': mean_reward,
-	# 		}
-	# 		common_metrics.update(train_metrics)
-	# 		if cfg.get('multitask', False):
-	# 			task_idxs = np.array([i % len(tasks) for i in range(cfg.eval_episodes)])
-	# 			task_rewards = np.empty((len(tasks), cfg.eval_episodes//len(tasks)))
-	# 			for i in range(len(tasks)):
-	# 				task_rewards[i] = rewards[task_idxs==i]
-	# 			task_rewards = task_rewards.mean(axis=1)
-	# 			common_metrics.update({f'task_reward/{task}': task_rewards[i] for i, task in enumerate(tasks)})
-	# 		else:
-	# 			common_metrics.update({f'task_reward/{cfg.task}': mean_reward})
-	# 		L.log(common_metrics, category='offline')
-	# 		t = time.time()
-	
-	# L.finish()
-	# print('\nTraining completed successfully')
+	save_dir = make_dir(f'/private/home/nihansen/code/tdmpc2/reconstruction/{cfg.task}/{cfg.get("features")}/{cfg.modality}/latent2state')
+	print('Saving to', save_dir)
+	for i in tqdm(range(50_000+1)):
+		metrics = agent.update(buffer)
+		if i % 10000 == 0:
+			print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
+			latent, _, _, _, state, _, _, _ = buffer.sample()
+			obs_pred = agent.render(latent[:num_images])
+			obs_target = agent.render(state[:num_images], from_state=True)
+			save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'{save_dir}/{i}.png')
+	agent.save(f'{save_dir}/model.pt')
 
 
 if __name__ == '__main__':

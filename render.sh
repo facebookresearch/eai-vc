@@ -1,0 +1,1 @@
+python render.py task=walker-walk modality=features features=mocodmcontrol algorithm=renderer
