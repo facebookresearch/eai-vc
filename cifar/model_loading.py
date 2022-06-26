@@ -4,7 +4,7 @@ from PIL import Image
 from torchvision.transforms import InterpolationMode
 from torch.nn.modules.linear import Identity
 import clip
-sys.path.append('/home/aryanjain/mae')
+sys.path.append('/home/aryanjain/representation_networks/mae')
 import models_mae
 
 CHECKPOINT_DIR = '/home/aryanjain/representation_networks/'    # hard-coded path for FAIR cluster
