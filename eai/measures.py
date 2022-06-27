@@ -6,7 +6,7 @@ from habitat.config import Config
 from habitat.core.embodied_task import EmbodiedTask, Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
-from habitat.tasks.nav.nav import NavigationEpisode, Success
+from habitat.tasks.nav.nav import NavigationEpisode, Success, DistanceToGoal
 from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_from_coeff,
@@ -59,16 +59,46 @@ class AngleSuccess(Measure):
         return self.cls_uuid
 
     def reset_metric(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
-        task.measurements.check_measure_dependencies(
-            self.uuid, [Success.cls_uuid, AngleToGoal.cls_uuid]
-        )
+        dependencies = [AngleToGoal.cls_uuid]
+        if self._config.USE_TRAIN_SUCCESS:
+            dependencies.append(TrainSuccess.cls_uuid)
+        else:
+            dependencies.append(Success.cls_uuid)
+        task.measurements.check_measure_dependencies(self.uuid, dependencies)
         self.update_metric(task=task, *args, **kwargs)  # type: ignore
 
     def update_metric(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
-        success = task.measurements.measures[Success.cls_uuid].get_metric()
+        if self._config.USE_TRAIN_SUCCESS:
+            success = task.measurements.measures[TrainSuccess.cls_uuid].get_metric()
+        else:
+            success = task.measurements.measures[Success.cls_uuid].get_metric()
         angle_to_goal = task.measurements.measures[AngleToGoal.cls_uuid].get_metric()
 
         if success and np.rad2deg(angle_to_goal) < self._config.SUCCESS_ANGLE:
+            self._metric = 1.0
+        else:
+            self._metric = 0.0
+
+
+@registry.register_measure
+class TrainSuccess(Success):
+    r"""Whether or not the agent succeeded at its task
+
+    This measure depends on DistanceToGoal measure.
+    """
+
+    cls_uuid: str = "train_success"
+
+    def update_metric(self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any):
+        distance_to_target = task.measurements.measures[
+            DistanceToGoal.cls_uuid
+        ].get_metric()
+
+        if (
+            hasattr(task, "is_stop_called")
+            and task.is_stop_called  # type: ignore
+            and distance_to_target < self._config.SUCCESS_DISTANCE
+        ):
             self._metric = 1.0
         else:
             self._metric = 0.0

@@ -53,6 +53,9 @@ def execute_exp(config: Config, run_type: str) -> None:
     logger.info("Using a generated random seed {}".format(seed))
     config.defrost()
     config.RUN_TYPE = run_type
+    if run_type == "eval":
+        config.TASK_CONFIG.TASK.ANGLE_SUCCESS.USE_TRAIN_SUCCESS = False
+        config.TASK_CONFIG.TASK.IMAGEGOAL_ROTATION_SENSOR.SAMPLE_ANGLE = False
     config.TASK_CONFIG.SEED = seed
     config.freeze()
     random.seed(config.TASK_CONFIG.SEED)

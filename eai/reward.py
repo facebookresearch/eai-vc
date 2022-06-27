@@ -5,9 +5,9 @@ from habitat.config import Config
 from habitat.core.embodied_task import EmbodiedTask, Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
-from habitat.tasks.nav.nav import DistanceToGoal, Success
+from habitat.tasks.nav.nav import DistanceToGoal
 
-from eai.measures import AngleSuccess, AngleToGoal
+from eai.measures import AngleSuccess, AngleToGoal, TrainSuccess
 
 
 @registry.register_measure
@@ -34,7 +34,7 @@ class SimpleReward(Measure):
             self.uuid,
             [
                 DistanceToGoal.cls_uuid,
-                Success.cls_uuid,
+                TrainSuccess.cls_uuid,
                 AngleToGoal.cls_uuid,
                 AngleSuccess.cls_uuid,
             ],
@@ -46,7 +46,7 @@ class SimpleReward(Measure):
 
     def update_metric(self, *args: Any, task: EmbodiedTask, **kwargs: Any):
         # success
-        success = task.measurements.measures[Success.cls_uuid].get_metric()
+        success = task.measurements.measures[TrainSuccess.cls_uuid].get_metric()
         success_reward = self._config.SUCCESS_REWARD if success else 0.0
 
         # distance-to-goal
