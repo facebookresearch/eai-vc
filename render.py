@@ -21,6 +21,7 @@ from torchvision.utils import make_grid, save_image
 import torchvision.transforms.functional as TF
 from tqdm import tqdm
 import logger
+import imageio
 from logger import make_dir
 import hydra
 torch.backends.cudnn.benchmark = True
@@ -80,19 +81,36 @@ def render(cfg: dict):
 	# 		if i % 1000 == 0:
 	# 			agent.save(f'/private/home/nihansen/code/tdmpc2/recon/renderer_{i}.pt')
 
-	# Run training (latent2state)
-	num_images = 8
 	save_dir = make_dir(f'/private/home/nihansen/code/tdmpc2/reconstruction/{cfg.task}/{cfg.get("features")}/{cfg.modality}/latent2state')
-	print('Saving to', save_dir)
-	for i in tqdm(range(50_000+1)):
-		metrics = agent.update(buffer)
-		if i % 10000 == 0:
-			print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
-			latent, _, _, _, state, _, _, _ = buffer.sample()
-			obs_pred = agent.render(latent[:num_images])
-			obs_target = agent.render(state[:num_images], from_state=True)
-			save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'{save_dir}/{i}.png')
-	agent.save(f'{save_dir}/model.pt')
+
+	if cfg.get('load_agent', False):
+		print('Loading from', save_dir)
+		agent.load(f'{save_dir}/model.pt')
+	else:
+		# Run training (latent2state)
+		num_images = 8
+		print('Saving to', save_dir)
+		for i in tqdm(range(50_000+1)):
+			metrics = agent.update(buffer)
+			if i % 10000 == 0:
+				print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
+				latent, _, _, _, state, _, _, _ = buffer.sample()
+				obs_pred = agent.render(latent[:num_images])
+				obs_target = agent.render(state[:num_images], from_state=True)
+				save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'{save_dir}/{i}.png')
+		agent.save(f'{save_dir}/model.pt')
+	
+	# Evaluate
+	idx = dataset.cumrew.argmax()
+	idxs = np.arange(idx*500, (idx+1)*500)
+	latent = buffer._obs[idxs]
+	state = buffer._state[idxs]
+
+	obs_pred = agent.render(latent)
+	obs_target = agent.render(state, from_state=True)
+
+	frames = torch.cat([obs_pred, obs_target], dim=-1)
+	imageio.mimsave(f'{save_dir}/optimal.mp4', (frames.permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
 
 
 if __name__ == '__main__':

@@ -87,6 +87,8 @@ class DMControlDataset(Dataset):
             else:
                 self._episodes.append(episode)
             self._cumulative_rewards.append(episode.cumulative_reward)
+
+        self._cumulative_rewards = torch.tensor(self._cumulative_rewards, dtype=torch.float32, device=torch.device('cpu'))
         
         if dump_filelist:
             # randomly drop some frames to reduce size
@@ -114,10 +116,14 @@ class DMControlDataset(Dataset):
     @property
     def buffer(self):
         return self._buffer
+    
+    @property
+    def cumrew(self):
+        return self._cumulative_rewards
 
     @property
     def summary(self):
-        return summary_stats(torch.tensor(self._cumulative_rewards))
+        return summary_stats(self.cumrew)
 
     def __len__(self):
         return len(self._episodes)

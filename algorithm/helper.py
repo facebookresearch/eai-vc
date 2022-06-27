@@ -312,7 +312,7 @@ class ReplayBuffer():
 	def __init__(self, cfg):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
-		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*990*500
+		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1650*500
 		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
 		obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
 		self._obs = torch.empty((self.capacity+1, *obs_shape), dtype=dtype, device=self.device)

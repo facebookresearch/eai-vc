@@ -74,7 +74,7 @@ class Renderer():
 	
 	def load(self, fp):
 		d = torch.load(fp)
-		self.model.load_state_dict(d['latent2state'])
+		self.latent2state.load_state_dict(d['latent2state'])
 
 	@torch.no_grad()
 	def render(self, input, from_state=False):

@@ -54,6 +54,8 @@ def make_encoder(cfg):
 			fn = 'moco_v2_800ep_pretrain.pth.tar'
 		elif cfg.features == 'mocodmcontrol':
 			fn = 'moco_v2_100ep_pretrain_dmcontrol.pth.tar'
+		elif cfg.features == 'mocoego15':
+			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocodmcontrolmini':
 			fn = 'moco_v2_80ep_pretrain_dmcontrolmini.pth.tar'
 			encoder.conv1.weight.data = encoder.conv1.weight.data.repeat(1, 3, 1, 1)

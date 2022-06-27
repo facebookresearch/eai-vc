@@ -1,1 +1,1 @@
-python render.py task=walker-walk modality=features features=mocodmcontrol algorithm=renderer
+python render.py task=walker-walk modality=features features=mocoego15 algorithm=renderer #+load_agent=True
