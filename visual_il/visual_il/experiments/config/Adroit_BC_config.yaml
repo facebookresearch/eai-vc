@@ -9,8 +9,8 @@ pixel_based       :   True                    # pixel based (True) or state base
 embedding         :   None                    # choice of embedding network
 camera            :   vil_camera              # choice of camera to use for image generation
 device            :   cuda
-data_dir          :   /private/home/aravraj/work/Projects/visual_rl/vrl_private/vrl/hydra/expert_data/resnet18_rand_paths/
-# data_dir          :   /checkpoint/aravraj/pvr_project_data/expert_paths/
+#data_dir          :   /private/home/aravraj/work/Projects/visual_rl/vrl_private/vrl/hydra/expert_data/resnet18_rand_paths/
+data_dir          :   /checkpoint/aravraj/pvr_project_data/
 data_parallel     :   True
 
 # experiment and evaluation

@@ -3,7 +3,7 @@ import numpy as np, torch, torch.nn as nn, torchvision.models as models, torchvi
 import gym
 from mjrl.utils.gym_env import GymEnv
 from gym.spaces.box import Box
-from visual_il.vision_model_loader import load_pvr_model
+from visual_il.utils.vision_model_loader import load_pvr_model
 from torch._C import device
 from torch.nn.modules.linear import Identity
 from PIL import Image

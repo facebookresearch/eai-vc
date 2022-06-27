@@ -4,8 +4,8 @@ from mjrl.samplers.core import sample_paths
 from mjrl.policies.gaussian_mlp import MLP, BatchNormMLP
 from mjrl.algos.behavior_cloning import BC
 from mjrl.utils.logger import DataLog
-from visual_il.env_constructor import env_constructor
-from visual_il.vision_model_loader import load_pvr_model, fuse_embeddings_concat, fuse_embeddings_flare
+from visual_il.utils.gym_wrapper import env_constructor
+from visual_il.utils.vision_model_loader import load_pvr_model, fuse_embeddings_concat, fuse_embeddings_flare
 from tabulate import tabulate
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
