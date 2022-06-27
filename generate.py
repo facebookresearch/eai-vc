@@ -20,13 +20,17 @@ import wandb
 torch.backends.cudnn.benchmark = True
 
 
+def get_state(env):
+	return env.env.env.env._env._env._env._env.physics.get_state()
+
+
 def evaluate(env, agent, num_episodes, step):
 	"""Evaluate a trained agent."""
 	episode_rewards = []
 	episodes = []
 	for i in range(num_episodes):
 		state, done, ep_reward, t = env.reset(), False, 0, 0
-		states, actions, rewards, infos = [state], [], [], []
+		states, actions, rewards, infos, phys_states = [state], [], [], [], [get_state(env)]
 		while not done:
 			action = agent.plan(state, eval_mode=False, step=step, t0=t==0)
 			state, reward, done, info = env.step(action.cpu().numpy())
@@ -35,6 +39,7 @@ def evaluate(env, agent, num_episodes, step):
 			actions.append(action.cpu().numpy())
 			rewards.append(reward)
 			infos.append(info)
+			phys_states.append(get_state(env))
 			t += 1
 		episode_rewards.append(ep_reward)
 		assert len(env.frames) == 501, f'{len(env.frames)} != 501'
@@ -44,7 +49,8 @@ def evaluate(env, agent, num_episodes, step):
 			'states': states,
 			'actions': actions,
 			'rewards': rewards, 
-			'infos': infos})
+			'infos': infos,
+			'phys_states': phys_states})
 	return np.nanmean(episode_rewards), episodes
 
 
@@ -66,8 +72,6 @@ def generate(cfg: dict):
 	run = wandb.init(job_type='demo', entity=cfg.wandb_entity, project=cfg.wandb_project, name=run_name, tags='demo')
 	
 	for identifier in range(0, int(cfg.train_steps*cfg.action_repeat)+1, cfg.eval_freq):
-		# try:
-			# Load model
 		artifact_dir = None
 		for version in range(0, 2):
 			name = f'{cfg.wandb_entity}/{cfg.wandb_project}/{cfg.task}-state-{cfg.exp_name}-{cfg.seed}-{identifier}:v{version}'
@@ -108,10 +112,8 @@ def generate(cfg: dict):
 				'episode': episode,
 				'reward': reward,
 			}})
+			# _data = torch.load(data_dir / f'{cfg.seed:03d}_{episode:03d}.pt') # for comparison to previous version
 			torch.save(data, data_dir / f'{cfg.seed:03d}_{episode:03d}.pt')
-		# except Exception as e:
-		# 	print('Failed to run {}'.format(name))
-		# 	print(e)
 
 if __name__ == '__main__':
 	generate()

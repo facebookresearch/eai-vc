@@ -90,11 +90,12 @@ def render(cfg: dict):
 		# Run training (latent2state)
 		num_images = 8
 		print('Saving to', save_dir)
-		for i in tqdm(range(50_000+1)):
+		for i in tqdm(range(200_000+1)):
 			metrics = agent.update(buffer)
-			if i % 10000 == 0:
+			if i % 20000 == 0:
 				print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
 				latent, _, _, _, state, _, _, _ = buffer.sample()
+				breakpoint()
 				obs_pred = agent.render(latent[:num_images])
 				obs_target = agent.render(state[:num_images], from_state=True)
 				save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'{save_dir}/{i}.png')
