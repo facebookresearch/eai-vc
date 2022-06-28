@@ -14,7 +14,6 @@ from control.impedance_controller import ImpedanceController
 from control.custom_pinocchio_utils import CustomPinocchioUtils
 import control.cube_utils as c_utils
 
-
 class Mode(enum.Enum):
     INIT       = enum.auto()
     GRASP      = enum.auto()
@@ -31,8 +30,9 @@ class MoveCubePolicy:
     - Compute ft goal positions give cube goal pose, contact poinst
     """
 
-    def __init__(self, action_space, platform):
+    def __init__(self, action_space, platform, time_step=0.001):
         self.action_space = action_space
+        self.time_step = time_step
 
         # TODO hardcoded
         robot_properties_path = "../trifinger_simulation/trifinger_simulation/robot_properties_fingers"
@@ -42,7 +42,7 @@ class MoveCubePolicy:
         finger_urdf_path = os.path.join(robot_properties_path, "urdf", urdf_file)
 
         # initial joint positions (lifting the fingers up)
-        self.joint_positions = np.array([-0.08, 0.9, -1.2] * 3) # "down and out" position
+        self.joint_positions = np.array([-0.08, 1.15, -1.5] * 3) # "down and out" position
 
         # set platform (robot)
         self.platform = platform
@@ -144,10 +144,10 @@ class MoveCubePolicy:
             ft_pos = c_utils.get_cp_pos_wf_from_cp_params(self.cp_params, obj_pose)
             ft_pos = np.concatenate(ft_pos)
 
-            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 2)
+            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 2, time_step=self.time_step)
         elif self.mode == Mode.MOVE_CUBE:
             # Get object trajectory
-            o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 3)
+            o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 3, time_step=self.time_step)
 
             # Get ft pos trajectory from object trajectory
             ft_pos_traj = np.zeros((o_traj.shape[0], 9))

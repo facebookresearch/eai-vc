@@ -299,6 +299,7 @@ class SimCubeEnv(BaseCubeEnv):
         no_collisions: bool = False,
         enable_cameras: bool = False,
         finger_type: str = "trifingerpro",
+        time_step=0.001,
     ):
         """Initialize.
 
@@ -323,12 +324,7 @@ class SimCubeEnv(BaseCubeEnv):
         self.no_collisions = no_collisions
         self.enable_cameras = enable_cameras
         self.finger_type = finger_type
-
-        self.platform = trifinger_simulation.TriFingerPlatform(
-            visualization=self.visualization,
-            enable_cameras=self.enable_cameras,
-            finger_type=self.finger_type,
-        )
+        self.time_step = time_step
 
 
     def step(self, action):
@@ -390,8 +386,7 @@ class SimCubeEnv(BaseCubeEnv):
             # When using this observation, the resulting cumulative reward
             # should match exactly the one computed during replay (with the
             # above it will differ slightly).
-            #
-            # self.info["time_index"] = t
+            #self.info["time_index"] = t
 
             observation = self._create_observation(
                 self.info["time_index"], action
@@ -411,16 +406,23 @@ class SimCubeEnv(BaseCubeEnv):
         """ Reset the environment. """
 
         # hard-reset simulation
-        #del self.platform
+        del self.platform
 
         # initialize simulation
-        initial_robot_position = trifingerpro_limits.robot_position.default
+        #initial_robot_position = trifingerpro_limits.robot_position.default
+        initial_robot_position = [-0.08, 1.15, -1.5] * 3
         # initialize cube at the centre
         initial_object_pose = task.sample_goal(difficulty=-1)
         initial_object_pose.position = [0,0,task._CUBE_WIDTH/2] # TODO hardcoded intial cube pose to arena center
 
-        # Reset platform; reset object to initial_object_pose
-        self.platform.reset(initial_object_pose=initial_object_pose)
+        self.platform = trifinger_simulation.TriFingerPlatform(
+            visualization=self.visualization,
+            enable_cameras=self.enable_cameras,
+            finger_type=self.finger_type,
+            time_step_s=self.time_step,
+            initial_object_pose=initial_object_pose,
+            initial_robot_position=initial_robot_position
+        )
 
         # Set pybullet GUI params
         self._set_sim_params()
@@ -433,7 +435,7 @@ class SimCubeEnv(BaseCubeEnv):
             self.goal = task.sample_goal(self.difficulty).to_dict()
 
         # visualize the goal
-        if self.visualization:
+        if self.visualization and not self.enable_cameras:
             self.goal_marker = trifinger_simulation.visual_objects.CubeMarker(
                 width=task._CUBE_WIDTH,
                 position=self.goal["position"],
@@ -445,7 +447,7 @@ class SimCubeEnv(BaseCubeEnv):
 
         self.step_count = 0
 
-        return
+        return self._create_observation(0, self._initial_action)
 
     def _set_sim_params(self):
         """ Set pybullet GUI params """
