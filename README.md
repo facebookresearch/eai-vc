@@ -17,3 +17,45 @@ Move cube with impedance controller, fixed contact points, pre-computed finger t
 ```
 python sim_move_cube.py -v
 ```
+
+## Demonstration data structure
+
+Demonstration data is stored in `demo-*.npz` files, as a list of observations dicts for each timestep. See `scripts/viz_sim_log.py` for an example of how to load and plot demonstration trajectories. See `scripts/viz_sim_images.py` for an example of how to access observation images and create a .mp4 video with them.
+
+Both these scripts take the path to a `demo-*.npz` file as an argument: `python scripts/viz_sim_*.py </path/to/data.npz>`
+
+The structure of the observation dicts (per timestep) are as follows:
+```
+obs_dict = {
+            "t": time step,
+            "robot_observation": {
+                                "position": joint positions,
+                                "velocity": joint velocities,
+                                "torque": joint torques
+                                },
+            "object_observation": {
+                                  "position": object position,
+                                  "orientation": object quaternion,
+                                  },
+            "camera_observation": {
+                                  "camera60" : {"image": rgb image (270, 270, 3), "timestamp": camera timestamp},
+                                  "camera180": {"image": rgb image (270, 270, 3), "timestamp": camera timestamp},
+                                  "camera300": {"image": rgb image (270, 270, 3), "timestamp": camera timestamp},
+                                  },
+            "policy": {
+                      "controller": {
+                                    "ft_pos_cur": fingertip position - actual,
+                                    "ft_pos_des": fingertip position - desired,
+                                    }
+                      },
+            "desired_goal": goal pose dict,
+            "achieved_goal": {
+                             "position_error": L2 distance from current to goal object position,
+                             "orientation_error": error between current to goal object orientation,
+                             }
+            "action": {
+                      "delta_ftpos": delta fingertip positions,
+                      "delta_q": delta joint positions
+                      }
+           }
+```
