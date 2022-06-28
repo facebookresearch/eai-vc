@@ -120,6 +120,27 @@ class Flare(nn.Module):
 		return torch.cat([x[:, -1:], deltas], dim=1).view(x.size(0), -1)
 
 
+class Prep(nn.Module):
+	"""Prep layer."""
+	def __init__(self, cfg, feature_dim):
+		super().__init__()
+		self.cfg = cfg
+		self.fn = nn.Sequential(
+			nn.Linear(feature_dim, cfg.enc_dim), nn.ELU(),
+			nn.Linear(cfg.enc_dim, cfg.enc_dim))
+		self.layers = nn.Sequential(
+			Flare(cfg.enc_dim, cfg.frame_stack),
+			nn.Linear(cfg.enc_dim*cfg.frame_stack, cfg.enc_dim), nn.ELU(),
+			nn.Linear(cfg.enc_dim, cfg.latent_dim))
+	
+	def forward(self, x):
+		b = x.size(0)
+		x = x.view(b*self.cfg.frame_stack, x.size(1)//self.cfg.frame_stack)
+		x = self.fn(x)
+		x = x.view(b, self.cfg.enc_dim*self.cfg.frame_stack)
+		return self.layers(x)
+
+
 class FeatureFuse(nn.Module):
 	"""Feature fusion and encoder layer."""
 	def __init__(self, cfg):
@@ -130,10 +151,15 @@ class FeatureFuse(nn.Module):
 			'clip': 512,
 			'random18': 1024,
 		})
-		layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack), # default to flare w/o batchnorm
-				  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-				  nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
-				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+		fuse = cfg.get('fuse', 'flare')
+		if fuse == 'flare':
+			layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack), # default to flare w/o batchnorm
+					nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+					nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
+					nn.Linear(cfg.enc_dim, cfg.latent_dim)]
+		elif fuse == 'prep':
+			layers = [Prep(cfg, features_to_dim[cfg.features])]
+
 		# fuse = cfg.get('fuse', 'cat')
 		# if fuse == 'bn':
 		# 	layers = [nn.BatchNorm1d(cfg.obs_shape[0]),

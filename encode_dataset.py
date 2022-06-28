@@ -56,6 +56,10 @@ def make_encoder(cfg):
 			fn = 'moco_v2_100ep_pretrain_dmcontrol.pth.tar'
 		elif cfg.features == 'mocoego15':
 			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
+		elif cfg.features == 'mocoego15center':
+			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
+		elif cfg.features == 'mocoego50':
+			fn = 'moco_v2_50ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocoego190':
 			fn = 'moco_v2_190ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocodmcontrolmini':
@@ -77,6 +81,11 @@ def make_encoder(cfg):
 	if cfg.features in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
 		preprocess = K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 		preprocess_eval = preprocess
+	elif cfg.features == 'mocoego15center':
+		preprocess_eval = nn.Sequential(
+			K.Resize((252, 252), resample=Resample.BILINEAR), K.CenterCrop((224, 224)),
+			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
+		preprocess = preprocess_eval
 	else:
 		preprocess = nn.Sequential(
 			K.Resize((252, 252), resample=Resample.BILINEAR), K.RandomCrop((224, 224)),
