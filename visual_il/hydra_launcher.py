@@ -39,6 +39,7 @@ def configure_jobs(job_data: dict) -> None:
                            config=OmegaConf.to_container(job_data, resolve=True))
 
     bc_pvr_train_loop(job_data, wandb_run)
+    wandb.finish()
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')
