@@ -13,3 +13,8 @@ FINGER_BASE_POSITIONS = [
                        np.array([[np.cos(theta_2*(np.pi/180))*r, np.sin(theta_2*(np.pi/180))*r, 0]]),
                        ]
 
+
+# These are offsets to cube half size for computing contact points
+# Tuned empirically; do not match actual fingertip dimensions
+FT_RADIUS = 0.009  # PRO 
+#FT_RADIUS = 0.007 # EDU

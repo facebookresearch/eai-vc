@@ -3,10 +3,9 @@ from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation
 
 from trifinger_simulation.tasks import move_cube as move_cube_task
-from control.finger_utils import *
+from control.finger_utils import FINGER_BASE_POSITIONS, FT_RADIUS
 
-CUBE_HALF_SIZE = move_cube_task._CUBE_WIDTH/2 + 0.007 # This offset can be tuned
-#CUBE_HALF_SIZE = move_cube_task._CUBE_WIDTH/2 + 0.01 # This offset can be tuned
+CUBE_HALF_SIZE = move_cube_task._CUBE_WIDTH/2
 
 # Information about object faces given face_id
 OBJ_FACES_INFO = {
@@ -48,7 +47,7 @@ OBJ_FACES_INFO = {
                            },
                 }
 
-def get_cp_pos_wf_from_cp_param(cp_param, obj_pose, cube_half_size=CUBE_HALF_SIZE):
+def get_cp_pos_wf_from_cp_param(cp_param, obj_pose, cube_half_size=CUBE_HALF_SIZE, ft_radius=0):
     """
     Compute contact point position in world frame
     Inputs:
@@ -59,14 +58,14 @@ def get_cp_pos_wf_from_cp_param(cp_param, obj_pose, cube_half_size=CUBE_HALF_SIZ
     cube_pos_wf = obj_pose["position"]
     cube_quat_wf = obj_pose["orientation"]
 
-    cp = get_cp_of_from_cp_param(cp_param, cube_half_size)
+    cp = get_cp_of_from_cp_param(cp_param, cube_half_size, ft_radius=FT_RADIUS)
 
     rotation = Rotation.from_quat(cube_quat_wf)
     translation = np.asarray(cube_pos_wf)
 
     return rotation.apply(cp["pos_of"]) + translation
 
-def get_cp_pos_wf_from_cp_params(cp_params, obj_pose, cube_half_size=CUBE_HALF_SIZE):
+def get_cp_pos_wf_from_cp_params(cp_params, obj_pose, cube_half_size=CUBE_HALF_SIZE, ft_radius=0):
     """
     Get contact point positions in world frame from cp_params
     """
@@ -75,17 +74,18 @@ def get_cp_pos_wf_from_cp_params(cp_params, obj_pose, cube_half_size=CUBE_HALF_S
     fingertip_goal_list = []
     for i in range(len(cp_params)):
     #for i in range(cp_params.shape[0]):
-        fingertip_goal_list.append(get_cp_pos_wf_from_cp_param(cp_params[i], obj_pose, cube_half_size))
+        fingertip_goal_list.append(get_cp_pos_wf_from_cp_param(cp_params[i], obj_pose, cube_half_size, ft_radius=FT_RADIUS))
     return fingertip_goal_list
 
-def get_cp_of_from_cp_param(cp_param, cube_half_size=CUBE_HALF_SIZE):
+def get_cp_of_from_cp_param(cp_param, cube_half_size=CUBE_HALF_SIZE, ft_radius=0):
     """
     Compute contact point position in object frame
     Inputs:
     cp_param: Contact point param [px, py, pz]
     """
 
-    obj_shape = (cube_half_size, cube_half_size, cube_half_size)
+    effective_cube_half_size = cube_half_size + ft_radius
+    obj_shape = (effective_cube_half_size, effective_cube_half_size, effective_cube_half_size)
     cp_of = []
     # Get cp position in OF
     for i in range(3):
@@ -136,33 +136,6 @@ def get_face_from_cp_param(cp_param):
         face = 6
 
     return face
-
-def get_wf_from_of(p, obj_pose):
-    """
-    Trasform point p from world frame to object frame, given object pose
-    """
-    cube_pos_wf = obj_pose["position"]
-    cube_quat_wf = obj_pose["orientation"]
-
-    rotation = Rotation.from_quat(cube_quat_wf)
-    translation = np.asarray(cube_pos_wf)
-    
-    return rotation.apply(p) + translation
-
-def get_of_from_wf(p, obj_pose):
-    """
-    Trasform point p from object frame to world frame, given object pose
-    """
-    cube_pos_wf = obj_pose["position"]
-    cube_quat_wf = obj_pose["orientation"]
-
-    rotation = Rotation.from_quat(cube_quat_wf)
-    translation = np.asarray(cube_pos_wf)
-    
-    rotation_inv = rotation.inv()
-    translation_inv = -rotation_inv.apply(translation)
-
-    return rotation_inv.apply(p) + translation_inv
 
 def get_cp_params(obj_pose):
     """
@@ -277,6 +250,65 @@ def get_closest_ground_face(obj_pose):
             min_face = i
 
     return min_face
+
+def get_vertices_wf(obj_pose):
+    """ Get vertices of cube in world frame, given obj_pose in world frame """
+    
+    v_of = get_vertices_of()
+
+    # TODO fill this in
+    #for k, p in v_of:
+    
+
+def get_vertices_of():
+    
+    v = {
+        0: np.array([-1, -1, -1]) * CUBE_HALF_SIZE,
+        1: np.array([ 1, -1, -1]) * CUBE_HALF_SIZE,
+        2: np.array([-1, -1,  1]) * CUBE_HALF_SIZE,
+        3: np.array([ 1, -1,  1]) * CUBE_HALF_SIZE,
+        4: np.array([-1, -1,  1]) * CUBE_HALF_SIZE,
+        5: np.array([ 1, -1,  1]) * CUBE_HALF_SIZE,
+        6: np.array([-1,  1,  1]) * CUBE_HALF_SIZE,
+        7: np.array([ 1,  1,  1]) * CUBE_HALF_SIZE,
+        }
+    
+    return v
+
+##############################################################################
+# Transformation functions
+##############################################################################
+
+def get_wf_from_of(p, obj_pose):
+    """
+    Trasform point p from world frame to object frame, given object pose
+    """
+    cube_pos_wf = obj_pose["position"]
+    cube_quat_wf = obj_pose["orientation"]
+
+    rotation = Rotation.from_quat(cube_quat_wf)
+    translation = np.asarray(cube_pos_wf)
+    
+    return rotation.apply(p) + translation
+
+def get_of_from_wf(p, obj_pose):
+    """
+    Trasform point p from object frame to world frame, given object pose
+    """
+    cube_pos_wf = obj_pose["position"]
+    cube_quat_wf = obj_pose["orientation"]
+
+    rotation = Rotation.from_quat(cube_quat_wf)
+    translation = np.asarray(cube_pos_wf)
+    
+    rotation_inv = rotation.inv()
+    translation_inv = -rotation_inv.apply(translation)
+
+    return rotation_inv.apply(p) + translation_inv
+
+##############################################################################
+# Non-cube specific functions TODO move somewhere else
+##############################################################################
 
 def lin_interp_pos_traj(x_cur, x_des, T, time_step=0.001):
     """
