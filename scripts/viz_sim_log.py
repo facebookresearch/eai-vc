@@ -11,38 +11,9 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 
 import utils.data_utils as d_utils
 
-def plot_traj(title, save_path, d_list, data_obs, data_des = None, plot_timestamp = None):
-    num_steps = data_obs.shape[0]
+def main(args):
+    file_path = args.file_path
 
-    plt.figure(figsize=(10, 10), dpi=200)
-    plt.subplots_adjust(hspace=1)
-    plt.suptitle(title)
-
-    k = 0
-    for i, d in enumerate(d_list):
-        k += 1
-
-        plt.subplot(len(d_list), 1, k)
-        if len(d_list) > 1:
-            plt.title(d)
-
-        plt.plot(list(range(num_steps)), data_obs[:, i], marker=".", label="observed")
-
-        if data_des is not None:
-            plt.plot(list(range(num_steps)), data_des[:, i], label="desired")
-            plt.legend()
-
-    if plot_timestamp is not None:
-        plt.axvline(x=plot_timestamp, ls='--', c='k', lw=1)
-
-    if save_path is not None:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-    plt.close()
-
-def main(file_path):
     data = np.load(file_path, allow_pickle=True)["data"]
     print(len(data))
     traj_dict = d_utils.get_traj_dict_from_obs_list(data)
@@ -52,29 +23,36 @@ def main(file_path):
     o_des = traj_dict["o_des"] # object position, desired
     ft_pos_cur = traj_dict["ft_pos_cur"] # ft position, actual
     ft_pos_des = traj_dict["ft_pos_des"] # ft position, desired
-    
-    ## Plot ft positions
-    plot_traj(
-            "ft position", 
-            None,
-            ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
-            ft_pos_cur,
-            ft_pos_des,
-            )
 
-    # Plot obj position trajectory
-    plot_traj(
-            "object position", 
-            None,
-            ["x", "y", "z"],
-            o_cur,
-            o_des,
+    downsampled_traj_dict = d_utils.downsample_traj_dict(traj_dict)
+    
+    
+    if args.save:
+        demo_name = os.path.splitext(os.path.split(file_path)[1])[0]
+        demo_dir = os.path.split(file_path)[0]
+        out_dir = os.path.join(demo_dir, "viz", demo_name)
+        if not os.path.exists(out_dir): os.makedirs(out_dir, exists=False)
+        out_name = "ft_position.png"
+        out_path = os.path.join(out_dir, out_name)
+    else:
+        out_path = None
+
+    ## Plot ft positions
+    d_utils.plot_traj(
+            "ft position", 
+            out_path,
+            ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
+            {
+            "all":  {"y": traj_dict["ft_pos_des"], "x": traj_dict["t"]},
+            "down": {"y": downsampled_traj_dict["ft_pos_cur"], "x": downsampled_traj_dict["t"], "marker": "x"},
+            }
             )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("file_path", default=None, help="""Filepath of trajectory to load""")
+    parser.add_argument("--save", "-s", action="store_true", help="Save figs")
     args = parser.parse_args()
-    main(args.file_path)
+    main(args)
 
 
