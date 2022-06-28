@@ -90,28 +90,25 @@ def render(cfg: dict):
 		# Run training (latent2state)
 		num_images = 8
 		print('Saving to', save_dir)
-		for i in tqdm(range(200_000+1)):
+		for i in tqdm(range(500_000+1)):
 			metrics = agent.update(buffer)
-			if i % 20000 == 0:
+			if i % 50000 == 0:
 				print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
+				
+				# Evaluate on sampled images
 				latent, _, _, _, state, _, _, _ = buffer.sample()
-				breakpoint()
 				obs_pred = agent.render(latent[:num_images])
 				obs_target = agent.render(state[:num_images], from_state=True)
 				save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'{save_dir}/{i}.png')
+				
+				# Evaluate on optimal trajectory
+				idx = dataset.cumrew.argmax()
+				idxs = np.arange(idx*500, (idx+1)*500)
+				obs_pred = agent.render(buffer._obs[idxs])
+				obs_target = agent.render(buffer._state[idxs], from_state=True)
+				frames = torch.cat([obs_pred, obs_target], dim=-1)
+				imageio.mimsave(f'{save_dir}/optimal_{i}.mp4', (frames.permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
 		agent.save(f'{save_dir}/model.pt')
-	
-	# Evaluate
-	idx = dataset.cumrew.argmax()
-	idxs = np.arange(idx*500, (idx+1)*500)
-	latent = buffer._obs[idxs]
-	state = buffer._state[idxs]
-
-	obs_pred = agent.render(latent)
-	obs_target = agent.render(state, from_state=True)
-
-	frames = torch.cat([obs_pred, obs_target], dim=-1)
-	imageio.mimsave(f'{save_dir}/optimal.mp4', (frames.permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
 
 
 if __name__ == '__main__':

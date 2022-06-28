@@ -16,6 +16,7 @@ models/
 results/
 recon/
 reconstruction/
+reconstruction_approx/
 frames.mp4
 
 # Byte-compiled / optimized / DLL files

@@ -51,8 +51,8 @@ class BC():
 			task_vec = torch.tensor(task_vec, dtype=torch.float32, device=self.device).unsqueeze(0)
 		return self.model.pi(self.model.h(obs), task_vec)
 
-	def update(self, replay_buffer, step):
-		obs, next_obses, action, reward, _, task_vec, idxs, weights = replay_buffer.sample()
+	def update(self, replay_buffer, step=int(1e6)):
+		obs, next_obses, action, _, _, task_vec, idxs, weights = replay_buffer.sample()
 		self.optim.zero_grad(set_to_none=True)
 		self.model.train()
 

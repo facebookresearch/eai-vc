@@ -319,8 +319,8 @@ class ReplayBuffer():
 		self._last_obs = torch.empty((self.capacity//cfg.episode_length, *cfg.obs_shape), dtype=dtype, device=self.device)
 		self._action = torch.empty((self.capacity, cfg.action_dim), dtype=torch.float32, device=self.device)
 		self._reward = torch.empty((self.capacity,), dtype=torch.float32, device=self.device)
-		self._state = torch.empty((self.capacity, 24), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
-		self._last_state = torch.empty((self.capacity//cfg.episode_length, 24), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
+		self._state = torch.empty((self.capacity, 18), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
+		self._last_state = torch.empty((self.capacity//cfg.episode_length, 18), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
 		self._task_vec = torch.empty((self.capacity, cfg.num_tasks), dtype=torch.uint8, device=self.device) if cfg.get('multitask', False) else None
 		self._priorities = torch.ones((self.capacity,), dtype=torch.float32, device=self.device)
 		self._eps = 1e-6
@@ -342,8 +342,8 @@ class ReplayBuffer():
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
 		if self.cfg.modality != 'state':
-			self._state[self.idx:self.idx+self.cfg.episode_length] = torch.tensor(episode.metadata['states'][:-1])
-			self._last_state[self.idx//self.cfg.episode_length] = torch.tensor(episode.metadata['states'][-1])
+			self._state[self.idx:self.idx+self.cfg.episode_length] = torch.tensor(episode.metadata['phys_states'][:-1])
+			self._last_state[self.idx//self.cfg.episode_length] = torch.tensor(episode.metadata['phys_states'][-1])
 		if self.cfg.multitask:
 			self._task_vec[self.idx:self.idx+self.cfg.episode_length] = episode.task_vec.unsqueeze(0).repeat(self.cfg.episode_length, 1)
 		if self._full:
@@ -395,16 +395,13 @@ class ReplayBuffer():
 			reward[t] = self._reward[_idxs]
 
 		mask = (_idxs+1) % self.cfg.episode_length == 0
-		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].cuda().float()
-		if not action.is_cuda:
-			action, reward, idxs, weights = \
-				action.cuda(), reward.cuda(), idxs.cuda(), weights.cuda()
-			if task_vec is not None:
-				task_vec = task_vec.cuda()
-			if state is not None:
-				state = state.cuda()
+		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(self.device).float()
+		if task_vec is not None:
+			task_vec = task_vec.cuda()
+		if state is not None:
+			state = state.cuda()
 
-		return obs, next_obs, action, reward.unsqueeze(2), state, task_vec, idxs, weights
+		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, task_vec, idxs.cuda(), weights.cuda()
 
 
 def linear_schedule(schdl, step):

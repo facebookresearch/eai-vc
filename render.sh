@@ -1,1 +1,1 @@
-python render.py task=walker-walk modality=features features=moco algorithm=renderer #+load_agent=True
+CUDA_VISIBLE_DEVICES=1 python render.py task=walker-walk modality=features features=mocoego190 algorithm=renderer #+load_agent=True

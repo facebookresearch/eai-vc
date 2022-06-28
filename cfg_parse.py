@@ -30,7 +30,7 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 
 	# Convenience
 	cfg.task_title = cfg.task.replace('-', ' ').title()
-	cfg.device = 'cpu' if cfg.modality == 'pixels' else 'cuda'
+	cfg.device = 'cuda' if cfg.modality == 'state' else 'cpu'
 	cfg.exp_name = f'{time.strftime("%m%d")}-{cfg.get("exp_name", "default")}'
 
 	# Hardcoded for now
