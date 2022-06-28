@@ -1,4 +1,10 @@
-import os, time as timer, hydra
+"""
+This is a launcher script for launching CIFAR-10 linear probing using hydra
+"""
+
+import os
+import time as timer
+import hydra
 from omegaconf import DictConfig, OmegaConf
 
 cwd = os.getcwd()
@@ -7,7 +13,7 @@ cwd = os.getcwd()
 # Process Inputs and configure job
 # ===============================================================================
 @hydra.main(config_name="cifar_lin_probe", config_path="config")
-def configure_jobs(job_data:dict) -> None:
+def configure_jobs(job_data: dict) -> None:
 
     print("========================================")
     print("Job Configuration")
@@ -15,11 +21,12 @@ def configure_jobs(job_data:dict) -> None:
 
     job_data = OmegaConf.structured(OmegaConf.to_yaml(job_data))
 
-    import torch, torchvision, torchvision.transforms as T
-    import numpy as np, wandb
+    import torch
+    import numpy as np
+    import wandb
     import matplotlib.pyplot as plt
     from tqdm import tqdm
-    from model_loading import load_pvr_model, MODEL_LIST
+    from utils.model_loading import load_pvr_model, MODEL_LIST
     from eval_model_cifar import probe_model_eval, ClassifierModel
     
     assert job_data['model'] in MODEL_LIST
@@ -31,11 +38,11 @@ def configure_jobs(job_data:dict) -> None:
                            config=OmegaConf.to_container(job_data, resolve=True))
 
     # Get base model, transform, and probing classifier
-    model, embedding_dim, transform = load_pvr_model(job_data['model'])
+    model, embedding_dim, transform = load_pvr_model(job_data['model'], input_type=torch.Tensor)
     linear_probe = torch.nn.Sequential(
-                                torch.nn.BatchNorm1d(embedding_dim),
-                                torch.nn.Linear(embedding_dim, 10),
-                               )
+                        torch.nn.BatchNorm1d(embedding_dim),
+                        torch.nn.Linear(embedding_dim, 10),
+                    )
     # Train the probe
     probe_model_eval(job_data, model, transform, linear_probe, embedding_dim, wandb_run)
     wandb.finish()

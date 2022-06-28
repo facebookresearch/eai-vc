@@ -9,8 +9,7 @@ pixel_based       :   True                    # pixel based (True) or state base
 embedding         :   None                    # choice of embedding network
 camera            :   vil_camera              # choice of camera to use for image generation
 device            :   cuda
-#data_dir          :   /private/home/aravraj/work/Projects/visual_rl/vrl_private/vrl/hydra/expert_data/resnet18_rand_paths/
-data_dir          :   /checkpoint/aravraj/pvr_project_data/
+data_dir          :   /home/aryanjain/data/
 data_parallel     :   True
 
 # experiment and evaluation
@@ -43,12 +42,16 @@ reparse_kwargs:
 
 # BC agent setup
 bc_kwargs:
-  hidden_sizes    :   (256, 256, 256)
-  nonlinearity    :   relu
-  loss_type       :   'MSE'
-  batch_size      :   256
-  lr              :   1e-3
-  dropout         :   0
+    hidden_sizes  :   (256, 256, 256)
+    nonlinearity  :   relu
+    loss_type     :   'MSE'
+    batch_size    :   256
+    lr            :   1e-3
+    dropout       :   0
+
+# logging
+wandb_user        :   aryan9101
+wandb_project     :   rep_eval_visual_il
 
 # general outputs
 job_name          :   'job'

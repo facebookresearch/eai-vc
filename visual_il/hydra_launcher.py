@@ -7,7 +7,6 @@ import time as timer
 import hydra
 import multiprocessing
 from omegaconf import DictConfig, OmegaConf
-from train_loop import bc_pvr_train_loop, configure_cluster_GPUs
 
 cwd = os.getcwd()
 
@@ -15,13 +14,16 @@ cwd = os.getcwd()
 # Process Inputs and configure job
 # ===============================================================================
 @hydra.main(config_name="BC_config", config_path="config")
-def configure_jobs(job_data:dict) -> None:
+def configure_jobs(job_data: dict) -> None:
 
     print("========================================")
     print("Job Configuration")
     print("========================================")
 
     job_data = OmegaConf.structured(OmegaConf.to_yaml(job_data))
+
+    from train_loop import bc_pvr_train_loop, configure_cluster_GPUs
+    import wandb
 
     # configure GPUs
     # os.environ['GPUS'] = os.environ.get('SLURM_STEP_GPUS', '0')
@@ -32,8 +34,11 @@ def configure_jobs(job_data:dict) -> None:
     with open('job_config.json', 'w') as fp:
         OmegaConf.save(config=job_data, f=fp.name)
     print(OmegaConf.to_yaml(job_data))
-    bc_pvr_train_loop(job_data)
 
+    wandb_run = wandb.init(project=job_data['wandb_project'], entity=job_data['wandb_user'], 
+                           config=OmegaConf.to_container(job_data, resolve=True))
+
+    bc_pvr_train_loop(job_data, wandb_run)
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')

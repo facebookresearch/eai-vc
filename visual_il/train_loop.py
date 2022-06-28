@@ -3,19 +3,29 @@ from mjrl.utils.gym_env import GymEnv
 from mjrl.samplers.core import sample_paths
 from mjrl.policies.gaussian_mlp import MLP, BatchNormMLP
 from mjrl.algos.behavior_cloning import BC
-from mjrl.utils.logger import DataLog
-from visual_il.utils.gym_wrapper import env_constructor
-from visual_il.utils.vision_model_loader import load_pvr_model, fuse_embeddings_concat, fuse_embeddings_flare
+from utils.gym_wrapper import env_constructor
+from utils.model_loading import load_pvr_model, fuse_embeddings_concat, fuse_embeddings_flare
 from tabulate import tabulate
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
-import mj_envs, gym, mjrl.envs, dmc2gym
-import numpy as np, time as timer, multiprocessing, pickle, os, torch, gc
+from wandb.wandb_run import Run
+import mj_envs
+import gym
+import mjrl.envs
+import dmc2gym
+import numpy as np
+import time as timer
+import multiprocessing
+import pickle
+import os
+import gc
+import torch
 import torch.nn as nn
 import torchvision.transforms as T
+import wandb
 
 
-def make_bc_agent(env_kwargs:dict, bc_kwargs:dict, demo_paths:list, epochs:int, seed:int):
+def make_bc_agent(env_kwargs: dict, bc_kwargs: dict, demo_paths: list, epochs: int, seed: int):
     e = env_constructor(**env_kwargs)
     policy = MLP(e.spec, hidden_sizes=(256, 256), seed=seed)
     bc_agent = BC(demo_paths, policy=policy, epochs=epochs, set_transforms=False, **bc_kwargs)
@@ -46,12 +56,12 @@ def configure_cluster_GPUs(gpu_logical_id: int) -> int:
         print("Found slurm-GPUS: <Physical_id:{}>".format(physical_gpu_ids))
         print("Using GPU <Physical_id:{}, Logical_id:{}>".format(gpu_id, gpu_logical_id))
     else:
-        gpu_id = 0 # base case when no GPUs detected in SLURM
+        gpu_id = 0  # base case when no GPUs detected in SLURM
         print("No GPUs detected. Defaulting to 0 as the device ID")
     return gpu_id
 
 
-def bc_pvr_train_loop(job_data:dict) -> None:
+def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
 
     # configure GPUs
     os.environ['GPUS'] = os.environ.get('SLURM_STEP_GPUS', '0')
@@ -89,24 +99,26 @@ def bc_pvr_train_loop(job_data:dict) -> None:
     demo_paths = compute_embeddings(demo_paths, device=job_data['device'],
                                     embedding_name=job_data['env_kwargs']['embedding_name'])
     demo_paths = precompute_features(demo_paths, history_window=job_data['env_kwargs']['history_window'],
-                                    fuse_embeddings=fuse_embeddings_flare)
+                                     fuse_embeddings=fuse_embeddings_flare)
     gc.collect()  # garbage collection to free up RAM
-    dataset    = FrozenEmbeddingDataset(demo_paths,
-                    history_window=job_data['env_kwargs']['history_window'],
-                    fuse_embeddings=fuse_embeddings_flare,
-                )
-    dataloader = DataLoader(dataset, batch_size=job_data['bc_kwargs']['batch_size'], 
+    dataset = FrozenEmbeddingDataset(demo_paths,
+                                     history_window=job_data['env_kwargs']['history_window'],
+                                     fuse_embeddings=fuse_embeddings_flare)
+    dataloader = DataLoader(dataset, batch_size=job_data['bc_kwargs']['batch_size'],
                             shuffle=True, num_workers=0, pin_memory=True)
-    optimizer = torch.optim.Adam(list(policy.model.parameters()), lr=job_data['bc_kwargs']['lr'])
+    optimizer = torch.optim.Adam(policy.model.parameters(), lr=job_data['bc_kwargs']['lr'])
     loss_func = torch.nn.MSELoss()
 
     # Make log dir
-    logger = DataLog()
-    if os.path.isdir(job_data['job_name']) == False: os.mkdir(job_data['job_name'])
+    if os.path.isdir(job_data['job_name']) == False:
+        os.mkdir(job_data['job_name'])
     previous_dir = os.getcwd()
-    os.chdir(job_data['job_name']) # important! we are now in the directory to save data
-    if os.path.isdir('iterations') == False: os.mkdir('iterations')
-    if os.path.isdir('logs') == False: os.mkdir('logs')
+    # important! we are now in the directory to save data
+    os.chdir(job_data['job_name'])
+    if os.path.isdir('iterations') == False:
+        os.mkdir('iterations')
+    if os.path.isdir('logs') == False:
+        os.mkdir('logs')
 
     highest_score = -np.inf
     for epoch in tqdm(range(job_data['epochs'])):
@@ -118,14 +130,15 @@ def bc_pvr_train_loop(job_data:dict) -> None:
         for mb_idx, batch in enumerate(dataloader):
             optimizer.zero_grad()
             feat = batch['features'].float().to(job_data['device'])
-            tar  = batch['actions'].float().to(job_data['device'])
+            tar = batch['actions'].float().to(job_data['device'])
             pred = policy.model(feat)
             loss = loss_func(pred, tar.detach())
             loss.backward()
             optimizer.step()
             running_loss = running_loss + loss.to('cpu').data.numpy().ravel()[0]
-        # log average loss for the epoch    
-        logger.log_kv('epoch_loss', running_loss / (mb_idx+1))
+        # log average loss for the epoch   
+        epoch_log = {} 
+        epoch_log['epoch_loss'] = running_loss / (mb_idx+1)
         # move the policy to CPU for saving and evaluation
         policy.model.to('cpu')
         policy.model.eval()
@@ -133,38 +146,33 @@ def bc_pvr_train_loop(job_data:dict) -> None:
         e.env.embedding.eval()
 
         # perform evaluation rollouts every few epochs
-        if (epoch % job_data['eval_frequency'] == 0 and epoch > 0) or (epoch == job_data['epochs']-1):
-            paths = sample_paths(num_traj=job_data['eval_num_traj'], env=e, 
-                                 policy=policy, eval_mode=True, horizon=e.horizon, 
+        if (epoch % job_data['eval_frequency'] == 0 and epoch > 0) or (epoch == job_data['epochs'] - 1):
+            paths = sample_paths(num_traj=job_data['eval_num_traj'], env=e,
+                                 policy=policy, eval_mode=True, horizon=e.horizon,
                                  base_seed=job_data['seed'], num_cpu=job_data['num_cpu'])
             mean_score = np.mean([np.sum(p['rewards']) for p in paths])
-            min_score  = np.min([np.sum(p['rewards']) for p in paths])
-            max_score  = np.max([np.sum(p['rewards']) for p in paths])
+            min_score = np.min([np.sum(p['rewards']) for p in paths])
+            max_score = np.max([np.sum(p['rewards']) for p in paths])
             try:
                 success_percentage = e.env.unwrapped.evaluate_success(paths)
             except:
                 print("Success percentage function not implemented in env")
                 success_percentage = -1
-            logger.log_kv('eval_epoch', epoch)
-            logger.log_kv('eval_score_mean', mean_score)
-            logger.log_kv('eval_score_min', min_score)
-            logger.log_kv('eval_score_max', max_score)
-            logger.log_kv('eval_success', success_percentage)
-
-            print("Epoch = %i | BC performance (eval mode) = %.3f " % (epoch, mean_score))
+            epoch_log['eval_epoch'] = epoch 
+            epoch_log['eval_score_mean'] = mean_score
+            epoch_log['eval_score_min'] = min_score
+            epoch_log['eval_score_max'] = max_score
+            epoch_log['eval_success'] = success_percentage
+            wandb_run.log(epoch_log)
+            print("Epoch = {0} | BC performance (eval mode) = {1:.3f}".format(epoch, mean_score))
 
         # save policy and logging
         if (epoch % job_data['save_frequency'] == 0 and epoch > 0) or (epoch == job_data['epochs']-1):
             # pickle.dump(agent.policy, open('./iterations/policy_%i.pickle' % epoch, 'wb'))
-            logger.save_log('./logs/')
             if mean_score > highest_score:
                 pickle.dump(policy, open('./iterations/best_policy.pickle', 'wb'))
                 highest_score = mean_score
-
-            print_data = sorted(filter(lambda v: np.asarray(v[1]).size == 1,
-                                        logger.get_current_log().items()))
-            print(tabulate(print_data))
-
+            print(tabulate(sorted(epoch_log.items())))
 
 
 class FrozenEmbeddingDataset(Dataset):
@@ -181,7 +189,7 @@ class FrozenEmbeddingDataset(Dataset):
         self.history_window = history_window
         self.fuse_embeddings = fuse_embeddings
         self.device = device
-    
+
     def __len__(self):
         return self.path_length * self.num_paths
 
@@ -191,18 +199,19 @@ class FrozenEmbeddingDataset(Dataset):
         timestep = min(timestep, self.paths[traj_idx]['actions'].shape[0])
         if 'features' in self.paths[traj_idx].keys():
             features = self.paths[traj_idx]['features'][timestep]
-            action   = self.paths[traj_idx]['actions'][timestep]
+            action = self.paths[traj_idx]['actions'][timestep]
         else:
-            embeddings = [ self.paths[traj_idx]['embeddings'][max(timestep-k, 0)] for k in range(self.history_window) ]
-            embeddings = embeddings[::-1]  # embeddings[-1] should be most recent embedding
+            embeddings = [self.paths[traj_idx]['embeddings'][max(timestep-k, 0)] for k in range(self.history_window)]
+            # embeddings[-1] should be most recent embedding
+            embeddings = embeddings[::-1]
             features = self.fuse_embeddings(embeddings)
             # features = torch.from_numpy(features).float().to(self.device)
-            action   = self.paths[traj_idx]['actions'][timestep]
+            action = self.paths[traj_idx]['actions'][timestep]
             # action   = torch.from_numpy(action).float().to(self.device)
         return {'features': features, 'actions': action}
 
 
-def compute_embeddings(paths: list, embedding_name: str, 
+def compute_embeddings(paths: list, embedding_name: str,
                        device: str = 'cpu', chunk_size: int = 20):
     model, embedding_dim, transforms = load_pvr_model(embedding_name=embedding_name)
     model.to(device)
@@ -212,26 +221,29 @@ def compute_embeddings(paths: list, embedding_name: str,
         path_len = inp.shape[0]
         preprocessed_inp = torch.cat([transforms(frame) for frame in inp])   # shape (B, 3, H, W)
         for chunk in range(path_len // chunk_size + 1):
-            if chunk_size * chunk < path_len:                
+            if chunk_size * chunk < path_len:
                 with torch.no_grad():
-                    inp_chunk = preprocessed_inp[chunk_size*chunk:min(chunk_size*(chunk+1),path_len)]
+                    inp_chunk = preprocessed_inp[chunk_size*chunk:min(chunk_size*(chunk+1), path_len)]
                     emb = model(inp_chunk.to(device))
-                    emb = emb.to('cpu').data.numpy()      # shape (chunk_size, emb_dim)
-                path['embeddings'][chunk_size*chunk:min(chunk_size*(chunk+1),path_len)] = emb
+                    # shape (chunk_size, emb_dim)
+                    emb = emb.to('cpu').data.numpy()
+                path['embeddings'][chunk_size*chunk:min(chunk_size*(chunk+1), path_len)] = emb
         del(path['images'])   # no longer need the images, free up RAM
     return paths
 
 
 def precompute_features(paths: list,
-                 history_window: int = 1,
-                 fuse_embeddings: callable = None,
-                ):
+                        history_window: int = 1,
+                        fuse_embeddings: callable = None,
+                        ):
     assert 'embeddings' in paths[0].keys()
     for path in paths:
         features = []
         for t in range(path['embeddings'].shape[0]):
-            emb_hist_t = [ path['embeddings'][max(t-k, 0)] for k in range(history_window) ]
-            emb_hist_t = emb_hist_t[::-1]  # emb_hist_t[-1] should correspond to time t embedding
+            emb_hist_t = [path['embeddings']
+                          [max(t-k, 0)] for k in range(history_window)]
+            # emb_hist_t[-1] should correspond to time t embedding
+            emb_hist_t = emb_hist_t[::-1]
             feat_t = fuse_embeddings(emb_hist_t)
             features.append(feat_t.copy())
         path['features'] = np.array(features)

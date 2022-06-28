@@ -1,5 +1,8 @@
-import torch, torchvision, torchvision.transforms as T
-import numpy as np, wandb
+import torch
+import torchvision
+import torchvision.transforms as T
+import numpy as np
+import wandb
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 

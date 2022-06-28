@@ -11,7 +11,16 @@ Given a trained representation (image -> embedding), have code in this repo to a
 
 To eval representations with CIFAR-10 probe:
 ```
-$ cd cifar
-$ python hydra_launcher.py -m model=resnet50,resnet50_rand,moco_conv5,mae_ViT-B,r3m,moco_ego4d_100k,moco_ego4d_5m
+$ cd rep_eval
+$ python cifar/hydra_launcher.py -m model=resnet50,resnet50_rand,moco_conv5,mae_ViT-B,r3m,moco_ego4d_100k,moco_ego4d_5m
+```
+Make sure to look at the config and update any logging information.
+
+### Visual Imitation Learning
+
+For example, to perform visual imitation learning on the Adroit Pen task using pre-trained ResNet-50 embeddings:
+```
+$ cd rep_eval
+$ python visual_il/hydra_launcher.py --config-name Adroit_BC_config.yaml -m env=pen-v0 embedding=resnet50
 ```
 Make sure to look at the config and update any logging information.
