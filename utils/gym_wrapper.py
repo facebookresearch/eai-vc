@@ -41,7 +41,7 @@ class MuJoCoPixelObsWrapper(gym.ObservationWrapper):
         else:
             # mujoco-py backend
             img = self.sim.render(width=self.width, height=self.height, depth=self.depth,
-                              camera_name=self.camera_name, device_id=self.device_id)
+                                  camera_name=self.camera_name, device_id=self.device_id)
             img = img[::-1,:,:]
         return img
 
@@ -144,7 +144,7 @@ def env_constructor(env_name: str,
                     history_window : int = 1,
                     fuse_embeddings : callable = None,
                     render_gpu_id : int = - 1, 
-                    seed: int = 123, 
+                    seed : int = 123,
                     *args, **kwargs) -> GymEnv:
     # get correct camera name
     camera_name = None if (camera_name == 'None' or camera_name == 'default') else camera_name
@@ -155,7 +155,7 @@ def env_constructor(env_name: str,
         e = MuJoCoPixelObsWrapper(env=e, width=image_width, height=image_height, 
                                   camera_name=camera_name, device_id=render_gpu_id)
         e = FrozenEmbeddingWrapper(env=e, embedding_name=embedding_name, history_window=history_window,
-                                    fuse_embeddings=fuse_embeddings, device=device, seed=seed)
+                                   fuse_embeddings=fuse_embeddings, device=device, seed=seed)
         e = GymEnv(e)
     else:
         e = GymEnv(e)

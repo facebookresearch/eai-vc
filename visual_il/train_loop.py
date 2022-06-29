@@ -1,9 +1,9 @@
 from matplotlib.pyplot import hist
 from mjrl.utils.gym_env import GymEnv
-from mjrl.samplers.core import sample_paths
 from mjrl.policies.gaussian_mlp import MLP, BatchNormMLP
 from mjrl.algos.behavior_cloning import BC
 from utils.gym_wrapper import env_constructor
+from utils.pixel_based_rollouts import sample_paths, sample_paths_video
 from utils.model_loading import load_pvr_model, fuse_embeddings_concat, fuse_embeddings_flare
 from tabulate import tabulate
 from tqdm import tqdm
@@ -117,8 +117,8 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
     os.chdir(job_data['job_name'])
     if os.path.isdir('iterations') == False:
         os.mkdir('iterations')
-    if os.path.isdir('logs') == False:
-        os.mkdir('logs')
+    if os.path.isdir('videos') == False:
+        os.mkdir('videos')
 
     highest_score = -np.inf
     for epoch in tqdm(range(job_data['epochs'])):
@@ -136,9 +136,6 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
             loss.backward()
             optimizer.step()
             running_loss = running_loss + loss.to('cpu').data.numpy().ravel()[0]
-        # log average loss for the epoch   
-        epoch_log = {} 
-        epoch_log['epoch_loss'] = running_loss / (mb_idx+1)
         # move the policy to CPU for saving and evaluation
         policy.model.to('cpu')
         policy.model.eval()
@@ -149,7 +146,8 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
         if (epoch % job_data['eval_frequency'] == 0 and epoch > 0) or (epoch == job_data['epochs'] - 1):
             paths = sample_paths(num_traj=job_data['eval_num_traj'], env=e,
                                  policy=policy, eval_mode=True, horizon=e.horizon,
-                                 base_seed=job_data['seed'], num_cpu=job_data['num_cpu'])
+                                 base_seed=job_data['seed'], num_cpu=job_data['num_cpu'],
+                                 env_kwargs=env_kwargs)
             mean_score = np.mean([np.sum(p['rewards']) for p in paths])
             min_score = np.min([np.sum(p['rewards']) for p in paths])
             max_score = np.max([np.sum(p['rewards']) for p in paths])
@@ -158,6 +156,8 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
             except:
                 print("Success percentage function not implemented in env")
                 success_percentage = -1
+            epoch_log = {} 
+            epoch_log['epoch_loss'] = running_loss / (mb_idx + 1)
             epoch_log['eval_epoch'] = epoch 
             epoch_log['eval_score_mean'] = mean_score
             epoch_log['eval_score_min'] = min_score
@@ -165,15 +165,18 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
             epoch_log['eval_success'] = success_percentage
             wandb_run.log(epoch_log)
             print("Epoch = {0} | BC performance (eval mode) = {1:.3f}".format(epoch, mean_score))
+            print(tabulate(sorted(epoch_log.items())))
 
-        # save policy and logging
+        # save policy
         if (epoch % job_data['save_frequency'] == 0 and epoch > 0) or (epoch == job_data['epochs']-1):
             # pickle.dump(agent.policy, open('./iterations/policy_%i.pickle' % epoch, 'wb'))
             if mean_score > highest_score:
                 pickle.dump(policy, open('./iterations/best_policy.pickle', 'wb'))
                 highest_score = mean_score
-            print(tabulate(sorted(epoch_log.items())))
-
+            paths = sample_paths_video(num_traj=job_data['video_num_traj'], env=e,
+                                       policy=policy, algorithm='BC', save_path='./videos', 
+                                       eval_mode=True, horizon=e.horizon, base_seed=job_data['seed'], 
+                                       num_cpu=job_data['num_cpu'], env_kwargs=env_kwargs)
 
 class FrozenEmbeddingDataset(Dataset):
     def __init__(self, paths: list,

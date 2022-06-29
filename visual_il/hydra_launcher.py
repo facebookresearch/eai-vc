@@ -13,7 +13,7 @@ cwd = os.getcwd()
 # ===============================================================================
 # Process Inputs and configure job
 # ===============================================================================
-@hydra.main(config_name="BC_config", config_path="config")
+@hydra.main(config_path="config", config_name="BC_config", version_base="1.1")
 def configure_jobs(job_data: dict) -> None:
 
     print("========================================")
@@ -33,7 +33,8 @@ def configure_jobs(job_data: dict) -> None:
     job_data['cwd'] = cwd
     with open('job_config.json', 'w') as fp:
         OmegaConf.save(config=job_data, f=fp.name)
-    print(OmegaConf.to_yaml(job_data))
+    # print(OmegaConf.to_yaml(job_data))
+    print("Arch : %s" % job_data['embedding'])
 
     wandb_run = wandb.init(project=job_data['wandb_project'], entity=job_data['wandb_user'], 
                            config=OmegaConf.to_container(job_data, resolve=True))

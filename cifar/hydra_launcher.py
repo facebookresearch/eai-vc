@@ -12,7 +12,7 @@ cwd = os.getcwd()
 # ===============================================================================
 # Process Inputs and configure job
 # ===============================================================================
-@hydra.main(config_name="cifar_lin_probe", config_path="config")
+@hydra.main(config_path="config", config_name="cifar_lin_probe", version_base="1.1")
 def configure_jobs(job_data: dict) -> None:
 
     print("========================================")

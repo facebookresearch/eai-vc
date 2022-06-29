@@ -18,6 +18,7 @@ epochs            :   100                     # number of outer epochs
 eval_frequency    :   10                      # frequency of epochs for evaluation and logging
 save_frequency    :   10                      # frequency of epochs for saving policies
 eval_num_traj     :   25                      # number of rollouts to eval
+video_num_traj    :   5                       # number of evaluation rollouts to save as video
 num_cpu           :   1                       # for rolling out paths when evaluating                 
 num_demos         :   100                     # path to demo file auto-inferred from other inputs
 exp_notes         :   Adroit run with context_length=3 and delta features from Flare. Running for more epochs.
@@ -33,7 +34,7 @@ env_kwargs:
     pixel_based   :   ${pixel_based}
     render_gpu_id :   0
     seed          :   ${seed}
-    history_window :  3                
+    history_window :  3   
 
 # demo reparsing arguments (states -> image embeddings)
 reparse_kwargs:
@@ -58,4 +59,5 @@ job_name          :   'job'
 
 hydra:
     job:
-        name: VIL_conv_comp_runs
+        name  : VIL_conv_comp_runs
+        chdir : True

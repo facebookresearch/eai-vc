@@ -19,4 +19,5 @@ job_name          :   'job'
 
 hydra:
     job:
-        name: rep_eval_runs
+        name  : rep_eval_runs
+        chdir : True
