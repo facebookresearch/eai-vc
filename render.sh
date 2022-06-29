@@ -1,1 +1,3 @@
-python render.py -m task=walker-walk modality=features features=moco,mocodmcontrol,mocoego15 algorithm=renderer hydra/launcher=slurm #+load_agent=True
+# python render.py -m task=walker-walk modality=features features=mocodmcontrol +tdmpc_artifact=walker-walk-features-0629-mocodmcontrol-chpkt-1-50000:v0 hydra/launcher=slurm
+# python render.py -m task=walker-walk modality=features features=mocoego15 +tdmpc_artifact=walker-walk-features-0629-mocoego15-chpkt-1-50000:v0 hydra/launcher=slurm
+python render.py -m task=walker-walk modality=features features=moco +tdmpc_artifact=walker-walk-features-0629-moco-chpkt-1-50000:v0 hydra/launcher=slurm

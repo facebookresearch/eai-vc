@@ -413,12 +413,15 @@ class ReplayBuffer():
 		action = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *self._action.shape[1:]), dtype=torch.float32, device=self.device)
 		reward = torch.empty((self.cfg.horizon+1, self.cfg.batch_size), dtype=torch.float32, device=self.device)
 		state = self._state[idxs] if self.cfg.modality != 'state' else None
+		next_state = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *state.shape[1:]), dtype=state.dtype, device=state.device)
 		task_vec = self._task_vec[idxs].float() if self.cfg.multitask else None
 		for t in range(self.cfg.horizon+1):
 			_idxs = idxs + t
 			next_obs[t] = self._get_obs(self._obs, _idxs+1)
 			action[t] = self._action[_idxs]
 			reward[t] = self._reward[_idxs]
+			if self.cfg.modality != 'state':
+				next_state[t] = self._state[_idxs+1]
 
 		mask = (_idxs+1) % self.cfg.episode_length == 0
 		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(self.device).float()
@@ -426,8 +429,10 @@ class ReplayBuffer():
 			task_vec = task_vec.cuda()
 		if state is not None:
 			state = state.cuda()
+			next_state[-1, mask] = self._last_state[_idxs[mask]//self.cfg.episode_length].to(self.device).float()
+			next_state = next_state.cuda()
 
-		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, task_vec, idxs.cuda(), weights.cuda()
+		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, next_state, task_vec, idxs.cuda(), weights.cuda()
 
 
 def linear_schedule(schdl, step):

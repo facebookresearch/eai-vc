@@ -25,6 +25,8 @@ import imageio
 from logger import make_dir
 import pandas as pd
 import hydra
+os.environ["WANDB_SILENT"] = "true"
+import wandb
 torch.backends.cudnn.benchmark = True
 __LOGS__ = 'logs'
 
@@ -59,8 +61,8 @@ def render(cfg: dict):
 	set_seed(cfg.seed)
 	work_dir = Path().cwd() / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
 	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
-	env, agent, buffer = make_env(cfg), make_agent(cfg), ReplayBuffer(cfg)
-	print(agent.latent2state)
+	env, renderer, buffer = make_env(cfg), Renderer(cfg), ReplayBuffer(cfg)
+	print(renderer.latent2state)
 
 	# Load dataset
 	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
@@ -73,42 +75,69 @@ def render(cfg: dict):
 	print(f'\n{colored("Evaluation statistics:", "yellow")}\n{dataset_eval.summary}')
 	save_dir = make_dir(f'/private/home/nihansen/code/tdmpc2/reconstruction/{cfg.task}/{cfg.get("features")}/{cfg.modality}/latent2state')
 
-	if cfg.get('load_agent', False):
-		print('Loading from', save_dir)
-		agent.load(f'{save_dir}/model.pt')
+	# Load from wandb
+	run_name = 'render' + str(np.random.randint(0, int(1e6)))
+	run = wandb.init(job_type='render', entity=cfg.wandb_entity, project=cfg.wandb_project, name=run_name, tags='render')
+
+	agent = TDMPC(cfg)
+	if cfg.get('tdmpc_artifact', None):
+		print(f'Loading TDMPC artifact {cfg.tdmpc_artifact}')
+		iteration = int(cfg.tdmpc_artifact.split('-')[-1].split(':')[0])
+		artifact = run.use_artifact(cfg.tdmpc_artifact, type='model')
+		artifact_dir = Path(artifact.download())
+		agent.load(artifact_dir / f'{iteration}.pt')
+	renderer.set_tdmpc_agent(agent)
+	if cfg.get('renderer_path', None):
+		print('Loading renderer from', cfg.renderer_path)
+		renderer.load(cfg.renderer_path)
 	else:
 		num_images = 8
 		print('Saving to', save_dir)
 		metrics = []
-		for i in tqdm(range(500_000+1)):
-			common_metrics = agent.update(buffer)
-			if i % 50000 == 0:
+		for i in tqdm(range(60_000+1)):
+			common_metrics = renderer.update(buffer)
+			if i % cfg.eval_freq == 0:
 
 				# Evaluate (training set)
 				idx = np.random.randint(0, len(dataset.cumrew))
 				idxs = np.arange(idx*500, (idx+1)*500)
-				obs_pred, state_pred = agent.render(buffer._obs[idxs])
-				obs_target, state_target = agent.render(buffer._state[idxs], from_state=True)
+				obs_pred, state_pred = renderer.render(buffer._obs[idxs])
+				obs_target, state_target = renderer.render(buffer._state[idxs], from_state=True)
 				train_mse = torch.mean((state_pred - state_target)**2).item()
 				image_idxs = np.random.randint(0, 500, size=num_images)
 				save_image(make_grid(torch.cat([obs_pred[image_idxs], obs_target[image_idxs]], dim=0), nrow=8), f'{save_dir}/train_{i}.png')
 				imageio.mimsave(f'{save_dir}/train_{i}.mp4', (torch.cat([obs_pred, obs_target], dim=-1).permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
-				print(colored('Training MSE:', 'yellow'), train_mse)
+				print(colored('Training MSE:', 'green'), train_mse)
+
+				# Evaluate (training set; imagined rollout)
+				start_idx, length = 100, 20
+				obs_pred, state_pred = renderer.imagine(buffer._obs[idxs[start_idx]], buffer._action[idxs[start_idx:start_idx+length]])
+				obs_target, state_target = renderer.render(buffer._state[idxs[start_idx:start_idx+length]], from_state=True)
+				save_image(make_grid(torch.cat([obs_pred[0,::2], obs_target[::2]], dim=0), nrow=10), f'{save_dir}/train_imagine_{i}.png')
+				train_imagine_mse = np.around(torch.mean((state_pred - state_target)**2, dim=-1)[0].numpy(), 2)
+				print(colored('Training imagine MSE:', 'green'), train_imagine_mse)
 
 				# Evaluate (evaluation set)
 				episode = dataset_eval.episodes[dataset_eval.cumrew.argmax()]
-				obs_pred, state_pred = agent.render(episode.obs[:500])
-				obs_target, state_target = agent.render(torch.FloatTensor(episode.metadata['states'][:500]), from_state=True)
+				obs_pred, state_pred = renderer.render(episode.obs[:500])
+				obs_target, state_target = renderer.render(torch.FloatTensor(episode.metadata['states'][:500]), from_state=True)
 				eval_mse = torch.mean((state_pred - state_target)**2).item()
 				image_idxs = np.random.randint(0, 500, size=num_images)
 				save_image(make_grid(torch.cat([obs_pred[image_idxs], obs_target[image_idxs]], dim=0), nrow=8), f'{save_dir}/eval_{i}.png')
 				imageio.mimsave(f'{save_dir}/eval_{i}.mp4', (torch.cat([obs_pred, obs_target], dim=-1).permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
 				print(colored('Eval MSE:', 'yellow'), eval_mse)
 
+				# Evaluate (evaluation set; imagined rollout)
+				obs_pred, state_pred = renderer.imagine(episode.obs[start_idx], episode.action[start_idx:start_idx+length])
+				obs_target, state_target = renderer.render(torch.FloatTensor(episode.metadata['states'][start_idx:start_idx+length]), from_state=True)
+				save_image(make_grid(torch.cat([obs_pred[0,::2], obs_target[::2]], dim=0), nrow=10), f'{save_dir}/eval_imagine_{i}.png')
+				eval_imagine_mse = np.around(torch.mean((state_pred - state_target)**2, dim=-1)[0].numpy(), 2)
+				print(colored('Eval imagine MSE:', 'yellow'), eval_imagine_mse)
+
 				# Logging
-				metrics.append(np.array([i, train_mse, eval_mse, common_metrics['total_loss'], common_metrics['grad_norm']]))
-				pd.DataFrame(np.array(metrics)).to_csv(f'{save_dir}/metrics.csv', header=['iteration', 'train_mse', 'eval_mse', 'batch_mse', 'grad_norm'], index=None)
-				agent.save(f'{save_dir}/model_{i}.pt')
+				metrics.append(np.array([i, train_mse, eval_mse, train_imagine_mse[-1], eval_imagine_mse[-1], common_metrics['total_loss'], common_metrics['grad_norm']]))
+				pd.DataFrame(np.array(metrics)).to_csv(f'{save_dir}/metrics.csv', header=['iteration', 'train_mse', 'eval_mse', 'train_imagine_mse', 'eval_imagine_mse', 'batch_mse', 'grad_norm'], index=None)
+				renderer.save(f'{save_dir}/model_{i}.pt')
 
 
 if __name__ == '__main__':

@@ -71,8 +71,8 @@ exp_name: default
 eval_freq: 10000
 eval_episodes: 10
 save_freq: 50000
-save_video: false
-save_model: false
+save_video: true
+save_model: true
 
 # convenience
 task_title: ???

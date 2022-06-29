@@ -187,7 +187,7 @@ class TDMPC():
 
 	def update(self, replay_buffer, step=int(1e6)):
 		"""Main update function. Corresponds to one iteration of the TOLD model learning."""
-		obs, next_obses, action, reward, _, task_vec, idxs, weights = replay_buffer.sample()
+		obs, next_obses, action, reward, _, _, task_vec, idxs, weights = replay_buffer.sample()
 		self.optim.zero_grad(set_to_none=True)
 		self.std = h.linear_schedule(self.cfg.std_schedule, step)
 		self.model.train()

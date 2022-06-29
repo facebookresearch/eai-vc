@@ -22,19 +22,22 @@ torch.backends.cudnn.benchmark = True
 __LOGS__ = 'logs'
 
 
-def evaluate(env, agent, cfg):
+def evaluate(env, agent, cfg, iteration, video):
 	"""Evaluate a trained agent."""
 	episode_rewards = []
 	for i in range(cfg.eval_episodes):
 		if cfg.get('multitask', False):
 			env.unwrapped.task_id = i % len(env.unwrapped.tasks)
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
+		if video: video.init(env, enabled=(i==0))
 		while not done:
 			action = agent.plan(obs, env.unwrapped.task_vec if cfg.get('multitask', False) else None, eval_mode=True, step=int(1e6), t0=t==0)
 			obs, reward, done, _ = env.step(action.cpu().numpy())
 			ep_reward += reward
+			if video: video.record(env)
 			t += 1
 		episode_rewards.append(ep_reward)
+		if video: video.save(iteration)
 	episode_rewards = np.array(episode_rewards)
 	return np.nanmean(episode_rewards), episode_rewards
 
@@ -75,7 +78,7 @@ def train_offline(cfg: dict):
 		if iteration % cfg.eval_freq == 0:
 
 			# Evaluate agent
-			mean_reward, rewards = evaluate(env, agent, cfg)
+			mean_reward, rewards = evaluate(env, agent, cfg, iteration, L.video)
 
 			# Log results
 			common_metrics = {
