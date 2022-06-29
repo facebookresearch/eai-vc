@@ -30,7 +30,7 @@ def summary_stats(rewards):
 
 
 class DMControlDataset(Dataset):
-    def __init__(self, cfg, data_dir, tasks='*', fraction=1., transform=None, buffer=None):
+    def __init__(self, cfg, data_dir, tasks='*', fraction=1., rbounds=None, transform=None, buffer=None):
         self._cfg = cfg
         self._data_dir = data_dir
         self._tasks = tasks if tasks != '*' else sorted(os.listdir(data_dir))
@@ -54,6 +54,10 @@ class DMControlDataset(Dataset):
 
         for fp in tqdm(self._fps):
             data = torch.load(fp)
+            cumr = np.array(data['rewards']).sum()
+            if rbounds is not None:
+                if not (rbounds[0] <= cumr <= rbounds[1]):
+                    continue
             if cfg.modality == 'features':
                 assert cfg.get('features', None) is not None, 'Features must be specified'
                 features_dir = Path(os.path.dirname(fp)) / 'features' / cfg.features
@@ -91,6 +95,8 @@ class DMControlDataset(Dataset):
             self._cumulative_rewards.append(episode.cumulative_reward)
 
         self._cumulative_rewards = torch.tensor(self._cumulative_rewards, dtype=torch.float32, device=torch.device('cpu'))
+        if rbounds is not None:
+            print('Found {} episodes within reward range {}'.format(len(self._cumulative_rewards), rbounds))
         
         if dump_filelist:
             # randomly drop some frames to reduce size

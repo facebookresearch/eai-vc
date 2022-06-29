@@ -7,9 +7,8 @@ WALKERMINI=walker-walk,walker-run,walker-arabesque,walker-flip,walker-backflip,w
 # MoCo (DMControl) features
 # python train_offline.py -m task=$WALKERMINI modality=features features=mocodmcontrol exp_name=mocodmcontrol-50eps enc_dim=512 mlp_dim=1024 hydra/launcher=slurm
 
-python train_offline.py -m task=$WALKERMINI modality=features features=mocodmcontrol +fuse=prep exp_name=mocodmcontrol-prepflare enc_dim=512 mlp_dim=1024 hydra/launcher=slurm
-# python train_offline.py task=walker-walk modality=features features=mocodmcontrol +fuse=prep exp_name=test enc_dim=512 mlp_dim=1024
-
+# python train_offline.py -m task=$WALKERMINI modality=features features=mocodmcontrol +fuse=prep exp_name=mocodmcontrol-prepflare enc_dim=512 mlp_dim=1024 hydra/launcher=slurm
+python train_offline.py task=walker-walk modality=state exp_name=test
 
 # python train_offline.py algorithm=bc task=walker-walk modality=features features=mocodmcontrol exp_name=mocodmcontrol enc_dim=512 mlp_dim=1024 hydra/launcher=slurm
 
