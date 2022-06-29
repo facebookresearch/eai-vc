@@ -326,6 +326,18 @@ class SimCubeEnv(BaseCubeEnv):
         self.finger_type = finger_type
         self.time_step = time_step
 
+        # initialize simulation
+        #initial_robot_position = trifingerpro_limits.robot_position.default
+        initial_robot_position = [-0.08, 1.15, -1.5] * 3
+
+        self.platform = trifinger_simulation.TriFingerPlatform(
+            visualization=self.visualization,
+            enable_cameras=self.enable_cameras,
+            finger_type=self.finger_type,
+            time_step_s=self.time_step,
+            initial_robot_position=initial_robot_position,
+        )
+
 
     def step(self, action):
         """Run one timestep of the environment's dynamics.
@@ -405,24 +417,14 @@ class SimCubeEnv(BaseCubeEnv):
     def reset(self, goal=None):
         """ Reset the environment. """
 
-        # hard-reset simulation
-        del self.platform
+        ##hard-reset simulation
+        #del self.platform
 
-        # initialize simulation
-        #initial_robot_position = trifingerpro_limits.robot_position.default
-        initial_robot_position = [-0.08, 1.15, -1.5] * 3
         # initialize cube at the centre
         initial_object_pose = task.sample_goal(difficulty=-1)
         initial_object_pose.position = [0,0,task._CUBE_WIDTH/2] # TODO hardcoded intial cube pose to arena center
 
-        self.platform = trifinger_simulation.TriFingerPlatform(
-            visualization=self.visualization,
-            enable_cameras=self.enable_cameras,
-            finger_type=self.finger_type,
-            time_step_s=self.time_step,
-            initial_object_pose=initial_object_pose,
-            initial_robot_position=initial_robot_position
-        )
+        self.platform.reset(initial_object_pose)
 
         # Set pybullet GUI params
         self._set_sim_params()
