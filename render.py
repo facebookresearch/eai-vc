@@ -23,6 +23,7 @@ from tqdm import tqdm
 import logger
 import imageio
 from logger import make_dir
+import pandas as pd
 import hydra
 torch.backends.cudnn.benchmark = True
 __LOGS__ = 'logs'
@@ -63,24 +64,13 @@ def render(cfg: dict):
 
 	# Load dataset
 	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
-	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, buffer=buffer)
+	rbounds = [0, 900 if cfg.task == 'walker-walk' else 1000]
+	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
+	dataset_eval = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=[rbounds[1], 1000])
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}')
-
-	# Run training (state2pixels)
-	# num_images = 8
-	# for i in tqdm(range(50_000)):
-	# 	metrics = agent.update(buffer)
-	# 	if i % 500 == 0:
-	# 		print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
-	# 		obs, _, _, _, state, _, _, _ = buffer.sample()
-	# 		obs_pred = agent.render(state[:num_images])
-	# 		obs_target = agent._resize(obs[:num_images, -3:]/255.).cpu()
-	# 		save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'/private/home/nihansen/code/tdmpc2/recon/recon_{i}.png')
-	# 		if i % 1000 == 0:
-	# 			agent.save(f'/private/home/nihansen/code/tdmpc2/recon/renderer_{i}.pt')
-
+	print(f'\n{colored("Evaluation statistics:", "yellow")}\n{dataset_eval.summary}')
 	save_dir = make_dir(f'/private/home/nihansen/code/tdmpc2/reconstruction/{cfg.task}/{cfg.get("features")}/{cfg.modality}/latent2state')
 
 	if cfg.get('load_agent', False):
@@ -90,24 +80,36 @@ def render(cfg: dict):
 		# Run training (latent2state)
 		num_images = 8
 		print('Saving to', save_dir)
+		metrics = []
 		for i in tqdm(range(500_000+1)):
-			metrics = agent.update(buffer)
+			common_metrics = agent.update(buffer)
 			if i % 50000 == 0:
-				print(colored('Iteration:', 'yellow'), f'{i:6d}', ' '.join([f'{k}: {v:.3f}' for k, v in metrics.items()]))
-				
-				# Evaluate on sampled images
-				latent, _, _, _, state, _, _, _ = buffer.sample()
-				obs_pred = agent.render(latent[:num_images])
-				obs_target = agent.render(state[:num_images], from_state=True)
-				save_image(make_grid(torch.cat([obs_pred, obs_target], dim=0), nrow=8), f'{save_dir}/{i}.png')
-				
-				# Evaluate on optimal trajectory
-				idx = dataset.cumrew.argmax()
+
+				# Evaluate (training set)
+				idx = np.random.randint(0, len(dataset.cumrew))
 				idxs = np.arange(idx*500, (idx+1)*500)
-				obs_pred = agent.render(buffer._obs[idxs])
-				obs_target = agent.render(buffer._state[idxs], from_state=True)
-				frames = torch.cat([obs_pred, obs_target], dim=-1)
-				imageio.mimsave(f'{save_dir}/optimal_{i}.mp4', (frames.permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
+				obs_pred, state_pred = agent.render(buffer._obs[idxs])
+				obs_target, state_target = agent.render(buffer._state[idxs], from_state=True)
+				train_mse = torch.mean((state_pred - state_target)**2).item()
+				image_idxs = np.random.randint(0, 500, size=num_images)
+				save_image(make_grid(torch.cat([obs_pred[image_idxs], obs_target[image_idxs]], dim=0), nrow=8), f'{save_dir}/train_{i}.png')
+				imageio.mimsave(f'{save_dir}/train_{i}.mp4', (torch.cat([obs_pred, obs_target], dim=-1).permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
+				print(colored('Training MSE:', 'yellow'), train_mse)
+
+				# Evaluate (evaluation set)
+				episode = dataset_eval.episodes[dataset_eval.cumrew.argmax()]
+				obs_pred, state_pred = agent.render(episode.obs[:500])
+				obs_target, state_target = agent.render(torch.FloatTensor(episode.metadata['states'][:500]), from_state=True)
+				eval_mse = torch.mean((state_pred - state_target)**2).item()
+				image_idxs = np.random.randint(0, 500, size=num_images)
+				save_image(make_grid(torch.cat([obs_pred[image_idxs], obs_target[image_idxs]], dim=0), nrow=8), f'{save_dir}/eval_{i}.png')
+				imageio.mimsave(f'{save_dir}/eval_{i}.mp4', (torch.cat([obs_pred, obs_target], dim=-1).permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
+				print(colored('Eval MSE:', 'yellow'), eval_mse)
+
+				# Logging
+				metrics.append(np.array([i, train_mse, eval_mse, common_metrics['total_loss'], common_metrics['grad_norm']]))
+				pd.DataFrame(np.array(metrics)).to_csv(f'{save_dir}/metrics.csv', header=['iteration', 'train_mse', 'eval_mse', 'batch_mse', 'grad_norm'], index=None)
+		
 		agent.save(f'{save_dir}/model.pt')
 
 

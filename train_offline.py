@@ -29,29 +29,6 @@ def evaluate(env, agent, cfg):
 		if cfg.get('multitask', False):
 			env.unwrapped.task_id = i % len(env.unwrapped.tasks)
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
-
-		# unwrapped_env = env.env.env.env._env._env._env._env
-		# phys = unwrapped_env.physics
-
-		# _state = unwrapped_env.physics.get_state()
-		# _obs = unwrapped_env.task.get_observation(unwrapped_env.physics)
-		
-		# xpos = unwrapped_env.physics.data.xpos
-		# qpos = unwrapped_env.physics.data.qpos
-		# qvel = unwrapped_env.physics.data.qvel
-		# xmat = unwrapped_env.physics.data.xmat[1:]
-
-		# orientations = unwrapped_env.physics.orientations()
-		# height = unwrapped_env.physics.torso_height()
-		# velocity = unwrapped_env.physics.velocity()
-
-		# def obs_to_state(obs):
-		# 	# obs: (xmat/orientations, height, qvel) (14, 1, 9)
-		# 	# state: (qpos, qvel) (9, 9)
-		# 	state = np.zeros((18,), dtype=np.float32)
-			
-		# 	state[-9:] = obs[-9:] # qvel
-
 		while not done:
 			action = agent.plan(obs, env.unwrapped.task_vec if cfg.get('multitask', False) else None, eval_mode=True, step=int(1e6), t0=t==0)
 			obs, reward, done, _ = env.step(action.cpu().numpy())
@@ -85,18 +62,6 @@ def train_offline(cfg: dict):
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}')
-
-	# import matplotlib.pyplot as plt
-	# cumrew_dir = logger.make_dir('/private/home/nihansen/code/tdmpc2/cumrew')
-	# plt.figure(figsize=(10, 5))
-	# plt.hist(dataset.cumrew, bins=100)
-	# plt.xlabel('Cumulative reward')
-	# plt.ylabel('Count')
-	# plt.title(cfg.task_title)
-	# plt.xlim(0, 1000)
-	# plt.ylim(0, 120)
-	# plt.savefig(f'{cumrew_dir}/{cfg.task}.png')
-	# exit(0)
 
 	# Run training
 	print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))

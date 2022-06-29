@@ -345,8 +345,8 @@ class ReplayBuffer():
 		self._last_obs = torch.empty((self.capacity//cfg.episode_length, *cfg.obs_shape), dtype=dtype, device=self.device)
 		self._action = torch.empty((self.capacity, cfg.action_dim), dtype=torch.float32, device=self.device)
 		self._reward = torch.empty((self.capacity,), dtype=torch.float32, device=self.device)
-		self._state = torch.empty((self.capacity, 18), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
-		self._last_state = torch.empty((self.capacity//cfg.episode_length, 18), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
+		self._state = torch.empty((self.capacity, 24), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
+		self._last_state = torch.empty((self.capacity//cfg.episode_length, 24), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
 		self._task_vec = torch.empty((self.capacity, cfg.num_tasks), dtype=torch.uint8, device=self.device) if cfg.get('multitask', False) else None
 		self._priorities = torch.ones((self.capacity,), dtype=torch.float32, device=self.device)
 		self._eps = 1e-6
@@ -368,8 +368,8 @@ class ReplayBuffer():
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
 		if self.cfg.modality != 'state':
-			self._state[self.idx:self.idx+self.cfg.episode_length] = torch.tensor(episode.metadata['phys_states'][:-1])
-			self._last_state[self.idx//self.cfg.episode_length] = torch.tensor(episode.metadata['phys_states'][-1])
+			self._state[self.idx:self.idx+self.cfg.episode_length] = torch.tensor(episode.metadata['states'][:-1])
+			self._last_state[self.idx//self.cfg.episode_length] = torch.tensor(episode.metadata['states'][-1])
 		if self.cfg.multitask:
 			self._task_vec[self.idx:self.idx+self.cfg.episode_length] = episode.task_vec.unsqueeze(0).repeat(self.cfg.episode_length, 1)
 		if self._full:

@@ -1,1 +1,1 @@
-CUDA_VISIBLE_DEVICES=1 python render.py task=walker-walk modality=features features=mocoego190 algorithm=renderer #+load_agent=True
+python render.py task=walker-walk modality=features features=mocodmcontrol algorithm=renderer #+load_agent=True
