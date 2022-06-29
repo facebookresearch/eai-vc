@@ -77,7 +77,6 @@ def render(cfg: dict):
 		print('Loading from', save_dir)
 		agent.load(f'{save_dir}/model.pt')
 	else:
-		# Run training (latent2state)
 		num_images = 8
 		print('Saving to', save_dir)
 		metrics = []
@@ -109,8 +108,7 @@ def render(cfg: dict):
 				# Logging
 				metrics.append(np.array([i, train_mse, eval_mse, common_metrics['total_loss'], common_metrics['grad_norm']]))
 				pd.DataFrame(np.array(metrics)).to_csv(f'{save_dir}/metrics.csv', header=['iteration', 'train_mse', 'eval_mse', 'batch_mse', 'grad_norm'], index=None)
-		
-		agent.save(f'{save_dir}/model.pt')
+				agent.save(f'{save_dir}/model_{i}.pt')
 
 
 if __name__ == '__main__':

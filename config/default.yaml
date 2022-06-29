@@ -49,8 +49,8 @@ tau: 0.01
 steps_per_update: 1
 
 # architecture
-enc_dim: 256
-mlp_dim: 512
+enc_dim: 512
+mlp_dim: 1024
 latent_dim: 50
 
 # wandb (fair)
@@ -68,8 +68,9 @@ encoder_dir: /checkpoint/nihansen/data/tdmpc2/encoders
 # misc
 seed: 1
 exp_name: default
-eval_freq: 5000
+eval_freq: 10000
 eval_episodes: 10
+save_freq: 50000
 save_video: false
 save_model: false
 

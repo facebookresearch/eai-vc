@@ -1,1 +1,1 @@
-python render.py task=walker-walk modality=features features=mocodmcontrol algorithm=renderer #+load_agent=True
+python render.py -m task=walker-walk modality=features features=moco,mocodmcontrol,mocoego15 algorithm=renderer hydra/launcher=slurm #+load_agent=True

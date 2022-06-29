@@ -95,6 +95,8 @@ def train_offline(cfg: dict):
 			else:
 				common_metrics.update({f'task_reward/{cfg.task}': mean_reward})
 			L.log(common_metrics, category='offline')
+			if iteration % cfg.save_freq == 0:
+				L.save_model(agent, iteration)
 			t = time.time()
 	
 	L.finish()
