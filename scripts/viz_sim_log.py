@@ -31,7 +31,7 @@ def main(args):
         demo_name = os.path.splitext(os.path.split(file_path)[1])[0]
         demo_dir = os.path.split(file_path)[0]
         out_dir = os.path.join(demo_dir, "viz", demo_name)
-        if not os.path.exists(out_dir): os.makedirs(out_dir, exists=False)
+        if not os.path.exists(out_dir): os.makedirs(out_dir, exist_ok=False)
         out_name = "ft_position.png"
         out_path = os.path.join(out_dir, out_name)
     else:
