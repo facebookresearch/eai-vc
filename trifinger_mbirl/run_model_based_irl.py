@@ -10,13 +10,13 @@ import argparse
 
 from differentiable_robot_model.robot_model import DifferentiableTrifingerEdu
 import trifinger_simulation.finger_types_data
-from mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost, LearnableRBFWeightedCost
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
 
 from trifinger_mbirl.ftpos_mpc import FTPosMPC
+from trifinger_mbirl.learnable_costs import LearnableWeightedCost, LearnableTimeDepWeightedCost, LearnableRBFWeightedCost
 import utils.data_utils as d_utils
 
 # The IRL Loss, the learning objective for the learnable cost functions.
