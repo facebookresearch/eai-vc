@@ -11,7 +11,6 @@ device            :   cuda
 log_frequency     :   10
 
 # logging
-wandb_user        :   aryan9101
 wandb_project     :   rep_eval_cifar
 
 # general outputs

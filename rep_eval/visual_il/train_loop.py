@@ -162,7 +162,8 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
             epoch_log['eval_score_min'] = min_score
             epoch_log['eval_score_max'] = max_score
             epoch_log['eval_success'] = success_percentage
-            wandb_run.log(epoch_log)
+            if wandb_run:
+                wandb_run.log(epoch_log)
             print("Epoch = {0} | BC performance (eval mode) = {1:.3f}".format(epoch, mean_score))
             print(tabulate(sorted(epoch_log.items())))
 

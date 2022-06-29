@@ -51,6 +51,7 @@ bc_kwargs:
     dropout       :   0
 
 # logging
+wandb_logging     :   True
 wandb_project     :   rep_eval_visual_il
 
 # general outputs

@@ -35,8 +35,11 @@ def configure_jobs(job_data: dict) -> None:
     # print(OmegaConf.to_yaml(job_data))
     print("Arch : %s" % job_data['embedding'])
 
-    wandb_run = wandb.init(project=job_data['wandb_project'], entity=os.environ['WANDB_USER'], 
-                           config=OmegaConf.to_container(job_data, resolve=True))
+    if job_data['wandb_logging'] and 'WANDB_USER' in os.environ:
+        wandb_run = wandb.init(project=job_data['wandb_project'], entity=os.environ['WANDB_USER'], 
+                               config=OmegaConf.to_container(job_data, resolve=True))
+    else:
+        wandb_run = None
 
     bc_pvr_train_loop(job_data, wandb_run)
     wandb.finish()
