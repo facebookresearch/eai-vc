@@ -32,19 +32,28 @@ def main(args):
         demo_dir = os.path.split(file_path)[0]
         out_dir = os.path.join(demo_dir, "viz", demo_name)
         if not os.path.exists(out_dir): os.makedirs(out_dir, exist_ok=False)
-        out_name = "ft_position.png"
-        out_path = os.path.join(out_dir, out_name)
     else:
         out_path = None
 
     ## Plot ft positions
     d_utils.plot_traj(
             "ft position", 
-            out_path,
+            os.path.join(out_dir, "ft_pos.png"),
             ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
             {
             "all":  {"y": traj_dict["ft_pos_des"], "x": traj_dict["t"]},
             "down": {"y": downsampled_traj_dict["ft_pos_cur"], "x": downsampled_traj_dict["t"], "marker": "x"},
+            }
+            )
+
+    ## Plot object positions
+    d_utils.plot_traj(
+            "object position", 
+            os.path.join(out_dir, "obj_pos.png"),
+            ["x", "y", "z"],
+            {
+            "actual":  {"y": o_cur, "x": traj_dict["t"]},
+            "desired": {"y": o_des, "x": traj_dict["t"]},
             }
             )
 
