@@ -10,10 +10,10 @@ from torchvision.transforms import InterpolationMode
 from torch.nn.modules.linear import Identity
 from r3m import load_r3m
 import clip
-sys.path.append('/home/aryanjain/representation_networks/mae')
+sys.path.append(os.environ['MAE_PATH'])
 import models_mae
 
-CHECKPOINT_DIR = '/home/aryanjain/representation_networks/'
+CHECKPOINT_DIR = os.environ['CHECKPOINT_DIR']
 
 clip_vit_model, _clip_vit_preprocess = clip.load("ViT-B/32", device='cpu')
 clip_rn50_model, _clip_rn50_preprocess = clip.load("RN50x16", device='cpu')
@@ -96,7 +96,7 @@ def load_pvr_model(embedding_name, seed = 123, input_type = np.ndarray, *args, *
     # ============================================================
     # ResNet50
     # ============================================================
-    if embedding_name == 'resnet50':
+    elif embedding_name == 'resnet50':
         # ResNet50 pretrained on ImageNet
         model = models.resnet50(pretrained=True, progress=False)
         model.fc = Identity()

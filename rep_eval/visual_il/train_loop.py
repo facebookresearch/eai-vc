@@ -2,9 +2,9 @@ from matplotlib.pyplot import hist
 from mjrl.utils.gym_env import GymEnv
 from mjrl.policies.gaussian_mlp import MLP, BatchNormMLP
 from mjrl.algos.behavior_cloning import BC
-from utils.gym_wrapper import env_constructor
-from utils.pixel_based_rollouts import sample_paths, sample_paths_video
-from utils.model_loading import load_pvr_model, fuse_embeddings_concat, fuse_embeddings_flare
+from rep_eval.utils.gym_wrapper import env_constructor
+from rep_eval.utils.pixel_based_rollouts import sample_paths, sample_paths_video
+from rep_eval.utils.model_loading import load_pvr_model, fuse_embeddings_concat, fuse_embeddings_flare
 from tabulate import tabulate
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
@@ -32,7 +32,7 @@ def make_bc_agent(env_kwargs: dict, bc_kwargs: dict, demo_paths: list, epochs: i
     return e, bc_agent
 
 
-def set_seed(seed=None):
+def set_seed(seed: int = None) -> None:
     """
     Set all seeds to make results reproducible
     :param seed: an integer to your choosing (default: None)
@@ -75,7 +75,6 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
     # the expert trajectories with pixel observations are assumed to be placed at
     # job_data['data_dir']/expert_paths/job_data['env_kwargs']['env_name'].pickle
     demo_paths_loc = job_data['data_dir'] + '/expert_paths/' + job_data['env_kwargs']['env_name'] + '.pickle'
-    # demo_paths_loc = '/private/home/aravraj/work/Projects/visual_rl/vrl_private/vrl/hydra/expert_data/resnet18_rand_paths/relocate-v0.pickle'
     try:
         demo_paths = pickle.load(open(demo_paths_loc, 'rb'))
     except:
@@ -156,9 +155,9 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
             except:
                 print("Success percentage function not implemented in env")
                 success_percentage = -1
-            epoch_log = {} 
+            epoch_log = {}
             epoch_log['epoch_loss'] = running_loss / (mb_idx + 1)
-            epoch_log['eval_epoch'] = epoch 
+            epoch_log['eval_epoch'] = epoch
             epoch_log['eval_score_mean'] = mean_score
             epoch_log['eval_score_min'] = min_score
             epoch_log['eval_score_max'] = max_score
@@ -174,9 +173,10 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
                 pickle.dump(policy, open('./iterations/best_policy.pickle', 'wb'))
                 highest_score = mean_score
             paths = sample_paths_video(num_traj=job_data['video_num_traj'], env=e,
-                                       policy=policy, algorithm='BC', save_path='./videos', 
-                                       eval_mode=True, horizon=e.horizon, base_seed=job_data['seed'], 
+                                       policy=policy, algorithm='BC', save_path='./videos',
+                                       eval_mode=True, horizon=e.horizon, base_seed=job_data['seed'],
                                        num_cpu=job_data['num_cpu'], env_kwargs=env_kwargs)
+
 
 class FrozenEmbeddingDataset(Dataset):
     def __init__(self, paths: list,
@@ -204,7 +204,8 @@ class FrozenEmbeddingDataset(Dataset):
             features = self.paths[traj_idx]['features'][timestep]
             action = self.paths[traj_idx]['actions'][timestep]
         else:
-            embeddings = [self.paths[traj_idx]['embeddings'][max(timestep-k, 0)] for k in range(self.history_window)]
+            embeddings = [self.paths[traj_idx]['embeddings'][max(
+                timestep-k, 0)] for k in range(self.history_window)]
             # embeddings[-1] should be most recent embedding
             embeddings = embeddings[::-1]
             features = self.fuse_embeddings(embeddings)
@@ -219,10 +220,10 @@ def compute_embeddings(paths: list, embedding_name: str,
     model, embedding_dim, transforms = load_pvr_model(embedding_name=embedding_name)
     model.to(device)
     for path in paths:
-        inp = path['images']        # shape (B, H, W, 3)
+        inp = path['images']  # shape (B, H, W, 3)
         path['embeddings'] = np.zeros((inp.shape[0], embedding_dim))
         path_len = inp.shape[0]
-        preprocessed_inp = torch.cat([transforms(frame) for frame in inp])   # shape (B, 3, H, W)
+        preprocessed_inp = torch.cat([transforms(frame) for frame in inp])  # shape (B, 3, H, W)
         for chunk in range(path_len // chunk_size + 1):
             if chunk_size * chunk < path_len:
                 with torch.no_grad():
@@ -237,8 +238,7 @@ def compute_embeddings(paths: list, embedding_name: str,
 
 def precompute_features(paths: list,
                         history_window: int = 1,
-                        fuse_embeddings: callable = None,
-                        ):
+                        fuse_embeddings: callable = None):
     assert 'embeddings' in paths[0].keys()
     for path in paths:
         features = []

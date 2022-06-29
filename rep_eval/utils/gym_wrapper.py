@@ -1,12 +1,12 @@
 import os
-import numpy as np, torch, torch.nn as nn, torchvision.models as models, torchvision.transforms as T
+import numpy as np
+import torch
 import gym
 from mjrl.utils.gym_env import GymEnv
+from rep_eval.utils.model_loading import load_pvr_model
 from gym.spaces.box import Box
-from .model_loading import load_pvr_model
 from torch._C import device
 from torch.nn.modules.linear import Identity
-from PIL import Image
 
 
 def set_seed(seed=None):

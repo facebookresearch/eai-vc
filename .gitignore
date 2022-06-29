@@ -130,3 +130,4 @@ dmypy.json
 
 # Ignore single runs
 multirun/
+outputs/

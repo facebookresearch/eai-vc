@@ -51,7 +51,6 @@ bc_kwargs:
     dropout       :   0
 
 # logging
-wandb_user        :   aryan9101
 wandb_project     :   rep_eval_visual_il
 
 # general outputs

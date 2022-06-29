@@ -3,7 +3,6 @@ This is a launcher script for launching CIFAR-10 linear probing using hydra
 """
 
 import os
-import time as timer
 import hydra
 from omegaconf import DictConfig, OmegaConf
 
@@ -22,19 +21,16 @@ def configure_jobs(job_data: dict) -> None:
     job_data = OmegaConf.structured(OmegaConf.to_yaml(job_data))
 
     import torch
-    import numpy as np
     import wandb
-    import matplotlib.pyplot as plt
-    from tqdm import tqdm
-    from utils.model_loading import load_pvr_model, MODEL_LIST
-    from eval_model_cifar import probe_model_eval, ClassifierModel
+    from rep_eval.utils.model_loading import load_pvr_model, MODEL_LIST
+    from rep_eval.cifar.eval_model_cifar import probe_model_eval
     
     assert job_data['model'] in MODEL_LIST
     
     print("-------------------------")
     print("Arch : %s" % job_data['model'])
     
-    wandb_run = wandb.init(project=job_data['wandb_project'], entity=job_data['wandb_user'], 
+    wandb_run = wandb.init(project=job_data['wandb_project'], entity=os.environ['WANDB_USER'], 
                            config=OmegaConf.to_container(job_data, resolve=True))
 
     # Get base model, transform, and probing classifier

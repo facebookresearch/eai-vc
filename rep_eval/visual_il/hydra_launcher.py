@@ -3,7 +3,6 @@ This is a launcher script for launching mjrl training using hydra
 """
 
 import os
-import time as timer
 import hydra
 import multiprocessing
 from omegaconf import DictConfig, OmegaConf
@@ -22,7 +21,7 @@ def configure_jobs(job_data: dict) -> None:
 
     job_data = OmegaConf.structured(OmegaConf.to_yaml(job_data))
 
-    from train_loop import bc_pvr_train_loop, configure_cluster_GPUs
+    from rep_eval.visual_il.train_loop import bc_pvr_train_loop, configure_cluster_GPUs
     import wandb
 
     # configure GPUs
@@ -36,7 +35,7 @@ def configure_jobs(job_data: dict) -> None:
     # print(OmegaConf.to_yaml(job_data))
     print("Arch : %s" % job_data['embedding'])
 
-    wandb_run = wandb.init(project=job_data['wandb_project'], entity=job_data['wandb_user'], 
+    wandb_run = wandb.init(project=job_data['wandb_project'], entity=os.environ['WANDB_USER'], 
                            config=OmegaConf.to_container(job_data, resolve=True))
 
     bc_pvr_train_loop(job_data, wandb_run)
