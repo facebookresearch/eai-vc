@@ -6,6 +6,21 @@ Given a trained representation (image -> embedding), have code in this repo to a
 - More ...
 
 ---
+### Initial Setup
+To install rep_eval:
+```
+$ cd path/to/the/rep_eval/root/directory
+$ pip install -e .
+```
+Set the following environment variables:
+```
+$ export CHECKPOINT_DIR=path/to/saved/representation/networks
+$ export MAE_PATH=path/to/the/mae/repository/
+```
+To enable wandb logging, set your wandb username by:
+```
+$ export WANDB_USER=<your wandb username>
+```
 
 ### CIFAR-10 Linear Probe Eval
 

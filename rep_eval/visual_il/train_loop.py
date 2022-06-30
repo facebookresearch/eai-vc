@@ -20,7 +20,6 @@ import pickle
 import os
 import gc
 import torch
-import torch.nn as nn
 import torchvision.transforms as T
 import wandb
 
@@ -61,20 +60,20 @@ def configure_cluster_GPUs(gpu_logical_id: int) -> int:
     return gpu_id
 
 
-def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
+def bc_pvr_train_loop(config: dict, wandb_run: Run) -> None:
 
     # configure GPUs
     os.environ['GPUS'] = os.environ.get('SLURM_STEP_GPUS', '0')
-    physical_gpu_id = configure_cluster_GPUs(job_data['env_kwargs']['render_gpu_id'])
-    job_data['env_kwargs']['render_gpu_id'] = physical_gpu_id
+    physical_gpu_id = configure_cluster_GPUs(config['env_kwargs']['render_gpu_id'])
+    config['env_kwargs']['render_gpu_id'] = physical_gpu_id
 
     # set the seed
-    set_seed(job_data['seed'])
+    set_seed(config['seed'])
 
     # infer the demo location
     # the expert trajectories with pixel observations are assumed to be placed at
-    # job_data['data_dir']/expert_paths/job_data['env_kwargs']['env_name'].pickle
-    demo_paths_loc = job_data['data_dir'] + '/expert_paths/' + job_data['env_kwargs']['env_name'] + '.pickle'
+    # config['data_dir']/expert_paths/config['env_kwargs']['env_name'].pickle
+    demo_paths_loc = config['data_dir'] + '/expert_paths/' + config['env_kwargs']['env_name'] + '.pickle'
     try:
         demo_paths = pickle.load(open(demo_paths_loc, 'rb'))
     except:
@@ -82,54 +81,54 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
         print(demo_paths_loc)
         quit()
 
-    demo_paths = demo_paths[:job_data['num_demos']]
+    demo_paths = demo_paths[:config['num_demos']]
     demo_score = np.mean([np.sum(p['rewards']) for p in demo_paths])
     print("Number of demonstrations used : %i" % len(demo_paths))
     print("Demonstration score : %.2f " % demo_score)
 
     # construct the environment and policy
-    env_kwargs = job_data['env_kwargs']
+    env_kwargs = config['env_kwargs']
     e = env_constructor(**env_kwargs, fuse_embeddings=fuse_embeddings_flare)
-    policy = BatchNormMLP(env_spec=e.spec, hidden_sizes=eval(job_data['bc_kwargs']['hidden_sizes']),
-                          seed=job_data['seed'], nonlinearity=job_data['bc_kwargs']['nonlinearity'],
-                          dropout=job_data['bc_kwargs']['dropout'])
+    policy = BatchNormMLP(env_spec=e.spec, hidden_sizes=eval(config['bc_kwargs']['hidden_sizes']),
+                          seed=config['seed'], nonlinearity=config['bc_kwargs']['nonlinearity'],
+                          dropout=config['bc_kwargs']['dropout'])
 
     # compute embeddings and create dataset
-    demo_paths = compute_embeddings(demo_paths, device=job_data['device'],
-                                    embedding_name=job_data['env_kwargs']['embedding_name'])
-    demo_paths = precompute_features(demo_paths, history_window=job_data['env_kwargs']['history_window'],
+    demo_paths = compute_embeddings(demo_paths, device=config['device'],
+                                    embedding_name=config['env_kwargs']['embedding_name'])
+    demo_paths = precompute_features(demo_paths, history_window=config['env_kwargs']['history_window'],
                                      fuse_embeddings=fuse_embeddings_flare)
     gc.collect()  # garbage collection to free up RAM
     dataset = FrozenEmbeddingDataset(demo_paths,
-                                     history_window=job_data['env_kwargs']['history_window'],
+                                     history_window=config['env_kwargs']['history_window'],
                                      fuse_embeddings=fuse_embeddings_flare)
-    dataloader = DataLoader(dataset, batch_size=job_data['bc_kwargs']['batch_size'],
+    dataloader = DataLoader(dataset, batch_size=config['bc_kwargs']['batch_size'],
                             shuffle=True, num_workers=0, pin_memory=True)
-    optimizer = torch.optim.Adam(policy.model.parameters(), lr=job_data['bc_kwargs']['lr'])
+    optimizer = torch.optim.Adam(policy.model.parameters(), lr=config['bc_kwargs']['lr'])
     loss_func = torch.nn.MSELoss()
 
     # Make log dir
-    if os.path.isdir(job_data['job_name']) == False:
-        os.mkdir(job_data['job_name'])
+    if os.path.isdir(config['job_name']) == False:
+        os.mkdir(config['job_name'])
     previous_dir = os.getcwd()
     # important! we are now in the directory to save data
-    os.chdir(job_data['job_name'])
+    os.chdir(config['job_name'])
     if os.path.isdir('iterations') == False:
         os.mkdir('iterations')
     if os.path.isdir('videos') == False:
         os.mkdir('videos')
 
     highest_score = -np.inf
-    for epoch in tqdm(range(job_data['epochs'])):
+    for epoch in tqdm(range(config['epochs'])):
         # move the policy to correct device
-        policy.model.to(job_data['device'])
+        policy.model.to(config['device'])
         policy.model.train()
         # update policy for one BC epoch
         running_loss = 0.0
         for mb_idx, batch in enumerate(dataloader):
             optimizer.zero_grad()
-            feat = batch['features'].float().to(job_data['device'])
-            tar = batch['actions'].float().to(job_data['device'])
+            feat = batch['features'].float().to(config['device'])
+            tar = batch['actions'].float().to(config['device'])
             pred = policy.model(feat)
             loss = loss_func(pred, tar.detach())
             loss.backward()
@@ -142,10 +141,10 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
         e.env.embedding.eval()
 
         # perform evaluation rollouts every few epochs
-        if (epoch % job_data['eval_frequency'] == 0 and epoch > 0) or (epoch == job_data['epochs'] - 1):
-            paths = sample_paths(num_traj=job_data['eval_num_traj'], env=e,
+        if (epoch % config['eval_frequency'] == 0 and epoch > 0) or (epoch == config['epochs'] - 1):
+            paths = sample_paths(num_traj=config['eval_num_traj'], env=e,
                                  policy=policy, eval_mode=True, horizon=e.horizon,
-                                 base_seed=job_data['seed'], num_cpu=job_data['num_cpu'],
+                                 base_seed=config['seed'], num_cpu=config['num_cpu'],
                                  env_kwargs=env_kwargs)
             mean_score = np.mean([np.sum(p['rewards']) for p in paths])
             min_score = np.min([np.sum(p['rewards']) for p in paths])
@@ -168,15 +167,15 @@ def bc_pvr_train_loop(job_data: dict, wandb_run: Run) -> None:
             print(tabulate(sorted(epoch_log.items())))
 
         # save policy
-        if (epoch % job_data['save_frequency'] == 0 and epoch > 0) or (epoch == job_data['epochs']-1):
+        if (epoch % config['save_frequency'] == 0 and epoch > 0) or (epoch == config['epochs']-1):
             # pickle.dump(agent.policy, open('./iterations/policy_%i.pickle' % epoch, 'wb'))
             if mean_score > highest_score:
                 pickle.dump(policy, open('./iterations/best_policy.pickle', 'wb'))
                 highest_score = mean_score
-            paths = sample_paths_video(num_traj=job_data['video_num_traj'], env=e,
+            paths = sample_paths_video(num_traj=config['video_num_traj'], env=e,
                                        policy=policy, algorithm='BC', save_path='./videos',
-                                       eval_mode=True, horizon=e.horizon, base_seed=job_data['seed'],
-                                       num_cpu=job_data['num_cpu'], env_kwargs=env_kwargs)
+                                       eval_mode=True, horizon=e.horizon, base_seed=config['seed'],
+                                       num_cpu=config['num_cpu'], env_kwargs=env_kwargs)
 
 
 class FrozenEmbeddingDataset(Dataset):

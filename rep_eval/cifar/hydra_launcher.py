@@ -30,17 +30,13 @@ def configure_jobs(job_data: dict) -> None:
     print("-------------------------")
     print("Arch : %s" % job_data['model'])
     
-    wandb_run = wandb.init(project=job_data['wandb_project'], entity=os.environ['WANDB_USER'], 
-                           config=OmegaConf.to_container(job_data, resolve=True))
-
-    # Get base model, transform, and probing classifier
-    model, embedding_dim, transform = load_pvr_model(job_data['model'], input_type=torch.Tensor)
-    linear_probe = torch.nn.Sequential(
-                        torch.nn.BatchNorm1d(embedding_dim),
-                        torch.nn.Linear(embedding_dim, 10),
-                    )
+    wandb_run = None
+    if job_data['wandb_logging'] and 'WANDB_USER' in os.environ:
+        wandb_run = wandb.init(project=job_data['wandb_project'], entity=os.environ['WANDB_USER'], 
+                               config=OmegaConf.to_container(job_data, resolve=True))
+    
     # Train the probe
-    probe_model_eval(job_data, model, transform, linear_probe, embedding_dim, wandb_run)
+    probe_model_eval(job_data, wandb_run)
     wandb.finish()
     
 if __name__ == "__main__":
