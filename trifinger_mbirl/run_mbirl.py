@@ -370,10 +370,11 @@ def get_exp_str(params_dict):
     
     sorted_dict = collections.OrderedDict(sorted(params_dict.items()))
 
-    exp_str = "exp"
+    run_id = params_dict["run_id"]
+    exp_str = f"exp_{run_id}"
     for key, val in sorted_dict.items():
         # TODO shorten traj path to include in exp_str
-        if key in ["file_path", "no_wandb", "log_dir"]: continue
+        if key in ["file_path", "no_wandb", "log_dir", "run_id"]: continue
 
         # Abbreviate key
         splits = key.split("_")
@@ -390,9 +391,10 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("file_path", default=None, help="""Filepath of trajectory to load""")
+    parser.add_argument("--file_path", default=None, help="""Filepath of trajectory to load""")
     parser.add_argument("--log_dir", type=str, default="/Users/clairelchen/logs/runs/", help="Directory for run logs")
     parser.add_argument("--no_wandb", action="store_true", help="Don't log in wandb")
+    parser.add_argument("--run_id", help="Run ID")
 
     # Parameters
     parser.add_argument("--cost_type", type=str, default="Weighted", help="Learnable cost type")
