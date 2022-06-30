@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def get_traj_dict_from_obs_list(data):
+NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
+
+def get_traj_dict_from_obs_list(data, scale=1):
 
     position_error = np.array([data[i]["achieved_goal"]["position_error"] for i in range(len(data))])
     o_cur = np.array([data[i]["object_observation"]["position"] for i in range(len(data))])
@@ -14,11 +16,12 @@ def get_traj_dict_from_obs_list(data):
 
     traj_dict = {
                 "t"          : t,
-                "o_cur"      : o_cur,
-                "o_des"      : o_des,
-                "ft_pos_cur" : ft_pos_cur,
-                "ft_pos_des" : ft_pos_cur,
-                "delta_ftpos": delta_ftpos,
+                "o_cur"      : scale * o_cur,
+                "o_des"      : scale * o_des,
+                "ft_pos_cur" : scale * ft_pos_cur,
+                "ft_pos_des" : scale * ft_pos_cur,
+                "delta_ftpos": scale * delta_ftpos,
+                "ft_pos_targets_per_mode": scale * data[-1]["policy"]["ft_pos_targets_per_mode"],
                 }
 
     return traj_dict
@@ -32,9 +35,15 @@ def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
     
     for k, traj in traj_dict.items():
         if "delta" in k: continue # Need to recompute deltas for downsampled traj
+
+        if k in NON_TRAJ_KEYS:
+            new_traj_dict[k] = traj
+            continue
+
         new_traj = traj[::every_x_steps, :]
         new_traj_dict[k] = new_traj
 
+    # Compute deltas for downsampled traj
     new_delta_ftpos = np.zeros(new_traj_dict["ft_pos_cur"].shape)
     ft_pos = new_traj_dict["ft_pos_cur"]
     for t in range(ft_pos.shape[0] - 1):
@@ -56,6 +65,10 @@ def crop_traj_dict(traj_dict, crop_range):
     for k, traj in traj_dict.items():
         if crop_range[1] is None: crop_max = traj.shape[0]
         else: crop_max = crop_range[1]
+
+        if k in NON_TRAJ_KEYS:
+            new_traj_dict[k] = traj
+            continue
 
         new_traj = traj[crop_min:crop_max, :]
         new_traj_dict[k] = new_traj
