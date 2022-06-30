@@ -72,6 +72,8 @@ class MoveCubePolicy:
 
         self.t = 0
 
+        self.ft_pos_targets_per_mode = [] # List of fingertip position targets per mode
+
     def reset(self):
         # initial joint positions (lifting the fingers up)
         self.joint_positions = self.joint_positions
@@ -90,6 +92,8 @@ class MoveCubePolicy:
 
         self.done = False
 
+        self.ft_pos_targets_per_mode = [] # List of fingertip position targets per mode
+
     def state_machine(self, observation, t): 
         """ Define mode transition logic """
 
@@ -99,8 +103,7 @@ class MoveCubePolicy:
         dq_cur = observation["robot_observation"]["velocity"]
 
         if self.mode == Mode.INIT:
-            if t > 300:
-                self.mode = Mode.GRASP
+            self.mode = Mode.GRASP
 
         elif self.mode == Mode.GRASP:
             if self.controller.is_avg_dx_converged(q_cur, dq_cur):
@@ -145,6 +148,9 @@ class MoveCubePolicy:
             ft_pos = np.concatenate(ft_pos)
 
             self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 2, time_step=self.time_step)
+
+            self.ft_pos_targets_per_mode.append(ft_pos)
+
         elif self.mode == Mode.MOVE_CUBE:
             # Get object trajectory
             o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 3, time_step=self.time_step)
@@ -159,6 +165,8 @@ class MoveCubePolicy:
 
             self.ft_vel_traj = np.tile(do_traj, (1,3))
             self.ft_pos_traj = ft_pos_traj
+
+            self.ft_pos_targets_per_mode.append(ft_pos_traj[-1,:])
         else:
             raise ValueError(f"{self.mode} is an invalide Mode")
 
@@ -210,8 +218,11 @@ class MoveCubePolicy:
     def get_observation(self):
 
         obs = {"policy": 
-                {"controller": self.controller.get_observation(),
-                "t" : self.t}
+                {
+                "controller": self.controller.get_observation(),
+                "ft_pos_targets_per_mode": np.array(self.ft_pos_targets_per_mode),
+                "t" : self.t,
+                }
               }
 
         return obs
