@@ -14,10 +14,9 @@ WALKERMINI=walker-walk,walker-run,walker-stand,walker-walk-backwards,walker-legs
 # python train_offline.py -m task=$WALKER modality=features features=mocoego15 exp_name=mocoego15-chpkt-l128 latent_dim=128 hydra/launcher=slurm
 # python train_offline.py -m task=$WALKER modality=features features=mocoego15 exp_name=mocoego15-chpkt-l256 latent_dim=256 hydra/launcher=slurm
 
-# python train_offline.py -m task=$WALKER modality=features features=mocodmcontrol exp_name=mocodmcontrol-prepln hydra/launcher=slurm
-# python train_offline.py -m task=$WALKERMINI modality=features features=mocodmcontrol exp_name=mocodmcontrol-newflare hydra/launcher=slurm
 
-python train_offline.py -m task=$WALKERMINI modality=features features=mocoego15center exp_name=mocoego15center-newflare hydra/launcher=slurm
+python train_offline.py -m task=$WALKERMINI modality=features features=mocoego15 dynamics_obj=reconstruction consistency_coef=100 detach_rewval=true exp_name=mocoego15-recon-c100-detach hydra/launcher=slurm
+
 
 
 # Encode dataset

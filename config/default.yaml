@@ -48,6 +48,8 @@ seed_steps: 5000
 update_freq: 2
 tau: 0.01
 steps_per_update: 1
+detach_rewval: false
+dynamics_obj: consistency
 
 # architecture
 enc_dim: 512
@@ -95,8 +97,8 @@ hydra:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 600 #3000
-        mem_gb: 32
+        timeout_min: 900 #3000
+        mem_gb: 52
         name: ${hydra.job.name}
         # array_parallelism: 256
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

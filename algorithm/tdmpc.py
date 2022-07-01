@@ -32,10 +32,15 @@ class TOLD(nn.Module):
 
 	def next(self, z, a, task_vec=None):
 		"""Predicts next latent state (d) and single-step reward (R)."""
+		zd, zr = z, z
+		if self.cfg.detach_rewval:
+			zr = zr.detach()
 		if task_vec is not None:
-			z = z + self._task_encoder(task_vec)
-		x = torch.cat([z, a], dim=-1)
-		return self._dynamics(x), self._reward(x)
+			zt = self._task_encoder(task_vec)
+			zd, zr = zd + zt, zr + zt
+		xd = torch.cat([zd, a], dim=-1)
+		xr = torch.cat([zr, a], dim=-1)
+		return self._dynamics(xd), self._reward(xr)
 
 	def pi(self, z, task_vec=None, std=0):
 		"""Samples an action from the learned policy (pi)."""
@@ -55,13 +60,30 @@ class TOLD(nn.Module):
 		return self._Q1(x), self._Q2(x)
 
 
+class ReconstructionTOLD(TOLD):
+	"""TOLD but with a decoder."""
+	def __init__(self, cfg):
+		super().__init__(cfg)
+		self._decoder = h.dec(cfg)
+		self._decoder.apply(h.orthogonal_init)
+	
+	def g(self, z):
+		"""Decodes a latent representation (z) into an observation (g)."""
+		return self._decoder(z)
+
+
 class TDMPC():
 	"""Implementation of TD-MPC learning + inference."""
 	def __init__(self, cfg):
 		self.cfg = cfg
 		self.device = torch.device('cuda')
 		self.std = h.linear_schedule(cfg.std_schedule, 0)
-		self.model = TOLD(cfg).cuda()
+		if self.cfg.dynamics_obj == 'consistency':
+			self.model = TOLD(cfg).cuda()
+		elif self.cfg.dynamics_obj == 'reconstruction':
+			self.model = ReconstructionTOLD(cfg).cuda()
+		else:
+			raise ValueError('Unknown dynamics objective: {}'.format(self.cfg.dynamics_obj))
 		self.model_target = deepcopy(self.model)
 		self.optim = torch.optim.Adam(self.model.parameters(), lr=self.cfg.lr)
 		self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr)
@@ -208,7 +230,7 @@ class TDMPC():
 		for t in range(self.cfg.horizon):
 
 			# Predictions
-			Q1, Q2 = self.model.Q(z, action[t], task_vec)
+			Q1, Q2 = self.model.Q(z.detach() if self.cfg.detach_rewval else z, action[t], task_vec)
 			z, reward_pred = self.model.next(z, action[t], task_vec)
 			with torch.no_grad():
 				next_obs = self.aug(next_obses[t])
@@ -218,7 +240,13 @@ class TDMPC():
 
 			# Losses
 			rho = (self.cfg.rho ** t)
-			consistency_loss += rho * torch.mean(h.mse(z, next_z), dim=1, keepdim=True)
+			if self.cfg.dynamics_obj == 'consistency':
+				consistency_loss += rho * torch.mean(h.mse(z, next_z), dim=1, keepdim=True)
+			elif self.cfg.dynamics_obj == 'reconstruction':
+				obs_pred = self.model.g(z)
+				consistency_loss += rho * torch.mean(h.mse(obs_pred, next_obs), dim=1, keepdim=True)
+			else:
+				raise ValueError('Unknown dynamics objective: {}'.format(self.cfg.dynamics_obj))
 			reward_loss += rho * h.mse(reward_pred, reward[t])
 			value_loss += rho * (h.mse(Q1, td_target) + h.mse(Q2, td_target))
 			priority_loss += rho * (h.l1(Q1, td_target) + h.l1(Q2, td_target))

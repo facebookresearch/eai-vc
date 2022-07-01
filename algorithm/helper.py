@@ -196,6 +196,24 @@ def enc(cfg):
 	return nn.Sequential(*layers)
 
 
+def dec(cfg):
+	"""Returns a TOLD decoder."""
+	assert cfg.modality in {'state', 'features'}
+	if cfg.modality == 'features':
+		features_to_dim = defaultdict(lambda: 2048)
+		features_to_dim.update({
+			'clip': 512,
+			'random18': 1024,
+		})
+		layers = [nn.Linear(cfg.latent_dim, cfg.mlp_dim), nn.ELU(),
+				  nn.Linear(cfg.mlp_dim, cfg.enc_dim), nn.ELU(),
+				  nn.Linear(cfg.enc_dim, features_to_dim[cfg.features]*cfg.frame_stack)]
+	else:
+		layers = [nn.Linear(cfg.latent_dim, cfg.mlp_dim), nn.ELU(),
+				  nn.Linear(cfg.mlp_dim, cfg.obs_shape[0])]
+	print('Decoder parameters: {}'.format(sum(p.numel() for p in nn.Sequential(*layers).parameters())))
+	return nn.Sequential(*layers)
+
 def task_enc(cfg):
 	"""Returns a task encoder."""
 	if not cfg.multitask:
