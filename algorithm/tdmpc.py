@@ -68,21 +68,29 @@ class TDMPC():
 		self.aug = h.RandomShiftsAug(cfg)
 		self.model.eval()
 		self.model_target.eval()
+		print('Model parameters: {}'.format(sum(p.numel() for p in self.model.parameters())))
 
 	def state_dict(self):
 		"""Retrieve state dict of TOLD model, including slow-moving target network."""
 		return {'model': self.model.state_dict(),
-				'model_target': self.model_target.state_dict()}
+				'model_target': self.model_target.state_dict(),
+				'optim': self.optim.state_dict(),
+				'pi_optim': self.pi_optim.state_dict()}
 
-	def save(self, fp):
+	def save(self, fp, metadata={}):
 		"""Save state dict of TOLD model to filepath."""
-		torch.save(self.state_dict(), fp)
+		state_dict = self.state_dict()
+		state_dict['metadata'] = metadata
+		torch.save(state_dict, fp)
 	
 	def load(self, fp):
 		"""Load a saved state dict from filepath (or dictionary) into current agent."""
 		d = fp if isinstance(fp, dict) else torch.load(fp)
 		self.model.load_state_dict(d['model'])
 		self.model_target.load_state_dict(d['model_target'])
+		self.optim.load_state_dict(d['optim'])
+		self.pi_optim.load_state_dict(d['pi_optim'])
+		return d['metadata']
 
 	@torch.no_grad()
 	def estimate_value(self, z, actions, task_vec, horizon):
@@ -224,7 +232,8 @@ class TDMPC():
 		weighted_loss.backward()
 		grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
 		self.optim.step()
-		replay_buffer.update_priorities(idxs, priority_loss.clamp(max=1e4).detach())
+		if self.cfg.per:
+			replay_buffer.update_priorities(idxs, priority_loss.clamp(max=1e4).detach())
 
 		# Update policy + target network
 		pi_loss = self.update_pi(zs, task_vec)

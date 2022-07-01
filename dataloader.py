@@ -67,7 +67,8 @@ class DMControlDataset(Dataset):
                     _obs = np.empty((obs.shape[0], cfg.frame_stack*obs.shape[1]), dtype=np.float32)
                     obs = stack_frames(obs, _obs, cfg.frame_stack)
                 data['metadata']['states'] = data['states']
-                data['metadata']['phys_states'] = data['phys_states']
+                if 'phys_states' in data:
+                    data['metadata']['phys_states'] = data['phys_states']
             elif cfg.modality == 'pixels':
                 frames_dir = Path(os.path.dirname(fp)) / 'frames'
                 assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
@@ -78,7 +79,8 @@ class DMControlDataset(Dataset):
                 else:
                     obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
                     data['metadata']['states'] = data['states']
-                    data['metadata']['phys_states'] = data['phys_states']
+                    if 'phys_states' in data:
+                        data['metadata']['phys_states'] = data['phys_states']
             else:
                 obs = data['states']
             actions = np.array([v['expert_action'] for v in data['infos']] if cfg.get('expert_actions', False) else data['actions'], dtype=np.float32).clip(-1, 1)

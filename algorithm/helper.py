@@ -117,69 +117,35 @@ class Flare(nn.Module):
 		assert x.shape[-1] == self.latent_dim*self.num_frames
 		x = x.view(x.size(0), self.num_frames, self.latent_dim)
 		deltas = x[:, 1:] - x[:, :-1]
-		return torch.cat([x[:, -1:], deltas], dim=1).view(x.size(0), -1)
-
-
-class Prep(nn.Module):
-	"""Prep layer."""
-	def __init__(self, cfg, feature_dim):
-		super().__init__()
-		self.cfg = cfg
-		self.fn = nn.Sequential(
-			nn.Linear(feature_dim, cfg.enc_dim), nn.ELU(),
-			nn.Linear(cfg.enc_dim, cfg.enc_dim))
-		self.layers = nn.Sequential(
-			Flare(cfg.enc_dim, cfg.frame_stack),
-			nn.Linear(cfg.enc_dim*cfg.frame_stack, cfg.enc_dim), nn.ELU(),
-			nn.Linear(cfg.enc_dim, cfg.latent_dim))
-	
-	def forward(self, x):
-		b = x.size(0)
-		x = x.view(b*self.cfg.frame_stack, x.size(1)//self.cfg.frame_stack)
-		x = self.fn(x)
-		x = x.view(b, self.cfg.enc_dim*self.cfg.frame_stack)
-		return self.layers(x)
+		ddelta = (x[:, -1] - x[:, 0]).unsqueeze(1)
+		dddelta = (deltas[:, -1] - deltas[:, 0]).unsqueeze(1)
+		return torch.cat([x, deltas, ddelta, dddelta], dim=1).view(x.size(0), -1)
 
 
 class FeatureFuse(nn.Module):
 	"""Feature fusion and encoder layer."""
 	def __init__(self, cfg):
 		super().__init__()
+		self.cfg = cfg
 		assert cfg.modality == 'features'
-		features_to_dim = defaultdict(lambda: 2048) # default to resnet50
+		features_to_dim = defaultdict(lambda: 2048)
 		features_to_dim.update({
 			'clip': 512,
 			'random18': 1024,
 		})
-		fuse = cfg.get('fuse', 'flare')
-		if fuse == 'flare':
-			layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack), # default to flare w/o batchnorm
-					nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-					nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
-					nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		elif fuse == 'prep':
-			layers = [Prep(cfg, features_to_dim[cfg.features])]
-
-		# fuse = cfg.get('fuse', 'cat')
-		# if fuse == 'bn':
-		# 	layers = [nn.BatchNorm1d(cfg.obs_shape[0]),
-		# 			  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		# elif fuse == 'flare':
-		# 	layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack),
-		# 			  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		# elif fuse == 'flare+bn':
-		# 	layers = [Flare(features_to_dim[cfg.features], cfg.frame_stack),
-		# 			  nn.BatchNorm1d(cfg.obs_shape[0]),
-		# 			  nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		# else:
-		# 	layers = [nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
-		# 			  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
-		self.layers = nn.Sequential(*layers)
+		self.fn = nn.Sequential(
+			nn.Linear(features_to_dim[cfg.features], cfg.enc_dim), nn.ELU(),
+			nn.Linear(cfg.enc_dim, cfg.enc_dim))
+		self.layers = nn.Sequential(
+			Flare(cfg.enc_dim, cfg.frame_stack),
+			nn.Linear(cfg.enc_dim*7, cfg.enc_dim), nn.ELU(),
+			nn.Linear(cfg.enc_dim, cfg.latent_dim))
 
 	def forward(self, x):
+		b = x.size(0)
+		x = x.view(b*self.cfg.frame_stack, x.size(1)//self.cfg.frame_stack)
+		x = self.fn(x)
+		x = x.view(b, self.cfg.enc_dim*self.cfg.frame_stack)
 		return self.layers(x)
 
 
@@ -413,14 +379,14 @@ class ReplayBuffer():
 		action = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *self._action.shape[1:]), dtype=torch.float32, device=self.device)
 		reward = torch.empty((self.cfg.horizon+1, self.cfg.batch_size), dtype=torch.float32, device=self.device)
 		state = self._state[idxs] if self.cfg.modality != 'state' else None
-		next_state = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *state.shape[1:]), dtype=state.dtype, device=state.device)
+		next_state = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *state.shape[1:]), dtype=state.dtype, device=state.device) if self.cfg.modality != 'state' else None
 		task_vec = self._task_vec[idxs].float() if self.cfg.multitask else None
 		for t in range(self.cfg.horizon+1):
 			_idxs = idxs + t
 			next_obs[t] = self._get_obs(self._obs, _idxs+1)
 			action[t] = self._action[_idxs]
 			reward[t] = self._reward[_idxs]
-			if self.cfg.modality != 'state':
+			if state is not None:
 				next_state[t] = self._state[_idxs+1]
 
 		mask = (_idxs+1) % self.cfg.episode_length == 0

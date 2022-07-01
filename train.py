@@ -16,7 +16,9 @@ from cfg_parse import parse_cfg
 from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.helper import Episode, ReplayBuffer
+from termcolor import colored
 import logger
+import hydra
 torch.backends.cudnn.benchmark = True
 __CONFIG__, __MODELS__ = 'cfgs', 'models'
 
@@ -69,12 +71,16 @@ def evaluate(env, agent, num_episodes, step, env_step, video):
 	return np.nanmean(episode_rewards), np.nanmean(episode_successes)
 
 
-def train(cfg):
-	"""Training script for TD-MPC."""
+@hydra.main(config_name='default', config_path='config')
+def train(cfg: dict):
+	"""Training script for online TD-MPC."""
 	assert torch.cuda.is_available()
+	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
-	work_dir = Path().cwd() / __MODELS__ / cfg.task / cfg.modality / cfg.exp_name / str(cfg.seed)
+	work_dir = Path(cfg.logging_dir) / __MODELS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
+	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
 	env, agent, buffer = make_env(cfg), TDMPC(cfg), ReplayBuffer(cfg)
+	print(agent.model)
 
 	# Run training
 	L = logger.Logger(work_dir, cfg)
@@ -128,4 +134,4 @@ def train(cfg):
 
 
 if __name__ == '__main__':
-	parallel(train, parse_cfg(Path().cwd() / __CONFIG__), verbose=True)
+	train()

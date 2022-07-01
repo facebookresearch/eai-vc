@@ -117,11 +117,15 @@ class Logger(object):
 	@property
 	def video(self):
 		return self._video
+
+	@property
+	def model_dir(self):
+		return self._model_dir
 	
-	def save_model(self, agent, identifier):
+	def save_model(self, agent, identifier, metadata={}):
 		if self._save_model:
 			fp = self._model_dir / f'{str(identifier)}.pt'
-			torch.save(agent.state_dict(), fp)
+			agent.save(fp, metadata)
 			if self._wandb:
 				artifact = self._wandb.Artifact(self._group+'-'+str(self._seed)+'-'+str(identifier), type='model')
 				artifact.add_file(fp)

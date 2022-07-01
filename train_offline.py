@@ -53,7 +53,7 @@ def train_offline(cfg: dict):
 	assert torch.cuda.is_available()
 	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
-	work_dir = Path().cwd() / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
+	work_dir = Path(cfg.logging_dir) / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
 	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
 	env, agent, buffer = make_env(cfg), make_agent(cfg), ReplayBuffer(cfg)
 	print(agent.model)
@@ -64,13 +64,20 @@ def train_offline(cfg: dict):
 	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
-	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}')
+	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
+	print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))
+
+	# Resume training (if applicable)
+	L = logger.Logger(work_dir, cfg)
+	try:
+		assert cfg.resume and os.path.exists(L.model_dir / 'chkpt.pt')
+		common_metrics = agent.load(L.model_dir / 'chkpt.pt')
+		print(colored('Resuming from checkpoint', 'blue', attrs=['bold']))
+	except:
+		common_metrics = {'iteration': 0, 'start_time': time.time(), 't': time.time()}
 
 	# Run training
-	print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))
-	L = logger.Logger(work_dir, cfg)
-	train_metrics, start_time, t = {}, time.time(), time.time()
-	for iteration in range(cfg.train_iter+1):
+	for iteration in range(common_metrics['iteration'], cfg.train_iter+1):
 
 		# Update model
 		train_metrics = agent.update(buffer, int(1e6))
@@ -81,10 +88,13 @@ def train_offline(cfg: dict):
 			mean_reward, rewards = evaluate(env, agent, cfg, iteration, L.video)
 
 			# Log results
+			t = time.time()
 			common_metrics = {
 				'iteration': iteration,
-				'total_time': time.time() - start_time,
-				'duration': time.time() - t,
+				'start_time': common_metrics['start_time'],
+				'total_time': t - common_metrics['start_time'],
+				'duration': t - common_metrics['t'],
+				't': t,
 				'reward': mean_reward,
 			}
 			common_metrics.update(train_metrics)
@@ -98,8 +108,8 @@ def train_offline(cfg: dict):
 			else:
 				common_metrics.update({f'task_reward/{cfg.task}': mean_reward})
 			L.log(common_metrics, category='offline')
-			if iteration % cfg.save_freq == 0:
-				L.save_model(agent, iteration)
+			if iteration % cfg.save_freq == 0 and iteration > 0:
+				L.save_model(agent, 'chkpt', common_metrics)
 			t = time.time()
 	
 	L.finish()

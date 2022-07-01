@@ -59,8 +59,6 @@ def render(cfg: dict):
 	assert torch.cuda.is_available()
 	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
-	work_dir = Path().cwd() / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
-	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
 	env, renderer, buffer = make_env(cfg), Renderer(cfg), ReplayBuffer(cfg)
 	print(renderer.latent2state)
 
@@ -94,7 +92,7 @@ def render(cfg: dict):
 		num_images = 8
 		print('Saving to', save_dir)
 		metrics = []
-		for i in tqdm(range(60_000+1)):
+		for i in tqdm(range(50_000+1)):
 			common_metrics = renderer.update(buffer)
 			if i % cfg.eval_freq == 0:
 
