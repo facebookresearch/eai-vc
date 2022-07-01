@@ -1,0 +1,1 @@
+python train_offline.py -m task=walker-mt11 modality=features features=mocoego15 exp_name=mocoego15-first-again hydra/launcher=slurm

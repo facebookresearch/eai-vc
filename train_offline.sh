@@ -2,7 +2,7 @@
 WALKER=walker-walk,walker-run,walker-stand,walker-walk-backwards,walker-run-backwards,walker-arabesque,walker-lie-down,walker-legs-up,walker-headstand,walker-flip,walker-backflip
 CHEETAH=cheetah-run,cheetah-run-backwards,cheetah-stand-front,cheetah-stand-back,cheetah-jump,cheetah-run-front,cheetah-run-back,cheetah-lie-down,cheetah-legs-up
 
-WALKERMINI=walker-walk,walker-run,walker-stand,walker-arabesque,walker-walk-backwards,walker-legs-up
+WALKERMINI=walker-walk,walker-run,walker-stand,walker-walk-backwards,walker-legs-up,walker-arabesque
 
 # Checkpoint experiments
 # python train_offline.py -m task=walker-walk modality=features features=mocodmcontrol exp_name=mocodmcontrol-chpkt hydra/launcher=slurm
@@ -15,7 +15,9 @@ WALKERMINI=walker-walk,walker-run,walker-stand,walker-arabesque,walker-walk-back
 # python train_offline.py -m task=$WALKER modality=features features=mocoego15 exp_name=mocoego15-chpkt-l256 latent_dim=256 hydra/launcher=slurm
 
 # python train_offline.py -m task=$WALKER modality=features features=mocodmcontrol exp_name=mocodmcontrol-prepln hydra/launcher=slurm
-python train_offline.py -m task=$WALKERMINI modality=features features=mocoego15 exp_name=mocoego15-newflare hydra/launcher=slurm
+# python train_offline.py -m task=$WALKERMINI modality=features features=mocodmcontrol exp_name=mocodmcontrol-newflare hydra/launcher=slurm
+
+python train_offline.py -m task=$WALKERMINI modality=features features=mocoego15center exp_name=mocoego15center-newflare hydra/launcher=slurm
 
 
 # Encode dataset

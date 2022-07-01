@@ -60,7 +60,15 @@ def train_offline(cfg: dict):
 
 	# Load dataset
 	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
-	rbounds = [0, 900 if cfg.task == 'walker-walk' else 1000]
+	max_bound = {
+		'walker-walk': 900,
+		'walker-stand': 925,
+		'walker-run': 375,
+		'walker-arabesque': 800,
+		'walker-walk-backwards': 750,
+		'walker-run-backwards': 225
+	}
+	rbounds = [0, max_bound[cfg.task]] if cfg.task in max_bound else None
 	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
