@@ -25,7 +25,6 @@ torch.backends.cudnn.benchmark = True
 
 __ENCODER__ = None
 __PREPROCESS__ = None
-__PREPROCESS_EVAL__ = None
 
 
 def stack_frames(source, target, num_frames):
@@ -52,8 +51,12 @@ def make_encoder(cfg):
 	if 'moco' in cfg.features:
 		if cfg.features == 'moco':
 			fn = 'moco_v2_800ep_pretrain.pth.tar'
+		elif cfg.features == 'mocoin':
+			fn = 'moco_v2_800ep_pretrain.pth.tar'
 		elif cfg.features == 'mocodmcontrol':
 			fn = 'moco_v2_100ep_pretrain_dmcontrol.pth.tar'
+		elif cfg.features == 'mocoego':
+			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocoego15':
 			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocoego15center':
@@ -64,12 +67,6 @@ def make_encoder(cfg):
 			fn = 'moco_v2_190ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocoegodmcontrol':
 			fn = 'moco_v2_15ep_pretrain_ego_dmcontrol_finetune.pth.tar'
-		elif cfg.features == 'mocoego8crop':
-			fn = 'moco_v2_8ep_pretrain_ego4d_crop.pth.tar'
-		elif cfg.features == 'mocodmcontrolmini':
-			fn = 'moco_v2_80ep_pretrain_dmcontrolmini.pth.tar'
-			encoder.conv1.weight.data = encoder.conv1.weight.data.repeat(1, 3, 1, 1)
-			encoder.conv1.in_channels = encoder.conv1.in_channels * 3
 		elif cfg.features == 'mocodmcontrol5m':
 			fn = 'moco_v2_20ep_pretrain_dmcontrol_5m.pth.tar'
 			encoder.conv1.weight.data = encoder.conv1.weight.data.repeat(1, 3, 1, 1)
@@ -82,45 +79,38 @@ def make_encoder(cfg):
 		encoder.load_state_dict(state_dict, strict=False)
 	encoder.fc = nn.Identity()
 	encoder.eval()
-	if cfg.features in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
-		preprocess = K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-		preprocess_eval = preprocess
-	elif cfg.features == 'mocoego15center':
-		preprocess_eval = nn.Sequential(
+	
+	if 'mocodmcontrol' in cfg.features:
+		preprocess = nn.Sequential(
 			K.Resize((252, 252), resample=Resample.BILINEAR), K.CenterCrop((224, 224)),
 			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
-		preprocess = preprocess_eval
 	else:
 		preprocess = nn.Sequential(
-			K.Resize((252, 252), resample=Resample.BILINEAR), K.RandomCrop((224, 224)),
-			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
-		preprocess_eval = nn.Sequential(
-			K.Resize((252, 252), resample=Resample.BILINEAR), K.CenterCrop((224, 224)),
+			K.Resize((224, 224), resample=Resample.BICUBIC),
 			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
 
-	return encoder, preprocess, preprocess_eval
+	return encoder, preprocess
 
 
 def encode_clip(obs, cfg, eval=False):
 	"""Encode one or more observations using CLIP."""
-	global __ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__
+	global __ENCODER__, __PREPROCESS__
 	if __ENCODER__ is None:
-		__ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__ = make_encoder(cfg)
+		__ENCODER__, __PREPROCESS__ = make_encoder(cfg)
 	assert isinstance(obs, (torch.Tensor, np.ndarray)), 'Observation must be a tensor or numpy array'
 	if isinstance(obs, torch.Tensor):
 		obs = obs.cpu().numpy()
 	assert obs.ndim >= 3, 'Observation must be at least 3D'
 
 	# Preprocess
-	prep_fn = __PREPROCESS_EVAL__ if eval else __PREPROCESS__
 	if obs.ndim == 4:
 		obses = []
 		for _obs in obs:
-			_obs = prep_fn(Image.fromarray(_obs.permute(0, 2, 3, 1)))
+			_obs = __PREPROCESS__(Image.fromarray(_obs.permute(0, 2, 3, 1)))
 			obses.append(_obs)
 		obs = torch.stack(obses).cuda()
 	else:
-		obs = prep_fn(Image.fromarray(obs.permute(0, 2, 3, 1))).cuda().unsqueeze(0)
+		obs = __PREPROCESS__(Image.fromarray(obs.permute(0, 2, 3, 1))).cuda().unsqueeze(0)
 
 	# Encode
 	with torch.no_grad():
@@ -130,20 +120,19 @@ def encode_clip(obs, cfg, eval=False):
 
 def encode_resnet(obs, cfg, eval=False):
 	"""Encode one or more observations using a ResNet model."""
-	global __ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__
+	global __ENCODER__, __PREPROCESS__
 	if __ENCODER__ is None:
-		__ENCODER__, __PREPROCESS__, __PREPROCESS_EVAL__ = make_encoder(cfg)
+		__ENCODER__, __PREPROCESS__ = make_encoder(cfg)
 	assert isinstance(obs, (torch.Tensor, np.ndarray)), 'Observation must be a tensor or numpy array'
 	if isinstance(obs, np.ndarray):
 		obs = torch.from_numpy(obs)
 	assert obs.ndim >= 3, 'Observation must be at least 3D'
 	if obs.ndim == 3:
 		obs = obs.unsqueeze(0)
-	prep_fn = __PREPROCESS_EVAL__ if eval else __PREPROCESS__
 	
 	# Encode frame-stacked input
 	if __ENCODER__.conv1.in_channels == 9:
-		obs = prep_fn(obs / 255.)
+		obs = __PREPROCESS__(obs / 255.)
 		if eval:
 			obs = obs.view(1, 3*obs.shape[1], *obs.shape[-2:])
 		else:
@@ -156,7 +145,7 @@ def encode_resnet(obs, cfg, eval=False):
 	
 	# Encode single frame input
 	with torch.no_grad():
-		features = __ENCODER__(prep_fn(obs.cuda() / 255.))
+		features = __ENCODER__(__PREPROCESS__(obs.cuda() / 255.))
 	return features
 
 

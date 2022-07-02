@@ -322,7 +322,7 @@ class ReplayBuffer():
 	def __init__(self, cfg):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
-		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1650*500
+		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1650*500 + 1
 		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
 		obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
 		self._obs = torch.empty((self.capacity+1, *obs_shape), dtype=dtype, device=self.device)
@@ -352,8 +352,10 @@ class ReplayBuffer():
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
 		if self.cfg.modality != 'state':
-			self._state[self.idx:self.idx+self.cfg.episode_length] = torch.tensor(episode.metadata['states'][:-1])
-			self._last_state[self.idx//self.cfg.episode_length] = torch.tensor(episode.metadata['states'][-1])
+			states = torch.tensor(episode.metadata['states'])
+			self._state_dim = states.size(1)
+			self._state[self.idx:self.idx+self.cfg.episode_length, :self._state_dim] = states[:-1]
+			self._last_state[self.idx//self.cfg.episode_length, :self._state_dim] = states[-1]
 		if self.cfg.multitask:
 			self._task_vec[self.idx:self.idx+self.cfg.episode_length] = episode.task_vec.unsqueeze(0).repeat(self.cfg.episode_length, 1)
 		if self._full:
@@ -396,7 +398,7 @@ class ReplayBuffer():
 		next_obs = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *next_obs_shape), dtype=obs.dtype, device=obs.device)
 		action = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *self._action.shape[1:]), dtype=torch.float32, device=self.device)
 		reward = torch.empty((self.cfg.horizon+1, self.cfg.batch_size), dtype=torch.float32, device=self.device)
-		state = self._state[idxs] if self.cfg.modality != 'state' else None
+		state = self._state[idxs, :self._state_dim] if self.cfg.modality != 'state' else None
 		next_state = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *state.shape[1:]), dtype=state.dtype, device=state.device) if self.cfg.modality != 'state' else None
 		task_vec = self._task_vec[idxs].float() if self.cfg.multitask else None
 		for t in range(self.cfg.horizon+1):
@@ -405,7 +407,7 @@ class ReplayBuffer():
 			action[t] = self._action[_idxs]
 			reward[t] = self._reward[_idxs]
 			if state is not None:
-				next_state[t] = self._state[_idxs+1]
+				next_state[t] = self._state[_idxs+1, :self._state_dim]
 
 		mask = (_idxs+1) % self.cfg.episode_length == 0
 		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(self.device).float()
@@ -413,7 +415,7 @@ class ReplayBuffer():
 			task_vec = task_vec.cuda()
 		if state is not None:
 			state = state.cuda()
-			next_state[-1, mask] = self._last_state[_idxs[mask]//self.cfg.episode_length].to(self.device).float()
+			next_state[-1, mask] = self._last_state[_idxs[mask]//self.cfg.episode_length, :self._state_dim].to(self.device).float()
 			next_state = next_state.cuda()
 
 		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, next_state, task_vec, idxs.cuda(), weights.cuda()
