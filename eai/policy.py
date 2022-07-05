@@ -37,6 +37,7 @@ class EAINet(Net):
         run_type: str,
         avgpooled_image: bool,
         augmentations_name: str,
+        drop_path_rate: float,
     ):
         super().__init__()
 
@@ -64,6 +65,7 @@ class EAINet(Net):
             vit_use_cls=vit_use_cls,
             vit_mask_ratio=vit_mask_ratio,
             avgpooled_image=avgpooled_image,
+            drop_path_rate=drop_path_rate,
         )
 
         self.visual_fc = nn.Sequential(
@@ -97,6 +99,7 @@ class EAINet(Net):
                 vit_use_cls=vit_use_cls,
                 vit_mask_ratio=vit_mask_ratio,
                 avgpooled_image=avgpooled_image,
+                drop_path_rate=drop_path_rate,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -215,6 +218,7 @@ class EAIPolicy(Policy):
         run_type: str = "train",
         avgpooled_image: bool = False,
         augmentations_name: str = "",
+        drop_path_rate: float = 0.0,
         **kwargs
     ):
         super().__init__(
@@ -238,6 +242,7 @@ class EAIPolicy(Policy):
                 run_type=run_type,
                 avgpooled_image=avgpooled_image,
                 augmentations_name=augmentations_name,
+                drop_path_rate=drop_path_rate,
             ),
             dim_actions=action_space.n,  # for action distribution
         )
@@ -264,4 +269,5 @@ class EAIPolicy(Policy):
             run_type=config.RUN_TYPE,
             avgpooled_image=config.RL.POLICY.avgpooled_image,
             augmentations_name=config.RL.POLICY.augmentations_name,
+            drop_path_rate=config.RL.POLICY.drop_path_rate,
         )

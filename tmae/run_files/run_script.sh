@@ -196,6 +196,78 @@ python submitit_pretrain.py \
     --partition learnlab --use_volta32
 
 python submitit_pretrain.py \
+    --wandb_name tmae_small_offset_4_tiny_decoder \
+    --nodes 4 \
+    --batch_size 128 \
+    --accum_iter 1 \
+    --model mae_vit_small_patch16_tiny_decoder \
+    --norm_pix_loss \
+    --max_offset 4 \
+    --mask_ratio1 0.75 \
+    --mask_ratio2 0.95 \
+    --loss_weight 0.5 \
+    --epochs 400 \
+    --warmup_epochs 40 \
+    --blr 1.5e-4 --weight_decay 0.05 \
+    --data_path /checkpoint/karmeshyadav/hm3d+gibson/v1/train \
+    --output_dir /checkpoint/karmeshyadav/mae_training/ \
+    --partition learnlab --use_volta32
+
+python submitit_pretrain.py \
+    --wandb_name tmae_small_offset_4_large_decoder \
+    --nodes 8 \
+    --batch_size 64 \
+    --accum_iter 1 \
+    --model mae_vit_small_patch16_large_decoder \
+    --norm_pix_loss \
+    --max_offset 4 \
+    --mask_ratio1 0.75 \
+    --mask_ratio2 0.95 \
+    --loss_weight 0.5 \
+    --epochs 400 \
+    --warmup_epochs 40 \
+    --blr 1.5e-4 --weight_decay 0.05 \
+    --data_path /checkpoint/karmeshyadav/hm3d+gibson/v1/train \
+    --output_dir /checkpoint/karmeshyadav/mae_training/ \
+    --partition learnlab --use_volta32
+
+python submitit_pretrain.py \
+    --wandb_name tmae_small_offset_4_real_estate \
+    --nodes 4 \
+    --batch_size 128 \
+    --accum_iter 1 \
+    --model mae_vit_small_patch16 \
+    --norm_pix_loss \
+    --max_offset 4 \
+    --mask_ratio1 0.75 \
+    --mask_ratio2 0.95 \
+    --loss_weight 0.5 \
+    --epochs 400 \
+    --warmup_epochs 40 \
+    --blr 1.5e-4 --weight_decay 0.05 \
+    --data_path /checkpoint/karmeshyadav/real-estate-10k-frames-v0/ \
+    --output_dir /checkpoint/karmeshyadav/mae_training/ \
+    --partition learnlab --use_volta32
+
+python submitit_pretrain.py \
+    --wandb_name tmae_small_offset_4_real_estate_hm3d_gibson \
+    --nodes 4 \
+    --batch_size 128 \
+    --accum_iter 1 \
+    --model mae_vit_small_patch16 \
+    --norm_pix_loss \
+    --max_offset 4 \
+    --mask_ratio1 0.75 \
+    --mask_ratio2 0.95 \
+    --loss_weight 0.5 \
+    --epochs 400 \
+    --warmup_epochs 40 \
+    --blr 1.5e-4 --weight_decay 0.05 \
+    --data_path /checkpoint/karmeshyadav/real-estate-10k-frames-v0/ /checkpoint/karmeshyadav/hm3d+gibson/v1/train \
+    --output_dir /checkpoint/karmeshyadav/mae_training/ \
+    --partition learnlab --use_volta32
+
+python submitit_pretrain.py \
     --wandb_name tmae_small_offset_4 \
     --nodes 4 \
     --batch_size 128 \

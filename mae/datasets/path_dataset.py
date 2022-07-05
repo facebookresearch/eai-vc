@@ -11,7 +11,7 @@ from torchvision.datasets import VisionDataset
 class PathDataset(VisionDataset):
     def __init__(
         self,
-        root: str,
+        root: List[str],
         transform: Optional[str] = None,
         extra_transform: Optional[str] = None,
         mean: Optional[List[float]] = None,
@@ -19,7 +19,9 @@ class PathDataset(VisionDataset):
     ):
         super().__init__(root=root)
 
-        self.files = sorted(glob.glob(os.path.join(self.root, "*", "*", "*.jpg")))
+        self.files = []
+        for folder in self.root:
+            self.files.extend(sorted(glob.glob(os.path.join(folder, "*", "*", "*.jpg"))))
 
         self.transform = transform
         self.extra_transform = extra_transform

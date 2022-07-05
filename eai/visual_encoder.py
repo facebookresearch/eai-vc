@@ -24,6 +24,7 @@ class VisualEncoder(nn.Module):
         vit_mask_ratio: Optional[float] = None,
         normalize_visual_inputs: bool = True,
         avgpooled_image: bool = False,
+        drop_path_rate: float = 0.0,
     ):
         super().__init__()
         self.avgpooled_image = avgpooled_image
@@ -74,6 +75,7 @@ class VisualEncoder(nn.Module):
                 global_pool=vit_global_pool,
                 use_cls=vit_use_cls,
                 mask_ratio=vit_mask_ratio,
+                drop_path_rate=drop_path_rate,
             )
 
             if self.backbone.global_pool or self.backbone.use_cls:

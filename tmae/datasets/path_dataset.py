@@ -11,7 +11,7 @@ from torchvision.datasets import VisionDataset
 class PathDataset(VisionDataset):
     def __init__(
         self,
-        root: str,
+        root: List[str],
         transform: Optional[str] = None,
         extra_transform: Optional[str] = None,
         mean: Optional[List[float]] = None,
@@ -22,7 +22,10 @@ class PathDataset(VisionDataset):
         assert (mean is None) == (std is None)
         super().__init__(root=root)
 
-        self.folders = sorted(glob.glob(os.path.join(self.root, "*", "*")))
+        self.folders = []
+        for folder in self.root:
+            self.folders.extend(sorted(glob.glob(os.path.join(folder, "*", "*"))))
+
         self.files, self.idx_to_folder, file_idx = {}, {}, 0
         for folder_idx, folder in enumerate(self.folders):
             self.files[folder] = sorted(glob.glob(os.path.join(folder, "*.jpg")))
@@ -80,7 +83,10 @@ if __name__ == "__main__":
     )
 
     dataset = PathDataset(
-        root="data/datasets/hm3d+gibson/v1/train",
+        root=[
+            "data/datasets/hm3d+gibson/v1/train",
+            "data/datasets/real-estate-10k-frames-v0",
+        ],
         transform=Compose(
             [
                 RandomResizedCrop(224, (0.2, 1.0), interpolation=3),

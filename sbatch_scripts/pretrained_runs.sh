@@ -18,8 +18,8 @@ NUM_STEPS=5e8
 TIME="72:00:00"
 NUM_ENV=10
 TEST_EPISODE_COUNT=4200
-RUN_TRAIN_SCRIPT=true
-RUN_EVAL_SCRIPT=false
+RUN_TRAIN_SCRIPT=false
+RUN_EVAL_SCRIPT=true
 
 # EXP_NAME="DINO_reproduce"
 # WEIGHTS_NAME="omnidata_DINO_02.pth"
@@ -663,17 +663,247 @@ RUN_EVAL_SCRIPT=false
 # run_training 0
 
 
-EXP_NAME="tmae_small_offset_1_100_compression_layer_adamw_0"
-WEIGHTS_NAME="tmae_small_offset_1_100.pth"
+# EXP_NAME="tmae_small_offset_1_100_compression_layer_adamw_0"
+# WEIGHTS_NAME="tmae_small_offset_1_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.PPO.wd 0.0 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_random_views_reward_hack"
+# WEIGHTS_NAME="tmae_small_offset_4_random_views_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="mae_improved_embedding_better_reward"
+# WEIGHTS_NAME="mae_small_01.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="mae_small_01_100_better_reward"
+# WEIGHTS_NAME="mae_small_01_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_random_views_droppath_0.05"
+# WEIGHTS_NAME="tmae_small_offset_4_random_views_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False \
+#             RL.POLICY.drop_path_rate 0.05"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_random_views_droppath_0.1"
+# WEIGHTS_NAME="tmae_small_offset_4_random_views_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False \
+#             RL.POLICY.drop_path_rate 0.1"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_random_views_droppath_0.2"
+# WEIGHTS_NAME="tmae_small_offset_4_random_views_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False \
+#             RL.POLICY.drop_path_rate 0.2"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_random_views_droppath_0.3"
+# WEIGHTS_NAME="tmae_small_offset_4_random_views_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False \
+#             RL.POLICY.drop_path_rate 0.3"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_tiny_decoder"
+# WEIGHTS_NAME="tmae_small_offset_4_tiny_decoder.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_140_tiny_decoder"
+# WEIGHTS_NAME="tmae_small_offset_4_tiny_decoder_140.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_200_tiny_decoder"
+# WEIGHTS_NAME="tmae_small_offset_4_tiny_decoder_200.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_399_tiny_decoder"
+# WEIGHTS_NAME="tmae_small_offset_4_tiny_decoder_399.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_large_decoder"
+# WEIGHTS_NAME="tmae_small_offset_4_large_decoder_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_random_views_reward_hack_0.8"
+# WEIGHTS_NAME="tmae_small_offset_4_random_views_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False \
+#             TASK_CONFIG.TASK.TRAIN_SUCCESS.SUCCESS_DISTANCE 0.8"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_offset_4_100_random_views_reward_hack_0.7"
+# WEIGHTS_NAME="tmae_small_offset_4_random_views_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False \
+#             TASK_CONFIG.TASK.TRAIN_SUCCESS.SUCCESS_DISTANCE 0.7"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+EXP_NAME="tmae_small_offset_4_real_estate_100"
+WEIGHTS_NAME="tmae_small_offset_4_real_estate_100.pth"
 BACKBONE="vit_small_patch16"
 EXTRA_CMDS="RL.POLICY.freeze_backbone False \
             RL.POLICY.rnn_type LSTM \
             RL.POLICY.randomize_augmentations_over_envs False \
             RL.PPO.lr 6.25e-5 \
-            RL.PPO.wd 0.0 \
             RL.POLICY.vit_global_pool False \
             RL.POLICY.vit_use_fc_norm False"
 SPLIT="train_extra"
 NUM_ENV=8
 NODES=5
 run_training 0
+
+# EXP_NAME="tmae_small_offset_4_real_estate_hm3d_gibson_100"
+# WEIGHTS_NAME="tmae_small_offset_4_real_estate_hm3d_gibson_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
