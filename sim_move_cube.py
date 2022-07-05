@@ -1,7 +1,5 @@
 """
-Demo on how to run the simulation using the Gym environment
-This demo creates a SimCubeTrajectoryEnv environment and runs one episode using
-a dummy policy.
+Run MoveCubePolicy to generate cube re-posititioning demos
 """
 
 import sys
