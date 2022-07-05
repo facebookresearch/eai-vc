@@ -112,9 +112,13 @@ def get_args_parser():
                         help="wandb mode to use for storing data, choose"
                         "online, offline or disabled")
 
-    # Augmentation parameters ** NEW **
-    parser.add_argument('--color_jitter', action='store_true', default=False,
+    # additional parameters ** NEW **
+    parser.add_argument('--color_jitter', action='store_true',
                         help='apply color jitter')
+    parser.add_argument('--independent_decoder', action='store_true',
+                        help='decode each view independently')
+    parser.add_argument('--randomize_views', action='store_true',
+                        help='randomly swap t and t+k')
 
     return parser
 
@@ -154,6 +158,7 @@ def main(args):
         mean=[0.485, 0.456, 0.406],
         std=[0.229, 0.224, 0.225],
         max_offset=args.max_offset,
+        randomize_views=args.randomize_views,
     )
 
     print("train_dataset size: {:,}".format(len(dataset_train)))
@@ -180,7 +185,11 @@ def main(args):
     )
 
     # define the model
-    model = models_mae.__dict__[args.model](decoder_max_offset=args.max_offset, norm_pix_loss=args.norm_pix_loss)
+    model = models_mae.__dict__[args.model](
+        decoder_max_offset=args.max_offset,
+        norm_pix_loss=args.norm_pix_loss,
+        independent_decoder=args.independent_decoder,
+    )
 
     model.to(device)
 

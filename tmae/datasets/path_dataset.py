@@ -17,7 +17,9 @@ class PathDataset(VisionDataset):
         mean: Optional[List[float]] = None,
         std: Optional[List[float]] = None,
         max_offset: int = 16,
+        randomize_views: bool = False,
     ):
+        assert (mean is None) == (std is None)
         super().__init__(root=root)
 
         self.folders = sorted(glob.glob(os.path.join(self.root, "*", "*")))
@@ -33,7 +35,7 @@ class PathDataset(VisionDataset):
         self.mean = mean
         self.std = std
         self.max_offset = max_offset
-        assert (mean is None) == (std is None)
+        self.randomize_views = randomize_views
 
     def _get_image(self, folder, idx):
         path = self.files[folder][idx]
@@ -62,6 +64,8 @@ class PathDataset(VisionDataset):
         img1_idx = np.random.randint(0, len(images) - offset)
         img1, extra_img1 = self._get_image(folder, img1_idx)
         img2, extra_img2 = self._get_image(folder, img1_idx + offset)
+        if self.randomize_views and np.random.rand() < 0.5:
+            return img2, extra_img2, img1, extra_img1, offset
         return img1, extra_img1, img2, extra_img2, offset
 
 

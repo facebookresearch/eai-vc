@@ -25,7 +25,8 @@ class MaskedAutoencoderViT(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_chans=3,
                  embed_dim=1024, depth=24, num_heads=16, decoder_max_offset=16,
                  decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16,
-                 mlp_ratio=4., norm_layer=nn.LayerNorm, norm_pix_loss=False):
+                 mlp_ratio=4., norm_layer=nn.LayerNorm, norm_pix_loss=False,
+                 independent_decoder=False):
         super().__init__()
 
         # --------------------------------------------------------------------------
@@ -60,6 +61,7 @@ class MaskedAutoencoderViT(nn.Module):
         # --------------------------------------------------------------------------
 
         self.norm_pix_loss = norm_pix_loss
+        self.independent_decoder = independent_decoder
 
         self.initialize_weights()
 
@@ -151,27 +153,38 @@ class MaskedAutoencoderViT(nn.Module):
 
         return x_masked, mask, ids_restore
 
-    def forward_encoder(self, x, mask_ratio):
+    def forward_encoder(self, x1, x2, mask_ratio1, mask_ratio2):
         # embed patches
-        x = self.patch_embed(x)
+        x1 = self.patch_embed(x1)
+        x2 = self.patch_embed(x2)
 
         # add pos embed w/o cls token
-        x = x + self.pos_embed[:, 1:, :]
+        x1 = x1 + self.pos_embed[:, 1:, :]
+        x2 = x2 + self.pos_embed[:, 1:, :]
 
         # masking: length -> length * mask_ratio
-        x, mask, ids_restore = self.random_masking(x, mask_ratio)
+        x1, mask1, ids_restore1 = self.random_masking(x1, mask_ratio1)
+        x2, mask2, ids_restore2 = self.random_masking(x2, mask_ratio2)
 
         # append cls token
-        cls_token = self.cls_token + self.pos_embed[:, :1, :]
-        cls_tokens = cls_token.expand(x.shape[0], -1, -1)
-        x = torch.cat((cls_tokens, x), dim=1)
+        cls_token1 = self.cls_token + self.pos_embed[:, :1, :]
+        cls_tokens1 = cls_token1.expand(x1.shape[0], -1, -1)
+        x1 = torch.cat((cls_tokens1, x1), dim=1)
+
+        cls_token2 = self.cls_token + self.pos_embed[:, :1, :]
+        cls_tokens2 = cls_token2.expand(x2.shape[0], -1, -1)
+        x2 = torch.cat((cls_tokens2, x2), dim=1)
 
         # apply Transformer blocks
         for blk in self.blocks:
-            x = blk(x)
-        x = self.norm(x)
+            x1 = blk(x1)
+        x1 = self.norm(x1)
 
-        return x, mask, ids_restore
+        for blk in self.blocks:
+            x2 = blk(x2)
+        x2 = self.norm(x2)
+
+        return x1, mask1, ids_restore1, x2, mask2, ids_restore2
 
     def forward_decoder(self, x1, x2, offsets, ids_restore1, ids_restore2):
         # embed tokens
@@ -193,7 +206,9 @@ class MaskedAutoencoderViT(nn.Module):
         x1 = x1 + self.decoder_pos_embed.index_select(0, torch.zeros_like(offsets))
         x2 = x2 + self.decoder_pos_embed.index_select(0, offsets)
 
-        x = torch.cat([x1, x2], dim=1)
+        # concatenate x1 and x2  ** NEW **
+        cat_dim = 0 if self.independent_decoder else 1
+        x = torch.cat([x1, x2], dim=cat_dim)
 
         # apply Transformer blocks
         for blk in self.decoder_blocks:
@@ -203,8 +218,8 @@ class MaskedAutoencoderViT(nn.Module):
         # predictor projection
         x = self.decoder_pred(x)
 
-        # split x1 and x2
-        x1, x2 = x.chunk(2, dim=1)
+        # split x1 and x2  ** NEW **
+        x1, x2 = x.chunk(2, dim=cat_dim)
 
         # remove cls token
         x1 = x1[:, 1:, :]
@@ -231,8 +246,9 @@ class MaskedAutoencoderViT(nn.Module):
         return loss
 
     def forward(self, imgs1, extra_imgs1, imgs2, extra_imgs2, offsets, mask_ratio1=0.75, mask_ratio2=0.95):
-        latent1, mask1, ids_restore1 = self.forward_encoder(extra_imgs1, mask_ratio1)
-        latent2, mask2, ids_restore2 = self.forward_encoder(extra_imgs2, mask_ratio2)
+        latent1, mask1, ids_restore1, latent2, mask2, ids_restore2 = self.forward_encoder(
+            extra_imgs1, extra_imgs2, mask_ratio1, mask_ratio2
+        )
 
         pred1, pred2 = self.forward_decoder(latent1, latent2, offsets, ids_restore1, ids_restore2)  # [N, L, p*p*3]
 
