@@ -18,10 +18,15 @@ python trifinger_mbirl/run_mbirl.py --no_wandb --file_path demos/difficulty-1/de
 
 ## Plot costs
 
-So far, this script only supports plotting the weights for the multi-phase cost. Use `-s` to save the figure to the experiment directory.
+So far, this script only supports plotting the weights for the multi-phase cost. 
 
 ```
-python trifinger_mbirl/plot_learned_cost.py /Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/logs/runs/exp_NOID_al-0p01_cl-0p01_ct-MPTimeDep_ils-100_nii-50_noi-1500_rk-5_rw-2_th-17/log.pth
+python trifinger_mbirl/plot_learned_cost.py <PATH/TO/EXP/log.pth> <-s SAVE FIG TO EXP DIR>
+```
+
+Example usage:
+```
+python trifinger_mbirl/plot_learned_cost.py /Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/logs/runs/exp_NOID_al-0p01_cl-0p01_ct-MPTimeDep_ils-100_nii-50_noi-1500_rk-5_rw-2_th-17/log.pth -s
 ```
 
 ## Running mbirl experiments with more than one demonstration
