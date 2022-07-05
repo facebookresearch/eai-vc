@@ -11,7 +11,7 @@ python trifinger_mbirl/run_mbirl.py --no_wandb --file_path demos/difficulty-1/de
 This will launch an mbirl run with one example demonstration (`--file_path`) without logging to wandb (--no_wandb), with the default parameters defined
 in `run_mbirl.py`. These parameters can be changed by running this script with various args. By default, all output logs and plots will be saved in `trifinger_mbirl/logs/runs/`. 
 
-Best parameters so far: multi-phase cost with 50 inner loop steps.
+Run with best parameters so far: multi-phase cost with 50 inner-loop steps (will run 1500 outer-loop steps, which takes about 15min on my local machine)
 ```
 python trifinger_mbirl/run_mbirl.py --no_wandb --file_path demos/difficulty-1/demo-0000.npz --cost_type MPTimeDep --n_inner_iter 50
 ```
