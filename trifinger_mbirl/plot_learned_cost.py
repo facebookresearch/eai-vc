@@ -9,8 +9,8 @@ import torch
 def main(args):
     
     data = torch.load(args.file_path)
-    exp_params_dict = data["exp_params_dict"]
-    cost_type = exp_params_dict["cost_type"]
+    conf = data["conf"]
+    cost_type = conf.cost_type
     
     cost_weights = data["cost_parameters"]["weights"].detach().numpy()
 
@@ -37,6 +37,7 @@ def plot_MPTimeDep(title, cost_weights, d_list, save_path=None):
 
     k = 0
     offsets = [-0.2, 0.2]
+    colors = ["r", "b"]
     for i, d in enumerate(d_list):
         k += 1
         plt.subplot(len(d_list), 1, k)
@@ -44,7 +45,7 @@ def plot_MPTimeDep(title, cost_weights, d_list, save_path=None):
             plt.title(f"{d}")
 
         for m in range(mode):
-            plt.bar(np.arange(time) + offsets[m], cost_weights[:, m, i], width=0.4, label=f"Mode {m}")
+            plt.bar(np.arange(time) + offsets[m], cost_weights[:, m, i], width=0.4, label=f"Mode {m}", color=colors[m])
 
     plt.legend()
 
