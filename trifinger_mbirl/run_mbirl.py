@@ -20,6 +20,10 @@ from trifinger_mbirl.ftpos_mpc import FTPosMPC
 from trifinger_mbirl.learnable_costs import *
 import utils.data_utils as d_utils
 
+# Set run logging directory to be trifinger_mbirl
+mbirl_dir = os.path.dirname(os.path.realpath(__file__))
+LOG_DIR = os.path.join(mbirl_dir, "logs/runs")
+
 # The IRL Loss, the learning objective for the learnable cost functions.
 # The IRL loss measures the distance between the demonstrated fingertip position trajectory and predicted trajectory
 class IRLLoss(object):
@@ -367,7 +371,7 @@ def get_exp_str(params_dict):
     run_id = params_dict["run_id"]
     exp_str = f"exp_{run_id}"
     for key, val in sorted_dict.items():
-        # TODO shorten traj path to include in exp_str
+        # exclude these keys from exp name
         if key in ["file_path", "no_wandb", "log_dir", "run_id"]: continue
 
         # Abbreviate key
@@ -386,7 +390,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--file_path", default=None, help="""Filepath of trajectory to load""")
-    parser.add_argument("--log_dir", type=str, default="/Users/clairelchen/logs/runs/", help="Directory for run logs")
+    parser.add_argument("--log_dir", type=str, default=LOG_DIR, help="Directory for run logs")
     parser.add_argument("--no_wandb", action="store_true", help="Don't log in wandb")
     parser.add_argument("--run_id", default="NOID", help="Run ID")
 
