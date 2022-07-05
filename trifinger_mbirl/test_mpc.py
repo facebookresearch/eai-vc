@@ -33,7 +33,7 @@ time_horizon = ft_pos_cur.shape[0]
 x_init = ft_pos_cur[0, :]
 
 # Run roll_out to get trajectory from initial state
-ftpos_mpc = FTPosMPC(time_horizon)
+ftpos_mpc = FTPosMPC(time_horizon-1)
 ftpos_mpc.set_action_seq_for_testing(delta_ftpos)
 x_traj = ftpos_mpc.roll_out(x_init)
 

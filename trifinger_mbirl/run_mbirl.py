@@ -50,7 +50,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
         expert_demo = torch.Tensor(traj["ft_pos_cur"])
         time_horizon, s_dim = expert_demo.shape
 
-        ftpos_mpc = FTPosMPC(time_horizon=time_horizon) # TODO check this (-1??)
+        ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
 
         action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
 
@@ -119,7 +119,7 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
         time_horizon, s_dim = expert_demo.shape
 
         # Forward rollout
-        ftpos_mpc = FTPosMPC(time_horizon=time_horizon) # TODO check this -1
+        ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
         pred_traj = ftpos_mpc.roll_out(x_init.clone())
 
         # get initial irl loss
@@ -149,12 +149,12 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             time_horizon, s_dim = expert_demo.shape
 
             # Forward rollout
-            ftpos_mpc = FTPosMPC(time_horizon=time_horizon) # TODO check this (-1??)
+            ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
 
             action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
 
             with higher.innerloop_ctx(ftpos_mpc, action_optimizer) as (fpolicy, diffopt):
-                for i in range(n_inner_iter): # TODO take more gradient descent steps, maybe?
+                for i in range(n_inner_iter):
                     pred_traj = fpolicy.roll_out(x_init.clone())
 
                     # use the learned loss to update the action sequence
@@ -197,8 +197,8 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
                         save_path,
                         ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
                         {
-                        "pred":  {"y": actions, "x": expert_demo_dict["t"], "marker": "x"},
-                        "demo":  {"y": expert_actions, "x": expert_demo_dict["t"], "marker": "."},
+                        "pred":  {"y": actions, "x": expert_demo_dict["t"][:-1], "marker": "x"},
+                        "demo":  {"y": expert_actions[:-1], "x": expert_demo_dict["t"][:-1],"marker": "."},
                         }
                         )
 
@@ -229,12 +229,13 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             for name, param in learnable_cost.weights_fn.named_parameters():
                 learnable_cost_params[name] = param
 
-        # Plot losses with wandb
-        loss_dict = {
-                    "train_irl_loss": irl_loss_on_train[-1], 
-                    "test_irl_loss": irl_loss_on_test[-1], 
-                    }
-        plot_loss(loss_dict, outer_i+1)
+        if not conf.no_wandb:
+            # Plot losses with wandb
+            loss_dict = {
+                        "train_irl_loss": irl_loss_on_train[-1], 
+                        "test_irl_loss": irl_loss_on_test[-1], 
+                        }
+            plot_loss(loss_dict, outer_i+1)
 
     title = "Fingertip positions (outer i: {})".format(outer_i)
     save_name = f"{demo_i}_{outer_i}.png"
@@ -248,13 +249,6 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             "demo":  {"y": expert_demo.detach().numpy(), "x": expert_demo_dict["t"], "marker": "."},
             }
             )
-
-    #print("Cost function parameters to be optimized:")
-    #for name, param in learnable_cost.named_parameters():
-    #    print(name)
-    #    print(param)
-    #    # TODO plot costs??
-
 
     return torch.stack(irl_loss_on_train), torch.stack(irl_loss_on_test), learnable_cost_params, pred_traj
 
@@ -394,7 +388,7 @@ def parse_args():
     parser.add_argument("--file_path", default=None, help="""Filepath of trajectory to load""")
     parser.add_argument("--log_dir", type=str, default="/Users/clairelchen/logs/runs/", help="Directory for run logs")
     parser.add_argument("--no_wandb", action="store_true", help="Don't log in wandb")
-    parser.add_argument("--run_id", help="Run ID")
+    parser.add_argument("--run_id", default="NOID", help="Run ID")
 
     # Parameters
     parser.add_argument("--cost_type", type=str, default="Weighted", help="Learnable cost type")

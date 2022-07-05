@@ -36,7 +36,7 @@ class FTPosMPC(torch.nn.Module):
         x_next = self.forward(x_init)
         x_traj.append(x_next)
 
-        for t in range(self.time_horizon-1):
+        for t in range(self.time_horizon):
             a = self.action_seq[t]
             x_next = self.forward(x_next, a)
             x_next = self.clip_ftpos(x_next)
