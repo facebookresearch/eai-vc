@@ -1,65 +1,58 @@
-import numpy as np, torch, torch.nn as nn, torchvision.transforms as T, os
+import numpy as np
+import torch
+import torch.nn as nn
 import torchvision.models as models
+import torchvision.transforms as T
+import os
+import sys
 from PIL import Image
 from torchvision.transforms import InterpolationMode
 from torch.nn.modules.linear import Identity
-
-# CHECKPOINT_DIR = os.path.dirname(os.path.abspath(__file__)) + '/../assets/models/'
-CHECKPOINT_DIR = '/checkpoint/aravraj/models/'    # hard-coded path for FAIR cluster
-
-# clip models
+from r3m import load_r3m
 import clip
-clip_vit_model, clip_vit_preprocess = clip.load("ViT-B/32", device='cpu')
-clip_rn50_model, clip_rn50_preprocess = clip.load("RN50x16", device='cpu')
-
-# MAE
-import sys
-sys.path.append('/private/home/aravraj/work/Projects/rep_learning/mae/')
+sys.path.append(os.environ['MAE_PATH'])
 import models_mae
 
-# ===================================
-# Preprocessing tranformations
-# ===================================
+CHECKPOINT_DIR = os.environ['CHECKPOINT_DIR']
 
-basic_resnet_transforms = nn.Sequential(
-                            T.Resize(256),
-                            T.CenterCrop(224),
-                            T.ConvertImageDtype(torch.float),
-                            T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-                        )
+clip_vit_model, _clip_vit_preprocess = clip.load("ViT-B/32", device='cpu')
+clip_rn50_model, _clip_rn50_preprocess = clip.load("RN50x16", device='cpu')
 
-basic_mae_transforms = T.Compose([
-                        T.Resize(256, interpolation=3),
+_resnet_transforms = T.Compose([
+                        T.Resize(256),
                         T.CenterCrop(224),
-                        T.ConvertImageDtype(torch.float),
+                        T.ToTensor(),
                         T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-                        ])
+                    ])
 
-def _resnet_transforms(observation: np.ndarray) -> torch.Tensor:
-    # observation dimension (H, W, 3)
-    inp = torch.from_numpy(observation.copy())
-    inp = inp.swapaxes(0, 2).swapaxes(1, 2)     # makes shape (3, H, W)
-    inp = basic_resnet_transforms(inp).reshape(-1, 3, 224, 224)
-    return inp
+_mae_transforms = T.Compose([
+                        T.Resize(256, interpolation=InterpolationMode.BICUBIC),
+                        T.CenterCrop(224),
+                        T.ToTensor(),
+                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                    ])
 
-def _clip_vit_transforms(observation: np.ndarray) -> torch.Tensor:
-    # observation dimension (H, W, 3)
-    pil_img = Image.fromarray(observation.astype(np.uint8))
-    inp = clip_vit_preprocess(pil_img).unsqueeze(0)  # (1, 3, 224, 224)
-    return inp
+_r3m_transforms = T.Compose([
+                        T.Resize(256, interpolation=InterpolationMode.BICUBIC),
+                        T.CenterCrop(224),
+                        T.ToTensor(),  # this divides by 255
+                        T.Normalize(mean=[0.0, 0.0, 0.0], std=[1/255, 1/255, 1/255]), # this will scale bact to [0-255]
+                    ])
 
-def _clip_rn50_transforms(observation: np.ndarray) -> torch.Tensor:
-    # observation dimension (H, W, 3)
-    pil_img = Image.fromarray(observation.astype(np.uint8))
-    inp = clip_rn50_preprocess(pil_img).unsqueeze(0)  # (1, 3, 224, 224)
-    return inp
 
-def _mae_transforms(observation: np.ndarray) -> torch.Tensor:
-    # observation dimension (H, W, 3)
-    inp = torch.from_numpy(observation.copy())
-    inp = torch.einsum('hwc->chw', inp)
-    inp = basic_mae_transforms(inp).reshape(-1, 3, 224, 224)
-    return inp
+MODEL_LIST = ['random',
+              'resnet50', 'resnet50_rand', 
+              'clip_vit', 'clip_rn50',
+              'mae_ViT-B', 'mae_ViT-L', 'mae_ViT-H',
+              'moco_conv5', 'moco_conv4', 'moco_conv3',
+              'moco_croponly_conv5', 'moco_croponly_conv4', 'moco_croponly_conv3',
+              'fuse_moco_34', 'fuse_moco_35', 'fuse_moco_45', 'fuse_moco_345',
+              'fuse_moco_croponly_34', 'fuse_moco_croponly_35', 'fuse_moco_croponly_45', 'fuse_moco_croponly_345',
+              'moco_adroit', 'moco_kitchen', 'moco_dmc',
+              # experimental ego4d stuff
+              'r3m', 'moco_ego4d_100k', 'moco_ego4d_5m',
+             ]
+
 
 # ===================================
 # Temporal Embedding Fusion
@@ -84,14 +77,15 @@ def fuse_embeddings_flare(embeddings: list):
         print("Unsupported embedding format in fuse_embeddings_flare.")
         print("Provide either numpy.ndarray or torch.Tensor.")
         quit()
-    
+
 
 # ===================================
 # Model Loading
 # ===================================
-
-def load_pvr_model(embedding_name: str, 
-                   seed: int = 123, *args, **kwargs):
+def load_pvr_model(embedding_name, seed = 123, input_type = np.ndarray, *args, **kwargs):
+    
+    assert embedding_name in MODEL_LIST
+    
     # ============================================================
     # Random
     # ============================================================
@@ -113,19 +107,6 @@ def load_pvr_model(embedding_name: str,
         model.fc = Identity()
         embedding_dim, transforms = 2048, _resnet_transforms
     # ============================================================
-    # CLIP
-    # ============================================================
-    elif embedding_name == 'clip_vit':
-        # CLIP with Vision Transformer architecture
-        model = clip_vit_model.visual
-        transforms = _clip_vit_transforms
-        embedding_dim = 512
-    elif embedding_name == 'clip_rn50':
-        # CLIP with ResNet50x16 (large model) architecture
-        model = clip_rn50_model.visual
-        transforms = _clip_rn50_transforms
-        embedding_dim = 768
-    # ============================================================
     # MAE
     # ============================================================
     elif embedding_name == 'mae_ViT-B':
@@ -140,6 +121,19 @@ def load_pvr_model(embedding_name: str,
         model = MAE_embedding_model(checkpoint_path = CHECKPOINT_DIR + 'mae_pretrain_vit_huge.pth', arch='mae_vit_huge_patch14')
         embedding_dim = 1280
         transforms = _mae_transforms
+    # ============================================================
+    # CLIP
+    # ============================================================
+    elif embedding_name == 'clip_vit':
+        # CLIP with Vision Transformer architecture
+        model = clip_vit_model.visual
+        transforms = _clip_vit_preprocess
+        embedding_dim = 512
+    elif embedding_name == 'clip_rn50':
+        # CLIP with ResNet50x16 (large model) architecture
+        model = clip_rn50_model.visual
+        transforms = _clip_rn50_preprocess
+        embedding_dim = 768
     # ============================================================
     # MoCo (Aug+)
     # ============================================================
@@ -224,11 +218,35 @@ def load_pvr_model(embedding_name: str,
     elif embedding_name == 'moco_dmc':
         model, embedding_dim = moco_conv5_model(CHECKPOINT_DIR + '/moco_dmc.pth')
         transforms = _resnet_transforms
+    # ============================================================
+    # Ego4D models
+    # ============================================================
+    elif embedding_name == 'r3m':
+        model = load_r3m("resnet50")
+        model = model.module.eval()
+        model = model.to('cpu')
+        embedding_dim = 2048
+        transforms = _r3m_transforms
+    elif embedding_name == 'moco_ego4d_100k':
+        # model, embedding_dim = moco_conv5_model(CHECKPOINT_DIR + '/moco_ego4d_100k.pth')
+        model, embedding_dim = moco_conv5_model('/checkpoint/aravraj/moco_diff_aug/ego4d_100k/checkpoints/ego4d_100k/checkpoint_0190.pth')
+        transforms = _resnet_transforms
+    elif embedding_name == 'moco_ego4d_5m':
+        # model, embedding_dim = moco_conv5_model(CHECKPOINT_DIR + '/moco_ego4d_5m.pth')
+        model, embedding_dim = moco_conv5_model('/checkpoint/aravraj/moco_diff_aug/ego4d_5m/checkpoints/ego4d_5m/checkpoint_0010.pth')
+        transforms = _resnet_transforms
     else:
         print("Model not implemented.")
         raise NotImplementedError
     model = model.eval()
-    return model, embedding_dim, transforms
+
+    def final_transforms(transforms):
+        if input_type == np.ndarray:
+            return lambda input : transforms(Image.fromarray(input)).unsqueeze(0)
+        else:
+            return transforms
+            
+    return model, embedding_dim, final_transforms(transforms)
 
 
 def moco_conv5_model(checkpoint_path):
@@ -334,6 +352,20 @@ def moco_conv3_compression_model(checkpoint_path):
     return model, 2156
 
 
+def small_cnn(in_channels=3):
+    """
+        Make a small CNN visual encoder
+        Architecture based on DrQ-v2
+    """
+    model = nn.Sequential(nn.Conv2d(in_channels, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
+                          nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
+                          nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32), 
+                          nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
+                          nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
+                          nn.ReLU(), nn.Flatten())
+    return model
+
+
 class CombinedModel(nn.Module):
     def __init__(self, 
                  model_list: list = None,
@@ -361,24 +393,10 @@ class MAE_embedding_model(torch.nn.Module):
         model = getattr(models_mae, arch)()
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
         msg = model.load_state_dict(checkpoint['model'], strict=False)
+        # print(msg)
         self.mae_model = model
     
     def forward(self, imgs, mask_ratio=0.0):
         latent, mask, ids_restore = self.mae_model.forward_encoder(imgs, mask_ratio)
         cls_latent = latent[:, 0, :]
         return cls_latent
-
-
-def small_cnn(in_channels=3):
-    """
-        Make a small CNN visual encoder
-        Architecture based on DrQ-v2
-    """
-    model = nn.Sequential(nn.Conv2d(in_channels, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
-                            nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
-                            nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32), 
-                            nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
-                            nn.ReLU(), nn.Conv2d(32, 32, 3, stride=2, padding=1), nn.BatchNorm2d(32),
-                            nn.ReLU(), nn.Flatten())
-    return model
-    

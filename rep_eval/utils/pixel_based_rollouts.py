@@ -4,6 +4,7 @@ Similar to MJRL sampler but also optionally logs image (pixel) observations
 
 import logging
 import numpy as np
+from .video_utils import save_video
 from mjrl.utils.gym_env import GymEnv
 from mjrl.utils import tensor_utils
 logging.disable(logging.CRITICAL)
@@ -19,10 +20,11 @@ def do_rollout(
         num_traj,
         env,
         policy,
-        eval_mode = False,
-        horizon = 1e6,
-        base_seed = None,
+        eval_mode=False,
+        horizon=1e6,
+        base_seed=None,
         env_kwargs=None,
+        load_frames=False
 ):
     """
     :param num_traj:    number of trajectories (int)
@@ -38,7 +40,7 @@ def do_rollout(
     # get the correct env behavior
     if type(env) == str:
         env = GymEnv(env)
-    elif isinstance(env, GymEnv) or isinstance(env, MJRLGymEnv):
+    elif isinstance(env, GymEnv):  # or isinstance(env, MJRLGymEnv):
         env = env
     elif callable(env):
         env = env(**env_kwargs)
@@ -61,12 +63,13 @@ def do_rollout(
             env.set_seed(seed)
             np.random.seed(seed)
 
-        observations=[]
-        actions=[]
-        rewards=[]
+        observations = []
+        actions = []
+        rewards = []
         agent_infos = []
         env_infos = []
         low_dim_obs = []
+        images = []
 
         o = env.reset()
         done = False
@@ -90,6 +93,8 @@ def do_rollout(
             agent_infos.append(agent_info)
             env_infos.append(env_info)
             low_dim_obs.append(internal_o)
+            if load_frames:
+                images.append(env.env.get_image())
             o = next_o.copy()
             t += 1
 
@@ -100,7 +105,8 @@ def do_rollout(
             agent_infos=tensor_utils.stack_tensor_dict_list(agent_infos),
             env_infos=tensor_utils.stack_tensor_dict_list(env_infos),
             terminated=done,
-            low_dim_obs=np.array(low_dim_obs)
+            low_dim_obs=np.array(low_dim_obs),
+            images=images
         )
         paths.append(path)
 
@@ -113,15 +119,16 @@ def sample_paths(
         num_traj,
         env,
         policy,
-        eval_mode = False,
-        horizon = 1e6,
-        base_seed = None,
-        num_cpu = 1,
+        eval_mode=False,
+        horizon=1e6,
+        base_seed=None,
+        num_cpu=1,
         max_process_time=300,
         max_timeouts=4,
         suppress_print=False,
         env_kwargs=None,
-        ):
+        load_frames=False
+):
 
     num_cpu = 1 if num_cpu is None else num_cpu
     num_cpu = mp.cpu_count() if num_cpu == 'max' else num_cpu
@@ -130,18 +137,18 @@ def sample_paths(
     if num_cpu == 1:
         input_dict = dict(num_traj=num_traj, env=env, policy=policy,
                           eval_mode=eval_mode, horizon=horizon, base_seed=base_seed,
-                          env_kwargs=env_kwargs)
+                          env_kwargs=env_kwargs, load_frames=load_frames)
         # dont invoke multiprocessing if not necessary
         return do_rollout(**input_dict)
 
     # do multiprocessing otherwise
     paths_per_cpu = int(np.ceil(num_traj/num_cpu))
-    input_dict_list= []
+    input_dict_list = []
     for i in range(num_cpu):
         input_dict = dict(num_traj=paths_per_cpu, env=env, policy=policy,
                           eval_mode=eval_mode, horizon=horizon,
                           base_seed=base_seed + i * paths_per_cpu,
-                          env_kwargs=env_kwargs)
+                          env_kwargs=env_kwargs, load_frames=load_frames)
         input_dict_list.append(input_dict)
     if suppress_print is False:
         start_time = timer.time()
@@ -153,10 +160,10 @@ def sample_paths(
     # result is a paths type and results is list of paths
     for result in results:
         for path in result:
-            paths.append(path)  
+            paths.append(path)
 
     if suppress_print is False:
-        print("======= Samples Gathered  ======= | >>>> Time taken = %f " %(timer.time()-start_time) )
+        print("======= Samples Gathered  ======= | >>>> Time taken = %f " % (timer.time()-start_time))
 
     return paths
 
@@ -165,13 +172,13 @@ def sample_data_batch(
         num_samples,
         env,
         policy,
-        eval_mode = False,
-        horizon = 1e6,
-        base_seed = None,
-        num_cpu = 1,
-        paths_per_call = 1,
+        eval_mode=False,
+        horizon=1e6,
+        base_seed=None,
+        num_cpu=1,
+        paths_per_call=1,
         env_kwargs=None,
-        ):
+):
 
     num_cpu = 1 if num_cpu is None else num_cpu
     num_cpu = mp.cpu_count() if num_cpu == 'max' else num_cpu
@@ -194,8 +201,7 @@ def sample_data_batch(
         new_samples = np.sum([len(p['rewards']) for p in new_paths])
         sampled_so_far += new_samples
     print("======= Samples Gathered  ======= | >>>> Time taken = %f " % (timer.time() - start_time))
-    print("................................. | >>>> # samples = %i # trajectories = %i " % (
-    sampled_so_far, paths_so_far))
+    print("................................. | >>>> # samples = %i # trajectories = %i " % (sampled_so_far, paths_so_far))
     return paths
 
 
@@ -219,5 +225,26 @@ def _try_multiprocess(func, input_dict_list, num_cpu, max_process_time, max_time
 
     pool.close()
     pool.terminate()
-    pool.join()  
+    pool.join()
     return results
+
+
+def sample_paths_video(
+        num_traj,
+        env,
+        policy,
+        algorithm,
+        save_path,
+        eval_mode=False,
+        horizon=1e6,
+        base_seed=None,
+        num_cpu=1,
+        env_kwargs=None,
+):
+    paths = sample_paths(num_traj=num_traj, env=env, policy=policy, 
+                         eval_mode=eval_mode, horizon=horizon, base_seed=base_seed, 
+                         num_cpu=num_cpu, env_kwargs=env_kwargs, load_frames=True)
+    frames = []
+    for path in paths:
+        frames.extend(path['images'])
+    save_video(f"{algorithm}_{env_kwargs['env_name']}_{env_kwargs['embedding_name']}", frames, save_path)

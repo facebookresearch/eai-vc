@@ -1,6 +1,10 @@
-import torch, torchvision, torchvision.transforms as T
-import numpy as np, wandb
+import torch
+import torchvision
+import torchvision.transforms as T
+import numpy as np
+import wandb
 import matplotlib.pyplot as plt
+from rep_eval.utils.model_loading import load_pvr_model
 from tqdm import tqdm
 
 
@@ -72,7 +76,12 @@ def precompute_embeddings(model, dataset, config):
     return embeddings, labels
 
 
-def probe_model_eval(config, model, transform, probe, embedding_dim, wandb_run):
+def probe_model_eval(config, wandb_run):
+    # Get base model, transform, and probing classifier
+    model, embedding_dim, transform = load_pvr_model(config['model'], input_type=torch.Tensor)
+    probe = torch.nn.Sequential(torch.nn.BatchNorm1d(embedding_dim),
+                                torch.nn.Linear(embedding_dim, 10))
+
     raw_tr_data = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
     raw_te_data = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
     
@@ -91,7 +100,6 @@ def probe_model_eval(config, model, transform, probe, embedding_dim, wandb_run):
     optimizer = torch.optim.Adam(probe.parameters(), lr=config['lr'])
     
     # train loop
-    log_step_ctr = 0
     for epoch in range(config['num_epochs']):
         running_loss = 0.0
         probe = probe.train()
@@ -106,11 +114,8 @@ def probe_model_eval(config, model, transform, probe, embedding_dim, wandb_run):
             optimizer.step()
             running_loss += loss.item()
 
-            if idx % int(config['log_frequency']) == 0 and idx > 0:
-                # print(f'epoch: %i | steps: %i | loss: %2.4f' % (epoch, idx, loss.item()))
-                wandb_run.log({'train/epoch': epoch+1, 'train/step': idx, 
-                               'train/loss': loss.item()}, step=log_step_ctr)
-                log_step_ctr += 1
+            if wandb_run and idx % int(config['log_frequency']) == 0:
+                wandb_run.log({'train/epoch': epoch + 1, 'train/step': idx + 1, 'train/loss': loss.item()})
 
         # after each epoch compute train and test accuracy
         train_accuracy = compute_accuracy(trainloader, probe, config)
@@ -118,5 +123,5 @@ def probe_model_eval(config, model, transform, probe, embedding_dim, wandb_run):
         print('===========================')
         print(f'epoch : %i | train accuracy : %3.2f | test accuracy : % 3.2f' % (epoch, train_accuracy, test_accuracy))
         print('===========================')
-        wandb_run.log({'eval/epoch': epoch+1, 'train/accuracy': train_accuracy, 
-                       'eval/accuracy': test_accuracy}, step=log_step_ctr)
+        if wandb_run:
+            wandb_run.log({'eval/epoch': epoch + 1, 'train/accuracy': train_accuracy, 'eval/accuracy': test_accuracy})
