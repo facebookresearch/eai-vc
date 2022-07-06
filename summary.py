@@ -12,7 +12,7 @@ from multiprocessing import Process
 from pathlib import Path
 from cfg_parse import parse_cfg
 from env import make_env
-from dataloader import DMControlDataset, summary_stats
+from dataloader import OfflineDataset, summary_stats
 from termcolor import colored
 from logger import make_dir
 torch.backends.cudnn.benchmark = True
@@ -102,7 +102,7 @@ def summary(cfg):
 			partitions = ['iterations=0', 'iterations=1', 'iterations=2',
 						'iterations=3', 'iterations=4', 'iterations=5',
 						'iterations=6', 'variable_std=0.3', 'variable_std=0.5']
-			dataset = DMControlDataset(cfg, Path().cwd() / __DATA__, tasks=[task], partitions=partitions, fraction=cfg.fraction)
+			dataset = OfflineDataset(cfg, Path().cwd() / __DATA__, tasks=[task], partitions=partitions, fraction=cfg.fraction)
 			results[task]['dataset'], results[task]['expert'] = dataset.summary
 
 		# Display dataset statistics

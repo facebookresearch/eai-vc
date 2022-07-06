@@ -1,0 +1,2 @@
+# xvfb-run -a python train_offline.py task=rlb-close-drawer modality=pixels frame_stack=1 action_repeat=1 episode_length=125 exp_name=test
+xvfb-run -a python train.py task=rlb-close-drawer modality=pixels enc_dim=256 mlp_dim=512 per=true exp_name=test seed=1

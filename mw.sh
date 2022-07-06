@@ -1,0 +1,1 @@
+python train.py task=mw-drawer-close modality=state enc_dim=256 mlp_dim=512 per=true action_repeat=1 episode_length=500 exp_name=test seed=1

@@ -1,4 +1,4 @@
-from collections import deque, defaultdict
+from collections import deque, defaultdict, OrderedDict
 from typing import Any, NamedTuple
 import dm_env
 import numpy as np
@@ -14,6 +14,13 @@ import gym
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 from encode_dataset import encode_clip, encode_resnet
+
+from rlbench.action_modes.action_mode import MoveArmThenGripper
+from rlbench.action_modes.arm_action_modes import JointVelocity
+from rlbench.action_modes.gripper_action_modes import Discrete
+from rlbench.environment import Environment
+from rlbench.observation_config import ObservationConfig
+from rlbench.tasks import ReachTarget, PushButton, CloseDrawer, CloseMicrowave, StraightenRope
 
 
 def set_seed(seed):
@@ -287,7 +294,10 @@ class TimeStepToGymWrapper(object):
 
 	def render(self, mode='rgb_array', width=384, height=384, camera_id=0):
 		camera_id = dict(quadruped=2).get(self.domain, camera_id)
-		return self.env.physics.render(height, width, camera_id)
+		try:
+			return self.env.physics.render(height, width, camera_id)
+		except:
+			return self.env.render(mode, width, height, camera_id)
 
 
 class DefaultDictWrapper(gym.Wrapper):
@@ -407,6 +417,162 @@ class MultitaskEnv(object):
 		return getattr(self._env, name)
 
 
+class RLBench(object):
+	def __init__(self, cfg):
+		self.domain, self.task = cfg.task.replace('-', '_').split('_', 1)
+		assert self.domain == 'rlb', 'domain must be rlb (RLBench)'
+		self.sim = Environment(
+			action_mode=MoveArmThenGripper(
+				arm_action_mode=JointVelocity(), gripper_action_mode=Discrete()),
+			obs_config=ObservationConfig(),
+			headless=True)
+		self.sim.launch()
+		tasks = {
+			'reach_target': ReachTarget,
+			'push_button': PushButton,
+			'close_drawer': CloseDrawer,
+			'close_microwave': CloseMicrowave,
+			'straighten_rope': StraightenRope
+		}
+		self.env = self.sim.get_task(tasks[self.task])
+		self.cameras = [
+			# 'left_shoulder_rgb',
+			# 'right_shoulder_rgb',
+			'overhead_rgb',
+			'wrist_rgb',
+			'front_rgb',
+		]
+		self._obs_spec = specs.BoundedArray(shape=np.array([len(self.cameras)*3, 128, 128]),
+											dtype=np.uint8,
+											minimum=0,
+											maximum=255,
+											name='observation')
+		self._action_spec = specs.BoundedArray(shape=self.sim.action_shape,
+											   dtype=np.float32,
+											   minimum=-1.,
+											   maximum=1.,
+											   name='action')
+		self.reset()
+		self._current_frame = None
+	
+	@property
+	def unwrapped(self):
+		return self.env.unwrapped
+	
+	def _get_obs(self, obs):
+		return torch.cat([torch.tensor(obs.__dict__[o]) for o in self.cameras], dim=-1).permute(2, 0, 1)
+	
+	def reset(self):
+		_, obs = self.env.reset()
+		obs = self._get_obs(obs)
+		self._current_frame = obs[-3:]
+		return ExtendedTimeStep(
+			step_type=StepType.FIRST,
+			reward=0.,
+			discount=1.,
+			observation=obs,
+			action=np.zeros(self._action_spec.shape, dtype=self._action_spec.dtype),
+		)
+	
+	def step(self, action):
+		obs, reward, done = self.env.step(action)
+		obs = self._get_obs(obs)
+		self._current_frame = obs[-3:]
+		return ExtendedTimeStep(
+			step_type=StepType.MID if not done else StepType.LAST,
+			reward=reward,
+			discount=1.,
+			observation=obs,
+			action=action,
+		)
+
+	def render(self, mode='rgb_array', width=None, height=None, camera_id=None):
+		return self._current_frame
+
+	def observation_spec(self):
+		return self._obs_spec
+
+	def action_spec(self):
+		return self._action_spec
+
+	def __getattr__(self, name):
+		return getattr(self._env, name)
+
+
+class MetaWorldWrapper(gym.Wrapper):
+	def __init__(self, env, cfg):
+		super().__init__(env)
+		self.env = env
+		self.cfg = cfg
+		if cfg.modality == 'pixels':
+			self._obs_spec = specs.BoundedArray(shape=np.array([3, 84, 84]),
+												dtype=np.uint8,
+												minimum=0,
+												maximum=255,
+												name='observation')
+		elif cfg.modality == 'features':
+			raise NotImplementedError()
+		else: # state
+			self._obs_spec = OrderedDict()
+			self._obs_spec['state'] = specs.BoundedArray(shape=np.array(env.observation_space.shape),
+												dtype=np.float32,
+												minimum=-np.inf,
+												maximum=np.inf,
+												name='observation')
+		self._action_spec = specs.BoundedArray(shape=self.env.action_space.shape,
+											   dtype=np.float32,
+											   minimum=-1.,
+											   maximum=1.,
+											   name='action')
+		self.success = False
+	
+	def _get_pixel_obs(self):
+		breakpoint()
+		obs = self.env.render(mode='rgb_array', height=84, width=84)
+	
+	def reset(self):
+		self.success = False
+		obs = self.env.reset()
+		if self.cfg.modality == 'pixels':
+			obs = self._get_pixel_obs()
+		else:
+			obs = {'state': obs}
+		return ExtendedTimeStep(
+			step_type=StepType.FIRST,
+			reward=0.,
+			discount=1.,
+			observation=obs,
+			action=np.zeros(self._action_spec.shape, dtype=self._action_spec.dtype),
+		)
+	
+	def step(self, action):
+		obs, reward, done, info = self.env.step(action)
+		if self.cfg.modality == 'pixels':
+			obs = self._get_pixel_obs()
+		else:
+			obs = {'state': obs}
+		self.success = self.success or bool(info['success'])
+		return ExtendedTimeStep(
+			step_type=StepType.MID if not done else StepType.LAST,
+			reward=reward,
+			discount=1.,
+			observation=obs,
+			action=action,
+		)
+	
+	def render(self, mode='rgb_array', width=None, height=None, camera_id=None):
+		return self.env.render(offscreen=True, resolution=(width, height))
+
+	def observation_spec(self):
+		return self._obs_spec
+
+	def action_spec(self):
+		return self._action_spec
+
+	def __getattr__(self, name):
+		return getattr(self._env, name)
+
+
 def make_env(cfg):
 	"""
 	Make environment for TD-MPC experiments.
@@ -417,6 +583,7 @@ def make_env(cfg):
 
 	if cfg.get('multitask', False):
 		env = MultitaskEnv(cfg)
+		cfg.task_list = env.tasks
 	elif cfg.get('distractors', False):
 		from distracting_control import suite as dc_suite
 		env = dc_suite.load(
@@ -429,6 +596,14 @@ def make_env(cfg):
 			background_dataset_paths=['/home/nh/data/DAVIS/JPEGImages/480p'],
 			background_dataset_videos='train',
 		)
+	elif domain == 'rlb': # RLBench
+		env = RLBench(cfg)
+		cfg.cameras = env.cameras
+	elif domain == 'mw':
+		import metaworld
+		env_id = task.replace('_','-') + '-v2-goal-hidden'
+		env = metaworld.envs.ALL_V2_ENVIRONMENTS_GOAL_HIDDEN[env_id](seed=cfg.seed)
+		env = MetaWorldWrapper(env, cfg)
 	else:
 		env = suite.load(domain,
 						task,
@@ -438,7 +613,7 @@ def make_env(cfg):
 	env = ActionRepeatWrapper(env, cfg.action_repeat)
 	env = action_scale.Wrapper(env, minimum=-1.0, maximum=+1.0)
 
-	if cfg.modality in {'pixels', 'features'}:
+	if cfg.modality in {'pixels', 'features'} and domain != 'rlb':
 		camera_id = dict(quadruped=2).get(domain, 0)
 		render_kwargs = dict(height=84, width=84, camera_id=camera_id)
 		env = pixels.Wrapper(env,
@@ -456,6 +631,7 @@ def make_env(cfg):
 
 	env = DefaultDictWrapper(env)
 	env = FrameEmitterWrapper(env, domain, enabled=cfg.get('demo', False))
+	cfg.domain = domain
 	cfg.obs_shape = tuple(int(x) for x in env.observation_space.shape)
 	cfg.action_shape = tuple(int(x) for x in env.action_space.shape)
 	cfg.action_dim = env.action_space.shape[0]

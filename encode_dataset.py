@@ -10,7 +10,7 @@ from pathlib import Path
 from collections import defaultdict
 from PIL import Image
 from cfg_parse import parse_cfg
-from dataloader import DMControlDataset
+from dataloader import OfflineDataset
 from termcolor import colored
 from logger import make_dir
 from tqdm import tqdm
@@ -161,7 +161,7 @@ def encode(cfg: dict):
 
 	# Load dataset
 	tasks = _env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
-	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction)
+	dataset = OfflineDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction)
 	features_to_fn = defaultdict(lambda: encode_resnet)
 	features_to_fn.update({'clip': encode_clip})
 	fn = features_to_fn[cfg.features]

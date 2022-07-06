@@ -15,7 +15,7 @@ from algorithm.tdmpc import TDMPC
 from algorithm.bc import BC
 from algorithm.renderer import Renderer
 from algorithm.helper import ReplayBuffer
-from dataloader import DMControlDataset
+from dataloader import OfflineDataset
 from termcolor import colored
 from torchvision.utils import make_grid, save_image
 import torchvision.transforms.functional as TF
@@ -65,8 +65,8 @@ def render(cfg: dict):
 	# Load dataset
 	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
 	rbounds = [0, 900 if cfg.task == 'walker-walk' else 1000]
-	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
-	dataset_eval = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=[rbounds[1], 1000])
+	dataset = OfflineDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
+	dataset_eval = OfflineDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=[rbounds[1], 1000])
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}')

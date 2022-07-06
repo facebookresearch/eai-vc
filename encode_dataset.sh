@@ -5,7 +5,8 @@ CHEETAH=cheetah-run,cheetah-run-backwards,cheetah-stand-front,cheetah-stand-back
 WALKERMINI=walker-walk,walker-run,walker-stand,walker-walk-backwards,walker-legs-up,walker-arabesque
 
 MANIPULATION=finger-spin,finger-turn-easy,finger-turn-hard,cup-catch,reacher-easy,reacher-hard
+CARTPOLE=cartpole-swingup,cartpole-balance,pendulum-swingup
 
 # Encode dataset
 # python encode_dataset.py -m task=$WALKER modality=pixels +features=mocoego15center hydra/launcher=slurm
-python encode_dataset.py -m task=$MANIPULATION modality=pixels +features=mocoego,mocodmcontrol hydra/launcher=slurm
+python encode_dataset.py -m task=$CARTPOLE modality=pixels +features=mocoego,mocodmcontrol hydra/launcher=slurm

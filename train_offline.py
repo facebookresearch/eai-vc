@@ -14,7 +14,7 @@ from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.bc import BC
 from algorithm.helper import ReplayBuffer
-from dataloader import DMControlDataset
+from dataloader import make_dataset
 from termcolor import colored
 import logger
 import hydra
@@ -59,17 +59,19 @@ def train_offline(cfg: dict):
 	print(agent.model)
 
 	# Load dataset
-	tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
-	max_bound = {
-		'walker-walk': 900,
-		'walker-stand': 925,
-		'walker-run': 375,
-		'walker-arabesque': 800,
-		'walker-walk-backwards': 750,
-		'walker-run-backwards': 225
-	}
-	rbounds = [0, max_bound[cfg.task]] if cfg.task in max_bound else None
-	dataset = DMControlDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
+	dataset = make_dataset(cfg, buffer)
+
+	# tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
+	# max_bound = {
+	# 	'walker-walk': 900,
+	# 	'walker-stand': 925,
+	# 	'walker-run': 375,
+	# 	'walker-arabesque': 800,
+	# 	'walker-walk-backwards': 750,
+	# 	'walker-run-backwards': 225
+	# }
+	# rbounds = [0, max_bound[cfg.task]] if cfg.task in max_bound else None
+	# dataset = OfflineDataset(cfg, Path(cfg.data_dir), tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')

@@ -351,7 +351,7 @@ class ReplayBuffer():
 			if self.cfg.modality == 'pixels' and episode.obs.shape[1] == 3 else episode.obs[-1]
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
-		if self.cfg.modality != 'state':
+		if self.cfg.modality != 'state' and 'states' in episode.__dict__:
 			states = torch.tensor(episode.metadata['states'])
 			self._state_dim = states.size(1)
 			self._state[self.idx:self.idx+self.cfg.episode_length, :self._state_dim] = states[:-1]
