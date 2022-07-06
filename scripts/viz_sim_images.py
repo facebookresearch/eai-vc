@@ -14,6 +14,7 @@ def main(file_path):
         img_list = []
         for i in range(len(data)):
             img = data[i]["camera_observation"][cam_name]["image"]
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
             height, width, layers = img.shape
             img_list.append(img)
             
