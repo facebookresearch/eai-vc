@@ -8,6 +8,8 @@ def get_traj_dict_from_obs_list(data, scale=1):
     position_error = np.array([data[i]["achieved_goal"]["position_error"] for i in range(len(data))])
     o_cur = np.array([data[i]["object_observation"]["position"] for i in range(len(data))])
     o_des = np.array([data[i]["desired_goal"]["position"] for i in range(len(data))])
+    o_cur_ori = np.array([data[i]["object_observation"]["orientation"] for i in range(len(data))])
+    o_des_ori = np.array([data[i]["desired_goal"]["orientation"] for i in range(len(data))])
     ft_pos_cur = np.array([data[i]["policy"]["controller"]["ft_pos_cur"] for i in range(len(data))])
     ft_pos_des = np.array([data[i]["policy"]["controller"]["ft_pos_des"] for i in range(len(data))])
     delta_ftpos = np.array([data[i]["action"]["delta_ftpos"] for i in range(len(data))])
@@ -16,13 +18,17 @@ def get_traj_dict_from_obs_list(data, scale=1):
 
     traj_dict = {
                 "t"          : t,
-                "o_cur"      : scale * o_cur,
-                "o_des"      : scale * o_des,
+                "o_cur_pos"  : scale * o_cur,
+                "o_des_pos"  : scale * o_des,
+                "o_cur_ori"  : o_cur_ori,
+                "o_des_ori"  : o_des_ori,
                 "ft_pos_cur" : scale * ft_pos_cur,
                 "ft_pos_des" : scale * ft_pos_cur,
                 "delta_ftpos": scale * delta_ftpos,
-                "ft_pos_targets_per_mode": scale * data[-1]["policy"]["ft_pos_targets_per_mode"],
                 }
+
+    if "ft_pos_targets_per_mode" in data[-1]["policy"]:
+        traj_dict["ft_pos_targets_per_mode"] = scale * data[-1]["policy"]["ft_pos_targets_per_mode"]
 
     return traj_dict
 
