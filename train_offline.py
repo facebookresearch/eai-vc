@@ -60,18 +60,6 @@ def train_offline(cfg: dict):
 
 	# Load dataset
 	dataset = make_dataset(cfg, buffer)
-
-	# tasks = env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
-	# max_bound = {
-	# 	'walker-walk': 900,
-	# 	'walker-stand': 925,
-	# 	'walker-run': 375,
-	# 	'walker-arabesque': 800,
-	# 	'walker-walk-backwards': 750,
-	# 	'walker-run-backwards': 225
-	# }
-	# rbounds = [0, max_bound[cfg.task]] if cfg.task in max_bound else None
-	# dataset = OfflineDataset(cfg, Path(cfg.data_dir), tasks=tasks, fraction=cfg.fraction, rbounds=rbounds, buffer=buffer)
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
@@ -109,12 +97,12 @@ def train_offline(cfg: dict):
 			}
 			common_metrics.update(train_metrics)
 			if cfg.get('multitask', False):
-				task_idxs = np.array([i % len(tasks) for i in range(cfg.eval_episodes)])
-				task_rewards = np.empty((len(tasks), cfg.eval_episodes//len(tasks)))
-				for i in range(len(tasks)):
+				task_idxs = np.array([i % cfg.num_tasks for i in range(cfg.eval_episodes)])
+				task_rewards = np.empty((cfg.num_tasks, cfg.eval_episodes//cfg.num_tasks))
+				for i in range(cfg.num_tasks):
 					task_rewards[i] = rewards[task_idxs==i]
 				task_rewards = task_rewards.mean(axis=1)
-				common_metrics.update({f'task_reward/{task}': task_rewards[i] for i, task in enumerate(tasks)})
+				common_metrics.update({f'task_reward/{task}': task_rewards[i] for i, task in enumerate(env.tasks)})
 			else:
 				common_metrics.update({f'task_reward/{cfg.task}': mean_reward})
 			L.log(common_metrics, category='offline')

@@ -5,7 +5,7 @@ defaults:
 
 # offline training
 fraction: 1.0
-train_iter: 500000
+train_iter: 100000
 
 # encoder
 encoder:
@@ -56,13 +56,9 @@ enc_dim: 512
 mlp_dim: 1024
 latent_dim: 50
 
-# wandb (fair)
+# wandb
 wandb_project: tdmpc2
 wandb_entity: nihansen
-
-# wandb (personal)
-# wandb_project: tdmpc
-# wandb_entity: nicklashansen
 
 # dirs
 data_dir: /checkpoint/nihansen/data/tdmpc2
@@ -100,7 +96,7 @@ hydra:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 300
-        mem_gb: 48
+        timeout_min: 500
+        mem_gb: 32
         name: ${hydra.job.name}
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

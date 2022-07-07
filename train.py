@@ -94,7 +94,7 @@ def train(cfg: dict):
 				'episode_reward': eval_rew,
 				'episode_success': eval_succ})
 			L.log(common_metrics, category='eval')
-			if cfg.save_model:
+			if cfg.save_model and env_step % cfg.save_freq == 0:
 				L.save_model(agent, env_step)
 
 	L.finish()

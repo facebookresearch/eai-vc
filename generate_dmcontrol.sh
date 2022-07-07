@@ -1,5 +1,5 @@
 python generate.py \
-    -m task=cup-catch,finger-spin,walker-run \
+    -m task=cup-catch,finger-spin,cheetah-run,walker-run,quadruped-run \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \

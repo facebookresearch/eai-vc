@@ -32,10 +32,9 @@ def summary_stats(rewards):
 
 
 class OfflineDataset(Dataset):
-    def __init__(self, cfg, tasks='*', rbounds=None, buffer=None):
+    def __init__(self, cfg, tasks='*', buffer=None):
         self._cfg = cfg
         self._tasks = tasks if tasks != '*' else sorted(os.listdir(self._data_dir))
-        self._rbounds = rbounds
         
         # Locate and filter episodes
         self._fps = self._locate_episodes()
@@ -45,74 +44,14 @@ class OfflineDataset(Dataset):
         idxs = np.random.choice(len(self._fps), int(self._cfg.fraction*len(self._fps)), replace=False)
         self._fps = [self._fps[i] for i in idxs]
 
-        # dump_filelist = cfg.get('dump_filelist', None)
-        # if dump_filelist:
-        #     filelist = []
-
         # Load episodes
         self._buffer = buffer
         self._episodes = []
         self._cumulative_rewards = []
         self._load_episodes()
-
-        # for fp in tqdm(self._fps):
-        #     data = torch.load(fp)
-        #     cumr = np.array(data['rewards']).sum()
-        #     if rbounds is not None:
-        #         if not (rbounds[0] <= cumr <= rbounds[1]):
-        #             continue
-        #     if cfg.modality == 'features':
-        #         assert cfg.get('features', None) is not None, 'Features must be specified'
-        #         features_dir = Path(os.path.dirname(fp)) / 'features' / cfg.features
-        #         assert features_dir.exists(), 'No features directory found for {}'.format(fp)
-        #         obs = torch.load(features_dir / os.path.basename(fp))
-        #         if not cfg.features in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
-        #             _obs = np.empty((obs.shape[0], cfg.frame_stack*obs.shape[1]), dtype=np.float32)
-        #             obs = stack_frames(obs, _obs, cfg.frame_stack)
-        #         data['metadata']['states'] = data['states']
-        #         if 'phys_states' in data:
-        #             data['metadata']['phys_states'] = data['phys_states']
-        #     elif cfg.modality == 'pixels':
-        #         frames_dir = Path(os.path.dirname(fp)) / 'frames'
-        #         assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
-        #         frame_fps = [frames_dir / fn for fn in data['frames']]
-        #         if dump_filelist:
-        #             obs = np.empty((len(frame_fps), 3*cfg.frame_stack, 84, 84), dtype=np.float32)
-        #             filelist.extend(frame_fps)
-        #         else:
-        #             obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
-        #             data['metadata']['states'] = data['states']
-        #             if 'phys_states' in data:
-        #                 data['metadata']['phys_states'] = data['phys_states']
-        #     else:
-        #         obs = data['states']
-        #     actions = np.array([v['expert_action'] for v in data['infos']] if cfg.get('expert_actions', False) else data['actions'], dtype=np.float32).clip(-1, 1)
-        #     episode = Episode.from_trajectory(cfg, obs, actions, data['rewards'])
-        #     episode.info = data['infos']
-        #     episode.metadata = data['metadata']
-        #     episode.task_vec = torch.tensor([float(data['metadata']['cfg']['task'] == tasks[i]) for i in range(len(tasks))], dtype=torch.float32, device=episode.device)
-        #     episode.task_id = episode.task_vec.argmax()
-        #     episode.filepath = fp
-        #     if buffer is not None:
-        #         self._buffer += episode
-        #     else:
-        #         self._episodes.append(episode)
-        #     self._cumulative_rewards.append(episode.cumulative_reward)
-
         self._cumulative_rewards = torch.tensor(self._cumulative_rewards, dtype=torch.float32, device=torch.device('cpu'))
-        if rbounds is not None:
-            print('Found {} episodes within reward range {}'.format(len(self._cumulative_rewards), rbounds))
-        
-        # if dump_filelist:
-        #     # randomly drop some frames to reduce size
-        #     keep_num = 5_000_000
-        #     idxs = np.random.choice(len(filelist), keep_num, replace=False)
-        #     filelist = [filelist[i] for i in idxs]
-        #     with open(dump_filelist, 'w') as f:
-        #         for fp in filelist:
-        #             f.write(str(fp) + '\n')
-        #     print('Dumped {} frames to {}'.format(len(filelist), dump_filelist))
-        #     exit(0)
+        self._partition_episodes()
+        self._load_into_buffer()
     
     def _locate_episodes(self):
         raise NotImplementedError()
@@ -122,22 +61,36 @@ class OfflineDataset(Dataset):
 
     def _load_episodes(self):
         raise NotImplementedError()
+    
+    def _partition_episodes(self, train_episodes=1500):
+        if self._cfg.multitask:
+            return
+        assert len(self) == 1650, 'Expected 1650 episodes, found {}'.format(len(self))
+        train_idxs = torch.topk(self.cumrew, k=train_episodes, dim=0, largest=False).indices
+        val_idxs = torch.topk(self.cumrew, k=len(self)-train_episodes, dim=0, largest=True).indices
+        print('Training on bottom {} episodes'.format(train_episodes))
+        print(f'Training returns: [{self.cumrew[train_idxs].min():.2f}, {self.cumrew[train_idxs].max():.2f}]')
+        print(f'Validation returns: [{self.cumrew[val_idxs].min():.2f}, {self.cumrew[val_idxs].max():.2f}]')
+        self._cumulative_rewards = self._cumulative_rewards[train_idxs]
+        self._episodes = [self._episodes[i] for i in train_idxs]
+         
+    def _load_into_buffer(self):
+        if self._buffer is None:
+            return
+        for episode in self._episodes:
+            self._buffer += episode
 
     @property
     def tasks(self):
         return self._tasks
 
     @property
-    def partitions(self):
-        return self._partitions
+    def buffer(self):
+        return self._buffer
 
     @property
     def episodes(self):
         return self._episodes
-    
-    @property
-    def buffer(self):
-        return self._buffer
     
     @property
     def cumrew(self):
@@ -147,6 +100,9 @@ class OfflineDataset(Dataset):
     def summary(self):
         return summary_stats(self.cumrew)
 
+    def __getitem__(self, idx):
+        return self._episodes[idx]
+
     def __len__(self):
         return len(self._episodes)
 
@@ -155,16 +111,7 @@ class DMControlDataset(OfflineDataset):
     def __init__(self, cfg, buffer=None):
         self._data_dir = Path(cfg.data_dir) / 'dmcontrol'
         tasks = cfg.task_list if cfg.get('multitask', False) else [cfg.task]
-        max_bound = {
-            'walker-walk': 900,
-            'walker-stand': 925,
-            'walker-run': 375,
-            'walker-arabesque': 800,
-            'walker-walk-backwards': 750,
-            'walker-run-backwards': 225
-        }
-        rbounds = [0, max_bound[cfg.task]] if cfg.task in max_bound else None
-        super().__init__(cfg, tasks, rbounds, buffer)
+        super().__init__(cfg, tasks, buffer)
     
     def _locate_episodes(self):
         return sorted(glob.glob(str(self._data_dir / '*/*/*.pt')))
@@ -179,9 +126,6 @@ class DMControlDataset(OfflineDataset):
         for fp in tqdm(self._fps):
             data = torch.load(fp)
             cumr = np.array(data['rewards']).sum()
-            if self._rbounds is not None:
-                if not (self._rbounds[0] <= cumr <= self._rbounds[1]):
-                    continue
             if self._cfg.modality == 'features':
                 assert self._cfg.get('features', None) is not None, 'Features must be specified'
                 features_dir = Path(os.path.dirname(fp)) / 'features' / cfg.features
@@ -197,10 +141,6 @@ class DMControlDataset(OfflineDataset):
                 frames_dir = Path(os.path.dirname(fp)) / 'frames'
                 assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
                 frame_fps = [frames_dir / fn for fn in data['frames']]
-                # if dump_filelist:
-                #     obs = np.empty((len(frame_fps), 3*self._cfg.frame_stack, 84, 84), dtype=np.float32)
-                #     filelist.extend(frame_fps)
-                # else:
                 obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
                 data['metadata']['states'] = data['states']
                 if 'phys_states' in data:
@@ -214,17 +154,8 @@ class DMControlDataset(OfflineDataset):
             episode.task_vec = torch.tensor([float(data['metadata']['cfg']['task'] == self._tasks[i]) for i in range(len(self._tasks))], dtype=torch.float32, device=episode.device)
             episode.task_id = episode.task_vec.argmax()
             episode.filepath = fp
-            if self._buffer is not None:
-                self._buffer += episode
-            else:
-                self._episodes.append(episode)
+            self._episodes.append(episode)
             self._cumulative_rewards.append(episode.cumulative_reward)
-
-    def __getitem__(self, idx):
-        return self._episodes[idx]
-
-    def __len__(self):
-        return len(self._episodes)
 
 
 class RLBenchDataset(OfflineDataset):
@@ -279,37 +210,10 @@ class RLBenchDataset(OfflineDataset):
             episode.task_vec = torch.ones(1, dtype=torch.float32, device=episode.device)
             episode.task_id = 0  # TODO
             episode.filepath = fp
-            if self._buffer is not None:
-                self._buffer += episode
-            else:
-                self._episodes.append(episode)
+            self._episodes.append(episode)
             self._cumulative_rewards.append(episode.cumulative_reward)
-        
-
-    def __getitem__(self, idx):
-        return self._episodes[idx]
-
-    def __len__(self):
-        return len(self._episodes)
 
 
 def make_dataset(cfg, buffer=None):
     cls = defaultdict(lambda: DMControlDataset, {'rlb': RLBenchDataset})[cfg.domain]
     return cls(cfg, buffer)
-
-
-def _test(tasks, partitions='*', fraction=.5):
-    dataset = OfflineDataset('/home/nh/code/dmcontrol-data/data', tasks=tasks, partitions=partitions, fraction=fraction)
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=64, shuffle=True)
-    _tasks = '_'.join(tasks).replace('*', 'all')
-    for i, imgs in enumerate(dataloader):
-        torchvision.utils.save_image(imgs, f'samples/imgs_{_tasks}.png', nrow=8, padding=2)
-        break
-
-
-if __name__ == '__main__':
-    if not os.path.exists('samples'):
-        os.makedirs('samples')
-    _test('*', fraction=.1)
-    _test(['humanoid-stand', 'humanoid-walk', 'humanoid-run'])
-    _test(['walker-stand', 'walker-walk', 'walker-run'])

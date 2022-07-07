@@ -31,7 +31,11 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 	# Convenience
 	cfg.task_title = cfg.task.replace('-', ' ').title()
 	cfg.device = 'cuda' if cfg.modality == 'state' else 'cpu'
+
 	cfg.exp_name = cfg.get('exp_name', 'default')
+	if cfg.modality == 'features':
+		assert cfg.get('features', None) is not None, 'features must be specified'
+		cfg.exp_name = cfg.features + '-' + cfg.exp_name
 
 	# Multi-task
 	cfg.multitask = bool(re.search(r'(mt\d+)', cfg.task))
