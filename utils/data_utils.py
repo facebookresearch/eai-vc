@@ -40,6 +40,8 @@ def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
     """ Downsample each of the trajectories in traj_dict """
 
     every_x_steps = max(1, int(new_time_step / cur_time_step))
+    num_waypoints = int(traj_dict["t"].shape[0] / every_x_steps)
+    indices_to_take = np.linspace(0, traj_dict["t"].shape[0]-1, num_waypoints, dtype=int)
     
     new_traj_dict = {}
     
@@ -50,7 +52,8 @@ def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
             new_traj_dict[k] = traj
             continue
 
-        new_traj = traj[::every_x_steps, :]
+        #new_traj = traj[::every_x_steps, :]
+        new_traj = traj[indices_to_take]
         new_traj_dict[k] = new_traj
 
     # Compute deltas for downsampled traj
