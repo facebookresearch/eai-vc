@@ -325,6 +325,27 @@ def lin_interp_pos_traj(x_cur, x_des, T, time_step=0.001):
 
     return x_traj, dx_traj
 
+def lin_interp_waypoints(x, time_step_in, time_step_out=0.001):
+    """
+    Linearly interpolate between all waypoints in x (between each row) [T, dim]
+    """
+
+    T = x.shape[0]
+    interp_n = int(time_step_in / time_step_out) # Number of interpolation points between two waypoints
+
+    # Linearly interpolate between each position waypoint (row) and force waypoint
+    # Initial row indices
+    row_ind_in = np.arange(T)
+    # Output row coordinates
+    row_coord_out = np.linspace(0, T - 1, interp_n * (T-1) + T)
+
+    # scipy.interpolate.interp1d instance
+    itp_x = interp1d(row_ind_in, x, axis=0)
+
+    x_interpolated = itp_x(row_coord_out)
+    return x_interpolated
+
+
 ##############################################################################
 # Private functions
 ##############################################################################

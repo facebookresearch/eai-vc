@@ -414,15 +414,18 @@ class SimCubeEnv(BaseCubeEnv):
 
         return observation, reward, is_done, self.info
 
-    def reset(self, goal=None):
+    def reset(self, goal_pose_dict=None, init_pose_dict=None):
         """ Reset the environment. """
 
         ##hard-reset simulation
         #del self.platform
 
         # initialize cube at the centre
-        initial_object_pose = task.sample_goal(difficulty=-1)
-        initial_object_pose.position = [0,0,task._CUBE_WIDTH/2] # TODO hardcoded intial cube pose to arena center
+        if init_pose_dict is None:
+            initial_object_pose = task.sample_goal(difficulty=-1)
+            initial_object_pose.position = [0,0,task._CUBE_WIDTH/2] # TODO hardcoded init pose to arena center
+        else:
+            initial_object_pose = task.Pose.from_dict(init_pose_dict)
 
         self.platform.reset(initial_object_pose)
 
@@ -433,8 +436,10 @@ class SimCubeEnv(BaseCubeEnv):
             self.disable_collisions()
 
         # if no goal is given, sample one randomly
-        if goal is None:
+        if goal_pose_dict is None:
             self.goal = task.sample_goal(self.difficulty).to_dict()
+        else:
+            self.goal = goal_pose_dict
 
         # visualize the goal
         if self.visualization and not self.enable_cameras:
