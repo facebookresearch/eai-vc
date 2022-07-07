@@ -106,7 +106,8 @@ class MoveCubePolicy:
             self.mode = Mode.GRASP
 
         elif self.mode == Mode.GRASP:
-            if self.controller.is_avg_dx_converged(q_cur, dq_cur):
+            #if self.controller.is_avg_dx_converged(q_cur, dq_cur):
+            if self.traj_counter == len(self.ft_pos_traj)-1:
                 self.mode = Mode.MOVE_CUBE
 
         elif self.mode == Mode.MOVE_CUBE:
