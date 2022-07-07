@@ -18,6 +18,7 @@ class Mode(enum.Enum):
     INIT       = enum.auto()
     GRASP      = enum.auto()
     MOVE_CUBE  = enum.auto()
+    DONE       = enum.auto()
 
 class MoveCubePolicy:
     """
@@ -111,7 +112,11 @@ class MoveCubePolicy:
                 self.mode = Mode.MOVE_CUBE
 
         elif self.mode == Mode.MOVE_CUBE:
-            if self.traj_counter == len(self.ft_pos_traj)-1: self.done = True
+            if self.traj_counter == len(self.ft_pos_traj)-1:
+                self.mode = Mode.DONE
+
+        elif self.mode == Mode.DONE:
+                self.done = True
 
         else:
             raise ValueError(f"{self.mode} is an invalide Mode")
@@ -148,13 +153,13 @@ class MoveCubePolicy:
             ft_pos = c_utils.get_cp_pos_wf_from_cp_params(self.cp_params, obj_pose)
             ft_pos = np.concatenate(ft_pos)
 
-            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 2, time_step=self.time_step)
+            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 1.5, time_step=self.time_step)
 
             self.ft_pos_targets_per_mode.append(ft_pos)
 
         elif self.mode == Mode.MOVE_CUBE:
             # Get object trajectory
-            o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 3, time_step=self.time_step)
+            o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 2.5, time_step=self.time_step)
 
             # Get ft pos trajectory from object trajectory
             ft_pos_traj = np.zeros((o_traj.shape[0], 9))
@@ -185,12 +190,12 @@ class MoveCubePolicy:
         t = self.t
 
         #print(observation["desired_goal"]["position"])
-        
+
         # 1. Call state_machine() to determine mode
         self.state_machine(observation, t)
-
+        
         # 2. If entering new mode, set new finger tip traj
-        if self.prev_mode != self.mode:
+        if self.prev_mode != self.mode and self.mode != Mode.DONE:
             self.set_ft_traj(observation)
 
         # 3. Get current waypoints for finger tips
