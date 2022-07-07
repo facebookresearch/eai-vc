@@ -46,11 +46,7 @@ class OfflineDataset(Dataset):
 
         # Load episodes
         self._buffer = buffer
-        self._episodes = []
-        self._cumulative_rewards = []
         self._load_episodes()
-        self._cumulative_rewards = torch.tensor(self._cumulative_rewards, dtype=torch.float32, device=torch.device('cpu'))
-        self._partition_episodes()
         self._load_into_buffer()
     
     def _locate_episodes(self):
@@ -62,17 +58,16 @@ class OfflineDataset(Dataset):
     def _load_episodes(self):
         raise NotImplementedError()
     
-    def _partition_episodes(self, train_episodes=1500):
+    def _partition_episodes(self, datas, cumrews, train_episodes=1500):
         if self._cfg.multitask:
             return
-        assert len(self) == 1650, 'Expected 1650 episodes, found {}'.format(len(self))
-        train_idxs = torch.topk(self.cumrew, k=train_episodes, dim=0, largest=False).indices
-        val_idxs = torch.topk(self.cumrew, k=len(self)-train_episodes, dim=0, largest=True).indices
+        assert len(datas) == int(1650*self._cfg.fraction), f'Expected {int(1650*self._cfg.fraction)} episodes, got {len(datas)}'
+        train_idxs = torch.topk(cumrews, k=train_episodes, dim=0, largest=False).indices
+        val_idxs = torch.topk(cumrews, k=len(datas)-train_episodes, dim=0, largest=True).indices
         print('Training on bottom {} episodes'.format(train_episodes))
-        print(f'Training returns: [{self.cumrew[train_idxs].min():.2f}, {self.cumrew[train_idxs].max():.2f}]')
-        print(f'Validation returns: [{self.cumrew[val_idxs].min():.2f}, {self.cumrew[val_idxs].max():.2f}]')
-        self._cumulative_rewards = self._cumulative_rewards[train_idxs]
-        self._episodes = [self._episodes[i] for i in train_idxs]
+        print(f'Training returns: [{cumrews[train_idxs].min():.2f}, {cumrews[train_idxs].max():.2f}]')
+        print(f'Validation returns: [{cumrews[val_idxs].min():.2f}, {cumrews[val_idxs].max():.2f}]')
+        return [datas[i] for i in train_idxs], cumrews[train_idxs]
          
     def _load_into_buffer(self):
         if self._buffer is None:
@@ -123,12 +118,19 @@ class DMControlDataset(OfflineDataset):
         print('Found {} episodes after filtering'.format(len(self._fps)))
 
     def _load_episodes(self):
-        for fp in tqdm(self._fps):
+        datas = []
+        cumrews = []
+        for fp in self._fps:
             data = torch.load(fp)
-            cumr = np.array(data['rewards']).sum()
+            datas.append(data)
+            cumrew = np.array(data['rewards']).sum()
+            cumrews.append(cumrew)
+        datas, self._cumulative_rewards = self._partition_episodes(datas, torch.tensor(np.array(cumrews), dtype=torch.float32), train_episodes=int(1500*self._cfg.fraction))
+        self._episodes = []
+        for data in tqdm(datas):
             if self._cfg.modality == 'features':
                 assert self._cfg.get('features', None) is not None, 'Features must be specified'
-                features_dir = Path(os.path.dirname(fp)) / 'features' / cfg.features
+                features_dir = Path(os.path.dirname(fp)) / 'features' / self._cfg.features
                 assert features_dir.exists(), 'No features directory found for {}'.format(fp)
                 obs = torch.load(features_dir / os.path.basename(fp))
                 if not self._cfg.features in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
@@ -155,7 +157,6 @@ class DMControlDataset(OfflineDataset):
             episode.task_id = episode.task_vec.argmax()
             episode.filepath = fp
             self._episodes.append(episode)
-            self._cumulative_rewards.append(episode.cumulative_reward)
 
 
 class RLBenchDataset(OfflineDataset):

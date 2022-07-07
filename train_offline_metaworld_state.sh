@@ -1,5 +1,5 @@
 python train_offline.py \
-    -m task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-push,mw-pick-place,mw-shelf-place \
+    -m task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-pick-place,mw-shelf-place \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \

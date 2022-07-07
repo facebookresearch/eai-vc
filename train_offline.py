@@ -60,7 +60,7 @@ def train_offline(cfg: dict):
 
 	# Load dataset
 	dataset = make_dataset(cfg, buffer)
-	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity}')
+	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity-1}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
 	print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))
