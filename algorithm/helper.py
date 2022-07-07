@@ -136,10 +136,15 @@ class FeatureFuse(nn.Module):
 		self.fn = nn.Sequential(
 			nn.Linear(features_to_dim[cfg.features], cfg.enc_dim), nn.ELU(),
 			nn.Linear(cfg.enc_dim, cfg.enc_dim))
-		self.layers = nn.Sequential(
-			Flare(cfg.enc_dim, cfg.frame_stack),
-			nn.Linear(cfg.enc_dim*7, cfg.enc_dim), nn.ELU(),
-			nn.Linear(cfg.enc_dim, cfg.latent_dim))
+		if cfg.frame_stack == 1:
+			self.layers = nn.Sequential(
+				nn.ELU(), nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
+				nn.Linear(cfg.enc_dim, cfg.latent_dim))
+		else:
+			self.layers = nn.Sequential(
+				Flare(cfg.enc_dim, cfg.frame_stack),
+				nn.Linear(cfg.enc_dim*7, cfg.enc_dim), nn.ELU(),
+				nn.Linear(cfg.enc_dim, cfg.latent_dim))
 
 	def forward(self, x):
 		b = x.size(0)

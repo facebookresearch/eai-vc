@@ -67,7 +67,7 @@ class OfflineDataset(Dataset):
         print('Training on bottom {} episodes'.format(train_episodes))
         print(f'Training returns: [{cumrews[train_idxs].min():.2f}, {cumrews[train_idxs].max():.2f}]')
         print(f'Validation returns: [{cumrews[val_idxs].min():.2f}, {cumrews[val_idxs].max():.2f}]')
-        return [datas[i] for i in train_idxs], cumrews[train_idxs]
+        return [datas[i] for i in train_idxs], cumrews[train_idxs], train_idxs
          
     def _load_into_buffer(self):
         if self._buffer is None:
@@ -125,17 +125,17 @@ class DMControlDataset(OfflineDataset):
             datas.append(data)
             cumrew = np.array(data['rewards']).sum()
             cumrews.append(cumrew)
-        datas, self._cumulative_rewards = self._partition_episodes(datas, torch.tensor(np.array(cumrews), dtype=torch.float32), train_episodes=int(1500*self._cfg.fraction))
+        datas, self._cumulative_rewards, idxs = self._partition_episodes(datas, torch.tensor(np.array(cumrews), dtype=torch.float32), train_episodes=int(1500*self._cfg.fraction))
         self._episodes = []
-        for data in tqdm(datas):
+        for data, idx in tqdm(zip(datas, idxs), desc='Loading episodes'):
+            fp = self._fps[idx]
             if self._cfg.modality == 'features':
                 assert self._cfg.get('features', None) is not None, 'Features must be specified'
                 features_dir = Path(os.path.dirname(fp)) / 'features' / self._cfg.features
                 assert features_dir.exists(), 'No features directory found for {}'.format(fp)
                 obs = torch.load(features_dir / os.path.basename(fp))
-                if not self._cfg.features in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
-                    _obs = np.empty((obs.shape[0], self._cfg.frame_stack*obs.shape[1]), dtype=np.float32)
-                    obs = stack_frames(obs, _obs, self._cfg.frame_stack)
+                _obs = np.empty((obs.shape[0], self._cfg.frame_stack*obs.shape[1]), dtype=np.float32)
+                obs = stack_frames(obs, _obs, self._cfg.frame_stack)
                 data['metadata']['states'] = data['states']
                 if 'phys_states' in data:
                     data['metadata']['phys_states'] = data['phys_states']
@@ -149,7 +149,7 @@ class DMControlDataset(OfflineDataset):
                     data['metadata']['phys_states'] = data['phys_states']
             else:
                 obs = data['states']
-            actions = np.array([v['expert_action'] for v in data['infos']] if self._cfg.get('expert_actions', False) else data['actions'], dtype=np.float32).clip(-1, 1)
+            actions = np.array(data['actions'], dtype=np.float32).clip(-1, 1)
             episode = Episode.from_trajectory(self._cfg, obs, actions, data['rewards'])
             episode.info = data['infos']
             episode.metadata = data['metadata']

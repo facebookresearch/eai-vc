@@ -1,4 +1,4 @@
-from collections import deque, defaultdict, OrderedDict
+from collections import deque, defaultdict
 from typing import Any, NamedTuple
 import numpy as np
 import torch

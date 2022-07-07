@@ -1,4 +1,3 @@
-from email.policy import default
 import warnings
 warnings.filterwarnings('ignore')
 import os
@@ -50,26 +49,12 @@ def make_encoder(cfg):
 	if 'moco' in cfg.features:
 		if cfg.features == 'moco':
 			fn = 'moco_v2_800ep_pretrain.pth.tar'
-		elif cfg.features == 'mocoin':
-			fn = 'moco_v2_800ep_pretrain.pth.tar'
 		elif cfg.features == 'mocodmcontrol':
 			fn = 'moco_v2_100ep_pretrain_dmcontrol.pth.tar'
 		elif cfg.features == 'mocoego':
 			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
-		elif cfg.features == 'mocoego15':
-			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
-		elif cfg.features == 'mocoego15center':
-			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
-		elif cfg.features == 'mocoego50':
-			fn = 'moco_v2_50ep_pretrain_ego4d.pth.tar'
-		elif cfg.features == 'mocoego190':
-			fn = 'moco_v2_190ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocoegodmcontrol':
 			fn = 'moco_v2_15ep_pretrain_ego_dmcontrol_finetune.pth.tar'
-		elif cfg.features == 'mocodmcontrol5m':
-			fn = 'moco_v2_20ep_pretrain_dmcontrol_5m.pth.tar'
-			encoder.conv1.weight.data = encoder.conv1.weight.data.repeat(1, 3, 1, 1)
-			encoder.conv1.in_channels = encoder.conv1.in_channels * 3
 		else:
 			raise ValueError('Unknown MOCO model')
 		print(colored('Loading MOCO pretrained model: {}'.format(fn), 'green'))
