@@ -78,16 +78,9 @@ def make_encoder(cfg):
 		encoder.load_state_dict(state_dict, strict=False)
 	encoder.fc = nn.Identity()
 	encoder.eval()
-	
-	if 'mocodmcontrol' in cfg.features:
-		preprocess = nn.Sequential(
-			K.Resize((252, 252), resample=Resample.BILINEAR), K.CenterCrop((224, 224)),
-			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
-	else:
-		preprocess = nn.Sequential(
-			K.Resize((224, 224), resample=Resample.BICUBIC),
-			K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
-
+	preprocess = nn.Sequential(
+		K.Resize((224, 224), resample=Resample.BICUBIC),
+		K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
 	return encoder, preprocess
 
 
@@ -159,7 +152,6 @@ def encode(cfg: dict):
 	print(colored(f'\nTask: {cfg.task}', 'blue', attrs=['bold']))
 
 	# Load dataset
-	tasks = _env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
 	dataset = make_dataset(cfg)
 	features_to_fn = defaultdict(lambda: encode_resnet)
 	features_to_fn.update({'clip': encode_clip})
