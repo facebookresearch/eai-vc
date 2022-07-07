@@ -100,8 +100,7 @@ hydra:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 2100 #3000
-        mem_gb: 48
+        timeout_min: 300 #3600
+        mem_gb: 32
         name: ${hydra.job.name}
-        # array_parallelism: 256
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

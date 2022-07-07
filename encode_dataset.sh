@@ -8,5 +8,8 @@ MANIPULATION=finger-spin,finger-turn-easy,finger-turn-hard,cup-catch,reacher-eas
 CARTPOLE=cartpole-swingup,cartpole-balance,pendulum-swingup
 
 # Encode dataset
-# python encode_dataset.py -m task=$WALKER modality=pixels +features=mocoego15center hydra/launcher=slurm
-python encode_dataset.py -m task=$CARTPOLE modality=pixels +features=mocoego,mocodmcontrol hydra/launcher=slurm
+python encode_dataset.py \
+    -m task=cup-catch,finger-spin,walker-run \
+    modality=pixels \
+    +features=random \
+    hydra/launcher=slurm

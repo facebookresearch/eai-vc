@@ -10,7 +10,7 @@ from pathlib import Path
 from collections import defaultdict
 from PIL import Image
 from cfg_parse import parse_cfg
-from dataloader import OfflineDataset
+from dataloader import make_dataset
 from termcolor import colored
 from logger import make_dir
 from tqdm import tqdm
@@ -46,8 +46,7 @@ def make_encoder(cfg):
 		import clip
 		return clip.load('ViT-B/32', device='cuda') # 151M params
 	# resnet50: 24M params
-	# resnet18: 11M params
-	encoder = torchvision.models.__dict__['resnet' + str(18 if '18' in cfg.features else 50)](pretrained=False).cuda()
+	encoder = torchvision.models.__dict__['resnet50'](pretrained=False).cuda()
 	if 'moco' in cfg.features:
 		if cfg.features == 'moco':
 			fn = 'moco_v2_800ep_pretrain.pth.tar'
@@ -161,10 +160,12 @@ def encode(cfg: dict):
 
 	# Load dataset
 	tasks = _env.unwrapped.tasks if cfg.get('multitask', False) else [cfg.task]
-	dataset = OfflineDataset(cfg, Path(cfg.data_dir) / 'dmcontrol', tasks=tasks, fraction=cfg.fraction)
+	dataset = make_dataset(cfg)
 	features_to_fn = defaultdict(lambda: encode_resnet)
 	features_to_fn.update({'clip': encode_clip})
 	fn = features_to_fn[cfg.features]
+
+	breakpoint()
 
 	# Encode dataset
 	for episode in tqdm(dataset.episodes):

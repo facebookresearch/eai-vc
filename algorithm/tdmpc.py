@@ -137,7 +137,7 @@ class TDMPC():
 		# Seed steps
 		if step < self.cfg.seed_steps and not eval_mode:
 			return torch.empty(self.cfg.action_dim, dtype=torch.float32, device=self.device).uniform_(-1, 1)
-			
+		
 		# Sample policy trajectories
 		obs = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
 		if task_vec is not None:

@@ -8,9 +8,6 @@ import numpy as np
 import gym
 gym.logger.set_level(40)
 import time
-import random
-from copy import deepcopy
-from multiprocessing import Process
 from pathlib import Path
 from cfg_parse import parse_cfg
 from env import make_env, set_seed
@@ -21,35 +18,6 @@ import logger
 import hydra
 torch.backends.cudnn.benchmark = True
 __CONFIG__, __MODELS__ = 'cfgs', 'models'
-
-
-def parallel(fn, cfg, wait=5, verbose=False):
-	assert cfg.seed is not None, 'No seed(s) given'
-	seeds = cfg.seed
-	if isinstance(seeds, int):
-		return fn(cfg)
-	seeds = [int(seed) for seed in seeds.split(',')]
-	proc = []
-	for seed in seeds:
-		_cfg = deepcopy(cfg)
-		_cfg.seed = seed
-		p = Process(target=fn, args=(_cfg,))
-		p.start()
-		proc.append(p)
-		if verbose:
-			print(f'Started process {p.pid} with seed {seed}')
-		time.sleep(wait)
-	for p in proc:
-		p.join()
-	while len(proc) > 0:
-		time.sleep(wait)
-		for p in proc:
-			if not p.is_alive():
-				if verbose:
-					print(f'Process {p.pid} has finished')
-				p.terminate()
-				proc.remove(p)
-	exit(0)
 
 
 def evaluate(env, agent, num_episodes, step, env_step, video):

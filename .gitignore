@@ -17,6 +17,7 @@ results/
 recon/
 reconstruction/
 reconstruction_approx/
+xvfb/
 frames.mp4
 
 # Byte-compiled / optimized / DLL files

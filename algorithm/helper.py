@@ -152,21 +152,7 @@ class FeatureFuse(nn.Module):
 def enc(cfg):
 	"""Returns a TOLD encoder."""
 	if cfg.modality == 'pixels':
-		if cfg.encoder.pretrained:
-			C = int(1024*cfg.frame_stack)
-			layers = [nn.Conv2d(C, cfg.num_channels, 1, stride=1, padding=0), nn.ReLU(),
-					  nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
-					  nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU()]
-			out_shape = _get_out_shape((C, 6, 6), layers)
-			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
-		elif 'resnet' in cfg.encoder.arch:
-			C = int(3*cfg.frame_stack)
-			layers = models.__dict__[cfg.encoder.arch]()
-			layers.conv1.weight.data = layers.conv1.weight.data.repeat(1, cfg.frame_stack, 1, 1)
-			layers = list(layers.children())[:-2]
-			out_shape = _get_out_shape((C, cfg.img_size, cfg.img_size), layers)
-			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
-		elif cfg.encoder.arch == 'default+':
+		if cfg.encoder.arch == 'default+':
 			C = int(3*cfg.frame_stack)
 			layers = [NormalizeImg(),
 					nn.Conv2d(C, cfg.num_channels, 3, stride=2), nn.ReLU(),
@@ -322,7 +308,7 @@ class ReplayBuffer():
 	def __init__(self, cfg):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
-		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1650*500 + 1
+		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1_000_000 + 1
 		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
 		obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
 		self._obs = torch.empty((self.capacity+1, *obs_shape), dtype=dtype, device=self.device)
@@ -334,6 +320,7 @@ class ReplayBuffer():
 		self._task_vec = torch.empty((self.capacity, cfg.num_tasks), dtype=torch.uint8, device=self.device) if cfg.get('multitask', False) else None
 		self._priorities = torch.ones((self.capacity,), dtype=torch.float32, device=self.device)
 		self._eps = 1e-6
+		self._state_dim = None
 		self._full = False
 		self.idx = 0
 	
@@ -398,8 +385,8 @@ class ReplayBuffer():
 		next_obs = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *next_obs_shape), dtype=obs.dtype, device=obs.device)
 		action = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *self._action.shape[1:]), dtype=torch.float32, device=self.device)
 		reward = torch.empty((self.cfg.horizon+1, self.cfg.batch_size), dtype=torch.float32, device=self.device)
-		state = self._state[idxs, :self._state_dim] if self.cfg.modality != 'state' else None
-		next_state = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *state.shape[1:]), dtype=state.dtype, device=state.device) if self.cfg.modality != 'state' else None
+		state = self._state[idxs, :self._state_dim] if self.cfg.modality != 'state' and self._state_dim is not None else None
+		next_state = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *state.shape[1:]), dtype=state.dtype, device=state.device) if state is not None else None
 		task_vec = self._task_vec[idxs].float() if self.cfg.multitask else None
 		for t in range(self.cfg.horizon+1):
 			_idxs = idxs + t
@@ -410,12 +397,12 @@ class ReplayBuffer():
 				next_state[t] = self._state[_idxs+1, :self._state_dim]
 
 		mask = (_idxs+1) % self.cfg.episode_length == 0
-		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(self.device).float()
+		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(next_obs.device).float()
 		if task_vec is not None:
 			task_vec = task_vec.cuda()
 		if state is not None:
 			state = state.cuda()
-			next_state[-1, mask] = self._last_state[_idxs[mask]//self.cfg.episode_length, :self._state_dim].to(self.device).float()
+			next_state[-1, mask] = self._last_state[_idxs[mask]//self.cfg.episode_length, :self._state_dim].to(next_state.device).float()
 			next_state = next_state.cuda()
 
 		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, next_state, task_vec, idxs.cuda(), weights.cuda()
