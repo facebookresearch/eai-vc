@@ -13,6 +13,8 @@ def get_traj_dict_from_obs_list(data, scale=1):
     ft_pos_cur = np.array([data[i]["policy"]["controller"]["ft_pos_cur"] for i in range(len(data))])
     ft_pos_des = np.array([data[i]["policy"]["controller"]["ft_pos_des"] for i in range(len(data))])
     delta_ftpos = np.array([data[i]["action"]["delta_ftpos"] for i in range(len(data))])
+    ft_vel_cur = np.array([data[i]["policy"]["controller"]["ft_vel_cur"] for i in range(len(data))])
+    ft_vel_des = np.array([data[i]["policy"]["controller"]["ft_vel_des"] for i in range(len(data))])
 
     t = np.expand_dims(np.array([data[i]["t"] for i in range(len(data))]), 1)
 
@@ -20,10 +22,12 @@ def get_traj_dict_from_obs_list(data, scale=1):
                 "t"          : t,
                 "o_cur_pos"  : scale * o_cur,
                 "o_des_pos"  : scale * o_des,
-                "o_cur_ori"  : o_cur_ori,
-                "o_des_ori"  : o_des_ori,
+                "o_cur_ori"  : scale * o_cur_ori,
+                "o_des_ori"  : scale * o_des_ori,
                 "ft_pos_cur" : scale * ft_pos_cur,
-                "ft_pos_des" : scale * ft_pos_cur,
+                "ft_pos_des" : scale * ft_pos_des,
+                "ft_vel_cur" : scale * ft_vel_cur,
+                "ft_vel_des" : scale * ft_vel_des,
                 "delta_ftpos": scale * delta_ftpos,
                 }
 
