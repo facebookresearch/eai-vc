@@ -5,24 +5,23 @@ import sys
 import torch
 import numpy as np
 import higher
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import argparse
 import collections
 import wandb
-
-#import trifinger_simulation.finger_types_data
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
 
-from trifinger_mbirl.ftpos_mpc import FTPosMPC
+from trifinger_mbirl.ftposnn_mpc import FTPosMPCNN
 from trifinger_mbirl.learnable_costs import *
 import utils.data_utils as d_utils
 
 # Set run logging directory to be trifinger_mbirl
 mbirl_dir = os.path.dirname(os.path.realpath(__file__))
 LOG_DIR = os.path.join(mbirl_dir, "logs/runs")
+
 
 # The IRL Loss, the learning objective for the learnable cost functions.
 # The IRL loss measures the distance between the demonstrated fingertip position trajectory and predicted trajectory
@@ -31,10 +30,12 @@ class IRLLoss(object):
         loss = ((pred_traj * dist_scale - target_traj * dist_scale) ** 2).sum(dim=0)
         return loss.mean()
 
+
 def plot_loss(loss_dict, outer_i):
     log_dict = {f'{k}': v for k, v in loss_dict.items()}
     log_dict['outer_i'] = outer_i
     wandb.log(log_dict)
+
 
 def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_dir=None):
     """ Test current learned cost by running inner loop action optimization on test demonstrations """
@@ -54,23 +55,23 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
         expert_demo = torch.Tensor(traj["ft_pos_cur"])
         time_horizon, s_dim = expert_demo.shape
 
-        ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
+        ftpos_mpc = FTPosMPCNN(time_horizon=time_horizon-1)
 
-        action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
+        policy_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
 
         for i in range(n_inner_iter):
-            action_optimizer.zero_grad()
+            policy_optimizer.zero_grad()
 
-            pred_traj = ftpos_mpc.roll_out(x_init.clone())
+            pred_traj, _ = ftpos_mpc.roll_out(x_init.clone())
 
             # use the learned loss to update the action sequence
             target = get_target_for_cost_type(traj, cost_type)
             learned_cost_val = learned_cost(pred_traj, target)
             learned_cost_val.backward(retain_graph=True)
-            action_optimizer.step()
+            policy_optimizer.step()
 
         # Actually take the next step after optimizing the action
-        pred_state_traj_new = ftpos_mpc.roll_out(x_init.clone())
+        pred_state_traj_new, _ = ftpos_mpc.roll_out(x_init.clone())
         eval_costs.append(irl_loss_fn(pred_state_traj_new, expert_demo, dist_scale=irl_loss_scale).mean())
 
         if plots_dir is not None:
@@ -123,8 +124,8 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
         time_horizon, s_dim = expert_demo.shape
 
         # Forward rollout
-        ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
-        pred_traj = ftpos_mpc.roll_out(x_init.clone())
+        ftpos_mpc = FTPosMPCNN(time_horizon=time_horizon-1)
+        pred_traj, _ = ftpos_mpc.roll_out(x_init.clone())
 
         # get initial irl loss
         irl_loss = irl_loss_fn(pred_traj, expert_demo, dist_scale=irl_loss_scale).mean()
@@ -138,6 +139,11 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
         print(name)
         print(param)
 
+    # Forward rollout
+    time_horizon, s_dim = expert_demo.shape
+    ftpos_mpc = FTPosMPCNN(time_horizon=time_horizon - 1)
+    action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
+
     # Start of inverse RL loop
     for outer_i in range(n_outer_iter):
         irl_loss_per_demo = []
@@ -146,20 +152,14 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             learnable_cost_opt.zero_grad()
             expert_demo_dict = train_trajs[demo_i]
 
-            x_init   = torch.Tensor(expert_demo_dict["ft_pos_cur"][0, :].squeeze())
-            traj_len = expert_demo_dict["ft_pos_cur"].shape[0]
+            x_init = torch.Tensor(expert_demo_dict["ft_pos_cur"][0, :].squeeze())
             expert_demo = torch.Tensor(expert_demo_dict["ft_pos_cur"])
             expert_actions = expert_demo_dict["delta_ftpos"]
-            time_horizon, s_dim = expert_demo.shape
-
-            # Forward rollout
-            ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
-
-            action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
+            ftpos_mpc.reset()
 
             with higher.innerloop_ctx(ftpos_mpc, action_optimizer) as (fpolicy, diffopt):
                 for i in range(n_inner_iter):
-                    pred_traj = fpolicy.roll_out(x_init.clone())
+                    pred_traj, _ = fpolicy.roll_out(x_init.clone())
 
                     # use the learned loss to update the action sequence
                     target = get_target_for_cost_type(expert_demo_dict, cost_type)
@@ -167,10 +167,10 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
 
                     diffopt.step(learned_cost_val)
                     #print(fpolicy.action_seq.data[1, :])
-                    actions = fpolicy.action_seq.data.detach().numpy()
+                    #actions = fpolicy.action_seq.data.detach().numpy()
 
                     # Compute traj with updated action sequence
-                    pred_traj = fpolicy.roll_out(x_init)
+                    pred_traj, actions = fpolicy.roll_out(x_init)
                     # compute task loss
                     irl_loss = irl_loss_fn(pred_traj, expert_demo, dist_scale=irl_loss_scale).mean()
                     # backprop gradient of learned cost parameters wrt irl loss
@@ -253,8 +253,8 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             "demo":  {"y": expert_demo.detach().numpy(), "x": expert_demo_dict["t"], "marker": "."},
             }
             )
-
     return torch.stack(irl_loss_on_train), torch.stack(irl_loss_on_test), learnable_cost_params, pred_traj
+
 
 def get_target_for_cost_type(demo_dict, cost_type):
     """ Get target from traj_dict for learnable cost function given cost_type """
@@ -272,6 +272,7 @@ def get_target_for_cost_type(demo_dict, cost_type):
         raise ValueError(f'Cost {cost_type} not implemented')
 
     return target
+
 
 def main(conf):
     random.seed(10)
@@ -326,7 +327,7 @@ def main(conf):
 
     if not conf.no_wandb:
         # wandb init
-        wandb.init(project='trifinger_mbirl', entity='clairec', name=exp_str, config=conf)
+        wandb.init(project='trifinger_mbirl', entity='fmeier', name=exp_str, config=conf)
 
     if cost_type == 'Weighted':
         learnable_cost = LearnableWeightedCost(dim=n_keypt_dim)
@@ -408,6 +409,7 @@ def parse_args():
 
     args = parser.parse_args()
     return args
+
 
 if __name__ == '__main__':
     args = parse_args()
