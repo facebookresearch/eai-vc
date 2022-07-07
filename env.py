@@ -29,11 +29,12 @@ class DefaultDictWrapper(gym.Wrapper):
 
 
 class FrameEmitterWrapper(gym.Wrapper):
-	def __init__(self, env, domain, enabled=False):
+	def __init__(self, env, cfg):
 		gym.Wrapper.__init__(self, env)
 		self.env = env
-		self._domain = domain
-		self._enabled = enabled
+		self.cfg = cfg
+		self._domain = cfg.task.split('-')[0]
+		self._enabled = cfg.get('demo', False)
 		self._frames = []
 
 	@property
@@ -46,12 +47,13 @@ class FrameEmitterWrapper(gym.Wrapper):
 	
 	def _save_frame(self):
 		if self._enabled:
-			self._frames.append(self.env.render(
-				mode='rgb_array',
-				height=84,
-				width=84,
-				camera_id=dict(quadruped=2).get(self._domain, 0)
-			))
+			if self._domain == 'rlb':
+				raise NotImplementedError()
+			elif self._domain == 'mw':
+				frame = self.env.render(mode='rgb_array', height=84, width=84)
+			else:
+				frame = self.env.render(mode='rgb_array', height=84, width=84, camera_id=2 if self._domain == 'quadruped' else 0)
+			self._frames.append(frame)
 	
 	def reset(self):
 		self._frames = []
@@ -83,7 +85,7 @@ def make_env(cfg):
 		env = make_dmcontrol_env(cfg)
 
 	env = DefaultDictWrapper(env)
-	env = FrameEmitterWrapper(env, domain, enabled=cfg.get('demo', False))
+	env = FrameEmitterWrapper(env, cfg)
 	cfg.domain = domain
 	cfg.obs_shape = tuple(int(x) for x in env.observation_space.shape)
 	cfg.action_shape = tuple(int(x) for x in env.action_space.shape)

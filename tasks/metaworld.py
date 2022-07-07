@@ -1,3 +1,4 @@
+import numpy as np
 import gym
 from gym.wrappers import TimeLimit
 from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_HIDDEN
@@ -9,7 +10,7 @@ class MetaWorldWrapper(gym.Wrapper):
 		self.env = env
 		self.cfg = cfg
 		if cfg.modality == 'pixels':
-			raise NotImplementedError()
+			self.observation_space = gym.spaces.Box(low=0, high=255, shape=(3, cfg.img_size, cfg.img_size), dtype=np.uint8)
 		elif cfg.modality == 'features':
 			raise NotImplementedError()
 		else: # state
@@ -20,7 +21,7 @@ class MetaWorldWrapper(gym.Wrapper):
 		self.success = False
 	
 	def _get_pixel_obs(self):
-		return self.render(width=self.cfg.img_size, height=self.cfg.img_size)
+		return self.render(width=self.cfg.img_size, height=self.cfg.img_size).transpose(2, 0, 1)
 	
 	def reset(self):
 		self.success = False

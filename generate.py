@@ -21,7 +21,10 @@ torch.backends.cudnn.benchmark = True
 
 
 def get_state(env):
-	return env.env.env.env._env._env._env._env.physics.get_state()
+	try:
+		return env.env.env.env._env._env._env._env.physics.get_state()
+	except:
+		return np.zeros(6, dtype=np.float32)
 
 
 def evaluate(env, agent, num_episodes, step):
@@ -42,7 +45,6 @@ def evaluate(env, agent, num_episodes, step):
 			phys_states.append(get_state(env))
 			t += 1
 		episode_rewards.append(ep_reward)
-		assert len(env.frames) == 501, f'{len(env.frames)} != 501'
 		frames = np.stack(env.frames, axis=0)
 		episodes.append({
 			'frames': frames,
@@ -91,7 +93,7 @@ def generate(cfg: dict):
 
 		# Evaluate
 		print(f'Evaluating model at step {identifier}')
-		reward, episodes = evaluate(env, agent, cfg.eval_episodes, int(1e6))
+		reward, episodes = evaluate(env, agent, cfg.eval_episodes, identifier)
 		print(f'Name: {name}, Reward:', reward)
 
 		# Save transitions to disk

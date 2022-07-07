@@ -165,8 +165,6 @@ def encode(cfg: dict):
 	features_to_fn.update({'clip': encode_clip})
 	fn = features_to_fn[cfg.features]
 
-	breakpoint()
-
 	# Encode dataset
 	for episode in tqdm(dataset.episodes):
 		
