@@ -12,7 +12,7 @@ class FTPosMPCNN(torch.nn.Module):
         self.n_keypt_dim = self.f_num * 3
         self.a_dim = self.f_num * 3
         num_neurons = 100
-        self.activation = torch.nn.Tanh
+        self.activation = torch.nn.Tanh #ReLU
         self.policy = torch.nn.Sequential(torch.nn.Linear(self.n_keypt_dim, num_neurons),
                                           self.activation(),
                                           torch.nn.Linear(num_neurons, num_neurons),
@@ -48,7 +48,7 @@ class FTPosMPCNN(torch.nn.Module):
         actions = []
 
         for t in range(self.time_horizon):
-            a = self.policy(x_next.detach()) #self.action_seq[t]
+            a = self.policy(x_next.detach())#*0.01 #self.action_seq[t]
             a = torch.where(a > 0.01, torch.tensor([0.01]), a)
             a = torch.where(a < -0.01, -torch.tensor([0.01]), a)
             actions.append(a.detach())
