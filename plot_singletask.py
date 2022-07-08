@@ -22,7 +22,6 @@ DEFAULT_PLOT_RC = {
 	'ytick.color': '#333',
 }
 sns.set(style='whitegrid', rc=DEFAULT_PLOT_RC)
-# sns.set_context('paper')
 ENTITY = 'nihansen'
 PROJECT = 'tdmpc2'
 
@@ -30,7 +29,7 @@ PROJECT = 'tdmpc2'
 def main():
 	tasks = {
 		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-run', 'quadruped-run'],
-		'metaworld': ['mw-drawer-close', 'mw-hammer', 'mw-box-close', 'mw-pick-place', 'mw-shelf-place']
+		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
 	}
 	exp_names = ['v1', 'offline-v1', 'mocoego-v1', 'mocoego-offline-v1', 'random-v1', 'random-offline-v1']
 	experiment2label = {
@@ -71,7 +70,7 @@ def main():
 			continue
 		key = 'offline/reward' if 'offline' in exp_name else 'eval/episode_reward'
 		hist = run.history(keys=[key], x_axis='_step')
-		if len(hist) < 1:
+		if len(hist) < 4:
 			continue
 		experiment = cfg['modality'] + '-' + exp_name
 		label = experiment2label[experiment]
@@ -99,9 +98,6 @@ def main():
 	df_metaworld['reward'] = (df_metaworld['reward'] / 45).round()
 
 	f, axs = plt.subplots(1, 2, figsize=(16,6))
-
-	# color palette
-	colors = sns.color_palette('colorblind', 4)
 
 	# dmcontrol
 	ax = axs[0]
