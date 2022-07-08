@@ -1,1 +1,8 @@
-python train_offline.py task=walker-walk modality=features features=mocoego15 dynamics_obj=reconstruction exp_name=test fraction=0.01 # hydra/launcher=slurm
+python train_offline.py \
+    task=* \
+    modality=state \
+    enc_dim=256 \
+    mlp_dim=512 \
+    exp_name=test \
+    seed=1 \
+    hydra/launcher=slurm

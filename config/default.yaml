@@ -6,6 +6,7 @@ defaults:
 # offline training
 fraction: 1.0
 train_iter: 100000
+dump_filelist: false
 
 # encoder
 encoder:
@@ -96,7 +97,7 @@ hydra:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 900
+        timeout_min: 1800
         mem_gb: 48
         name: ${hydra.job.name}
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

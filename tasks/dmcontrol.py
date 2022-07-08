@@ -285,7 +285,10 @@ class TimeStepToGymWrapper(object):
 
 class MultitaskEnv(object):
 	def __init__(self, cfg):
-		domain, task = cfg.task.replace('-', '_').split('_', 1)
+		try:
+			domain, task = cfg.task.replace('-', '_').split('_', 1)
+		except:
+			domain, task = '*', '*'
 		domain = dict(cup='ball_in_cup').get(domain, domain)
 		self.multitask = cfg.multitask
 		if not cfg.multitask:
@@ -294,11 +297,13 @@ class MultitaskEnv(object):
 			tasks = [(domain, _task) for _task in suite.TASKS_BY_DOMAIN[domain]]
 			assert cfg.num_tasks <= len(tasks), f'num_tasks={cfg.num_tasks} but only {len(tasks)} tasks available'
 			tasks = tasks[:cfg.num_tasks]
+		else: # hardcoded for now
+			tasks = [('cup', 'catch'), ('finger', 'spin'), ('cheetah', 'run'), ('walker', 'run'), ('quadruped', 'run')]
 		self._tasks = ['-'.join(tup).replace('_', '-') for tup in tasks]
 		task_kwargs = {'random': cfg.seed}
 		if cfg.get('infinite_horizon', False):
 			task_kwargs.update({'time_limit': float('inf')})
-		self._envs = [suite.load(domain, task, task_kwargs=task_kwargs, visualize_reward=False) for domain, task in tasks]
+		self._envs = [suite.load(dict(cup='ball_in_cup').get(domain, domain), task, task_kwargs=task_kwargs, visualize_reward=False) for domain, task in tasks]
 		self._task_id = 0
 		self._env = self._envs[self._task_id]
 	
@@ -350,7 +355,10 @@ class MultitaskEnv(object):
 
 
 def make_dmcontrol_env(cfg):
-	domain, task = cfg.task.replace('-', '_').split('_', 1)
+	try:
+		domain, task = cfg.task.replace('-', '_').split('_', 1)
+	except:
+		domain, task = '*', '*'
 	domain = dict(cup='ball_in_cup').get(domain, domain)
 
 	if cfg.get('multitask', False):

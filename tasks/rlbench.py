@@ -5,7 +5,8 @@ import gym
 from gym.wrappers import TimeLimit
 import string
 import os
-os.environ['DISPLAY'] = ':0.0'
+# os.environ['DISPLAY'] = ':0.0'
+os.environ['DISPLAY'] = ':99'
 os.environ['XDG_RUNTIME_DIR'] = '/private/home/nihansen/code/tdmpc2/xvfb/xvfb-run-' + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
 from logger import make_dir
 make_dir(os.environ['XDG_RUNTIME_DIR'])
@@ -25,6 +26,7 @@ class RLBench(object):
 		assert self.domain == 'rlb', 'domain must be rlb (RLBench)'
 		if self.cfg.modality == 'state':
 			self.cameras = ['front_rgb']
+			# self.cameras = []
 		else:
 			self.cameras = [
 				# 'left_shoulder_rgb',
@@ -47,13 +49,16 @@ class RLBench(object):
 			camera = getattr(obs_cfg, c)
 			camera.set_all(False)
 		obs_cfg.task_low_dim_state = True
-		subprocess.Popen(['Xvfb', os.environ['DISPLAY']])
+		subprocess.Popen(['Xvfb', os.environ['DISPLAY'], '-screen', '0', '1024x768x24', '+extension', 'GLX', '+render', '-noreset'])
+		# Xvfb :99 -screen 0 1024x768x24 +extension GLX +render -noreset &
+		print('init self.sim')
 		self.sim = Environment(
 			action_mode=MoveArmThenGripper(
 				arm_action_mode=JointPosition(absolute_mode=False), gripper_action_mode=Discrete()),
 			obs_config=obs_cfg,
 			shaped_rewards=self.task=='reach_target',
 			headless=True)
+		print('self.sim.launch()')
 		self.sim.launch()
 		tasks = {
 			'reach_target': ReachTarget,
@@ -62,14 +67,18 @@ class RLBench(object):
 			'close_microwave': CloseMicrowave,
 			'straighten_rope': StraightenRope
 		}
+		print('self.env = self.sim.get_task(tasks[self.task])')
 		self.env = self.sim.get_task(tasks[self.task])
 		if cfg.modality == 'pixels':
 			self.observation_space = gym.spaces.Box(-np.inf, np.inf, shape=np.array([len(self.cameras)*3, img_size, img_size]), dtype='uint8')
 		elif cfg.modality == 'features':
 			raise NotImplementedError()
 		else:
+			print('self.env.reset()')
 			self.env.reset()
+			print('self.env.get_low_dim_state()')
 			state = self.env._task.get_low_dim_state()
+			print('state.shape', state.shape)
 			self.observation_space = gym.spaces.Box(-np.inf, np.inf, shape=np.array([state.shape[0]]), dtype='float32')
 		self.action_space = gym.spaces.Box(-1., 1., shape=(int(self.sim.action_shape[0]),), dtype='float32')
 		self._current_frame = None
@@ -80,14 +89,14 @@ class RLBench(object):
 		return self.env.unwrapped
 	
 	def _get_obs(self, obs):
-		frames = torch.cat([torch.tensor(obs.__dict__[o]) for o in self.cameras], dim=-1).permute(2, 0, 1)
-		self._current_frame = frames[-3:].permute(1,2,0)
-		if self.cfg.modality == 'pixels':
-			obs = frames
-		elif self.cfg.modality == 'features':
-			raise NotImplementedError()
-		else:
-			obs = obs.task_low_dim_state
+		# frames = torch.cat([torch.tensor(obs.__dict__[o]) for o in self.cameras], dim=-1).permute(2, 0, 1)
+		# self._current_frame = frames[-3:].permute(1,2,0)
+		# if self.cfg.modality == 'pixels':
+			# obs = frames
+		# elif self.cfg.modality == 'features':
+			# raise NotImplementedError()
+		# else:
+		obs = obs.task_low_dim_state
 		self._prev_obs = obs
 		return obs
 	
@@ -110,7 +119,8 @@ class RLBench(object):
 		return self._get_obs(obs), reward, False, {'success': self.env._task.success()[0]}
 
 	def render(self, mode='rgb_array', width=None, height=None, camera_id=None):
-		return self._current_frame
+		# return self._current_frame
+		return np.zeros((84, 84, 3), dtype='uint8')
 
 	def observation_spec(self):
 		return self._obs_spec

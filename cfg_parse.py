@@ -38,9 +38,12 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 		cfg.exp_name = cfg.features + '-' + cfg.exp_name
 
 	# Multi-task
-	cfg.multitask = bool(re.search(r'(mt\d+)', cfg.task))
+	cfg.multitask = bool(re.search(r'(mt\d+)', cfg.task)) or cfg.task == '*'
 	if cfg.multitask: # equal number (and >=2) of episodes per task
-		cfg.num_tasks = int(re.search(r'(mt\d+)', cfg.task).group(1)[2:])
+		try:
+			cfg.num_tasks = int(re.search(r'(mt\d+)', cfg.task).group(1)[2:])
+		except:
+			cfg.num_tasks = 5
 		cfg.eval_episodes = max(cfg.eval_episodes, cfg.num_tasks * 2)
 		cfg.eval_episodes = cfg.eval_episodes - (cfg.eval_episodes % cfg.num_tasks)
 	else:
