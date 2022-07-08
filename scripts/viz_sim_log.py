@@ -27,8 +27,8 @@ def main(args):
     o_cur_ori = traj_dict["o_cur_ori"] # object ori observed
     o_des_ori = traj_dict["o_des_ori"] # object ori desired
 
-    downsampled_traj_dict = d_utils.downsample_traj_dict(traj_dict)
-    
+    downsampled_traj_dict = d_utils.downsample_traj_dict(traj_dict, new_time_step=0.2)
+
     
     if args.save:
         demo_name = os.path.splitext(os.path.split(file_path)[1])[0]
@@ -44,9 +44,9 @@ def main(args):
             (os.path.join(out_dir, "ft_pos.png") if out_dir else None),
             ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
             {
-            "desired":  {"y": traj_dict["ft_pos_des"], "x": traj_dict["t"]},
+            #"desired":  {"y": traj_dict["ft_pos_des"], "x": traj_dict["t"]},
             "actual":  {"y": traj_dict["ft_pos_cur"], "x": traj_dict["t"]},
-            #"down": {"y": downsampled_traj_dict["ft_pos_cur"], "x": downsampled_traj_dict["t"], "marker": "x"},
+            "down": {"y": downsampled_traj_dict["ft_pos_cur"], "x": downsampled_traj_dict["t"], "marker": "x"},
             }
             )
 
@@ -61,15 +61,15 @@ def main(args):
             }
             )
 
-    ## Plot object positions
-    d_utils.plot_traj(
-            "object ori", 
-            (os.path.join(out_dir, "obj_ori.png") if out_dir else None),
-            ["x", "y", "z", "w"],
-            {
-            "actual":  {"y": o_cur_ori, "x": traj_dict["t"]},
-            }
-            )
+    ### Plot object positions
+    #d_utils.plot_traj(
+    #        "object ori", 
+    #        (os.path.join(out_dir, "obj_ori.png") if out_dir else None),
+    #        ["x", "y", "z", "w"],
+    #        {
+    #        "actual":  {"y": o_cur_ori, "x": traj_dict["t"]},
+    #        }
+    #        )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
