@@ -298,7 +298,8 @@ class MultitaskEnv(object):
 			assert cfg.num_tasks <= len(tasks), f'num_tasks={cfg.num_tasks} but only {len(tasks)} tasks available'
 			tasks = tasks[:cfg.num_tasks]
 		else: # hardcoded for now
-			tasks = [('cup', 'catch'), ('finger', 'spin'), ('cheetah', 'run'), ('walker', 'run'), ('quadruped', 'run')]
+			tasks = [('cup', 'catch'), ('finger', 'spin'), ('cheetah', 'run'), ('walker', 'run'), ('quadruped', 'run')] # dmcontrol
+			# tasks = [('mw', 'drawer-close'), ('mw', 'drawer-open'), ('mw', 'hammer'), ('mw', 'box-close'), ('mw', 'push'), ('mw', 'pick-place'), ('mw', 'shelf-place')] # metaworld
 		self._tasks = ['-'.join(tup).replace('_', '-') for tup in tasks]
 		task_kwargs = {'random': cfg.seed}
 		if cfg.get('infinite_horizon', False):

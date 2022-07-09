@@ -5,6 +5,6 @@ python train_offline.py \
     mlp_dim=512 \
     action_repeat=2 \
     episode_length=250 \
-    exp_name=offline-v1 \
+    exp_name=offline-v1-100p \
     seed=1,2,3 \
     hydra/launcher=slurm

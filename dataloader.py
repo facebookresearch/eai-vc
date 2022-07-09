@@ -8,7 +8,6 @@ from pathlib import Path
 from collections import deque, defaultdict
 from PIL import Image
 from torch.utils.data import Dataset
-import torchvision
 from algorithm.helper import Episode
 from tqdm import tqdm
 
@@ -62,7 +61,7 @@ class OfflineDataset(Dataset):
 		raise NotImplementedError()
 
 	def _partition_episodes(self, datas, cumrews, train_episodes=1500):
-		if self._cfg.multitask: #or self._cfg.task.startswith('mw-'):
+		if self._cfg.multitask or self._cfg.task.startswith('mw-'):
 			return datas, cumrews, range(len(datas))
 		assert len(datas) == int(1650*self._cfg.fraction), f'Expected {int(1650*self._cfg.fraction)} episodes, got {len(datas)}'
 		train_idxs = torch.topk(cumrews, k=train_episodes, dim=0, largest=False).indices
