@@ -61,15 +61,16 @@ def main(args):
             }
             )
 
-    ### Plot object positions
-    #d_utils.plot_traj(
-    #        "object ori", 
-    #        (os.path.join(out_dir, "obj_ori.png") if out_dir else None),
-    #        ["x", "y", "z", "w"],
-    #        {
-    #        "actual":  {"y": o_cur_ori, "x": traj_dict["t"]},
-    #        }
-    #        )
+    ### Plot object vertex 0 (for debugging)
+    if "vertices" in traj_dict:
+        d_utils.plot_traj(
+                "object vertex 0", 
+                (os.path.join(out_dir, "obj_vert_0.png") if out_dir else None),
+                ["x", "y", "z"],
+                {
+                "actual":  {"y": traj_dict["vertices"][:, 0:3], "x": traj_dict["t"]},
+                }
+                )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

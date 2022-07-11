@@ -27,6 +27,7 @@ def main(args):
         enable_cameras=True,
         finger_type="trifingerpro",
         time_step=SIM_TIME_STEP,
+        camera_delay_steps=0,
     )
       
     if args.log_paths:

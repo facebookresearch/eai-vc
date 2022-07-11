@@ -254,21 +254,27 @@ def get_closest_ground_face(obj_pose):
 def get_vertices_wf(obj_pose):
     """ Get vertices of cube in world frame, given obj_pose in world frame """
     
-    v_of = get_vertices_of()
+    v_of_dict = get_vertices_of()
+    v_wf_dict = {}
 
     # TODO fill this in
-    #for k, p in v_of:
+    for k, v_of in v_of_dict.items():
+        v_wf = get_wf_from_of(v_of, obj_pose)
+        v_wf_dict[k] = v_wf
+
+    return v_wf_dict
     
 
 def get_vertices_of():
+    """ Get vertices of cube in object frame """
     
     v = {
         0: np.array([-1, -1, -1]) * CUBE_HALF_SIZE,
         1: np.array([ 1, -1, -1]) * CUBE_HALF_SIZE,
         2: np.array([-1, -1,  1]) * CUBE_HALF_SIZE,
         3: np.array([ 1, -1,  1]) * CUBE_HALF_SIZE,
-        4: np.array([-1, -1,  1]) * CUBE_HALF_SIZE,
-        5: np.array([ 1, -1,  1]) * CUBE_HALF_SIZE,
+        4: np.array([-1,  1,  -1]) * CUBE_HALF_SIZE,
+        5: np.array([ 1,  1,  -1]) * CUBE_HALF_SIZE,
         6: np.array([-1,  1,  1]) * CUBE_HALF_SIZE,
         7: np.array([ 1,  1,  1]) * CUBE_HALF_SIZE,
         }
