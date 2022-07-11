@@ -42,6 +42,19 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=False):
     if "ft_pos_targets_per_mode" in data[-1]["policy"]:
         traj_dict["ft_pos_targets_per_mode"] = scale * data[-1]["policy"]["ft_pos_targets_per_mode"]
 
+    # Object vertices
+    if "vertices" in data[0]["object_observation"]:
+        vertices = []
+        # Flatten vertices dict at each timestep and add to vertices list
+        for i in range(len(data)):
+            v_wf_dict = data[i]["object_observation"]["vertices"]
+            v_wf_flat = np.zeros(len(v_wf_dict) * 3)
+            for k, v_wf in v_wf_dict.items():
+                v_wf_flat[k*3:k*3+3] = v_wf
+            vertices.append(v_wf_flat)
+
+        traj_dict["vertices"] = scale * np.array(vertices)
+
     return traj_dict
 
 def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):

@@ -4,6 +4,8 @@ import gym
 import numpy as np
 import pybullet
 from scipy.spatial.transform import Rotation
+import os
+import sys
 
 import trifinger_simulation
 import trifinger_simulation.visual_objects
@@ -15,6 +17,11 @@ try:
 except ImportError:
     robot_fingers = None
 
+base_path = os.path.dirname(__file__)
+sys.path.insert(0, base_path)
+sys.path.insert(0, os.path.join(base_path, '..'))
+
+import control.cube_utils as c_utils
 
 class ActionType(enum.Enum):
     """Different action types that can be used to control the robot."""
@@ -234,6 +241,10 @@ class BaseCubeEnv(gym.Env):
         error_rot = goal_rot.inv() * actual_rot
         orientation_error = error_rot.magnitude()
 
+        # Get cube vertices
+        obj_pose = {"position": object_observation.position, "orientation": object_observation.orientation}
+        v_wf_dict = c_utils.get_vertices_wf(obj_pose)
+
         observation = {
             "t": t,
             "robot_observation": {
@@ -244,6 +255,7 @@ class BaseCubeEnv(gym.Env):
             "object_observation": {
                 "position": object_observation.position,
                 "orientation": object_observation.orientation,
+                "vertices": v_wf_dict,
             },
             "action": action,
             "desired_goal": self.goal,
@@ -299,7 +311,8 @@ class SimCubeEnv(BaseCubeEnv):
         no_collisions: bool = False,
         enable_cameras: bool = False,
         finger_type: str = "trifingerpro",
-        time_step=0.001,
+        camera_delay_steps: int = 90,
+        time_step: float = 0.001,
     ):
         """Initialize.
 
@@ -312,6 +325,16 @@ class SimCubeEnv(BaseCubeEnv):
                 one call of step().
             visualization (bool): If true, the pyBullet GUI is run for
                 visualization.
+            no_collisions (bool): If true, turn of collisions between platform and object.
+            enable_cameras (bool): If true, enable cameras that capture RGB image 
+                observations.
+            finger_type (str): Finger type ("trifingerpro", "trifingeredu")
+            camera_delay_steps (int):  Number of time steps by which camera
+                observations are held back after they are generated.  This is
+                used to simulate the delay of the camera observation that is
+                happening on the real system due to processing (mostly the
+                object detection).
+            time_step (float): Simulation timestep
         """
         super().__init__(
             goal_pose=goal_pose,
@@ -336,8 +359,15 @@ class SimCubeEnv(BaseCubeEnv):
             finger_type=self.finger_type,
             time_step_s=self.time_step,
             initial_robot_position=initial_robot_position,
+            camera_delay_steps=camera_delay_steps,
         )
 
+        # visualize the cube vertices
+        if self.visualization and not self.enable_cameras:
+            self.draw_verts = True
+        else:
+            self.draw_verts = False
+        self.vert_markers = None
 
     def step(self, action):
         """Run one timestep of the environment's dynamics.
@@ -410,6 +440,13 @@ class SimCubeEnv(BaseCubeEnv):
                 self.info,
             )
 
+            # Draw cube vertices from observation
+            if self.draw_verts:
+                v_wf_dict = observation["object_observation"]["vertices"]
+                positions = [v_wf for k, v_wf in v_wf_dict.items()]
+                self.vert_markers.set_state(positions)
+
+
         is_done = self.step_count >= task.EPISODE_LENGTH
 
         return observation, reward, is_done, self.info
@@ -449,6 +486,18 @@ class SimCubeEnv(BaseCubeEnv):
                 orientation=self.goal["orientation"],
                 pybullet_client_id=self.platform.simfinger._pybullet_client_id,
             )
+
+
+        if self.draw_verts:
+            v_wf_dict = c_utils.get_vertices_wf(initial_object_pose.to_dict())
+            if self.vert_markers is None:
+                self.vert_markers = trifinger_simulation.visual_objects.Marker(
+                    8, goal_size = 0.005,
+                    initial_position = [v_wf for k, v_wf in v_wf_dict.items()],
+                )
+            else:
+                positions = [v_wf for k, v_wf in v_wf_dict.items()]
+                self.vert_markers.set_state(positions)
 
         self.info = {"time_index": -1, "goal": self.goal, "difficulty": self.difficulty}
 
