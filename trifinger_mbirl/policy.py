@@ -14,6 +14,11 @@ class DeterministicPolicy(torch.nn.Module):
                                           torch.nn.Linear(num_neurons, out_dim),
                                           torch.nn.Tanh())
 
+        self.init_state = self.state_dict()
+
     def forward(self, state):
         action = self.policy(state)
         return action
+
+    def reset(self):
+        self.policy.load_state_dict(self.init_state)

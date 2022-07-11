@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
 
-def get_traj_dict_from_obs_list(data, scale=1):
+def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=False):
 
     position_error = np.array([data[i]["achieved_goal"]["position_error"] for i in range(len(data))])
     o_cur = np.array([data[i]["object_observation"]["position"] for i in range(len(data))])
@@ -30,6 +30,14 @@ def get_traj_dict_from_obs_list(data, scale=1):
                 "ft_vel_des" : scale * ft_vel_des,
                 "delta_ftpos": scale * delta_ftpos,
                 }
+
+    if include_image_obs:
+        image60 = np.array([data[i]['camera_observation']['camera60']['image'] for i in range(len(data))])
+        image180 = np.array([data[i]['camera_observation']['camera180']['image'] for i in range(len(data))])
+        image300 = np.array([data[i]['camera_observation']['camera300']['image'] for i in range(len(data))])
+        traj_dict["image_60"] = image60
+        traj_dict["image_180"] = image180
+        traj_dict["image_300"] = image300
 
     if "ft_pos_targets_per_mode" in data[-1]["policy"]:
         traj_dict["ft_pos_targets_per_mode"] = scale * data[-1]["policy"]["ft_pos_targets_per_mode"]

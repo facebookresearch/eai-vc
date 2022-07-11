@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+from trifinger_mbirl.policy import DeterministicPolicy
+
+
 # Compute next state given current state and action (ft position deltas)
 class FTPosMPCNN(torch.nn.Module):
 
@@ -13,14 +16,7 @@ class FTPosMPCNN(torch.nn.Module):
         self.a_dim = self.f_num * 3
         num_neurons = 100
         self.activation = torch.nn.Tanh #ReLU
-        self.policy = torch.nn.Sequential(torch.nn.Linear(self.n_keypt_dim, num_neurons),
-                                          self.activation(),
-                                          torch.nn.Linear(num_neurons, num_neurons),
-                                          self.activation(),
-                                          torch.nn.Linear(num_neurons, self.a_dim),
-                                          torch.nn.Tanh())
-
-        self.init_state = self.state_dict()
+        self.policy = DeterministicPolicy(in_dim=12, out_dim=9)
 
     def forward(self, x, u=0):
         """ 
@@ -59,7 +55,7 @@ class FTPosMPCNN(torch.nn.Module):
         return torch.stack(x_traj), torch.stack(actions)
 
     def reset(self):
-        self.load_state_dict(self.init_state)
+        self.policy.reset()
 
     # def reset_actions(self):
     #     self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
