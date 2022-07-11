@@ -13,7 +13,7 @@ DEFAULT_PLOT_RC = {
 	'axes.titlesize': 20,
 	'axes.facecolor': '#F6F6F6',
 	'axes.edgecolor': '#333',
-	'legend.fontsize': 16,
+	'legend.fontsize': 14,
 	'xtick.labelsize': 14,
 	'xtick.bottom': True,
 	'xtick.color': '#333',
@@ -31,7 +31,7 @@ def main():
 		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-run', 'quadruped-run'],
 		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
 	}
-	exp_names = ['v1', 'mocodmcontrol-v1', 'mocometaworld-v1', 'mocoego-v1', 'random-v1']
+	exp_names = ['v1', 'offline-v1', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v1', 'mocometaworld-v1', 'mocometaworld-offline-v1', 'mocoego-v1', 'mocoego-offline-v1', 'random-v1', 'random-offline-v1']
 	experiment2label = {
 		'state-v1': 'State',
 		'state-offline-v1': '✻ State',
@@ -72,7 +72,7 @@ def main():
 		   exp_name not in exp_names or \
 		   seed not in seeds:
 			continue
-		key = 'eval/episode_reward'
+		key = 'offline/total_time' if 'offline' in exp_name else 'eval/total_time'
 		hist = run.history(keys=[key], x_axis='_step')
 		if len(hist) < 4:
 			continue
@@ -81,103 +81,66 @@ def main():
 		idx = list(experiment2label.values()).index(label)
 		step = np.array(hist['_step'])
 		step = step[step <= 500_000]
-		reward = np.array(hist[key])
-		reward = reward[:min(len(step), len(reward))]
-		print(f'Appending experiment {label} with {len(step)} steps')
-		for i in range(len(step)):
-			entries.append(
-				(idx, cfg['task'], label, seed, step[i], reward[i])
-			)
+		walltime = np.array(hist[key])
+		walltime = 100_000 * walltime[:min(len(step), len(walltime))][-1] / step[-1]
+		print(f'Appending experiment {label} with walltime {round(walltime)}s per 100k steps')
+		entries.append(
+			(idx, cfg['task'], label, seed, walltime)
+		)
 	
-	df = pd.DataFrame(entries, columns=['idx', 'task', 'experiment', 'seed', 'step', 'reward'])
+	df = pd.DataFrame(entries, columns=['idx', 'task', 'experiment', 'seed', 'walltime'])
 	df_dmcontrol = df[df['task'].isin(tasks['dmcontrol'])]
 	df_metaworld = df[df['task'].isin(tasks['metaworld'])]
+
+	# average across tasks
+	df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment', 'seed']).mean().reset_index()
+	df_metaworld = df_metaworld.groupby(['idx', 'experiment', 'seed']).mean().reset_index()
 
 	# print unique experiments
 	print(df_dmcontrol['experiment'].unique())
 	print(df_metaworld['experiment'].unique())
-
-	# average across tasks
-	df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment', 'seed', 'step']).mean().reset_index()
-	df_metaworld = df_metaworld.groupby(['idx', 'experiment', 'seed', 'step']).mean().reset_index()
-
+	
 	# average across seeds
-	# df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment', 'step']).mean().reset_index()
-	# df_metaworld = df_metaworld.groupby(['idx', 'experiment', 'step']).mean().reset_index()
+	df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment']).mean().reset_index()
+	df_metaworld = df_metaworld.groupby(['idx', 'experiment']).mean().reset_index()
 
-	# rescale reward
-	df_dmcontrol['reward'] = df_dmcontrol['reward'] / 10
-	df_metaworld['reward'] = df_metaworld['reward'] / 45
+	# rescale walltime
+	df_dmcontrol['walltime'] = (df_dmcontrol['walltime'] / 60).round()
+	df_metaworld['walltime'] = (df_metaworld['walltime'] / 60).round()
 
-	# rescale step
-	df_dmcontrol['step'] = df_dmcontrol['step'] / 1e6
-	df_metaworld['step'] = df_metaworld['step'] / 1e6
-
-	f, axs = plt.subplots(1, 2, figsize=(16,6))
-
-	experiment2kwargs = {
-		'State': {'color': 'tab:blue'},
-		'Pixels': {'color': 'tab:green'},
-		'In-domain': {'color': 'tab:purple'},
-		'Ego4D': {'color': 'tab:pink'},
-		'Random': {'color': 'tab:olive'},
-	}
+	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
 	# dmcontrol
 	ax = axs[0]
-	for experiment in experiment2kwargs.keys():
-		df_dmcontrol_exp = df_dmcontrol[df_dmcontrol['experiment'] == experiment]
-		sns.lineplot(
-				data=df_dmcontrol_exp,
-				x='step',
-				y=f'reward',
-				ci=95,
-				label=experiment,
-				color=experiment2kwargs[experiment]['color'],
-				legend=False,
-				linewidth=3,
-				linestyle='-',
-				alpha=0.8,
-				err_kws={'alpha': .095},
-				ax=ax
-			)
+	sns.barplot(data=df_dmcontrol, x='experiment', y='walltime', ax=ax, ci=None)
 	ax.set_title('DMControl', fontweight='bold')
-	ax.set_xlim(0, 0.5)
-	ax.set_ylim(0, 100)
-	ax.set_xlabel('Environment steps (M)')
-	ax.set_ylabel('Normalized return')
-
+	ax.set_ylim(0, 550)
+	ax.set_xlabel('')
+	ax.set_ylabel('Wall-time (min / 100k steps)')
+	ax.bar_label(ax.containers[0], fontsize=18)
+	ax.tick_params(labelrotation=35)
+	for i in range(1, len(df_dmcontrol), 2):
+		ax.containers[0].patches[i]._hatch = '//'
+		ax.containers[0].patches[i].set_facecolor(ax.containers[0].patches[i-1]._facecolor)
+	
 	# metaworld
 	ax = axs[1]
-	for experiment in experiment2kwargs.keys():
-		df_metaworld_exp = df_metaworld[df_metaworld['experiment'] == experiment]
-		sns.lineplot(
-				data=df_metaworld_exp,
-				x='step',
-				y=f'reward',
-				ci=95,
-				label=experiment,
-				color=experiment2kwargs[experiment]['color'],
-				legend=False,
-				linewidth=4,
-				linestyle='-',
-				alpha=0.8,
-				err_kws={'alpha': .08},
-				ax=ax
-			)
+	sns.barplot(data=df_metaworld, x='experiment', y='walltime', ax=ax, ci=None)
 	ax.set_title('Meta-World', fontweight='bold')
-	ax.set_xlim(0, 0.5)
-	ax.set_ylim(0, 100)
-	ax.set_xlabel('Environment steps (M)')
+	ax.set_ylim(0, 550)
+	ax.set_xlabel('')
 	ax.set_ylabel('')
+	ax.bar_label(ax.containers[0], fontsize=18)
+	ax.tick_params(labelrotation=35)
+	for i in range(1, len(df_metaworld), 2):
+		ax.containers[0].patches[i]._hatch = '//'
+		ax.containers[0].patches[i].set_facecolor(ax.containers[0].patches[i-1]._facecolor)
 
 	h, l = axs[0].get_legend_handles_labels()
-	f.legend(h, l, loc='lower center', ncol=5, frameon=False)
+	f.legend(h, l, loc='lower center', ncol=4, frameon=False)
 	plt.tight_layout()
-	f.subplots_adjust(bottom=0.2, wspace=0.15)
-	plt.savefig('plot_online_rl.png', bbox_inches='tight')
-
-
+	f.subplots_adjust(bottom=0.16, wspace=0.15)
+	plt.savefig('plot_walltime.png', bbox_inches='tight')
 
 
 if __name__ == '__main__':

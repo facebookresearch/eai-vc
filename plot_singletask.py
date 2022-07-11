@@ -31,12 +31,16 @@ def main():
 		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-run', 'quadruped-run'],
 		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
 	}
-	exp_names = ['v1', 'offline-v1', 'mocoego-v1', 'mocoego-offline-v1', 'random-v1', 'random-offline-v1']
+	exp_names = ['v1', 'offline-v1', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v1', 'mocometaworld-v1', 'mocometaworld-offline-v1', 'mocoego-v1', 'mocoego-offline-v1', 'random-v1', 'random-offline-v1']
 	experiment2label = {
 		'state-v1': 'State',
 		'state-offline-v1': '✻ State',
 		'pixels-v1': 'Pixels',
 		'pixels-offline-v1': '✻ Pixels',
+		'features-mocodmcontrol-v1': 'In-domain',
+		'features-mocodmcontrol-offline-v1': '✻ In-domain',
+		'features-mocometaworld-v1': 'In-domain',
+		'features-mocometaworld-offline-v1': '✻ In-domain',
 		'features-mocoego-v1': 'Ego4D',
 		'features-mocoego-offline-v1': '✻ Ego4D',
 		'features-random-v1': 'Random',
@@ -74,8 +78,11 @@ def main():
 			continue
 		experiment = cfg['modality'] + '-' + exp_name
 		label = experiment2label[experiment]
-		idx = list(experiment2label.values()).index(label) 
-		reward = np.array(hist[key])[-1]
+		idx = list(experiment2label.values()).index(label)
+		step = np.array(hist['_step'])
+		step = step[step <= 500_000]
+		reward = np.array(hist[key])
+		reward = reward[:min(len(step), len(reward))][-1]
 		print(f'Appending experiment {label} with reward {reward}')
 		entries.append(
 			(idx, cfg['task'], label, seed, reward)
@@ -89,6 +96,10 @@ def main():
 	df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment', 'seed']).mean().reset_index()
 	df_metaworld = df_metaworld.groupby(['idx', 'experiment', 'seed']).mean().reset_index()
 
+	# print unique experiments
+	print(df_dmcontrol['experiment'].unique())
+	print(df_metaworld['experiment'].unique())
+	
 	# average across seeds
 	df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment']).mean().reset_index()
 	df_metaworld = df_metaworld.groupby(['idx', 'experiment']).mean().reset_index()
@@ -97,7 +108,7 @@ def main():
 	df_dmcontrol['reward'] = (df_dmcontrol['reward'] / 10).round()
 	df_metaworld['reward'] = (df_metaworld['reward'] / 45).round()
 
-	f, axs = plt.subplots(1, 2, figsize=(16,6))
+	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
 	# dmcontrol
 	ax = axs[0]
