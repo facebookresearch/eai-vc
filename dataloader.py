@@ -60,10 +60,11 @@ class OfflineDataset(Dataset):
 	def _load_episodes(self):
 		raise NotImplementedError()
 
-	def _partition_episodes(self, datas, cumrews, train_episodes=1500):
-		if self._cfg.multitask or self._cfg.task.startswith('mw-'):
+	def _partition_episodes(self, datas, cumrews):
+		if self._cfg.multitask:
 			return datas, cumrews, range(len(datas))
-		assert len(datas) == int(1650*self._cfg.fraction), f'Expected {int(1650*self._cfg.fraction)} episodes, got {len(datas)}'
+		assert len(datas) in {int(1650*self._cfg.fraction), int(3300*self._cfg.fraction)}, 'Unexpected number of episodes: {}'.format(len(datas))
+		train_episodes = int((3000 if self._cfg.task.startswith('mw-') else 1650)*self._cfg.fraction)
 		train_idxs = torch.topk(cumrews, k=train_episodes, dim=0, largest=False).indices
 		val_idxs = torch.topk(cumrews, k=len(datas)-train_episodes, dim=0, largest=True).indices
 		print('Training on bottom {} episodes'.format(train_episodes))
@@ -149,7 +150,7 @@ class DMControlDataset(OfflineDataset):
 			datas.append(data)
 			cumrew = np.array(data['rewards']).sum()
 			cumrews.append(cumrew)
-		datas, self._cumulative_rewards, idxs = self._partition_episodes(datas, torch.tensor(np.array(cumrews), dtype=torch.float32), train_episodes=int(1500*self._cfg.fraction))
+		datas, self._cumulative_rewards, idxs = self._partition_episodes(datas, torch.tensor(np.array(cumrews), dtype=torch.float32))
 		self._episodes = []
 		for data, idx in tqdm(zip(datas, idxs), desc='Loading episodes'):
 			fp = self._fps[idx]

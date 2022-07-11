@@ -1,5 +1,5 @@
 python train_offline.py \
-    task=mw-box-close \
+    task=mw-shelf-place \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \

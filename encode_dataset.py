@@ -50,7 +50,9 @@ def make_encoder(cfg):
 		if cfg.features == 'moco':
 			fn = 'moco_v2_800ep_pretrain.pth.tar'
 		elif cfg.features == 'mocodmcontrol':
-			fn = 'moco_v2_100ep_pretrain_dmcontrol.pth.tar'
+			fn = 'moco_v2_100ep_dmcontrol.pt'
+		elif cfg.features == 'mocometaworld':
+			fn = 'moco_v2_33ep_metaworld.pt'
 		elif cfg.features == 'mocoego':
 			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
 		elif cfg.features == 'mocoegodmcontrol':
@@ -106,19 +108,6 @@ def encode_resnet(obs, cfg, eval=False):
 	assert obs.ndim >= 3, 'Observation must be at least 3D'
 	if obs.ndim == 3:
 		obs = obs.unsqueeze(0)
-	
-	# Encode frame-stacked input
-	if __ENCODER__.conv1.in_channels == 9:
-		obs = __PREPROCESS__(obs / 255.)
-		if eval:
-			obs = obs.view(1, 3*obs.shape[1], *obs.shape[-2:])
-		else:
-			_obs = torch.empty((obs.shape[0], __ENCODER__.conv1.in_channels, *obs.shape[-2:]), dtype=torch.float32)
-			obs = stack_frames(obs, _obs, cfg.frame_stack)
-		obs = obs.cuda()
-		with torch.no_grad():
-			features = __ENCODER__(obs)
-		return features
 	
 	# Encode single frame input
 	with torch.no_grad():

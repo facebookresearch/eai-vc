@@ -1,7 +1,7 @@
 python train.py \
     -m task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-pick-place,mw-shelf-place \
     modality=features \
-    features=mocoego,random \
+    features=mocometaworld \
     enc_dim=256 \
     mlp_dim=512 \
     per=true \

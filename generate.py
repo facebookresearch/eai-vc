@@ -65,7 +65,7 @@ def generate(cfg: dict):
 	cfg.demo = True
 	cfg.exp_name = 'v1'
 	cfg.eval_freq = 50_000
-	cfg.eval_episodes = 50
+	cfg.eval_episodes = 100 if cfg.task.startswith('mw-') else 50
 	set_seed(cfg.seed)
 	env, agent = make_env(cfg), TDMPC(cfg)
 
@@ -84,10 +84,8 @@ def generate(cfg: dict):
 			except Exception as e:
 				print(e)
 		run.join()
-		if artifact_dir is None and identifier > 0:
-			raise Exception('No model found')
-		elif artifact_dir is None and identifier == 0:
-			print('No model found for identifier 0, using random initialization')
+		if artifact_dir is None:
+			print(f'Warning: no artifact found for {identifier}, using random initialization')
 		else:
 			agent.load(artifact_dir / f'{identifier}.pt')
 

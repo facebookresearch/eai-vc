@@ -1,5 +1,5 @@
 python generate.py \
-    -m task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-pick-place,mw-shelf-place \
+    -m task=mw-shelf-place \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \
@@ -10,5 +10,5 @@ python generate.py \
     eval_freq=50000 \
     save_freq=50000 \
     exp_name=v1 \
-    seed=1,2,3 \
+    seed=1 \
     hydra/launcher=slurm
