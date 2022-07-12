@@ -126,6 +126,9 @@ class MultitaskWrapper(gym.Wrapper):
 	def step(self, action):
 		obs, reward, done, info = self._env.step(self._reshape_action(action))
 		return self._reshape_obs(obs), reward, done, info
+	
+	def render(self, *args, **kwargs):
+		self._env.render(*args, **kwargs)
 
 
 def make_multitask_env(cfg):
