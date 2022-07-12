@@ -61,7 +61,7 @@ class OfflineDataset(Dataset):
 		raise NotImplementedError()
 
 	def _partition_episodes(self, datas, cumrews):
-		if self._cfg.multitask:
+		if self._cfg.multitask or self._cfg.get('use_all', False):
 			return datas, cumrews, range(len(datas))
 		assert len(datas) in {int(1650*self._cfg.fraction), int(3300*self._cfg.fraction)}, 'Unexpected number of episodes: {}'.format(len(datas))
 		train_episodes = int((3000 if self._cfg.task.startswith('mw-') else 1650)*self._cfg.fraction)

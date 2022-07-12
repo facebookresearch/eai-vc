@@ -380,11 +380,7 @@ def make_dmcontrol_env(cfg):
 		env = pixels.Wrapper(env,
 							pixels_only=True,
 							render_kwargs=render_kwargs)
-		if cfg.modality == 'features' and cfg.get('features', None) in {'mocodmcontrol5m', 'mocodmcontrolmini'}:
-			fs = 3
-		else:
-			fs = cfg.get('frame_stack', 1)
-		env = FrameStackWrapper(env, fs)
+		env = FrameStackWrapper(env, cfg.get('frame_stack', 1))
 	env = ExtendedTimeStepWrapper(env)
 	if cfg.modality == 'features':
 		env = FeaturesWrapper(env, cfg)

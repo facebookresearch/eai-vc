@@ -1,9 +1,9 @@
-from collections import defaultdict
+from collections import deque, defaultdict
 import numpy as np
 import torch
 import gym
 from gym.wrappers import TimeLimit
-from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_HIDDEN
+from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
 from encode_dataset import encode_resnet
 
 
@@ -12,14 +12,16 @@ class MetaWorldWrapper(gym.Wrapper):
 		super().__init__(env)
 		self.env = env
 		self.cfg = cfg
+		self._num_frames = cfg.get('frame_stack', 1)
+		self._frames = deque([], maxlen=self._num_frames)
 		if cfg.modality == 'pixels':
-			self.observation_space = gym.spaces.Box(low=0, high=255, shape=(3, cfg.img_size, cfg.img_size), dtype=np.uint8)
+			self.observation_space = gym.spaces.Box(low=0, high=255, shape=(self._num_frames*3, cfg.img_size, cfg.img_size), dtype=np.uint8)
 		elif cfg.modality == 'features':
 			features_to_dim = defaultdict(lambda: 2048) # default to RN50
 			features_to_dim.update({
 				'clip': 512,
 			})
-			self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(cfg.get('frame_stack', 1)*features_to_dim[cfg.features],), dtype=np.float32)
+			self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self._num_frames*features_to_dim[cfg.features],), dtype=np.float32)
 		else: # state
 			self.observation_space = self.env.observation_space
 		self.action_space = self.env.action_space
@@ -34,6 +36,10 @@ class MetaWorldWrapper(gym.Wrapper):
 		obs = torch.from_numpy(self._get_pixel_obs()).unsqueeze(0).view(-1, 3, self.cfg.img_size, self.cfg.img_size)
 		obs = encode_resnet(obs, self.cfg, eval=True).view(-1).cpu().numpy()
 		return obs
+
+	def _stacked_obs(self):
+		assert len(self._frames) == self._num_frames
+		return np.concatenate(list(self._frames), axis=0)
 	
 	def reset(self):
 		self.success = False
@@ -42,7 +48,9 @@ class MetaWorldWrapper(gym.Wrapper):
 			obs = self._get_pixel_obs()
 		elif self.cfg.modality == 'features':
 			obs = self._get_feature_obs()
-		return obs
+		for _ in range(self._num_frames):
+			self._frames.append(obs)
+		return self._stacked_obs()
 	
 	def step(self, action):
 		reward = 0
@@ -53,9 +61,10 @@ class MetaWorldWrapper(gym.Wrapper):
 			obs = self._get_pixel_obs()
 		elif self.cfg.modality == 'features':
 			obs = self._get_feature_obs()
+		self._frames.append(obs)
 		self.success = self.success or bool(info['success'])
-		return obs, reward, False, info
-	
+		return self._stacked_obs(), reward, False, info
+
 	def render(self, mode='rgb_array', width=None, height=None, camera_id=None):
 		return self.env.render(offscreen=True, resolution=(width, height), camera_name=self.camera_name)
 
@@ -70,8 +79,8 @@ class MetaWorldWrapper(gym.Wrapper):
 
 
 def make_metaworld_env(cfg):
-	env_id = cfg.task.split('-', 1)[-1] + '-v2-goal-hidden'
-	env = ALL_V2_ENVIRONMENTS_GOAL_HIDDEN[env_id](seed=cfg.seed)
+	env_id = cfg.task.split('-', 1)[-1] + '-v2-goal-observable'
+	env = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[env_id](seed=cfg.seed)
 	env = MetaWorldWrapper(env, cfg)
 	env = TimeLimit(env, max_episode_steps=cfg.episode_length)
 	return env
