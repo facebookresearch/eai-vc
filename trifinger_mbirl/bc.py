@@ -125,7 +125,7 @@ def train(conf, dataloader, policy, model_data_dir):
 
         print(f"Epoch: {outer_i}, loss: {loss.item()}")
 
-        if (outer_i+1) % 25 == 0:
+        if (outer_i+1) % conf.n_epoch_every_log == 0:
 
             torch.save({
                 'bc_loss_train' : loss,

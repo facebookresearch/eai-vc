@@ -145,6 +145,7 @@ def parse_args():
     parser.add_argument("--no_wandb", action="store_true", help="Don't log in wandb")
     parser.add_argument("--run_id", default="NOID", help="Run ID")
     parser.add_argument("--n_outer_iter", type=int, default=1500, help="Outer loop iterations")
+    parser.add_argument("--n_epoch_every_log", type=int, default=100, help="Num epochs every log")
 
 
     # MBIRL parameters (used if --algo=="mbirl")

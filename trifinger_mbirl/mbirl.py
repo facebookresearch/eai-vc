@@ -167,7 +167,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             irl_loss_per_demo.append(irl_loss.detach())
             pred_traj_per_demo.append(pred_traj.detach())
 
-            if (outer_i+1) % 25 == 0:
+            if (outer_i+1) % conf.n_epoch_every_log == 0:
                 traj_dir = os.path.join(plots_dir, f"traj_{demo_i}")
                 if not os.path.exists(traj_dir): os.makedirs(traj_dir)
 
@@ -205,7 +205,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
 
         # Evaluate current learned cost on test trajectories
         # Plot test traj predictions every 25 steps
-        if (outer_i+1) % 25 == 0:
+        if (outer_i+1) % conf.n_epoch_every_log == 0:
             test_dir_name = test_plots_dir
         else:
             test_dir_name = None
@@ -235,7 +235,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             plot_loss(loss_dict, outer_i+1)
 
         # TODO Save checkpoint here
-        if (outer_i+1) % 25 == 0:
+        if (outer_i+1) % conf.n_epoch_every_log == 0:
             torch.save({
                 'irl_loss_train_per_demo' : irl_loss_per_demo,
                 'irl_loss_test_per_demo'  : test_irl_losses,
