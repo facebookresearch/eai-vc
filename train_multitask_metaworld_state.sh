@@ -1,5 +1,5 @@
 python train_offline.py \
-    -m task=mw-mt5 \
+    task=mw-mt5 \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \

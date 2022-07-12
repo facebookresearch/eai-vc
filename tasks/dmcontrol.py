@@ -356,20 +356,13 @@ class MultitaskEnv(object):
 
 
 def make_dmcontrol_env(cfg):
-	try:
-		domain, task = cfg.task.replace('-', '_').split('_', 1)
-	except:
-		domain, task = '*', '*'
+	domain, task = cfg.task.replace('-', '_').split('_', 1)
 	domain = dict(cup='ball_in_cup').get(domain, domain)
 
-	if cfg.get('multitask', False):
-		env = MultitaskEnv(cfg)
-		cfg.task_list = env.tasks
-	else:
-		env = suite.load(domain,
-						task,
-						task_kwargs={'random': cfg.seed},
-						visualize_reward=False)
+	env = suite.load(domain,
+					task,
+					task_kwargs={'random': cfg.seed},
+					visualize_reward=False)
 	env = ActionDTypeWrapper(env, np.float32)
 	env = ActionRepeatWrapper(env, cfg.action_repeat)
 	env = action_scale.Wrapper(env, minimum=-1.0, maximum=+1.0)

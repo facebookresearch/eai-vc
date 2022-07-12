@@ -4,7 +4,6 @@ python train_offline.py \
     enc_dim=256 \
     mlp_dim=512 \
     train_iter=500000 \
-    exp_name=test \
-    fraction=0.05 \
+    exp_name=v1 \
     seed=1 \
     hydra/launcher=slurm

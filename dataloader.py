@@ -117,6 +117,8 @@ class DMControlDataset(OfflineDataset):
 	def __init__(self, cfg, buffer=None):
 		self._data_dir = Path(cfg.data_dir) / 'dmcontrol'
 		tasks = cfg.task_list if cfg.get('multitask', False) else [cfg.task]
+		if len(tasks) > 1:
+			print('Tasks: {}'.format(tasks))
 		super().__init__(cfg, tasks, buffer)
 	
 	def _locate_episodes(self):
@@ -197,6 +199,13 @@ class DMControlDataset(OfflineDataset):
 			else:
 				obs = data['states']
 			actions = np.array(data['actions'], dtype=np.float32).clip(-1, 1)
+			if self._cfg.get('multitask', False):
+				task = fp.split('/')[-2]
+				data['metadata']['task'] = task
+				if self._cfg.modality == 'state' and obs[0].shape[0] < self._cfg.obs_shape[0]:
+					obs = [np.concatenate([_obs, np.zeros((self._cfg.obs_shape[0] - _obs.shape[0],))]) for _obs in obs]
+				if actions.shape[-1] < self._cfg.action_dim:
+					actions = np.concatenate([actions, np.zeros((actions.shape[0], self._cfg.action_dim - actions.shape[-1]))], axis=-1)
 			episode = Episode.from_trajectory(self._cfg, obs, actions, data['rewards'])
 			episode.info = data['infos']
 			episode.metadata = data['metadata']

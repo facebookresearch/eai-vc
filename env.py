@@ -75,7 +75,6 @@ class MultitaskWrapper(gym.Wrapper):
 		self._tasks = cfg.task_list
 		self._task_id = 0
 		self._env = self._envs[self._task_id]
-		breakpoint()
 
 	@property
 	def task(self):
@@ -117,8 +116,8 @@ class MultitaskWrapper(gym.Wrapper):
 		return obs
 	
 	def _reshape_action(self, action):
-		if action.shape[0] > self.action_space.shape[0]:
-			return action[:self.action_space.shape[0]]
+		if action.shape[0] > self._env.action_space.shape[0]:
+			return action[:self._env.action_space.shape[0]]
 		return action
 	
 	def reset(self):
@@ -130,6 +129,7 @@ class MultitaskWrapper(gym.Wrapper):
 
 
 def make_multitask_env(cfg):
+	__task = cfg.task
 	domain, task = cfg.task.split('-', 1)
 	assert task.startswith('mt'), 'Expected MT task name, got {}'.format(task)
 	num_tasks = int(task[2:])
@@ -151,9 +151,14 @@ def make_multitask_env(cfg):
 	for _task in tasks:
 		cfg.task = _task
 		envs.append(make_env(cfg))
-	cfg.task = task
+	cfg.task = __task
 	cfg.task_list = tasks
-	return MultitaskWrapper(envs, cfg)
+	env = MultitaskWrapper(envs, cfg)
+	cfg.domain = domain
+	cfg.obs_shape = tuple(int(x) for x in env.observation_space.shape)
+	cfg.action_shape = tuple(int(x) for x in env.action_space.shape)
+	cfg.action_dim = env.action_space.shape[0]
+	return env
 
 
 def make_env(cfg):
