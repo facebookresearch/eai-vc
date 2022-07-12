@@ -14,7 +14,6 @@ def main(args):
     
     cost_weights = data["cost_parameters"]["weights"].detach().numpy()
 
-    irl_loss_train = data["irl_loss_train"]
 
     d_list = ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",]
 
