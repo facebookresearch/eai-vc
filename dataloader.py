@@ -9,7 +9,9 @@ from collections import deque, defaultdict
 from PIL import Image
 from torch.utils.data import Dataset
 from algorithm.helper import Episode
+from logger import make_dir
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 
 def stack_frames(source, target, num_frames):
@@ -73,6 +75,9 @@ class OfflineDataset(Dataset):
 		return [datas[i] for i in train_idxs], cumrews[train_idxs], train_idxs
 
 	def _dump_filelist(self):
+		raise NotImplementedError()
+
+	def _dump_histogram(self, cumulative_rewards):
 		raise NotImplementedError()
 		 
 	def _load_into_buffer(self):
@@ -142,6 +147,21 @@ class DMControlDataset(OfflineDataset):
 		print('Dumped {} frames to {}'.format(len(filelist), filelist_fp))
 		exit(0)
 
+	def _dump_histogram(self, cumulative_rewards):
+		if not self._cfg.get('dump_histogram', False):
+			return
+		hist_fp = make_dir(Path(self._cfg.logging_dir) / 'histograms') / f'{self._cfg.task}.png'
+		plt.figure(figsize=(8, 5))
+		plt.hist(cumulative_rewards, bins=100)
+		plt.xlabel('Episode return')
+		plt.ylabel('Count')
+		plt.xlim(0, 5000 if self._cfg.task.startswith('mw-') else 1000)
+		plt.title(f'{self._cfg.task}')
+		plt.savefig(hist_fp)
+		plt.close()
+		print(f'Dumped histogram to {hist_fp}')
+		exit(0)
+
 	def _load_episodes(self):
 		datas = []
 		cumrews = []
@@ -150,7 +170,9 @@ class DMControlDataset(OfflineDataset):
 			datas.append(data)
 			cumrew = np.array(data['rewards']).sum()
 			cumrews.append(cumrew)
-		datas, self._cumulative_rewards, idxs = self._partition_episodes(datas, torch.tensor(np.array(cumrews), dtype=torch.float32))
+		cumrews = np.array(cumrews)
+		self._dump_histogram(cumrews)
+		datas, self._cumulative_rewards, idxs = self._partition_episodes(datas, torch.tensor(cumrews, dtype=torch.float32))
 		self._episodes = []
 		for data, idx in tqdm(zip(datas, idxs), desc='Loading episodes'):
 			fp = self._fps[idx]

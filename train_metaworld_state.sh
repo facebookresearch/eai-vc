@@ -4,11 +4,11 @@ python train.py \
     enc_dim=256 \
     mlp_dim=512 \
     per=true \
-    action_repeat=2 \
-    episode_length=250 \
+    action_repeat=1 \
+    episode_length=500 \
     train_steps=500000 \
     eval_freq=50000 \
     save_freq=50000 \
-    exp_name=v2 \
+    exp_name=v3 \
     seed=1,2,3 \
     hydra/launcher=slurm
