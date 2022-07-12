@@ -27,17 +27,20 @@ def evaluate(env, agent, cfg, iteration, video):
 	episode_rewards = []
 	for i in range(cfg.eval_episodes):
 		if cfg.get('multitask', False):
-			env.unwrapped.task_id = i % len(env.unwrapped.tasks)
+			env.task_id = i % len(env.tasks)
+			enable_video = i < len(env.tasks)
+		else:
+			enable_video = i == 0
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
-		if video: video.init(env, enabled=(i==0))
+		if video: video.init(env, enabled=enable_video)
 		while not done:
-			action = agent.plan(obs, env.unwrapped.task_vec if cfg.get('multitask', False) else None, eval_mode=True, step=int(1e6), t0=t==0)
+			action = agent.plan(obs, env.task_vec if cfg.get('multitask', False) else None, eval_mode=True, step=int(1e6), t0=t==0)
 			obs, reward, done, _ = env.step(action.cpu().numpy())
 			ep_reward += reward
 			if video: video.record(env)
 			t += 1
 		episode_rewards.append(ep_reward)
-		if video: video.save(iteration)
+		if video: video.save(iteration, f'videos/{env.task}') if cfg.get('multitask', False) else video.save(iteration)
 	episode_rewards = np.array(episode_rewards)
 	return np.nanmean(episode_rewards), episode_rewards
 

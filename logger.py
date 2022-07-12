@@ -76,10 +76,10 @@ class VideoRecorder:
 			if frame is not None:
 				self.frames.append(frame)
 
-	def save(self, step):
+	def save(self, step, key='videos/eval_video'):
 		if self.enabled and len(self.frames) > 0:
 			frames = np.stack(self.frames).transpose(0, 3, 1, 2)
-			self._wandb.log({'eval_video': self._wandb.Video(frames, fps=self.fps, format='mp4')}, step=step)
+			self._wandb.log({key: self._wandb.Video(frames, fps=self.fps, format='mp4')}, step=step)
 
 
 class Logger(object):
