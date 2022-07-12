@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import enum
+import torch
 
 import trifinger_simulation.finger_types_data
 import trifinger_simulation.pinocchio_utils
@@ -13,21 +14,22 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 from control.impedance_controller import ImpedanceController
 from control.custom_pinocchio_utils import CustomPinocchioUtils
 import control.cube_utils as c_utils
+from trifinger_mbirl.policy import DeterministicPolicy
 
-class FollowFtTrajPolicy:
+class BCPolicy:
     """
     Follow fingertip position trajectory
     """
 
-    def __init__(self, ft_pos_traj_in, action_space, platform, time_step=0.001,
-                 downsample_time_step=0.001):
+    def __init__(self, ckpt_path, expert_actions, action_space, platform, time_step=0.001,
+                 downsample_time_step=0.001, total_ep_steps=1000):
         """
         ftpos_traj: fingertip position trajectory [T, 9]
         """
 
         self.action_space = action_space
         self.time_step = time_step
-        self.ft_pos_traj_in = ft_pos_traj_in
+        self.total_ep_steps = total_ep_steps
         self.downsample_time_step = downsample_time_step
 
         # TODO hardcoded
@@ -54,24 +56,62 @@ class FollowFtTrajPolicy:
 
         self.controller = ImpedanceController(self.kinematics)
 
-        self.ft_pos_traj, self.ft_vel_traj = self.interp_ft_traj(self.ft_pos_traj_in)
         self.traj_counter = 0
 
-    def reset(self, ft_pos_traj_in=None):
+        self.policy = self.load_policy(ckpt_path)
+
+        self.expert_actions = expert_actions
+
+    def reset(self):
         # initial joint positions (lifting the fingers up)
         self.joint_positions = self.joint_positions
 
         # mode and trajectory initializations
         self.traj_counter = 0
 
+        self.set_traj_counter = 0
+
         # Initial ft pos and vel trajectories
-        if ft_pos_traj_in is not None:
-            self.ft_pos_traj_in = ft_pos_traj_in
-        self.ft_pos_traj, self.ft_vel_traj = self.interp_ft_traj(self.ft_pos_traj_in)
+        self.init_x = self.get_ft_pos(self.joint_positions) # initial fingertip pos
+        self.ft_pos_traj = np.expand_dims(self.init_x, 0)
+        self.ft_vel_traj = np.zeros((1,9))
 
         self.t = 0
 
         self.done = False
+
+    def load_policy(self, ckpt_path):
+        policy = DeterministicPolicy(in_dim=12, out_dim=9)
+        info = torch.load(ckpt_path)
+        policy.load_state_dict(info["policy"])
+        return policy
+
+    def set_ft_traj(self, observation):
+        # Run this every X timesteps (based on downsampling factor)
+
+        o_pos_cur = observation["object_observation"]["position"]
+        q_cur = observation["robot_observation"]["position"]
+        ft_pos_cur = self.get_ft_pos(q_cur)
+
+        # Get next ft waypoint
+        # Get ft delta from policy
+        obs = torch.cat([torch.FloatTensor(o_pos_cur), torch.FloatTensor(ft_pos_cur)])
+        pred_action = self.policy(obs).detach().numpy()
+    
+        # Use expert actions
+        #pred_action = self.expert_actions[self.set_traj_counter, :]
+
+        # Add ft delta to current ft pos
+        ft_pos_next = ft_pos_cur + pred_action
+
+        # Lin interp from current ft pos to next ft waypoint
+        ft_traj = np.stack((ft_pos_cur, ft_pos_next))
+        self.ft_pos_traj, self.ft_vel_traj = self.interp_ft_traj(ft_traj)
+
+        # Reset traj counter
+        self.traj_counter = 0
+
+        self.set_traj_counter += 1
 
     def interp_ft_traj(self, ft_pos_traj_in):
         """
@@ -89,15 +129,13 @@ class FollowFtTrajPolicy:
         return ft_pos_traj, ft_vel_traj
 
     def get_ft_des(self, observation):
-        """ Get fingertip desired pos based on current self.mode """
+        """ Get fingertip desired pos  """
 
         ft_pos_des = self.ft_pos_traj[self.traj_counter, :]
         ft_vel_des = self.ft_vel_traj[self.traj_counter, :]
 
         if self.traj_counter < len(self.ft_pos_traj) - 1:
             self.traj_counter += 1
-        else:   
-            self.done = True
 
         return ft_pos_des, ft_vel_des
 
@@ -105,6 +143,13 @@ class FollowFtTrajPolicy:
         """
         Returns torques to command to robot
         """
+    
+        if self.t >= self.total_ep_steps:
+            self.done = True
+
+        if self.t == 0 or self.traj_counter >= len(self.ft_pos_traj) -1:
+            self.set_ft_traj(observation)
+            #print(self.set_traj_counter)
 
         # 3. Get current waypoints for finger tips
         x_des, dx_des = self.get_ft_des(observation)

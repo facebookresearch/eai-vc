@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 
 from envs.cube_env import SimCubeEnv, ActionType
 from policies.follow_ft_traj_policy import FollowFtTrajPolicy
+from policies.bc_policy import BCPolicy
 
 SIM_TIME_STEP = 0.004
 
@@ -34,17 +35,30 @@ def main(args):
     else:
         num_episodes = 6
 
-    # Load log.pth and get object initial and goal pose
-    # Get predicted trajectory
-    data = torch.load(args.log_paths[0])
-    expert_demo = data["expert_demo"]
+    ckpt_path = args.log_paths[0]
+    exp_dir = os.path.split(os.path.split(ckpt_path)[0])[0]
+    demo_info_path = os.path.join(exp_dir, "demo_info.pth")
+    conf_path = os.path.join(exp_dir, "conf.pth")
+
+    # Load algo (either "bc" or "mbirl")
+    conf = torch.load(conf_path)
+    algo = conf.algo
+
+    # Load demo_info.pth and get object initial and goal pose
+    TEST_TRAJ_NUM = 0
+    demo_info = torch.load(demo_info_path)
+    expert_demo = demo_info["test_demos"][TEST_TRAJ_NUM]
     obj_init_pos = expert_demo["o_cur_pos"][0, :]
     obj_init_ori = expert_demo["o_cur_ori"][0, :]
     obj_goal_pos = expert_demo["o_des_pos"][0, :]
     obj_goal_ori = expert_demo["o_des_ori"][0, :]
+    expert_actions = expert_demo["delta_ftpos"]
     init_pose = {"position": obj_init_pos, "orientation": obj_init_ori}
     goal_pose = {"position": obj_goal_pos, "orientation": obj_goal_ori}
-    ftpos_traj = data["final_pred_traj"].detach().numpy()
+    downsample_time_step = demo_info["downsample_time_step"]
+
+    # Get checkpoint info
+    ckpt_info = torch.load(ckpt_path)
 
     for i in range(num_episodes):
         print(f"Running episode {i}")
@@ -52,7 +66,17 @@ def main(args):
         is_done = False
 
         observation = env.reset(goal_pose_dict=goal_pose, init_pose_dict=init_pose)
-        policy = FollowFtTrajPolicy(ftpos_traj, env.action_space, env.platform, time_step=SIM_TIME_STEP)
+        if algo == "mbirl":
+            ftpos_traj = ckpt_info["test_pred_traj_per_demo"][TEST_TRAJ_NUM].detach().numpy()
+            #ftpos_traj = expert_demo["ft_pos_cur"]
+            policy = FollowFtTrajPolicy(ftpos_traj, env.action_space, env.platform, time_step=SIM_TIME_STEP,
+                                        downsample_time_step=downsample_time_step)
+        elif algo == "bc":
+            policy = BCPolicy(ckpt_path, expert_actions, env.action_space, env.platform, time_step=SIM_TIME_STEP,
+                                        downsample_time_step=downsample_time_step)
+        else:
+            raise ValueError("Invalid arg")
+
         policy.reset()
 
         observation_list = []
@@ -98,6 +122,7 @@ def parse_args():
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
     parser.add_argument("--no_collisions", "-nc", action="store_true", help="Visualize sim")
     parser.add_argument("--log_paths", "-l", nargs="*", type=str, help="Save sim log")
+    parser.add_argument("--algo", "-a", type=str, choices=["mbirl", "bc"])
     return parser.parse_args()
 
 if __name__ == "__main__":
