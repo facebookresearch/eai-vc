@@ -25,7 +25,7 @@ mbirl_dir = os.path.dirname(os.path.realpath(__file__))
 LOG_DIR = os.path.join(mbirl_dir, "logs/runs")
 
 # The IRL Loss, the learning objective for the learnable cost functions.
-# The IRL loss measures the distance between the demonstrated fingertip position trajectory and predicted trajectory
+# Measures the distance between the demonstrated fingertip position trajectory and predicted trajectory
 class IRLLoss(object):
     def __call__(self, pred_traj, target_traj, dist_scale=100):
         loss = ((pred_traj * dist_scale - target_traj * dist_scale) ** 2).sum(dim=0)
@@ -36,7 +36,7 @@ def plot_loss(loss_dict, outer_i):
     log_dict['outer_i'] = outer_i
     wandb.log(log_dict)
 
-def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_dir=None):
+def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_dir=None, outer_i=None):
     """ Test current learned cost by running inner loop action optimization on test demonstrations """
     # np.random.seed(cfg.random_seed)
     # torch.manual_seed(cfg.random_seed)
@@ -46,7 +46,9 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
     n_inner_iter   = conf.n_inner_iter
     irl_loss_scale = conf.irl_loss_scale
 
-    eval_costs = []
+    test_pred_trajs = [] # final predicted traj per test traj
+    eval_costs = [] # final cost values per test traj
+
     for t_i, traj in enumerate(trajs):
  
         x_init   = torch.Tensor(traj["ft_pos_cur"][0, :].squeeze())
@@ -73,10 +75,14 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
         pred_state_traj_new = ftpos_mpc.roll_out(x_init.clone())
         eval_costs.append(irl_loss_fn(pred_state_traj_new, expert_demo, dist_scale=irl_loss_scale).mean())
 
+        test_pred_trajs.append(pred_state_traj_new)
+
         if plots_dir is not None:
             title = "Fingertip positions"
-            save_name = f"test_traj_{t_i}.png"
-            save_path = os.path.join(plots_dir, save_name)
+            traj_dir = os.path.join(plots_dir, f"traj_{t_i}")
+            if not os.path.exists(traj_dir): os.makedirs(traj_dir)
+            save_name = f"outer_{outer_i}.png"
+            save_path = os.path.join(traj_dir, save_name)
             d_utils.plot_traj(
                     title, 
                     save_path,
@@ -87,7 +93,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
                     }
                     )
 
-    return torch.stack(eval_costs).detach()
+    return torch.stack(eval_costs).detach(), test_pred_trajs
 
 
 def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs, 
@@ -101,37 +107,18 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
     n_inner_iter   = conf.n_inner_iter
     irl_loss_scale = conf.irl_loss_scale
 
-    irl_loss_on_train = []
-    irl_loss_on_test = []
+    irl_loss_on_train = [] # Average IRL loss on training demos, every outer loop
+    irl_loss_on_test = []  # Average IRL loss on test demos, every outer loop
 
     learnable_cost_opt = torch.optim.Adam(learnable_cost.parameters(), lr=cost_lr)
 
-    irl_loss_per_demo = []
-
-    plots_dir = os.path.join(model_data_dir, f"trajs")
-    actions_dir = os.path.join(model_data_dir, "actions")
+    # Make logging directories
+    ckpts_dir = os.path.join(model_data_dir, "ckpts") 
+    plots_dir = os.path.join(model_data_dir, "train_trajs")
+    test_plots_dir = os.path.join(model_data_dir, "test_trajs")
+    if not os.path.exists(ckpts_dir): os.makedirs(ckpts_dir)
     if not os.path.exists(plots_dir): os.makedirs(plots_dir)
-    if not os.path.exists(actions_dir): os.makedirs(actions_dir)
-
-    # Compute initial loss before training
-    for demo_i in range(len(train_trajs)):
-        expert_demo_dict = train_trajs[demo_i]
-
-        x_init   = torch.Tensor(expert_demo_dict["ft_pos_cur"][0, :].squeeze())
-        traj_len = expert_demo_dict["ft_pos_cur"].shape[0]
-        expert_demo = torch.Tensor(expert_demo_dict["ft_pos_cur"])
-        time_horizon, s_dim = expert_demo.shape
-
-        # Forward rollout
-        ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
-        pred_traj = ftpos_mpc.roll_out(x_init.clone())
-
-        # get initial irl loss
-        irl_loss = irl_loss_fn(pred_traj, expert_demo, dist_scale=irl_loss_scale).mean()
-        irl_loss_per_demo.append(irl_loss.item())
-
-    irl_loss_on_train.append(torch.Tensor(irl_loss_per_demo).mean())
-    print("irl cost training iter: {} loss: {}".format(0, irl_loss_on_train[-1]))
+    if not os.path.exists(test_plots_dir): os.makedirs(test_plots_dir)
 
     print("Cost function parameters to be optimized:")
     for name, param in learnable_cost.named_parameters():
@@ -141,6 +128,7 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
     # Start of inverse RL loop
     for outer_i in range(n_outer_iter):
         irl_loss_per_demo = []
+        pred_traj_per_demo = []
 
         for demo_i in range(len(train_trajs)):
             learnable_cost_opt.zero_grad()
@@ -167,22 +155,29 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
 
                     diffopt.step(learned_cost_val)
                     #print(fpolicy.action_seq.data[1, :])
-                    actions = fpolicy.action_seq.data.detach().numpy()
 
-                    # Compute traj with updated action sequence
-                    pred_traj = fpolicy.roll_out(x_init)
-                    # compute task loss
-                    irl_loss = irl_loss_fn(pred_traj, expert_demo, dist_scale=irl_loss_scale).mean()
-                    # backprop gradient of learned cost parameters wrt irl loss
-                    irl_loss.backward(retain_graph=True)
-                    irl_loss_per_demo.append(irl_loss.detach())
+                actions = fpolicy.action_seq.data.detach().numpy()
+                # Compute traj with updated action sequence
+                pred_traj = fpolicy.roll_out(x_init)
+                # compute task loss
+                irl_loss = irl_loss_fn(pred_traj, expert_demo, dist_scale=irl_loss_scale).mean()
+                # backprop gradient of learned cost parameters wrt irl loss
+                irl_loss.backward(retain_graph=True)
 
+            # Update cost parameters
             learnable_cost_opt.step()
 
-            if outer_i % 25 == 0:
+            # Save losses and predicted trajectories
+            irl_loss_per_demo.append(irl_loss.detach())
+            pred_traj_per_demo.append(pred_traj.detach())
+
+            if (outer_i+1) % 25 == 0:
+                traj_dir = os.path.join(plots_dir, f"traj_{demo_i}")
+                if not os.path.exists(traj_dir): os.makedirs(traj_dir)
+
                 title = "Fingertip positions (outer i: {})".format(outer_i)
-                save_name = f"{demo_i}_{outer_i}.png"
-                save_path = os.path.join(plots_dir, save_name)
+                save_name = f"outer_{outer_i+1}.png"
+                save_path = os.path.join(traj_dir, save_name)
                 d_utils.plot_traj(
                         title, 
                         save_path,
@@ -194,8 +189,10 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
                         )
 
                 title = "Fingertip position deltas (outer i: {})".format(outer_i)
-                save_name = f"{demo_i}_{outer_i}_action.png"
-                save_path = os.path.join(actions_dir, save_name)
+                save_name = f"outer_{outer_i+1}_action.png"
+                traj_dir = os.path.join(plots_dir, "actions", f"traj_{demo_i}")
+                if not os.path.exists(traj_dir): os.makedirs(traj_dir)
+                save_path = os.path.join(traj_dir, save_name)
                 d_utils.plot_traj(
                         title, 
                         save_path,
@@ -210,24 +207,24 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
         irl_loss_on_train.append(torch.Tensor(irl_loss_per_demo).mean())
         print("irl loss (on train) training iter: {} loss: {}".format(outer_i + 1, irl_loss_on_train[-1]))
 
+        # Evaluate current learned cost on test trajectories
         # Plot test traj predictions every 25 steps
-        if outer_i % 25 == 0:
-            test_plots_dir = plots_dir
+        if (outer_i+1) % 25 == 0:
+            test_dir_name = test_plots_dir
         else:
-            test_plots_dir = None
+            test_dir_name = None
+        test_irl_losses, test_pred_trajs = evaluate_action_optimization(conf, learnable_cost.eval(), 
+                                                       irl_loss_fn, test_trajs,
+                                                       plots_dir=test_dir_name, outer_i=outer_i+1)
 
-        test_irl_losses = evaluate_action_optimization(conf, learnable_cost.eval(), 
-                                                       irl_loss_fn, test_trajs, plots_dir=test_plots_dir)
-
-        print("irl loss (on test) training iter: {} loss: {}".format(outer_i + 1, test_irl_losses.mean().item()))
+        irl_loss_on_test.append(test_irl_losses.mean())
+        print("irl loss (on test) training iter: {} loss: {}".format(outer_i + 1, irl_loss_on_test[-1]))
         print("")
-        irl_loss_on_test.append(test_irl_losses)
     
         # Save learned cost weights into dict
         learnable_cost_params = {}
         for name, param in learnable_cost.named_parameters():
             learnable_cost_params[name] = param
-
         if len(learnable_cost_params) == 0:
             # For RBF Weighted Cost
             for name, param in learnable_cost.weights_fn.named_parameters():
@@ -241,20 +238,17 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
                         }
             plot_loss(loss_dict, outer_i+1)
 
-    title = "Fingertip positions (outer i: {})".format(outer_i)
-    save_name = f"{demo_i}_{outer_i}.png"
-    save_path = os.path.join(plots_dir, save_name)
-    d_utils.plot_traj(
-            title, 
-            save_path,
-            ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
-            {
-            "pred":  {"y": pred_traj.detach().numpy(), "x": expert_demo_dict["t"], "marker": "x"},
-            "demo":  {"y": expert_demo.detach().numpy(), "x": expert_demo_dict["t"], "marker": "."},
-            }
-            )
+        # TODO Save checkpoint here
+        if (outer_i+1) % 25 == 0:
+            torch.save({
+                'irl_loss_train_per_demo' : irl_loss_per_demo,
+                'irl_loss_test_per_demo'  : test_irl_losses,
+                'train_pred_traj_per_demo': pred_traj_per_demo, 
+                'test_pred_traj_per_demo' : test_pred_trajs,
+                'cost_parameters'         : learnable_cost_params,
+                'conf'                    : conf,
+            }, f=f'{ckpts_dir}/outer_{outer_i+1}_ckpt.pth')
 
-    return torch.stack(irl_loss_on_train), torch.stack(irl_loss_on_test), learnable_cost_params, pred_traj
 
 def get_target_for_cost_type(demo_dict, cost_type):
     """ Get target from traj_dict for learnable cost function given cost_type """
@@ -277,57 +271,31 @@ def main(conf):
     random.seed(10)
     np.random.seed(10)
     torch.manual_seed(0)
-
-    # Load trajectory, get x_init and time_horizon
-    data = np.load(conf.file_path, allow_pickle=True)["data"]
-    traj = d_utils.get_traj_dict_from_obs_list(data)
-    
-    # Full trajectory, downsampled by 25x (10Hz), cropped out 20 steps
-    #traj = d_utils.downsample_traj_dict(traj)
-    #traj = d_utils.crop_traj_dict(d_utils.downsample_traj_dict(traj), [10, 30])
-
-    # Full trajectory, downsampled by 75x (3.3Hz)
-    traj = d_utils.downsample_traj_dict(traj, new_time_step=0.3)
         
-    time_horizon = traj["ft_pos_cur"].shape[0]
-    x_init = traj["ft_pos_cur"][0, :]
-    n_keypt_dim = traj["ft_pos_cur"].shape[1] # xyz position of each fingertip
+    # Name experiment and make exp directory
+    exp_str = get_exp_str(vars(conf))
+    exp_dir = os.path.join(conf.log_dir, exp_str)
+    if not os.path.exists(exp_dir):
+        os.makedirs(exp_dir)
+    
+    # Save conf
+    conf.algo = "mbirl"
+    torch.save(conf, f=f'{exp_dir}/conf.pth')
 
-    # type of cost
-    #cost_type = 'Weighted'
-    #cost_type = 'TimeDep'
-    #cost_type = 'RBF'
-    #cost_type = 'Traj'
-    #cost_type = 'MPTimeDep'
+    # Load train and test trajectories
+    train_trajs, test_trajs = d_utils.load_trajs(args.file_path, exp_dir)
 
-    #exp_params_dict = {
-    #                  "cost_type"    : 'Traj',
-    #                  "cost_lr"      : 1e-2,
-    #                  "action_lr"    : 1e-2, # 1e-3
-    #                  "n_outer_iter" : 1500,
-    #                  "n_inner_iter" : 10, # 1??
-    #                  "rbf_kernels"  : None,
-    #                  "rbf_width"    : None,
-    #                  "traj_path"    : args.file_path,
-    #                  "time_horizon" : time_horizon,
-    #                  "irl_loss_scale": 100,
-    #                  }
-
-    conf.time_horizon = time_horizon
+    time_horizon, n_keypt_dim = train_trajs[0]["ft_pos_cur"].shape # xyz position for each fingertip
 
     rbf_kernels  = conf.rbf_kernels
     rbf_width    = conf.rbf_width
     cost_type    = conf.cost_type
 
-    exp_str = get_exp_str(vars(conf))
-    exp_dir = os.path.join(conf.log_dir, exp_str)
-    if not os.path.exists(exp_dir):
-        os.makedirs(exp_dir)
-
     if not conf.no_wandb:
         # wandb init
         wandb.init(project='trifinger_mbirl', entity='clairec', name=exp_str, config=conf)
 
+    # Set learnable cost
     if cost_type == 'Weighted':
         learnable_cost = LearnableWeightedCost(dim=n_keypt_dim)
     elif cost_type == 'TimeDep':
@@ -342,34 +310,27 @@ def main(conf):
     else:
         raise ValueError(f'Cost {cost_type} not implemented')
 
+    # IRL loss
     irl_loss_fn = IRLLoss()
 
-    #n_test_traj  = 2
-    # For now, just use one traj for training and testing
-    train_trajs  = [traj]
-    test_trajs   = [traj]
-    irl_loss_train, irl_loss_test, learnable_cost_params, pred_traj = irl_training(conf,
-                                                                                   learnable_cost, 
-                                                                                   irl_loss_fn,
-                                                                                   train_trajs, test_trajs,
-                                                                                   model_data_dir=exp_dir,
-                                                                                   no_wandb=conf.no_wandb,
-                                                                                  )
-
-    torch.save({
-        'irl_loss_train' : irl_loss_train,
-        'irl_loss_test'  : irl_loss_test,
-        'cost_parameters': learnable_cost_params,
-        'final_pred_traj': pred_traj,
-        'conf'           : conf,
-    }, f=f'{exp_dir}/log.pth')
+    # Run training
+    irl_training(conf,
+                 learnable_cost, 
+                 irl_loss_fn,
+                 train_trajs, test_trajs,
+                 model_data_dir=exp_dir,
+                 no_wandb=conf.no_wandb,
+                )
 
 def get_exp_str(params_dict):
     
     sorted_dict = collections.OrderedDict(sorted(params_dict.items()))
 
     run_id = params_dict["run_id"]
-    exp_str = f"exp_{run_id}"
+    file_path = os.path.splitext(os.path.split(params_dict["file_path"])[1])[0]
+ 
+    exp_str = f"exp_{run_id}_{file_path}"
+
     for key, val in sorted_dict.items():
         # exclude these keys from exp name
         if key in ["file_path", "no_wandb", "log_dir", "run_id"]: continue
@@ -389,13 +350,17 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
 
+    # Required
     parser.add_argument("--file_path", default=None, help="""Filepath of trajectory to load""")
+
+    # Optional
     parser.add_argument("--log_dir", type=str, default=LOG_DIR, help="Directory for run logs")
     parser.add_argument("--no_wandb", action="store_true", help="Don't log in wandb")
     parser.add_argument("--run_id", default="NOID", help="Run ID")
 
     # Parameters
-    parser.add_argument("--cost_type", type=str, default="Weighted", help="Learnable cost type")
+    parser.add_argument("--cost_type", type=str, default="Weighted", help="Learnable cost type",
+                        choices=["Weighted", "TimeDep", "RBF", "Traj", "MPTimeDep"])
     parser.add_argument("--cost_lr", type=float, default=0.01, help="Cost learning rate")
     parser.add_argument("--action_lr", type=float, default=0.01, help="Action learning rate")
     parser.add_argument("--n_outer_iter", type=int, default=1500, help="Outer loop iterations")

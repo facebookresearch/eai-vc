@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import json
+import os
+import torch
 
 NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
 
@@ -20,10 +23,10 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=False):
 
     traj_dict = {
                 "t"          : t,
-                "o_cur_pos"  : scale * o_cur,
-                "o_des_pos"  : scale * o_des,
-                "o_cur_ori"  : scale * o_cur_ori,
-                "o_des_ori"  : scale * o_des_ori,
+                "o_pos_cur"  : scale * o_cur,
+                "o_pos_des"  : scale * o_des,
+                "o_ori_cur"  : scale * o_cur_ori,
+                "o_ori_des"  : scale * o_des_ori,
                 "ft_pos_cur" : scale * ft_pos_cur,
                 "ft_pos_des" : scale * ft_pos_des,
                 "ft_vel_cur" : scale * ft_vel_cur,
@@ -111,6 +114,8 @@ def crop_traj_dict(traj_dict, crop_range):
     
 def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
     """
+    Plot trajectories
+
     data_dicts = {
                  "label_1": {"y": y data, "x": x data (optional), "marker": marker string (optional)],},
                  "label_2": {"y": y data, "x"},
@@ -152,4 +157,56 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
         plt.show()
 
     plt.close()
+
+def load_trajs(exp_info_json_path, exp_dir):
+    """
+    Load train and test trajectories fro exp_info_json_path json file
+    Save demo_info.pth in exp_dir
+    """
+
+    # TODO
+    # Load json and get traj filepaths
+    with open(exp_info_json_path, "rb") as f:
+        info = json.load(f)
+
+    demo_dir       = info["demo_dir"]
+    train_demo_ids = info["train_demos"]
+    test_demo_ids  = info["test_demos"]
+    diff           = info["difficulty"]
+
+    downsample_time_step = 0.2
+
+    train_trajs = []
+    test_trajs = []
+
+    # Load and downsample train trajectories
+    def get_demo_path(demo_dir, diff, demo_id):
+        demo_path = os.path.join(demo_dir, f"difficulty-{diff}", f"demo-{demo_id:04d}.npz")
+        return demo_path
+
+    # Load and downsample test trajectories
+    for demo_id_list, traj_list in [[train_demo_ids, train_trajs], [test_demo_ids, test_trajs]]:
+        for demo_id in demo_id_list:
+            demo_path = get_demo_path(demo_dir, diff, demo_id)
+
+            data = np.load(demo_path, allow_pickle=True)["data"]
+            traj_original = get_traj_dict_from_obs_list(data)
+    
+            # Full trajectory, downsampled
+            traj = downsample_traj_dict(traj_original, new_time_step=downsample_time_step)
+
+            traj_list.append(traj)
+
+    print(f"Loaded {len(train_trajs)} training demos")
+    print(f"Loaded {len(test_trajs)} test demos")
+    
+    # Save demo info (train and test demos)
+    torch.save({
+        'train_demos'         : train_trajs,
+        'test_demos'          : test_trajs,
+        'downsample_time_step': downsample_time_step,
+    }, f=f'{exp_dir}/demo_info.pth')
+
+    return train_trajs, test_trajs
+
 
