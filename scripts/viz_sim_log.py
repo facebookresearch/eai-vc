@@ -19,13 +19,13 @@ def main(args):
     traj_dict = d_utils.get_traj_dict_from_obs_list(data)
 
     #position_error = np.array([data[i]["achieved_goal"]["position_error"] for i in range(len(data))])
-    o_cur = traj_dict["o_cur_pos"] # object position, observed
-    o_des = traj_dict["o_des_pos"] # object position, desired
+    o_cur = traj_dict["o_pos_cur"] # object position, observed
+    o_des = traj_dict["o_pos_des"] # object position, desired
     ft_pos_cur = traj_dict["ft_pos_cur"] # ft position, actual
     ft_pos_des = traj_dict["ft_pos_des"] # ft position, desired
 
-    o_cur_ori = traj_dict["o_cur_ori"] # object ori observed
-    o_des_ori = traj_dict["o_des_ori"] # object ori desired
+    o_cur_ori = traj_dict["o_ori_cur"] # object ori observed
+    o_des_ori = traj_dict["o_ori_des"] # object ori desired
 
     downsampled_traj_dict = d_utils.downsample_traj_dict(traj_dict, new_time_step=0.2)
 
