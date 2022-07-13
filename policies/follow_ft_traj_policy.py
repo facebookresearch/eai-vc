@@ -76,7 +76,8 @@ class FollowFtTrajPolicy:
     def interp_ft_traj(self, ft_pos_traj_in):
         """
         Interpolate between waypoints in ftpos trajectory, and compute velocities
-        For now, just try linear interpolation between waypoints, with first-order hold on linear velocity between waypoints
+        For now, just try linear interpolation between waypoints,
+        with zero-order hold on linear velocity between waypoints
         """
         ft_pos_traj =  c_utils.lin_interp_waypoints(ft_pos_traj_in, self.downsample_time_step,
                                                     time_step_out=self.time_step)
