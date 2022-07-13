@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import enum
 import torch
+from r3m import load_r3m
 
 import trifinger_simulation.finger_types_data
 import trifinger_simulation.pinocchio_utils
@@ -15,13 +16,15 @@ from control.impedance_controller import ImpedanceController
 from control.custom_pinocchio_utils import CustomPinocchioUtils
 import control.cube_utils as c_utils
 from trifinger_mbirl.policy import DeterministicPolicy
+import trifinger_mbirl.bc as bc_utils
 
 class BCPolicy:
     """
     Follow fingertip position trajectory
     """
 
-    def __init__(self, ckpt_path, expert_actions, action_space, platform, time_step=0.001,
+    def __init__(self, ckpt_path, expert_demo, obs_type,
+                 action_space, platform, time_step=0.001,
                  downsample_time_step=0.001, total_ep_steps=1000):
         """
         ftpos_traj: fingertip position trajectory [T, 9]
@@ -60,7 +63,18 @@ class BCPolicy:
 
         self.policy = self.load_policy(ckpt_path)
 
-        self.expert_actions = expert_actions
+        self.obs_type = obs_type
+        self.expert_demo = expert_demo
+        self.expert_actions = expert_demo["delta_ftpos"]
+
+        if torch.cuda.is_available():
+            device = "cuda"
+        else:
+            device = "cpu"
+
+        self.r3m = load_r3m("resnet50")  # resnet18, resnet34
+        self.r3m.eval()
+        self.r3m.to(device)
 
     def reset(self):
         # initial joint positions (lifting the fingers up)
@@ -81,8 +95,10 @@ class BCPolicy:
         self.done = False
 
     def load_policy(self, ckpt_path):
-        policy = DeterministicPolicy(in_dim=12, out_dim=9)
         info = torch.load(ckpt_path)
+        in_dim = info["policy"]["policy.0.weight"].shape[1]
+
+        policy = DeterministicPolicy(in_dim=in_dim, out_dim=9)
         policy.load_state_dict(info["policy"])
         return policy
 
@@ -93,9 +109,18 @@ class BCPolicy:
         q_cur = observation["robot_observation"]["position"]
         ft_pos_cur = self.get_ft_pos(q_cur)
 
+        obs_dict = {
+                    "o_pos_cur" : o_pos_cur,
+                    "ft_pos_cur": ft_pos_cur,
+                    "o_pos_des" : self.expert_demo["o_pos_des"][0, :], # Goal object position
+                    "image_60"  : observation["camera_observation"]["camera60"]["image"],
+                   }
+
         # Get next ft waypoint
         # Get ft delta from policy
-        obs = torch.cat([torch.FloatTensor(o_pos_cur), torch.FloatTensor(ft_pos_cur)])
+        obs = bc_utils.get_bc_obs(obs_dict, self.obs_type, r3m=self.r3m)
+
+        #obs = torch.cat([torch.FloatTensor(o_pos_cur), torch.FloatTensor(ft_pos_cur)])
         pred_action = self.policy(obs).detach().numpy()
     
         # Use expert actions
@@ -116,7 +141,8 @@ class BCPolicy:
     def interp_ft_traj(self, ft_pos_traj_in):
         """
         Interpolate between waypoints in ftpos trajectory, and compute velocities
-        For now, just try linear interpolation between waypoints, with first-order hold on linear velocity between waypoints
+        For now, just try linear interpolation between waypoints,
+        with zero-order hold on linear velocity between waypoints
         """
         ft_pos_traj =  c_utils.lin_interp_waypoints(ft_pos_traj_in, self.downsample_time_step,
                                                     time_step_out=self.time_step)
