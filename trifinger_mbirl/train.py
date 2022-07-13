@@ -119,7 +119,7 @@ def get_exp_str(params_dict):
 
     for key, val in sorted_dict.items():
         # exclude these keys from exp name
-        if key in ["file_path", "no_wandb", "log_dir", "run_id"]: continue
+        if key in ["file_path", "no_wandb", "log_dir", "run_id", "n_epoch_every_log"]: continue
 
         # Abbreviate key
         splits = key.split("_")
