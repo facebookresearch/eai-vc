@@ -97,13 +97,15 @@ class Flatten(nn.Module):
 		
 	def forward(self, x):
 		return x.view(x.size(0), -1)
-	
 
-class FiLMLayer(nn.Module):
-	"""Feature-wise affine transformation layer."""
-	def __init__(self):
-		super().__init__()
-		pass
+
+class Unflatten(nn.Module):
+	def __init__(self, size):
+		super(Unflatten, self).__init__()
+		self.size = size
+
+	def forward(self, x):
+		return x.view(-1, *self.size)
 
 
 class Flare(nn.Module):
@@ -163,8 +165,7 @@ def enc(cfg):
 					nn.Conv2d(C, cfg.num_channels, 3, stride=2), nn.ReLU(),
 					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
 					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
-					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU()
-			]
+					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU()]
 			out_shape = _get_out_shape((C, cfg.img_size, cfg.img_size), layers)
 			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
 		elif cfg.encoder.arch == 'default':
@@ -189,8 +190,17 @@ def enc(cfg):
 
 def dec(cfg):
 	"""Returns a TOLD decoder."""
-	assert cfg.modality in {'state', 'features'}
-	if cfg.modality == 'features':
+	if cfg.modality == 'pixels':
+		layers = [nn.Linear(50, cfg.num_channels*16*16), nn.ReLU(), Unflatten((cfg.num_channels, 16, 16)),
+				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 4, stride=2, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 4, stride=2, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(cfg.num_channels, 3, 3, stride=1, padding=1), nn.ReLU(),]
+	elif cfg.modality == 'features':
 		features_to_dim = defaultdict(lambda: 2048)
 		features_to_dim.update({
 			'clip': 512,

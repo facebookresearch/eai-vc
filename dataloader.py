@@ -66,7 +66,7 @@ class OfflineDataset(Dataset):
 		if self._cfg.multitask or self._cfg.get('use_all', False):
 			return datas, cumrews, range(len(datas))
 		assert len(datas) in {int(1650*self._cfg.fraction), int(3300*self._cfg.fraction)}, 'Unexpected number of episodes: {}'.format(len(datas))
-		train_episodes = int((3000 if self._cfg.task.startswith('mw-') else 1650)*self._cfg.fraction)
+		train_episodes = int((3150 if self._cfg.task.startswith('mw-') else 1500)*self._cfg.fraction)
 		train_idxs = torch.topk(cumrews, k=train_episodes, dim=0, largest=False).indices
 		val_idxs = torch.topk(cumrews, k=len(datas)-train_episodes, dim=0, largest=True).indices
 		print('Training on bottom {} episodes'.format(train_episodes))
