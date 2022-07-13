@@ -6,7 +6,7 @@ import torch
 
 NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
 
-def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=False):
+def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
 
     position_error = np.array([data[i]["achieved_goal"]["position_error"] for i in range(len(data))])
     o_cur = np.array([data[i]["object_observation"]["position"] for i in range(len(data))])
@@ -20,7 +20,7 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=False):
     ft_vel_des = np.array([data[i]["policy"]["controller"]["ft_vel_des"] for i in range(len(data))])
 
     t = np.expand_dims(np.array([data[i]["t"] for i in range(len(data))]), 1)
-
+    
     traj_dict = {
                 "t"          : t,
                 "o_pos_cur"  : scale * o_cur,
@@ -31,6 +31,7 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=False):
                 "ft_pos_des" : scale * ft_pos_des,
                 "ft_vel_cur" : scale * ft_vel_cur,
                 "ft_vel_des" : scale * ft_vel_des,
+                "position_error": scale * position_error,
                 "delta_ftpos": scale * delta_ftpos,
                 }
 
@@ -179,15 +180,23 @@ def load_trajs(exp_info_json_path, exp_dir):
     train_trajs = []
     test_trajs = []
 
+    train_demo_stats = []
+    test_demo_stats = []
+
     # Load and downsample train trajectories
     def get_demo_path(demo_dir, diff, demo_id):
         demo_path = os.path.join(demo_dir, f"difficulty-{diff}", f"demo-{demo_id:04d}.npz")
         return demo_path
 
     # Load and downsample test trajectories
-    for demo_id_list, traj_list in [[train_demo_ids, train_trajs], [test_demo_ids, test_trajs]]:
+    for demo_id_list, traj_list, stats_list in [[train_demo_ids, train_trajs, train_demo_stats],\
+        [test_demo_ids, test_trajs, test_demo_stats]]:
+
         for demo_id in demo_id_list:
             demo_path = get_demo_path(demo_dir, diff, demo_id)
+
+            demo_stats = {"path": demo_path, "diff": diff, "id": demo_id}
+            stats_list.append(demo_stats)
 
             data = np.load(demo_path, allow_pickle=True)["data"]
             traj_original = get_traj_dict_from_obs_list(data)
@@ -204,6 +213,8 @@ def load_trajs(exp_info_json_path, exp_dir):
     torch.save({
         'train_demos'         : train_trajs,
         'test_demos'          : test_trajs,
+        'train_demo_stats'    : train_demo_stats,
+        'test_demo_stats'     : test_demo_stats,
         'downsample_time_step': downsample_time_step,
     }, f=f'{exp_dir}/demo_info.pth')
 
