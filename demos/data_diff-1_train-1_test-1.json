@@ -1,0 +1,6 @@
+{
+    "demo_dir"   : "demos/",
+    "difficulty" : 1,
+    "train_demos": [5],
+    "test_demos" : [5]
+}
