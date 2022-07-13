@@ -59,19 +59,21 @@ def render(cfg: dict):
 	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity-1}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
-	save_dir = make_dir(f'/private/home/nihansen/code/tdmpc2/renderer/{cfg.task}')
+	save_dir = make_dir(f'{cfg.logging_dir}/renderer/{cfg.task}')
 
 	# Load agent from wandb
 	run_name = 'renderer' + str(np.random.randint(0, int(1e6)))
 	run = wandb.init(job_type='renderer', entity=cfg.wandb_entity, project=cfg.wandb_project, name=run_name, tags='renderer')
 	agent = TDMPC(cfg)
-	# if cfg.get('tdmpc_artifact', None):
-	# 	print(f'Loading TDMPC artifact {cfg.tdmpc_artifact}')
-	# 	iteration = int(cfg.tdmpc_artifact.split('-')[-1].split(':')[0])
-	# 	artifact = run.use_artifact(cfg.tdmpc_artifact, type='model')
-	# 	artifact_dir = Path(artifact.download())
-	# 	agent.load(artifact_dir / f'{iteration}.pt')
+	if cfg.get('tdmpc_artifact', None):
+		print(f'Loading TDMPC artifact {cfg.tdmpc_artifact}')
+		artifact = run.use_artifact(cfg.tdmpc_artifact, type='model')
+		artifact_dir = Path(artifact.download())
+		agent.load(artifact_dir / os.listdir(artifact_dir)[0])
 	renderer.set_tdmpc_agent(agent)
+
+	# Config
+	num_images = 8
 
 	# Run training
 	for iteration in tqdm(range(cfg.train_iter+1)):
@@ -80,11 +82,14 @@ def render(cfg: dict):
 		common_metrics = renderer.update(buffer)
 		print(common_metrics)
 
-		if iteration % cfg.eval_freq == 0:
+		if iteration % 100 == 0:
+		# if iteration % cfg.eval_freq == 0:
 
-			# TODO
-			continue
-
+			# Evaluate (training set)
+			pixels = buffer.sample()[0]
+			pixels_pred = renderer.encode_decode(pixels)
+			image_idxs = np.random.randint(len(pixels), size=num_images)
+			save_image(make_grid(torch.cat([pixels_pred[image_idxs], renderer.preprocess_target(pixels[image_idxs]).cpu()], dim=0), nrow=8), f'{save_dir}/train_{iteration}.png')
 
 	# if cfg.get('renderer_path', None):
 	# 	print('Loading renderer from', cfg.renderer_path)

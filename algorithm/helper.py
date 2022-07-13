@@ -191,15 +191,19 @@ def enc(cfg):
 def dec(cfg):
 	"""Returns a TOLD decoder."""
 	if cfg.modality == 'pixels':
-		layers = [nn.Linear(50, cfg.num_channels*16*16), nn.ReLU(), Unflatten((cfg.num_channels, 16, 16)),
-				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
-				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
-				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 4, stride=2, padding=1), nn.ReLU(),
-				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
-				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
-				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 4, stride=2, padding=1), nn.ReLU(),
-				  nn.ConvTranspose2d(cfg.num_channels, cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
-				  nn.ConvTranspose2d(cfg.num_channels, 3, 3, stride=1, padding=1), nn.ReLU(),]
+		layers = [nn.Linear(50, 1024), nn.ELU(),
+				  nn.Linear(1024, 512), nn.ELU(),
+				  nn.Linear(512, 50), nn.ELU(),
+				  nn.Linear(50, cfg.num_channels*16*16), nn.ReLU(), Unflatten((cfg.num_channels, 16, 16)),
+				  nn.ConvTranspose2d(cfg.num_channels, 2*cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(2*cfg.num_channels, 2*cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(2*cfg.num_channels, 2*cfg.num_channels, 4, stride=2, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(2*cfg.num_channels, 4*cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(4*cfg.num_channels, 4*cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(4*cfg.num_channels, 4*cfg.num_channels, 4, stride=2, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(4*cfg.num_channels, 8*cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(8*cfg.num_channels, 16*cfg.num_channels, 3, stride=1, padding=1), nn.ReLU(),
+				  nn.ConvTranspose2d(16*cfg.num_channels, 3, 3, stride=1, padding=1), nn.Sigmoid()]
 	elif cfg.modality == 'features':
 		features_to_dim = defaultdict(lambda: 2048)
 		features_to_dim.update({

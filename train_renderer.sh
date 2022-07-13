@@ -1,9 +1,7 @@
-python train_renderer.py \
-    task=cup-catch \
+CUDA_VISIBLE_DEVICES=1 python train_renderer.py \
+    task=finger-spin \
     modality=pixels \
     encoder.arch=default+ \
-    enc_dim=256 \
-    mlp_dim=512 \
-    +tdmpc_artifact=cup-catch-pixels-v1-3-500000:v0 \
-    fraction=0.01 \
+    +tdmpc_artifact=finger-spin-pixels-offline-v1-1-chkpt:v0 \
+    fraction=0.005 \
     hydra/launcher=slurm

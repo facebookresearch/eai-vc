@@ -81,6 +81,13 @@ class Renderer():
 		if not from_state:
 			input = self.latent2state(self.agent.model.h(input))
 		return self.state2pixels(input).cpu(), input.cpu()
+	
+	@torch.no_grad()
+	def encode_decode(self, pixels):
+		return self.decoder(self.agent.model.h(pixels.cuda()/255.)).cpu()
+
+	def preprocess_target(self, pixels):
+		return self._resize(pixels[:, -3:] / 255.)
 
 	@torch.no_grad()
 	def imagine(self, input, actions):
@@ -102,17 +109,22 @@ class Renderer():
 
 
 	def update(self, replay_buffer, step=int(1e6)):
-		pixels, _, _, _, _, _, _, _, _, = replay_buffer.sample()
+		pixels, next_pixels, action, _, _, _, _, _, _, = replay_buffer.sample()
 		self.optim.zero_grad(set_to_none=True)
 		self.decoder.train()
 
 		with torch.no_grad():
-			z = self.agent.model.h(pixels)
+			zs = [self.agent.model.h(pixels)]
+			for t in range(self.cfg.horizon):
+				zs.append(self.agent.model.next(zs[-1], action[t])[0])
 
 		# Compute loss
-		pixels_pred = self.decoder(z)
-		pixels_target = self._resize(pixels[:, -3:] / 255.)
-		total_loss = h.l1(pixels_pred, pixels_target).mean()
+		pixels = torch.cat((pixels.unsqueeze(0), next_pixels), dim=0)
+		total_loss = 0
+		for t in range(self.cfg.horizon):
+			pixels_pred = self.decoder(zs[t])
+			pixels_target = self.preprocess_target(pixels[t])
+			total_loss += (self.cfg.rho ** t) * h.l1(pixels_pred, pixels_target).mean()
 
 		# Optimize model
 		total_loss.backward()

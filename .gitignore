@@ -17,6 +17,7 @@ results/
 recon/
 reconstruction/
 reconstruction_approx/
+renderer/
 xvfb/
 frames.mp4
 
