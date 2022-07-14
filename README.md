@@ -35,7 +35,7 @@ Note: For fast training, the Ego4D data loading code assumes that the dataset ha
  
 ## Evaluating the representation with behavior cloning
 
-Code coming soon!
+See the `eval` branch [here](https://github.com/facebookresearch/r3m/tree/eval/evaluation).
 
 ## License
 
