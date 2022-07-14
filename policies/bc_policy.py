@@ -57,7 +57,7 @@ class BCPolicy:
                 self.platform.simfinger.tip_link_names,
                 self.platform.simfinger.link_names)
 
-        self.controller = ImpedanceController(self.kinematics)
+        self.controller = ImpedanceController(self.kinematics, kp = [2000] * 9,)
 
         self.traj_counter = 0
 
@@ -94,6 +94,7 @@ class BCPolicy:
 
         self.done = False
 
+
     def load_policy(self, ckpt_path):
         info = torch.load(ckpt_path)
         in_dim = info["policy"]["policy.0.weight"].shape[1]
@@ -123,7 +124,7 @@ class BCPolicy:
         #obs = torch.cat([torch.FloatTensor(o_pos_cur), torch.FloatTensor(ft_pos_cur)])
         pred_action = self.policy(obs).detach().numpy()
     
-        # Use expert actions
+        # Use expert actions [FOR DEBUGGING]
         #pred_action = self.expert_actions[self.set_traj_counter, :]
 
         # Add ft delta to current ft pos
@@ -142,7 +143,7 @@ class BCPolicy:
         """
         Interpolate between waypoints in ftpos trajectory, and compute velocities
         For now, just try linear interpolation between waypoints,
-        with zero-order hold on linear velocity between waypoints
+        with finite difference approximation to compute linear velocities
         """
         ft_pos_traj =  c_utils.lin_interp_waypoints(ft_pos_traj_in, self.downsample_time_step,
                                                     time_step_out=self.time_step)
