@@ -77,7 +77,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
             title = "Fingertip positions"
             traj_dir = os.path.join(plots_dir, f"traj_{t_i}")
             if not os.path.exists(traj_dir): os.makedirs(traj_dir)
-            save_name = f"outer_{outer_i}.png"
+            save_name = f"epoch_{outer_i}.png"
             save_path = os.path.join(traj_dir, save_name)
             d_utils.plot_traj(
                     title, 
@@ -172,7 +172,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
                 if not os.path.exists(traj_dir): os.makedirs(traj_dir)
 
                 title = "Fingertip positions (outer i: {})".format(outer_i)
-                save_name = f"outer_{outer_i+1}.png"
+                save_name = f"epoch_{outer_i+1}.png"
                 save_path = os.path.join(traj_dir, save_name)
                 d_utils.plot_traj(
                         title, 
@@ -185,7 +185,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
                         )
 
                 title = "Fingertip position deltas (outer i: {})".format(outer_i)
-                save_name = f"outer_{outer_i+1}_action.png"
+                save_name = f"epoch_{outer_i+1}_action.png"
                 traj_dir = os.path.join(plots_dir, "actions", f"traj_{demo_i}")
                 if not os.path.exists(traj_dir): os.makedirs(traj_dir)
                 save_path = os.path.join(traj_dir, save_name)
@@ -243,7 +243,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
                 'test_pred_traj_per_demo' : test_pred_trajs,
                 'cost_parameters'         : learnable_cost_params,
                 'conf'                    : conf,
-            }, f=f'{ckpts_dir}/outer_{outer_i+1}_ckpt.pth')
+            }, f=f'{ckpts_dir}/epoch_{outer_i+1}_ckpt.pth')
 
 
 def get_target_for_cost_type(demo_dict, cost_type):
