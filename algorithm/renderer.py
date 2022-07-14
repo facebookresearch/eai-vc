@@ -82,11 +82,13 @@ class Renderer():
 		return self.state2pixels(input).cpu(), input.cpu()
 	
 	@torch.no_grad()
-	def encode_decode(self, pixels):
-		return self.decoder(self.agent.model.h(pixels.cuda())).cpu()
+	def encode_decode(self, input):
+		return self.decoder(self.agent.model.h(input.cuda())).cpu()
 
-	def preprocess_target(self, pixels):
-		return self._resize(pixels[:, -3:]/255.).clip(0, 1)
+	def preprocess_target(self, target):
+		if self.cfg.target_modality == 'pixels':
+			return self._resize(target[:, -3:]/255.).clip(0, 1)
+		return target
 
 	@torch.no_grad()
 	def imagine(self, input, actions):
@@ -103,21 +105,21 @@ class Renderer():
 			z, _ = self.agent.model.next(z, action)
 		return torch.cat(output, dim=0)
 
-	def update(self, replay_buffer, step=int(1e6)):
-		pixels, next_pixels, action, _, _, _, _, _, _, = replay_buffer.sample()
+	def update(self, buffer):
+		dictionary = buffer.sample({self.cfg.modality, self.cfg.target_modality})
+		input = dictionary[self.cfg.modality]
+		target = torch.cat((dictionary[self.cfg.target_modality].unsqueeze(0), dictionary['next_'+self.cfg.target_modality]), dim=0)
+		action = dictionary['action']
 		self.optim.zero_grad(set_to_none=True)
 		self.decoder.train()
 
 		with torch.no_grad():
-			z = self.agent.model.h(pixels)
+			z = self.agent.model.h(input)
 
 		# Compute loss
-		pixels = torch.cat((pixels.unsqueeze(0), next_pixels), dim=0)
 		total_loss = 0
 		for t in range(self.cfg.horizon):
-			pixels_pred = self.decoder(z)
-			pixels_target = self.preprocess_target(pixels[t])
-			total_loss += (self.cfg.rho ** t) * h.mse(pixels_pred, pixels_target).mean()
+			total_loss += (self.cfg.rho ** t) * h.mse(self.decoder(z), self.preprocess_target(target[t])).mean()
 			z, _ = self.agent.model.next(z, action[t])
 
 		# Optimize model
@@ -128,31 +130,3 @@ class Renderer():
 		
 		self.decoder.eval()
 		return {'total_loss': float(total_loss.mean().item())}
-
-
-	# def update(self, replay_buffer, step=int(1e6)):
-	# 	features, _, action, _, state_target, next_state_target, _, _, _ = replay_buffer.sample()
-	# 	self.optim.zero_grad(set_to_none=True)
-	# 	self.latent2state.train()
-
-	# 	with torch.no_grad():
-	# 		z = self.agent.model.h(features)
-		
-	# 	# Compute loss
-	# 	state_target = torch.cat((state_target.unsqueeze(0), next_state_target), dim=0)
-	# 	total_loss = 0
-	# 	for t in range(self.cfg.horizon):
-	# 		state_pred = self.latent2state(z)
-	# 		total_loss += (self.cfg.rho ** t) * h.mse(state_pred, state_target[t]).mean(dim=1)
-	# 		z, _ = self.agent.model.next(z, action[t])
-
-	# 	# Optimize model
-	# 	total_loss = total_loss.clamp(max=1e4).mean()
-	# 	total_loss.register_hook(lambda grad: grad * (1/self.cfg.horizon))
-	# 	total_loss.backward()
-	# 	grad_norm = torch.nn.utils.clip_grad_norm_(self.latent2state.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
-	# 	self.optim.step()
-
-	# 	self.latent2state.eval()
-	# 	return {'total_loss': float(total_loss.mean().item()),
-	# 			'grad_norm': float(grad_norm)}

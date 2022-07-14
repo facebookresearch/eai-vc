@@ -184,7 +184,7 @@ class DMControlDataset(OfflineDataset):
 
 		def load_episode(data, idx):
 			fp = self._fps[idx]
-			if self._cfg.modality == 'features':
+			if self._cfg.modality == 'features' or self._cfg.get('all_modalities', False):
 				assert self._cfg.get('features', None) is not None, 'Features must be specified'
 				features_dir = Path(os.path.dirname(fp)) / 'features' / self._cfg.features
 				assert features_dir.exists(), 'No features directory found for {}'.format(fp)
@@ -194,7 +194,9 @@ class DMControlDataset(OfflineDataset):
 				data['metadata']['states'] = data['states']
 				if 'phys_states' in data:
 					data['metadata']['phys_states'] = data['phys_states']
-			elif self._cfg.modality == 'pixels':
+				if self._cfg.get('all_modalities', False):
+					data['metadata']['features'] = obs
+			if self._cfg.modality == 'pixels' or self._cfg.get('all_modalities', False):
 				frames_dir = Path(os.path.dirname(fp)) / 'frames'
 				assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
 				frame_fps = [frames_dir / fn for fn in data['frames']]
@@ -202,7 +204,11 @@ class DMControlDataset(OfflineDataset):
 				data['metadata']['states'] = data['states']
 				if 'phys_states' in data:
 					data['metadata']['phys_states'] = data['phys_states']
-			else:
+				if self._cfg.get('all_modalities', False):
+					data['metadata']['pixels'] = obs
+					if self._cfg.modality == 'features':
+						obs = data['metadata']['features']
+			elif self._cfg.modality == 'state':
 				obs = data['states']
 			actions = np.array(data['actions'], dtype=np.float32).clip(-1, 1)
 			if self._cfg.get('multitask', False):

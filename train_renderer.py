@@ -14,8 +14,9 @@ from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.renderer import Renderer
 import algorithm.helper as h
-from algorithm.helper import ReplayBuffer
+from algorithm.helper import RendererBuffer
 from dataloader import make_dataset
+from encode_dataset import stack_frames
 from termcolor import colored
 from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
@@ -52,8 +53,8 @@ def render(cfg: dict):
 	assert torch.cuda.is_available()
 	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
-	save_dir = make_dir(Path(cfg.logging_dir) / 'renderer' / cfg.task / (cfg.get('features', cfg.modality)) / cfg.exp_name / str(cfg.seed))
-	env, renderer, buffer, val_buffer = make_env(cfg), Renderer(cfg), ReplayBuffer(cfg), ReplayBuffer(cfg)
+	save_dir = make_dir(Path(cfg.logging_dir) / 'renderer' / cfg.task / (cfg.get('features', cfg.modality)) / cfg.target_modality / cfg.exp_name / str(cfg.seed))
+	env, renderer, buffer, val_buffer = make_env(cfg), Renderer(cfg), RendererBuffer(cfg), RendererBuffer(cfg)
 
 	# Load agent from wandb
 	run_name = 'renderer' + str(np.random.randint(0, int(1e6)))
@@ -72,38 +73,44 @@ def render(cfg: dict):
 	dataset = make_dataset(cfg, buffer)
 	for episode in dataset._val_episodes:
 		val_buffer += episode
-	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity-1}')
-	print(f'Validation buffer contains {val_buffer.capacity if val_buffer.full else val_buffer.idx} transitions, capacity is {val_buffer.capacity-1}')
+	print(f'Buffer contains {buffer.idx} transitions, capacity is {buffer.capacity-1}')
+	print(f'Validation buffer contains {val_buffer.idx} transitions, capacity is {val_buffer.capacity-1}')
 	dataset_summary = dataset.summary
 	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
 
 	# Config
 	num_images = 9
-	rollout_length = 40
+	rollout_length = 56
 
 	def eval_encode_decode(buffer, fp=None, num_images=num_images):
 		"""Evaluate single-step reconstruction error"""
-		pixels = buffer.sample()[0]
-		pixels_pred = renderer.encode_decode(pixels)
-		pixels_target = renderer.preprocess_target(pixels).cpu()
-		if fp is not None:
-			image_idxs = np.random.randint(len(pixels), size=num_images)
-			save_image(make_grid(torch.cat([pixels_pred[image_idxs], pixels_target[image_idxs]], dim=0), nrow=num_images), fp)
-		return h.mse(pixels_pred, pixels_target, reduce=True)
-	
+		dictionary = buffer.sample({'pixels', cfg.modality})
+		pred = renderer.encode_decode(dictionary[cfg.modality])
+		target = renderer.preprocess_target(dictionary['pixels']).cpu()
+		if fp is not None and cfg.target_modality == 'pixels':
+			image_idxs = np.random.randint(len(pred), size=num_images)
+			save_image(make_grid(torch.cat([pred[image_idxs], target[image_idxs]], dim=0), nrow=num_images), fp)
+		return h.mse(pred, target, reduce=True)
+
 	def eval_rollout(buffer, num_episodes, fp=None, num_images=num_images, rollout_length=rollout_length):
 		start_idx = np.random.randint(cfg.episode_length//4-rollout_length-1) + np.random.randint(num_episodes) * cfg.episode_length
 		idxs = np.arange(start_idx, start_idx+rollout_length+1)
-		pixels, actions = buffer._obs[idxs], buffer._action[idxs]
-		pixels_pred = renderer.imagine(pixels[0], actions)
-		pixels_target = renderer.preprocess_target(pixels).cpu()
+		input = buffer.__dict__['_'+cfg.modality][idxs]
+		target = buffer.__dict__['_'+cfg.target_modality][idxs]
+		action = buffer._action[idxs]
+		if cfg.modality == 'pixels':
+			_input = torch.empty((input.shape[0], input.shape[1]*cfg.frame_stack, *input.shape[2:]), dtype=torch.float32)
+			input = stack_frames(input, _input, cfg.frame_stack).cuda()
+		pred = renderer.imagine(input[0], action)
+		target = renderer.preprocess_target(target).cpu()
 		mse_rollout = 0
 		for t in range(rollout_length):
-			mse_rollout += (0.95**t) * h.mse(pixels_pred[t], pixels_target[t], reduce=True)
+			mse_rollout += (0.95**t) * h.mse(pred[t], target[t], reduce=True)
 		mse_rollout = mse_rollout.item()
-		if fp is not None:
+		if fp is not None and cfg.target_modality == 'pixels':
 			image_idxs = np.arange(0, rollout_length+1, rollout_length//(num_images-1))
-			save_image(make_grid(torch.cat([pixels_pred[image_idxs], pixels_target[image_idxs]], dim=0), nrow=num_images), fp)
+			save_image(make_grid(torch.cat([pred[image_idxs], target[image_idxs]], dim=0), nrow=num_images), fp)
+			imageio.mimsave(str(fp).replace('.png', '.mp4'), torch.cat([pred, target], dim=-1).mul(255).byte().numpy().transpose(0, 2, 3, 1), fps=6)
 		return mse_rollout
 
 	# Run training
@@ -131,58 +138,6 @@ def render(cfg: dict):
 			
 			if iteration % cfg.save_freq == 0 and iteration > 0:
 				renderer.save(f'{save_dir}/model_{iteration}.pt')
-
-	# if cfg.get('renderer_path', None):
-	# 	print('Loading renderer from', cfg.renderer_path)
-	# 	renderer.load(cfg.renderer_path)
-	# else:
-	# 	num_images = 8
-	# 	print('Saving to', save_dir)
-	# 	metrics = []
-	# 	for i in tqdm(range(50_000+1)):
-	# 		common_metrics = renderer.update(buffer)
-	# 		if i % cfg.eval_freq == 0:
-
-	# 			# Evaluate (training set)
-	# 			idx = np.random.randint(0, len(dataset.cumrew))
-	# 			idxs = np.arange(idx*500, (idx+1)*500)
-	# 			obs_pred, state_pred = renderer.render(buffer._obs[idxs])
-	# 			obs_target, state_target = renderer.render(buffer._state[idxs], from_state=True)
-	# 			train_mse = torch.mean((state_pred - state_target)**2).item()
-	# 			image_idxs = np.random.randint(0, 500, size=num_images)
-	# 			save_image(make_grid(torch.cat([obs_pred[image_idxs], obs_target[image_idxs]], dim=0), nrow=8), f'{save_dir}/train_{i}.png')
-	# 			imageio.mimsave(f'{save_dir}/train_{i}.mp4', (torch.cat([obs_pred, obs_target], dim=-1).permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
-	# 			print(colored('Training MSE:', 'green'), train_mse)
-
-	# 			# Evaluate (training set; imagined rollout)
-	# 			start_idx, length = 100, 20
-	# 			obs_pred, state_pred = renderer.imagine(buffer._obs[idxs[start_idx]], buffer._action[idxs[start_idx:start_idx+length]])
-	# 			obs_target, state_target = renderer.render(buffer._state[idxs[start_idx:start_idx+length]], from_state=True)
-	# 			save_image(make_grid(torch.cat([obs_pred[0,::2], obs_target[::2]], dim=0), nrow=10), f'{save_dir}/train_imagine_{i}.png')
-	# 			train_imagine_mse = np.around(torch.mean((state_pred - state_target)**2, dim=-1)[0].numpy(), 2)
-	# 			print(colored('Training imagine MSE:', 'green'), train_imagine_mse)
-
-	# 			# Evaluate (evaluation set)
-	# 			episode = dataset_eval.episodes[dataset_eval.cumrew.argmax()]
-	# 			obs_pred, state_pred = renderer.render(episode.obs[:500])
-	# 			obs_target, state_target = renderer.render(torch.FloatTensor(episode.metadata['states'][:500]), from_state=True)
-	# 			eval_mse = torch.mean((state_pred - state_target)**2).item()
-	# 			image_idxs = np.random.randint(0, 500, size=num_images)
-	# 			save_image(make_grid(torch.cat([obs_pred[image_idxs], obs_target[image_idxs]], dim=0), nrow=8), f'{save_dir}/eval_{i}.png')
-	# 			imageio.mimsave(f'{save_dir}/eval_{i}.mp4', (torch.cat([obs_pred, obs_target], dim=-1).permute(0,2,3,1)*255).byte().cpu().numpy(), fps=12)
-	# 			print(colored('Eval MSE:', 'yellow'), eval_mse)
-
-	# 			# Evaluate (evaluation set; imagined rollout)
-	# 			obs_pred, state_pred = renderer.imagine(episode.obs[start_idx], episode.action[start_idx:start_idx+length])
-	# 			obs_target, state_target = renderer.render(torch.FloatTensor(episode.metadata['states'][start_idx:start_idx+length]), from_state=True)
-	# 			save_image(make_grid(torch.cat([obs_pred[0,::2], obs_target[::2]], dim=0), nrow=10), f'{save_dir}/eval_imagine_{i}.png')
-	# 			eval_imagine_mse = np.around(torch.mean((state_pred - state_target)**2, dim=-1)[0].numpy(), 2)
-	# 			print(colored('Eval imagine MSE:', 'yellow'), eval_imagine_mse)
-
-	# 			# Logging
-	# 			metrics.append(np.array([i, train_mse, eval_mse, train_imagine_mse[-1], eval_imagine_mse[-1], common_metrics['total_loss'], common_metrics['grad_norm']]))
-	# 			pd.DataFrame(np.array(metrics)).to_csv(f'{save_dir}/metrics.csv', header=['iteration', 'train_mse', 'eval_mse', 'train_imagine_mse', 'eval_imagine_mse', 'batch_mse', 'grad_norm'], index=None)
-	# 			renderer.save(f'{save_dir}/model_{i}.pt')
 
 
 if __name__ == '__main__':

@@ -201,18 +201,18 @@ class ResidualBlock(nn.Module):
 
 def dec(cfg):
 	"""Returns a TOLD decoder."""
-	if cfg.modality == 'pixels':
+	if cfg.target_modality == 'pixels':
 		layers = [nn.Linear(cfg.latent_dim, cfg.mlp_dim), nn.ELU(),
 				  nn.Linear(cfg.mlp_dim, cfg.enc_dim), nn.ELU(),
 				  nn.Linear(cfg.enc_dim, 128), nn.ELU(),
-				  nn.Linear(128, cfg.num_channels*16*16), nn.ReLU(), Unflatten((cfg.num_channels, 16, 16)),
+				  nn.Linear(128, 32*16*16), nn.ReLU(), Unflatten((32, 16, 16)),
 				  nn.ConvTranspose2d(32, 64, 4, stride=2, padding=1), nn.ReLU(),
 				  nn.ConvTranspose2d(64, 128, 4, stride=2, padding=1), nn.ReLU(),
 				  ResidualBlock(128),
 				  nn.ConvTranspose2d(128, 64, 3, stride=1, padding=1), nn.ReLU(),
 				  ResidualBlock(64),
 				  nn.ConvTranspose2d(64, 3, 3, stride=1, padding=1), nn.Sigmoid()]
-	elif cfg.modality == 'features':
+	elif cfg.target_modality == 'features':
 		features_to_dim = defaultdict(lambda: 2048)
 		features_to_dim.update({
 			'clip': 512,
@@ -434,6 +434,97 @@ class ReplayBuffer():
 			next_state = next_state.cuda()
 
 		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, next_state, task_vec, idxs.cuda(), weights.cuda()
+
+
+class RendererBuffer(ReplayBuffer):
+	"""
+	Storage and sampling functionality for training a renderer."""
+	def __init__(self, cfg):
+		self.cfg = cfg
+		self.capacity = 1_000_001
+		self.pixels_shape = (3, cfg.img_size, cfg.img_size)
+		self.features_shape = (2048*cfg.frame_stack,)
+		self.state_shape = (9,)
+		self._pixels = torch.empty((self.capacity+1, *self.pixels_shape), dtype=torch.uint8)
+		self._features = torch.empty((self.capacity+1, *self.features_shape), dtype=torch.float32)
+		self._state = torch.empty((self.capacity+1, *self.state_shape), dtype=torch.float32)
+		self._action = torch.empty((self.capacity, cfg.action_dim), dtype=torch.float32)
+		self._last_pixels = torch.empty((self.capacity//cfg.episode_length, 3*self.cfg.frame_stack, *self.pixels_shape[-2:]), dtype=torch.uint8)
+		self._last_features = torch.empty((self.capacity//cfg.episode_length, *self.features_shape), dtype=torch.float32)
+		self._last_state = torch.empty((self.capacity//cfg.episode_length, *self.state_shape), dtype=torch.float32)
+		self._priorities = torch.ones((self.capacity,), dtype=torch.float32)
+		self._full = False
+		self.idx = 0
+
+	def add(self, episode: Episode):
+		assert not self.full, 'Replay buffer is full'
+		self._pixels[self.idx:self.idx+self.cfg.episode_length] = torch.from_numpy(episode.metadata['pixels'][:-1, -3:])
+		self._features[self.idx:self.idx+self.cfg.episode_length] = torch.from_numpy(episode.metadata['features'][:-1])
+		self._state[self.idx:self.idx+self.cfg.episode_length] = torch.from_numpy(np.array(episode.metadata['states'][:-1]))
+		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
+		self._last_pixels[self.idx//self.cfg.episode_length] = torch.from_numpy(episode.metadata['pixels'][-self.cfg.frame_stack:]).reshape(3*self.cfg.frame_stack, *self.pixels_shape[-2:])
+		self._last_features[self.idx//self.cfg.episode_length] = torch.from_numpy(episode.metadata['features'][-1])
+		self._last_state[self.idx//self.cfg.episode_length] = torch.from_numpy(episode.metadata['states'][-1])
+		mask = torch.arange(self.cfg.episode_length) >= self.cfg.episode_length-self.cfg.horizon
+		new_priorities = torch.full((self.cfg.episode_length,), 1.)
+		new_priorities[mask] = 0
+		self._priorities[self.idx:self.idx+self.cfg.episode_length] = new_priorities
+		self.idx = (self.idx + self.cfg.episode_length) % self.capacity
+		self._full = self._full or self.idx == 0
+	
+	def _get_pixel_obs(self, arr, idxs):
+		obs = torch.empty((self.cfg.batch_size, 3*self.cfg.frame_stack, *arr.shape[-2:]), dtype=arr.dtype, device=torch.device('cuda'))
+		obs[:, -3:] = arr[idxs].cuda()
+		_idxs = idxs.clone()
+		mask = torch.ones_like(_idxs, dtype=torch.bool)
+		for i in range(1, self.cfg.frame_stack):
+			mask[_idxs % self.cfg.episode_length == 0] = False
+			_idxs[mask] -= 1
+			obs[:, -(i+1)*3:-i*3] = arr[_idxs].cuda()
+		return obs.float()
+
+	def sample(self, modalities):
+		probs = self._priorities[:self.idx] ** self.cfg.per_alpha
+		probs /= probs.sum()
+		total = len(probs)
+		idxs = torch.from_numpy(np.random.choice(total, self.cfg.batch_size, p=probs.cpu().numpy(), replace=False))
+
+		if 'pixels' in modalities:
+			pixels = self._get_pixel_obs(self._pixels, idxs)
+			next_pixels = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, 3*self.cfg.frame_stack, *self.pixels_shape[-2:]), dtype=torch.float32)
+		if 'features' in modalities:
+			features = self._features[idxs]
+			next_features = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *self.features_shape), dtype=torch.float32)
+		if 'state' in modalities:
+			state = self._state[idxs]
+			next_state = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *self.state_shape), dtype=torch.float32)
+		action = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, self.cfg.action_dim), dtype=torch.float32)
+
+		for t in range(self.cfg.horizon+1):
+			_idxs = idxs + t
+			if 'pixels' in modalities:
+				next_pixels[t] = self._get_pixel_obs(self._pixels, _idxs+1)
+			if 'features' in modalities:
+				next_features[t] = self._features[_idxs+1]
+			if 'state' in modalities:
+				next_state[t] = self._state[_idxs+1]
+			action[t] = self._action[_idxs]
+
+		dictionary = {'action': action.cuda()}
+		mask = (_idxs+1) % self.cfg.episode_length == 0
+		if 'pixels' in modalities:
+			next_pixels[-1, mask] = self._last_pixels[_idxs[mask]//self.cfg.episode_length].float()
+			dictionary['pixels'] = pixels.cuda()
+			dictionary['next_pixels'] = next_pixels.cuda()
+		if 'features' in modalities:
+			next_features[-1, mask] = self._last_features[_idxs[mask]//self.cfg.episode_length].float()
+			dictionary['features'] = features.cuda()
+			dictionary['next_features'] = next_features.cuda()
+		if 'state' in modalities:
+			next_state[-1, mask] = self._last_state[_idxs[mask]//self.cfg.episode_length].float()
+			dictionary['state'] = state.cuda()
+			dictionary['next_state'] = next_state.cuda()
+		return dictionary
 
 
 def linear_schedule(schdl, step):
