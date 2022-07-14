@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import algorithm.helper as h
 import torchvision.transforms as transforms
-from env import make_env
 
 
 class Unflatten(nn.Module):
@@ -84,29 +83,25 @@ class Renderer():
 	
 	@torch.no_grad()
 	def encode_decode(self, pixels):
-		return self.decoder(self.agent.model.h(pixels.cuda()/255.)).cpu()
+		return self.decoder(self.agent.model.h(pixels.cuda())).cpu()
 
 	def preprocess_target(self, pixels):
-		return self._resize(pixels[:, -3:] / 255.)
+		return self._resize(pixels[:, -3:]/255.).clip(0, 1)
 
 	@torch.no_grad()
 	def imagine(self, input, actions):
 		input, actions = input.cuda(), actions.cuda()
-		if input.ndim == 1:
+		if input.ndim in {1, 3}:
 			input = input.unsqueeze(0)
 		assert actions.ndim > 1
 		if actions.ndim == 2:
-			actions = actions.unsqueeze(0)
+			actions = actions.unsqueeze(1)
 		z = self.agent.model.h(input)
-		b, T, _ = actions.shape
-		states = torch.empty(b, T, 24, dtype=z.dtype, device=z.device)
-		pixels = torch.empty(b, T, 3, 64, 64, dtype=z.dtype, device=z.device)
-		for t in range(T):
-			states[:, t] = self.latent2state(z)
-			pixels[:, t] = self.state2pixels(states[:, t])
-			z, _ = self.agent.model.next(z, actions[:, t])
-		return pixels.cpu(), states.cpu()
-
+		output = []
+		for action in actions:
+			output.append(self.decoder(z).cpu())
+			z, _ = self.agent.model.next(z, action)
+		return torch.cat(output, dim=0)
 
 	def update(self, replay_buffer, step=int(1e6)):
 		pixels, next_pixels, action, _, _, _, _, _, _, = replay_buffer.sample()
@@ -114,19 +109,20 @@ class Renderer():
 		self.decoder.train()
 
 		with torch.no_grad():
-			zs = [self.agent.model.h(pixels)]
-			for t in range(self.cfg.horizon):
-				zs.append(self.agent.model.next(zs[-1], action[t])[0])
+			z = self.agent.model.h(pixels)
 
 		# Compute loss
 		pixels = torch.cat((pixels.unsqueeze(0), next_pixels), dim=0)
 		total_loss = 0
 		for t in range(self.cfg.horizon):
-			pixels_pred = self.decoder(zs[t])
+			pixels_pred = self.decoder(z)
 			pixels_target = self.preprocess_target(pixels[t])
-			total_loss += (self.cfg.rho ** t) * h.l1(pixels_pred, pixels_target).mean()
+			total_loss += (self.cfg.rho ** t) * h.mse(pixels_pred, pixels_target).mean()
+			z, _ = self.agent.model.next(z, action[t])
 
 		# Optimize model
+		total_loss = total_loss.clamp(max=1e4).mean()
+		total_loss.register_hook(lambda grad: grad * (1/self.cfg.horizon))
 		total_loss.backward()
 		self.optim.step()
 		

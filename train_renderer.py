@@ -13,6 +13,7 @@ from cfg_parse import parse_cfg
 from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.renderer import Renderer
+import algorithm.helper as h
 from algorithm.helper import ReplayBuffer
 from dataloader import make_dataset
 from termcolor import colored
@@ -51,45 +52,85 @@ def render(cfg: dict):
 	assert torch.cuda.is_available()
 	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
-	env, renderer, buffer = make_env(cfg), Renderer(cfg), ReplayBuffer(cfg)
-	print(renderer.decoder)
-
-	# Load dataset
-	dataset = make_dataset(cfg, buffer)
-	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity-1}')
-	dataset_summary = dataset.summary
-	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
-	save_dir = make_dir(f'{cfg.logging_dir}/renderer/{cfg.task}')
+	save_dir = make_dir(Path(cfg.logging_dir) / 'renderer' / cfg.task / (cfg.get('features', cfg.modality)) / cfg.exp_name / str(cfg.seed))
+	env, renderer, buffer, val_buffer = make_env(cfg), Renderer(cfg), ReplayBuffer(cfg), ReplayBuffer(cfg)
 
 	# Load agent from wandb
 	run_name = 'renderer' + str(np.random.randint(0, int(1e6)))
 	run = wandb.init(job_type='renderer', entity=cfg.wandb_entity, project=cfg.wandb_project, name=run_name, tags='renderer')
 	agent = TDMPC(cfg)
-	if cfg.get('tdmpc_artifact', None):
-		print(f'Loading TDMPC artifact {cfg.tdmpc_artifact}')
-		artifact = run.use_artifact(cfg.tdmpc_artifact, type='model')
-		artifact_dir = Path(artifact.download())
-		agent.load(artifact_dir / os.listdir(artifact_dir)[0])
+	tdmpc_artifact = f'{cfg.task}-{cfg.modality}-{cfg.exp_name}-{cfg.seed}-chkpt:v1'
+	print(f'Loading TDMPC artifact {tdmpc_artifact}')
+	artifact = run.use_artifact(tdmpc_artifact, type='model')
+	artifact_dir = Path(artifact.download())
+	agent.load(artifact_dir / os.listdir(artifact_dir)[0])
 	renderer.set_tdmpc_agent(agent)
+	print(renderer.decoder)
+
+	# Load dataset
+	assert cfg.get('use_val', False), 'Validation dataset is required for simulation experiments'
+	dataset = make_dataset(cfg, buffer)
+	for episode in dataset._val_episodes:
+		val_buffer += episode
+	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity-1}')
+	print(f'Validation buffer contains {val_buffer.capacity if val_buffer.full else val_buffer.idx} transitions, capacity is {val_buffer.capacity-1}')
+	dataset_summary = dataset.summary
+	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
 
 	# Config
-	num_images = 8
+	num_images = 9
+	rollout_length = 40
+
+	def eval_encode_decode(buffer, fp=None, num_images=num_images):
+		"""Evaluate single-step reconstruction error"""
+		pixels = buffer.sample()[0]
+		pixels_pred = renderer.encode_decode(pixels)
+		pixels_target = renderer.preprocess_target(pixels).cpu()
+		if fp is not None:
+			image_idxs = np.random.randint(len(pixels), size=num_images)
+			save_image(make_grid(torch.cat([pixels_pred[image_idxs], pixels_target[image_idxs]], dim=0), nrow=num_images), fp)
+		return h.mse(pixels_pred, pixels_target, reduce=True)
+	
+	def eval_rollout(buffer, num_episodes, fp=None, num_images=num_images, rollout_length=rollout_length):
+		start_idx = np.random.randint(cfg.episode_length//4-rollout_length-1) + np.random.randint(num_episodes) * cfg.episode_length
+		idxs = np.arange(start_idx, start_idx+rollout_length+1)
+		pixels, actions = buffer._obs[idxs], buffer._action[idxs]
+		pixels_pred = renderer.imagine(pixels[0], actions)
+		pixels_target = renderer.preprocess_target(pixels).cpu()
+		mse_rollout = 0
+		for t in range(rollout_length):
+			mse_rollout += (0.95**t) * h.mse(pixels_pred[t], pixels_target[t], reduce=True)
+		mse_rollout = mse_rollout.item()
+		if fp is not None:
+			image_idxs = np.arange(0, rollout_length+1, rollout_length//(num_images-1))
+			save_image(make_grid(torch.cat([pixels_pred[image_idxs], pixels_target[image_idxs]], dim=0), nrow=num_images), fp)
+		return mse_rollout
 
 	# Run training
+	metrics = []
+	print(colored('Saving to dir:', 'yellow'), save_dir)
 	for iteration in tqdm(range(cfg.train_iter+1)):
 
 		# Update model
 		common_metrics = renderer.update(buffer)
-		print(common_metrics)
 
-		if iteration % 100 == 0:
-		# if iteration % cfg.eval_freq == 0:
+		if iteration % cfg.eval_freq == 0:
 
 			# Evaluate (training set)
-			pixels = buffer.sample()[0]
-			pixels_pred = renderer.encode_decode(pixels)
-			image_idxs = np.random.randint(len(pixels), size=num_images)
-			save_image(make_grid(torch.cat([pixels_pred[image_idxs], renderer.preprocess_target(pixels[image_idxs]).cpu()], dim=0), nrow=8), f'{save_dir}/train_{iteration}.png')
+			train_mse = eval_encode_decode(buffer, fp=save_dir / f'train_{iteration}.png')
+			train_mse_rollout = eval_rollout(buffer, len(dataset._episodes), fp=save_dir / f'train_rollout_{iteration}.png')
+
+			# Evaluate (validation set)
+			eval_mse = eval_encode_decode(val_buffer, fp=save_dir / f'val_{iteration}.png')
+			eval_mse_rollout = eval_rollout(val_buffer, len(dataset._val_episodes), fp=save_dir / f'val_rollout_{iteration}.png')
+
+			# Logging
+			metrics.append(np.array([iteration, train_mse, eval_mse, train_mse_rollout, eval_mse_rollout, *common_metrics.values()]))
+			pd.DataFrame(np.array(metrics)).to_csv(f'{save_dir}/metrics.csv', header=['iteration', 'train_mse', 'eval_mse', 'train_mse_rollout', 'eval_mse_rollout', *common_metrics.keys()], index=None)
+			print(f'Iteration {iteration}, train mse: {train_mse:.4f}, eval mse: {eval_mse:.4f}, train mse rollout: {train_mse_rollout:.4f}, eval mse rollout: {eval_mse_rollout:.4f}')
+			
+			if iteration % cfg.save_freq == 0 and iteration > 0:
+				renderer.save(f'{save_dir}/model_{iteration}.pt')
 
 	# if cfg.get('renderer_path', None):
 	# 	print('Loading renderer from', cfg.renderer_path)

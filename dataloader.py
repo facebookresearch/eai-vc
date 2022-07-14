@@ -64,15 +64,19 @@ class OfflineDataset(Dataset):
 
 	def _partition_episodes(self, datas, cumrews):
 		if self._cfg.multitask or self._cfg.get('use_all', False):
-			return datas, cumrews, range(len(datas))
+			return datas, cumrews, range(len(datas)), None, None, None
 		assert len(datas) in {int(1650*self._cfg.fraction), int(3300*self._cfg.fraction)}, 'Unexpected number of episodes: {}'.format(len(datas))
 		train_episodes = int((3150 if self._cfg.task.startswith('mw-') else 1500)*self._cfg.fraction)
 		train_idxs = torch.topk(cumrews, k=train_episodes, dim=0, largest=False).indices
-		val_idxs = torch.topk(cumrews, k=len(datas)-train_episodes, dim=0, largest=True).indices
 		print('Training on bottom {} episodes'.format(train_episodes))
 		print(f'Training returns: [{cumrews[train_idxs].min():.2f}, {cumrews[train_idxs].max():.2f}]')
-		print(f'Validation returns: [{cumrews[val_idxs].min():.2f}, {cumrews[val_idxs].max():.2f}]')
-		return [datas[i] for i in train_idxs], cumrews[train_idxs], train_idxs
+		assert len(datas)-train_episodes > 0, 'Not enough validation episodes'
+		val_idxs = torch.topk(cumrews, k=len(datas)-train_episodes, dim=0, largest=True).indices
+		if self._cfg.get('use_val', False):
+			print('Validation on top {} episodes'.format(len(datas)-train_episodes))
+			print(f'Validation returns: [{cumrews[val_idxs].min():.2f}, {cumrews[val_idxs].max():.2f}]')
+		return [datas[i] for i in train_idxs], cumrews[train_idxs], train_idxs, \
+			   [datas[i] for i in val_idxs], cumrews[val_idxs], val_idxs
 
 	def _dump_filelist(self):
 		raise NotImplementedError()
@@ -174,9 +178,11 @@ class DMControlDataset(OfflineDataset):
 			cumrews.append(cumrew)
 		cumrews = np.array(cumrews)
 		self._dump_histogram(cumrews)
-		datas, self._cumulative_rewards, idxs = self._partition_episodes(datas, torch.tensor(cumrews, dtype=torch.float32))
+		datas, self._cumulative_rewards, idxs, val_datas, self._val_cumulative_rewards, val_idxs = \
+			self._partition_episodes(datas, torch.tensor(cumrews, dtype=torch.float32))
 		self._episodes = []
-		for data, idx in tqdm(zip(datas, idxs), desc='Loading episodes'):
+
+		def load_episode(data, idx):
 			fp = self._fps[idx]
 			if self._cfg.modality == 'features':
 				assert self._cfg.get('features', None) is not None, 'Features must be specified'
@@ -212,7 +218,17 @@ class DMControlDataset(OfflineDataset):
 			episode.task_vec = torch.tensor([float(data['metadata']['cfg']['task'] == self._tasks[i]) for i in range(len(self._tasks))], dtype=torch.float32, device=episode.device)
 			episode.task_id = episode.task_vec.argmax()
 			episode.filepath = fp
+			return episode
+
+		for data, idx in tqdm(zip(datas, idxs), desc='Loading episodes'):
+			episode = load_episode(data, idx)
 			self._episodes.append(episode)
+
+		if self._cfg.get('use_val', False):
+			self._val_episodes = []
+			for data, idx in tqdm(zip(val_datas, val_idxs), desc='Loading validation episodes'):
+				episode = load_episode(data, idx)
+				self._val_episodes.append(episode)
 
 
 class RLBenchDataset(OfflineDataset):
