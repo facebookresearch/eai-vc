@@ -223,7 +223,8 @@ def dec(cfg):
 				  nn.Linear(cfg.enc_dim, features_to_dim[cfg.features]*cfg.frame_stack)]
 	else:
 		layers = [nn.Linear(cfg.latent_dim, cfg.mlp_dim), nn.ELU(),
-				  nn.Linear(cfg.mlp_dim, cfg.obs_shape[0])]
+				  nn.Linear(cfg.mlp_dim, cfg.enc_dim), nn.ELU(),
+				  nn.Linear(cfg.enc_dim, cfg.state_dim)]
 	print('Decoder parameters: {}'.format(sum(p.numel() for p in nn.Sequential(*layers).parameters())))
 	return nn.Sequential(*layers)
 

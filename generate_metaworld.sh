@@ -1,14 +1,15 @@
 python generate.py \
-    -m task=mw-shelf-place \
+    -m task=mw-pick-place \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \
     per=true \
-    action_repeat=2 \
-    episode_length=250 \
-    train_steps=250000 \
+    action_repeat=1 \
+    episode_length=500 \
+    train_steps=500000 \
     eval_freq=50000 \
     save_freq=50000 \
-    exp_name=v1 \
+    +identifier_id=0,1,2,3,4,5,6,7,8,9,10 \
+    exp_name=v3 \
     seed=1 \
     hydra/launcher=slurm

@@ -65,8 +65,8 @@ class OfflineDataset(Dataset):
 	def _partition_episodes(self, datas, cumrews):
 		if self._cfg.multitask or self._cfg.get('use_all', False):
 			return datas, cumrews, range(len(datas)), None, None, None
-		assert len(datas) in {int(1650*self._cfg.fraction), int(3300*self._cfg.fraction)}, 'Unexpected number of episodes: {}'.format(len(datas))
-		train_episodes = int((3150 if self._cfg.task.startswith('mw-') else 1500)*self._cfg.fraction)
+		assert len(datas) == int(1650*self._cfg.fraction), 'Unexpected number of episodes: {}'.format(len(datas))
+		train_episodes = int(1500*self._cfg.fraction)
 		train_idxs = torch.topk(cumrews, k=train_episodes, dim=0, largest=False).indices
 		print('Training on bottom {} episodes'.format(train_episodes))
 		print(f'Training returns: [{cumrews[train_idxs].min():.2f}, {cumrews[train_idxs].max():.2f}]')
@@ -173,9 +173,12 @@ class DMControlDataset(OfflineDataset):
 		cumrews = []
 		for fp in self._fps:
 			data = torch.load(fp)
+			if data['metadata']['episode'] >= 50 or ('/mw-' in data['metadata']['name'] and '-state-v1-' in data['metadata']['name']):
+				continue
 			datas.append(data)
 			cumrew = np.array(data['rewards']).sum()
 			cumrews.append(cumrew)
+		print('Loaded {} episodes'.format(len(datas)))
 		cumrews = np.array(cumrews)
 		self._dump_histogram(cumrews)
 		datas, self._cumulative_rewards, idxs, val_datas, self._val_cumulative_rewards, val_idxs = \

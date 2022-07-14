@@ -18,6 +18,8 @@ recon/
 reconstruction/
 reconstruction_approx/
 renderer/
+histograms/
+histograms_prev/
 xvfb/
 frames.mp4
 

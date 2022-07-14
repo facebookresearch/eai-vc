@@ -53,7 +53,10 @@ def render(cfg: dict):
 	assert torch.cuda.is_available()
 	cfg = parse_cfg(cfg)
 	set_seed(cfg.seed)
-	save_dir = make_dir(Path(cfg.logging_dir) / 'renderer' / cfg.task / (cfg.get('features', cfg.modality)) / cfg.target_modality / cfg.exp_name / str(cfg.seed))
+	save_dir = make_dir(Path(cfg.logging_dir) / 'renderer' / cfg.task / (cfg.features if cfg.modality=='features' else cfg.modality) / cfg.target_modality / cfg.exp_name / str(cfg.seed))
+	if os.path.exists(save_dir / 'metrics.csv'):
+		print('Metrics file already exists. Skipping.')
+		return
 	env, renderer, buffer, val_buffer = make_env(cfg), Renderer(cfg), RendererBuffer(cfg), RendererBuffer(cfg)
 
 	# Load agent from wandb
@@ -84,9 +87,9 @@ def render(cfg: dict):
 
 	def eval_encode_decode(buffer, fp=None, num_images=num_images):
 		"""Evaluate single-step reconstruction error"""
-		dictionary = buffer.sample({'pixels', cfg.modality})
+		dictionary = buffer.sample({cfg.modality, cfg.target_modality})
 		pred = renderer.encode_decode(dictionary[cfg.modality])
-		target = renderer.preprocess_target(dictionary['pixels']).cpu()
+		target = renderer.preprocess_target(dictionary[cfg.target_modality]).cpu()
 		if fp is not None and cfg.target_modality == 'pixels':
 			image_idxs = np.random.randint(len(pred), size=num_images)
 			save_image(make_grid(torch.cat([pred[image_idxs], target[image_idxs]], dim=0), nrow=num_images), fp)
