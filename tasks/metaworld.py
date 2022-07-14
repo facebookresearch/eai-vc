@@ -83,4 +83,5 @@ def make_metaworld_env(cfg):
 	env = (ALL_V2_ENVIRONMENTS_GOAL_HIDDEN if cfg.get('goal_hidden', False) else ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE)[env_id](seed=cfg.seed)
 	env = MetaWorldWrapper(env, cfg)
 	env = TimeLimit(env, max_episode_steps=cfg.episode_length)
+	cfg.state_dim = 39
 	return env

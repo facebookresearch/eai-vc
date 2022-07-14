@@ -86,6 +86,7 @@ cameras: ???
 obs_shape: ???
 action_shape: ???
 action_dim: ???
+state_dim: ???
 demo: false
 goal_hidden: false
 
@@ -98,7 +99,7 @@ hydra:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 240
-        mem_gb: 48
+        timeout_min: 300
+        mem_gb: 76
         name: ${hydra.job.name}
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

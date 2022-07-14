@@ -1,7 +1,7 @@
 python train_renderer.py \
     -m task=cup-catch,finger-spin,cheetah-run,walker-run,quadruped-run \
     modality=features \
-    features=mocoego \
+    features=mocodmcontrol,random \
     +target_modality=pixels \
     batch_size=128 \
     train_iter=10000 \

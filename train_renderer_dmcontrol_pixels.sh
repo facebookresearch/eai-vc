@@ -3,6 +3,7 @@ python train_renderer.py \
     modality=pixels \
     encoder.arch=default+ \
     +target_modality=pixels \
+    +features=mocoego \
     batch_size=128 \
     train_iter=10000 \
     eval_freq=200 \
@@ -10,4 +11,5 @@ python train_renderer.py \
     exp_name=offline-v1 \
     seed=1,2,3 \
     +use_val=true \
+    +all_modalities=true \
     hydra/launcher=slurm

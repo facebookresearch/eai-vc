@@ -444,7 +444,7 @@ class RendererBuffer(ReplayBuffer):
 		self.capacity = 1_000_001
 		self.pixels_shape = (3, cfg.img_size, cfg.img_size)
 		self.features_shape = (2048*cfg.frame_stack,)
-		self.state_shape = (9,)
+		self.state_shape = (cfg.state_dim,)
 		self._pixels = torch.empty((self.capacity+1, *self.pixels_shape), dtype=torch.uint8)
 		self._features = torch.empty((self.capacity+1, *self.features_shape), dtype=torch.float32)
 		self._state = torch.empty((self.capacity+1, *self.state_shape), dtype=torch.float32)

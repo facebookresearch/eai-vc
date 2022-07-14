@@ -355,6 +355,17 @@ class MultitaskEnv(object):
 		return getattr(self._env, name)
 
 
+def get_state_dim(env):
+	obs_shp = []
+	for v in env.observation_spec().values():
+		try:
+			shp = v.shape[0]
+		except:
+			shp = 1
+		obs_shp.append(shp)
+	return int(np.sum(obs_shp))
+
+
 def make_dmcontrol_env(cfg):
 	domain, task = cfg.task.replace('-', '_').split('_', 1)
 	domain = dict(cup='ball_in_cup').get(domain, domain)
@@ -366,6 +377,7 @@ def make_dmcontrol_env(cfg):
 	env = ActionDTypeWrapper(env, np.float32)
 	env = ActionRepeatWrapper(env, cfg.action_repeat)
 	env = action_scale.Wrapper(env, minimum=-1.0, maximum=+1.0)
+	cfg.state_dim = get_state_dim(env)
 
 	if cfg.modality in {'pixels', 'features'}:
 		camera_id = dict(quadruped=2).get(domain, 0)
@@ -378,4 +390,5 @@ def make_dmcontrol_env(cfg):
 	if cfg.modality == 'features':
 		env = FeaturesWrapper(env, cfg)
 	env = TimeStepToGymWrapper(env, domain, task, cfg)
+
 	return env
