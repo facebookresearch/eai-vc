@@ -173,8 +173,9 @@ class DMControlDataset(OfflineDataset):
 		cumrews = []
 		for fp in self._fps:
 			data = torch.load(fp)
-			if data['metadata']['episode'] >= 50 or ('/mw-' in data['metadata']['name'] and '-state-v1-' in data['metadata']['name']):
-				continue
+			# if data['metadata']['episode'] >= 50 or ('/mw-' in data['metadata']['name'] and '-state-v1-' in data['metadata']['name']):
+			# if '/mw-' in data['metadata']['name'] and '-state-v3-' in data['metadata']['name']:
+				# continue
 			datas.append(data)
 			cumrew = np.array(data['rewards']).sum()
 			cumrews.append(cumrew)

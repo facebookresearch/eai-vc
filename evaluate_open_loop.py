@@ -7,22 +7,15 @@ import torch
 import numpy as np
 import gym
 gym.logger.set_level(40)
-import time
 from pathlib import Path
 from cfg_parse import parse_cfg
 from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.renderer import Renderer
-import algorithm.helper as h
 from algorithm.helper import RendererBuffer
-from dataloader import make_dataset
-from encode_dataset import stack_frames
 from termcolor import colored
-from torchvision.utils import make_grid, save_image
-from tqdm import tqdm
 import imageio
 from logger import make_dir
-import pandas as pd
 import hydra
 os.environ["WANDB_SILENT"] = "true"
 import wandb
@@ -65,43 +58,24 @@ def open_loop(cfg: dict):
 	episode_rewards = []
 	for i in range(cfg.eval_episodes):
 		obs, done, ep_reward = env.reset(), False, 0
-		actions = agent.plan(obs, None, eval_mode=True, step=int(1e6), t0=True, open_loop=True)
-		pred_frames = renderer.imagine(torch.from_numpy(obs), actions).permute(0,2,3,1)
-		gt_frames = []
-		for action in actions.cpu().numpy():
-			gt_frames.append(env.render(height=64, width=64))
-			obs, reward, done, _ = env.step(action)
-			ep_reward += reward
-			if done:
-				break
+		pred_frames, gt_frames = [], []
+		while not done:
+			actions = agent.plan(obs, None, eval_mode=True, step=int(1e6), t0=True, open_loop=True)
+			_pred_frames = renderer.imagine(torch.from_numpy(obs), actions).permute(0,2,3,1)
+			for t, action in enumerate(actions.cpu().numpy()):
+				pred_frames.append(_pred_frames[t])
+				gt_frames.append(env.render(height=64, width=64))
+				obs, reward, done, _ = env.step(action)
+				ep_reward += reward
+				if done:
+					break
 		print('Reward:', ep_reward)
-		gt_frames = np.array(gt_frames)
-		imageio.mimsave(Path(cfg.logging_dir) / f'openloop_{i}.gif', torch.cat(((pred_frames*255).byte(), torch.from_numpy(gt_frames)), dim=2))
+		pred_frames = torch.stack(pred_frames).mul(255).byte()
+		gt_frames = torch.from_numpy(np.array(gt_frames))
+		imageio.mimsave(Path(cfg.logging_dir) / f'openloop_{i}.gif', torch.cat((pred_frames, gt_frames), dim=2))
 		episode_rewards.append(ep_reward)
 	episode_rewards = np.array(episode_rewards)
 	print('Mean reward:', episode_rewards.mean())
-
-
-	def eval_rollout(buffer, num_episodes, fp=None, num_images=num_images, rollout_length=rollout_length):
-		start_idx = np.random.randint(cfg.episode_length//4-rollout_length-1) + np.random.randint(num_episodes) * cfg.episode_length
-		idxs = np.arange(start_idx, start_idx+rollout_length+1)
-		input = buffer.__dict__['_'+cfg.modality][idxs]
-		target = buffer.__dict__['_'+cfg.target_modality][idxs]
-		action = buffer._action[idxs]
-		if cfg.modality == 'pixels':
-			_input = torch.empty((input.shape[0], input.shape[1]*cfg.frame_stack, *input.shape[2:]), dtype=torch.float32)
-			input = stack_frames(input, _input, cfg.frame_stack).cuda()
-		pred = renderer.imagine(input[0], action)
-		target = renderer.preprocess_target(target).cpu()
-		mse_rollout = 0
-		for t in range(rollout_length):
-			mse_rollout += (0.95**t) * h.mse(pred[t], target[t], reduce=True)
-		mse_rollout = mse_rollout.item()
-		if fp is not None and cfg.target_modality == 'pixels':
-			image_idxs = np.arange(0, rollout_length+1, rollout_length//(num_images-1))
-			save_image(make_grid(torch.cat([pred[image_idxs], target[image_idxs]], dim=0), nrow=num_images), fp)
-			imageio.mimsave(str(fp).replace('.png', '.mp4'), torch.cat([pred, target], dim=-1).mul(255).byte().numpy().transpose(0, 2, 3, 1), fps=6)
-		return mse_rollout
 
 
 if __name__ == '__main__':

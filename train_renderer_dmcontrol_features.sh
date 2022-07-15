@@ -1,8 +1,8 @@
 python train_renderer.py \
-    -m task=cup-catch,finger-spin,cheetah-run,walker-run,quadruped-run \
+    -m task=walker-run \
     modality=features \
-    features=mocodmcontrol,random \
-    +target_modality=pixels \
+    features=random \
+    +target_modality=state \
     batch_size=128 \
     train_iter=10000 \
     eval_freq=200 \

@@ -32,7 +32,7 @@ task2factor = {
 	'mw-box-close': 1.5,
 	'mw-hammer': 1.15,
 	'mw-push': 2.,
-	'mw-pick-place': 4.,
+	'mw-pick-place': 10.,
 }
 
 

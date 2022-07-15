@@ -75,8 +75,8 @@ def main():
 	# min across seeds
 	df = df.groupby(['idx', 'task', 'source', 'target']).min().reset_index()
 
-	# average across tasks
-	df = df.groupby(['idx', 'source', 'target']).mean().reset_index()
+	# median across tasks
+	df = df.groupby(['idx', 'source', 'target']).median().reset_index()
 
 	# subgroup by target
 	df_pixels = df[df['target'] == 'pixels']
