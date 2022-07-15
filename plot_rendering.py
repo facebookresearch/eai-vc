@@ -41,26 +41,6 @@ def main():
 		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-run', 'quadruped-run'],
 		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
 	}
-	# tasks = {
-	# 	'dmcontrol': ['cup-catch']
-	# }
-	exp_names = ['offline-v1', 'mocodmcontrol-offline-v1', 'mocometaworld-offline-v1', 'mocoego-offline-v1', 'random-offline-v1']
-	experiment2label = {
-		'state-v1': 'State',
-		'state-offline-v1': '✻ State',
-		'pixels-v1': 'Pixels',
-		'pixels-offline-v1': '✻ Pixels',
-		'features-mocodmcontrol-v1': 'In-domain',
-		'features-mocodmcontrol-offline-v1': '✻ In-domain',
-		'features-mocometaworld-v1': 'In-domain',
-		'features-mocometaworld-offline-v1': '✻ In-domain',
-		'features-mocoego-v1': 'Ego4D',
-		'features-mocoego-offline-v1': '✻ Ego4D',
-		'features-random-v1': 'Random',
-		'features-random-offline-v1': '✻ Random',
-	}
-	num_seeds = 3
-	seeds = set(range(1, num_seeds+1))
 	logging_dir = Path('/private/home/nihansen/code/tdmpc2/renderer')
 
 	source2exp = {
@@ -69,6 +49,12 @@ def main():
 		'mocodmcontrol': 'mocodmcontrol-offline-v1',
 		'random': 'random-offline-v1',
 	}
+	source2label = {
+		'pixels': 'Pixels',
+		'mocodmcontrol': 'In-domain',
+		'mocoego': 'Ego4D',
+		'random': 'Random',
+	}
 
 	entries = []
 	for task in tasks['dmcontrol']:
@@ -76,36 +62,40 @@ def main():
 			for target in ['pixels', 'state']:
 				for seed in range(1, 3+1):
 					try:
+						idx = list(source2label.keys()).index(source)
 						eval_mse = get_eval_mse(logging_dir, task, source, target, source2exp[source], seed)
 						entries.append(
-							(task, source, target, seed, eval_mse)
+							(idx, task, source2label[source], target, seed, eval_mse)
 						)
 					except FileNotFoundError:
 						print('File not found:', task, source, target, seed)
 
-	df = pd.DataFrame(entries, columns=['task', 'source', 'target', 'seed', 'eval_mse'])
+	df = pd.DataFrame(entries, columns=['idx', 'task', 'source', 'target', 'seed', 'eval_mse'])
+
+	# min across seeds
+	df = df.groupby(['idx', 'task', 'source', 'target']).min().reset_index()
 
 	# average across tasks
-	df = df.groupby(['source', 'target', 'seed']).mean().reset_index()
-	
-	# average across seeds
-	df = df.groupby(['source', 'target']).mean().reset_index()
+	df = df.groupby(['idx', 'source', 'target']).mean().reset_index()
 
 	# subgroup by target
 	df_pixels = df[df['target'] == 'pixels']
 	df_state = df[df['target'] == 'state']
 
-	# rescale mse
-	df_state['eval_mse'] = (df_state['eval_mse'] * 1e3).round()
-	df_pixels['eval_mse'] = (df_pixels['eval_mse'] * 1e5).round()
+	# rescale mse by max value
+	df_state['eval_mse'] = (100 * df_state['eval_mse'] / df_state['eval_mse'].max()).round()
+	df_pixels['eval_mse'] = (100 * df_pixels['eval_mse'] / df_pixels['eval_mse'].max()).round()
 
 	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
+	# colors (use tableau palette)
+	colors = sns.color_palette()[::2][1:]
+
 	# state
 	ax = axs[0]
-	sns.barplot(data=df_state, x='source', y='eval_mse', ax=ax, ci=None)
+	sns.barplot(data=df_state, x='source', y='eval_mse', ax=ax, ci=None, palette=colors)
 	ax.set_title('State prediction', fontweight='bold')
-	ax.set_ylim(0, None)
+	ax.set_ylim(0, 110)
 	ax.set_xlabel('')
 	ax.set_ylabel('Normalized MSE')
 	ax.bar_label(ax.containers[0], fontsize=18)
@@ -113,9 +103,9 @@ def main():
 	
 	# pixels
 	ax = axs[1]
-	sns.barplot(data=df_pixels, x='source', y='eval_mse', ax=ax, ci=None)
+	sns.barplot(data=df_pixels, x='source', y='eval_mse', ax=ax, ci=None, palette=colors)
 	ax.set_title('Pixel prediction', fontweight='bold')
-	ax.set_ylim(0, None)
+	ax.set_ylim(0, 110)
 	ax.set_xlabel('')
 	ax.set_ylabel('Normalized MSE')
 	ax.bar_label(ax.containers[0], fontsize=18)

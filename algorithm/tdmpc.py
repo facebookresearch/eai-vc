@@ -126,13 +126,14 @@ class TDMPC():
 		return G
 
 	@torch.no_grad()
-	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True):
+	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True, open_loop=False):
 		"""
 		Plan next action using TD-MPC inference.
 		obs: raw input observation.
 		eval_mode: uniform sampling and action noise is disabled during evaluation.
 		step: current time step. determines e.g. planning horizon.
 		t0: whether current step is the first step of an episode.
+		open_loop: whether to use open-loop dynamics.
 		"""
 		# Seed steps
 		if step < self.cfg.seed_steps and not eval_mode:
@@ -182,6 +183,8 @@ class TDMPC():
 		# Outputs
 		score = score.squeeze(1).cpu().numpy()
 		actions = elite_actions[:, np.random.choice(np.arange(score.shape[0]), p=score)]
+		if open_loop:
+			return actions
 		self._prev_mean = mean
 		mean, std = actions[0], _std[0]
 		a = mean

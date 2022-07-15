@@ -1,5 +1,6 @@
 python encode_dataset.py \
-    -m task=cup-catch,finger-spin,cheetah-run,walker-run,quadruped-run \
+    task=walker-run \
     modality=pixels \
-    +features=mocodmcontrol \
+    +features=random \
+    +use_all=true \
     hydra/launcher=slurm

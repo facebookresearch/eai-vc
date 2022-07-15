@@ -4,4 +4,5 @@ python encode_dataset.py \
     +features=mocoego,random \
     action_repeat=2 \
     episode_length=250 \
+    +use_all=true \
     hydra/launcher=slurm

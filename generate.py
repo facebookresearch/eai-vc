@@ -29,10 +29,10 @@ def get_state(env):
 
 
 task2factor = {
-	'mw-box-close': 1.25,
-	'mw-hammer': 1.25,
-	'mw-push': 1.25,
-	'mw-pick-place': 2.,
+	'mw-box-close': 1.5,
+	'mw-hammer': 1.15,
+	'mw-push': 2.,
+	'mw-pick-place': 4.,
 }
 
 
@@ -82,7 +82,7 @@ def generate(cfg: dict):
 	cfg = parse_cfg(cfg)
 	cfg.demo = True
 	cfg.eval_freq = 50_000
-	cfg.eval_episodes = 50
+	cfg.eval_episodes = 100 if cfg.task.startswith('mw-') else 50
 	set_seed(cfg.seed)
 	env, agent = make_env(cfg), TDMPC(cfg)
 
