@@ -168,16 +168,27 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
 
     plt.close()
 
-def load_trajs(exp_info_json_path, exp_dir=None):
+def load_trajs(exp_info, exp_dir=None):
     """
-    Load train and test trajectories fro exp_info_json_path json file
-    Save demo_info.pth in exp_dir
+    Load train and test trajectories from exp_info
+    
+    Args
+        exp_info (dict or path to .json file): should contain a dict in the following format:
+                        {
+                            "demo_dir"   : top-level directory containing demos ("demos/"),
+                            "difficulty" : difficulty level (1),
+                            "train_demos": list of demo ids for training ([0,1]),
+                            "test_demos" : list of demo ids for testing ([5]),
+                        }
+        exp_dir (str): If specified, save demo_info.pth in exp_dir/
     """
 
-    # TODO
     # Load json and get traj filepaths
-    with open(exp_info_json_path, "rb") as f:
-        info = json.load(f)
+    if type(exp_info) is dict:
+        info = exp_info
+    else:
+        with open(exp_info, "rb") as f:
+            info = json.load(f)
 
     demo_dir       = info["demo_dir"]
     train_demo_ids = info["train_demos"]

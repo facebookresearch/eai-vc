@@ -168,9 +168,11 @@ def get_exp_str(params_dict):
     
     sorted_dict = collections.OrderedDict(sorted(params_dict.items()))
 
-    file_path = os.path.splitext(os.path.split(params_dict["file_path"])[1])[0]
- 
-    exp_str = f"phase2_model_{file_path}"
+    exp_str = f"phase2_model"
+
+    if params_dict["file_path"] is not None:
+        file_path = os.path.splitext(os.path.split(params_dict["file_path"])[1])[0]
+        exp_str += f"_{file_path}"
 
     for key, val in sorted_dict.items():
         # exclude these keys from exp name
@@ -198,8 +200,20 @@ def main(conf):
     else:
         device = "cpu"
 
-    # Load train and test trajectories
-    train_trajs, test_trajs = d_utils.load_trajs(args.file_path)
+    if args.file_path is not None:
+        train_trajs, test_trajs = d_utils.load_trajs(args.file_path)
+    else:
+        train_demos = list(range(args.n_train+1))
+        train_demos.remove(5)
+        traj_info = {
+                "demo_dir"   : "/Users/clairelchen/logs/demos/",
+                "difficulty" : 1,
+                "train_demos": train_demos,
+                "test_demos" : [5]
+            }
+
+        # Load train and test trajectories
+        train_trajs, test_trajs = d_utils.load_trajs(traj_info)
 
     # Name experiment and make exp directory
     exp_str = get_exp_str(vars(conf))
@@ -228,8 +242,10 @@ def parse_args():
 
     parser = argparse.ArgumentParser()
 
-    # Required
+    # Required for specifying training and test trajectories
     parser.add_argument("--file_path", default=None, help="""Filepath of trajectory to load""")
+    # OR
+    parser.add_argument("--n_train", type=int, default=20, help="Number of training trajectories")
 
     parser.add_argument("--n_epochs", type=int, default=1500, help="Number of epochs")
     parser.add_argument("--log_dir", type=str, default=LOG_DIR, help="Directory for run logs")
