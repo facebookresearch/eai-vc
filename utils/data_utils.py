@@ -43,8 +43,17 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
         traj_dict["image_180"] = image180
         traj_dict["image_300"] = image300
 
+    # Mode information
     if "ft_pos_targets_per_mode" in data[-1]["policy"]:
         traj_dict["ft_pos_targets_per_mode"] = scale * data[-1]["policy"]["ft_pos_targets_per_mode"]
+        
+        # Add "mode" 
+        if "mode" not in data[0]["policy"]:
+            traj_dict["mode"] = np.array([len(data[i]["policy"]["ft_pos_targets_per_mode"]) \
+                                            for i in range(len(data))])
+        else:
+            traj_dict["mode"] = np.array([data[i]["policy"]["mode"] for i in range(len(data))])
+            
 
     # Object vertices
     if "vertices" in data[0]["object_observation"]:
@@ -159,7 +168,7 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
 
     plt.close()
 
-def load_trajs(exp_info_json_path, exp_dir):
+def load_trajs(exp_info_json_path, exp_dir=None):
     """
     Load train and test trajectories fro exp_info_json_path json file
     Save demo_info.pth in exp_dir
@@ -210,13 +219,14 @@ def load_trajs(exp_info_json_path, exp_dir):
     print(f"Loaded {len(test_trajs)} test demos")
     
     # Save demo info (train and test demos)
-    torch.save({
-        'train_demos'         : train_trajs,
-        'test_demos'          : test_trajs,
-        'train_demo_stats'    : train_demo_stats,
-        'test_demo_stats'     : test_demo_stats,
-        'downsample_time_step': downsample_time_step,
-    }, f=f'{exp_dir}/demo_info.pth')
+    if exp_dir is not None:
+        torch.save({
+            'train_demos'         : train_trajs,
+            'test_demos'          : test_trajs,
+            'train_demo_stats'    : train_demo_stats,
+            'test_demo_stats'     : test_demo_stats,
+            'downsample_time_step': downsample_time_step,
+        }, f=f'{exp_dir}/demo_info.pth')
 
     return train_trajs, test_trajs
 
