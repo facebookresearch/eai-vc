@@ -33,6 +33,8 @@ task2factor = {
 	'mw-hammer': 1.15,
 	'mw-push': 2.,
 	'mw-pick-place': 10.,
+	'mw-assembly': 2.,
+	'mw-soccer': 4.,
 }
 
 
@@ -57,6 +59,7 @@ def evaluate(env, agent, cfg, step):
 			infos.append(info)
 			phys_states.append(get_state(env))
 			t += 1
+		print('Episode reward: {}'.format(ep_reward))
 		episode_rewards.append(ep_reward)
 		frames = np.stack(env.frames, axis=0)
 		episodes.append({
@@ -86,20 +89,21 @@ def generate(cfg: dict):
 	set_seed(cfg.seed)
 	env, agent = make_env(cfg), TDMPC(cfg)
 
-	# Load from wandb
+	# Init wandb and specify target identifier
 	run_name = 'demo' + str(np.random.randint(0, int(1e6)))
 	run = wandb.init(job_type='demo', entity=cfg.wandb_entity, project=cfg.wandb_project, name=run_name, tags='demo')
-
-	identifiers = range(0, int(cfg.train_steps*cfg.action_repeat)+1, cfg.eval_freq)
-	print('Identifiers:', identifiers)
-
+	all_identifiers = range(0, int(cfg.train_steps*cfg.action_repeat)+1, cfg.eval_freq)
 	if cfg.get('identifier_id', None) is not None:
-		identifiers = [identifiers[cfg.identifier_id]]
+		identifiers = [all_identifiers[cfg.identifier_id]]
 		print('Identifier:', identifiers)
-	
+	else:
+		identifiers = all_identifiers
+		print('Using all identifiers:', identifiers)
+
+	# Search for the trained agent, fallback to the latest checkpoint if not found
 	for identifier in identifiers:
 		artifact_dir = None
-		for version in range(0, 2):
+		for version in range(0, 3):
 			name = f'{cfg.wandb_entity}/{cfg.wandb_project}/{cfg.task}-state-{cfg.exp_name}-{cfg.seed}-{identifier}:v{version}'
 			try:
 				artifact = run.use_artifact(name, type='model')
@@ -109,8 +113,25 @@ def generate(cfg: dict):
 				print(e)
 		run.join()
 		if artifact_dir is None:
-			print(f'Warning: no artifact found for {identifier}, using random initialization')
+			print(f'Warning: no artifact found for identifier {identifier}, looking for best available model')
+			for _identifier in reversed(all_identifiers):
+				for version in range(0, 3):
+					name = f'{cfg.wandb_entity}/{cfg.wandb_project}/{cfg.task}-state-{cfg.exp_name}-{cfg.seed}-{_identifier}:v{version}'
+					try:
+						artifact = run.use_artifact(name, type='model')
+						artifact_dir = Path(artifact.download())
+						agent.load(artifact_dir / f'{_identifier}.pt')
+						print('Found artifact for identifier', _identifier)
+						break
+					except Exception as e:
+						print(e)
+				if artifact_dir is not None:
+					break
+			run.join()
+			if artifact_dir is None:
+				print(f'Warning: all fallbacks failed, using random initialization')
 		else:
+			print('Using artifact:', artifact_dir / f'{identifier}.pt')
 			agent.load(artifact_dir / f'{identifier}.pt')
 
 		# Evaluate

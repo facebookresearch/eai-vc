@@ -157,12 +157,13 @@ class DMControlDataset(OfflineDataset):
 		if not self._cfg.get('dump_histogram', False):
 			return
 		hist_fp = make_dir(Path(self._cfg.logging_dir) / 'histograms') / f'{self._cfg.task}.png'
-		plt.figure(figsize=(8, 5))
-		plt.hist(cumulative_rewards, bins=100)
+		plt.figure(figsize=(8, 4))
+		plt.hist(cumulative_rewards, bins=400 if self._cfg.task.startswith('mw-') else 200)
 		plt.xlabel('Episode return')
 		plt.ylabel('Count')
 		plt.xlim(0, 5000 if self._cfg.task.startswith('mw-') else 1000)
-		plt.title(f'{self._cfg.task}')
+		plt.title(self._cfg.task_title.split(' ', 1)[1] + f' ({len(cumulative_rewards)} episodes)')
+		plt.tight_layout()
 		plt.savefig(hist_fp)
 		plt.close()
 		print(f'Dumped histogram to {hist_fp}')

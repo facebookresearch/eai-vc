@@ -3,8 +3,8 @@ python train_offline.py \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \
-    action_repeat=1 \
-    episode_length=500 \
-    exp_name=offline-v3 \
+    action_repeat=2 \
+    episode_length=250 \
+    exp_name=offline-v1 \
     seed=1,2,3 \
     hydra/launcher=slurm

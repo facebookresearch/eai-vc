@@ -1,5 +1,5 @@
 python generate.py \
-    -m task=mw-pick-place \
+    -m task=mw-reach,mw-faucet-close,mw-faucet-open,mw-assembly,mw-soccer \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \
@@ -10,6 +10,6 @@ python generate.py \
     eval_freq=50000 \
     save_freq=50000 \
     +identifier_id=0,1,2,3,4,5,6,7,8,9,10 \
-    exp_name=v3 \
+    exp_name=v1 \
     seed=1,2,3 \
     hydra/launcher=slurm
