@@ -156,10 +156,11 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
 
             plt.plot(x, data["y"][:, i], marker=marker, label=label)
 
+        if plot_timestamp is not None:
+            plt.axvline(x=plot_timestamp, ls='--', c='k', lw=1)
+
     plt.legend()
 
-    if plot_timestamp is not None:
-        plt.axvline(x=plot_timestamp, ls='--', c='k', lw=1)
 
     if save_path is not None:
         plt.savefig(save_path)

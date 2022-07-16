@@ -185,7 +185,7 @@ def main(args):
     # Run roll_out to get trajectory from initial state
     mpc.set_action_seq_for_testing(traj["delta_ftpos"])
     pred_traj = mpc.roll_out(obs_dict_init)
-    #pred_traj = mpc.roll_out_gt_state(traj)
+    #pred_traj = mpc.roll_out_gt_state(traj) # one-step rollout (from ground truth states)
 
     pred_traj = pred_traj.detach().numpy()
     pred_ft_pos = pred_traj[:, :mpc.a_dim]
@@ -197,37 +197,88 @@ def main(args):
         true_o_state = traj["vertices"]
     else:
         raise ValueError()
-    
+
+    # Compute l2 distance between each ft and object state (pos or vertices)
+    ft_pos_err = np.zeros((time_horizon, 3))
+    for i in range(3):
+        per_finger_err = np.linalg.norm((pred_ft_pos[:, i*3:i*3+3] - traj["ft_pos_cur"][:, i*3:i*3+3]), axis=1)
+        ft_pos_err[:, i] = per_finger_err
+
+    if mpc.obj_state_type == "pos":
+        o_state_err = np.expand_dims(np.linalg.norm((pred_o_state - true_o_state), axis=1), 1)
+    elif mpc.obj_state_type == "vertices":
+        o_state_err = np.zeros((time_horizon, 8))
+        for i in range(8):
+            per_vert_err = np.linalg.norm((pred_o_state[:, i*3:i*3+3] - true_o_state[:, i*3:i*3+3]), axis=1)
+            o_state_err[:, i] = per_vert_err
+    else:
+        raise ValueError()
+
     # Compare against ground truth trajectory to check that rollout is correct
+    #d_utils.plot_traj(
+    #        "ft position", 
+    #        None,
+    #        ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
+    #        {
+    #        "pred":  {"y": pred_ft_pos, "x": traj["t"], "marker": "x"},
+    #        "demo": {"y": traj["ft_pos_cur"], "x": traj["t"]},
+    #        })
+
+    ## Object state
+    #if mpc.obj_state_type == "pos":
+    #    d_utils.plot_traj(
+    #            "object position", 
+    #            None,
+    #            ["x", "y", "z"],
+    #            {
+    #            "pred":  {"y": pred_o_state, "x": traj["t"], "marker": "x"},
+    #            "demo": {"y":  true_o_state, "x": traj["t"]},
+    #            })
+    #elif mpc.obj_state_type == "vertices":
+    #    for i in range(8):
+    #        d_utils.plot_traj(
+    #                f"object vertex {i}", 
+    #                None,
+    #                ["x", "y", "z"],
+    #                {
+    #                "pred":  {"y": pred_o_state[:, i*3:i*3+3], "x": traj["t"], "marker": "x"},
+    #                "demo": {"y":  true_o_state[:, i*3:i*3+3], "x": traj["t"]},
+    #                })
+    #else:
+    #    raise ValueError()
+
+    # Plot l2 distance between each ft and object state (pos or vertices)
     d_utils.plot_traj(
-            "ft position", 
+            "ft position error (m)", 
             None,
-            ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
+            ["f1", "f2", "f3"],
             {
-            "pred":  {"y": pred_ft_pos, "x": traj["t"], "marker": "x"},
-            "demo": {"y": traj["ft_pos_cur"], "x": traj["t"]},
-            })
+            "err":  {"y": ft_pos_err, "x": traj["t"], "marker": "x"},
+            },
+            plot_timestamp = traj["t"][phase2_start_ind]
+            )
 
     # Object state
     if mpc.obj_state_type == "pos":
         d_utils.plot_traj(
-                "object position", 
+                "object position error (m)", 
                 None,
-                ["x", "y", "z"],
+                ["pos"],
                 {
-                "pred":  {"y": pred_o_state, "x": traj["t"], "marker": "x"},
-                "demo": {"y":  true_o_state, "x": traj["t"]},
-                })
+                "err":  {"y": o_state_err, "x": traj["t"], "marker": "x"},
+                },
+                plot_timestamp = traj["t"][phase2_start_ind]
+                )
     elif mpc.obj_state_type == "vertices":
-        for i in range(8):
-            d_utils.plot_traj(
-                    f"object vertex {i}", 
-                    None,
-                    ["x", "y", "z"],
-                    {
-                    "pred":  {"y": pred_o_state[:, i*3:i*3+3], "x": traj["t"], "marker": "x"},
-                    "demo": {"y":  true_o_state[:, i*3:i*3+3], "x": traj["t"]},
-                    })
+        d_utils.plot_traj(
+                f"object vertex position error (m)", 
+                None,
+                ["v0","v1", "v2", "v3", "v4", "v5", "v6", "v7"],
+                {
+                "err":  {"y": o_state_err, "x": traj["t"], "marker": "x"},
+                },
+                plot_timestamp = traj["t"][phase2_start_ind]
+                )
     else:
         raise ValueError()
 
