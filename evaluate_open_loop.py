@@ -72,7 +72,7 @@ def open_loop(cfg: dict):
 		print('Reward:', ep_reward)
 		pred_frames = torch.stack(pred_frames).mul(255).byte()
 		gt_frames = torch.from_numpy(np.array(gt_frames))
-		imageio.mimsave(Path(cfg.logging_dir) / f'openloop_{i}.gif', torch.cat((pred_frames, gt_frames), dim=2))
+		imageio.mimsave(Path(cfg.logging_dir) / 'openloop' / f'openloop_{cfg.task.replace("-", "_")}_horizon{cfg.horizon}_{i}.gif', torch.cat((pred_frames, gt_frames), dim=2))
 		episode_rewards.append(ep_reward)
 	episode_rewards = np.array(episode_rewards)
 	print('Mean reward:', episode_rewards.mean())

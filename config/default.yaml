@@ -5,7 +5,7 @@ defaults:
 
 # offline training
 fraction: 1.0
-train_iter: 100000
+train_iter: 200000
 dump_filelist: false
 
 # encoder
@@ -94,12 +94,12 @@ goal_hidden: false
 resume: True
 hydra:
     job:
-        name: generate
+        name: v1-again
     launcher:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 260
+        timeout_min: 660
         mem_gb: 48
         name: ${hydra.job.name}
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j
