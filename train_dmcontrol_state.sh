@@ -1,5 +1,5 @@
 python train.py \
-    -m task=cup-catch,finger-spin,cheetah-run,walker-run,quadruped-run \
+    -m task=walker-walk \
     modality=state \
     enc_dim=256 \
     mlp_dim=512 \

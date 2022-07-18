@@ -1,7 +1,7 @@
 python train.py \
-    -m task=cup-catch,finger-spin,cheetah-run,walker-run,quadruped-run \
+    -m task=walker-walk \
     modality=features \
-    features=mocodmcontrol \
+    features=mocodmcontrol,mocoego,random \
     enc_dim=256 \
     mlp_dim=512 \
     per=true \

@@ -1,5 +1,5 @@
 python encode_dataset.py \
-    task=walker-run \
+    task=pendulum-swingup \
     modality=pixels \
     +features=random \
     +use_all=true \

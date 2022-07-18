@@ -142,6 +142,8 @@ def make_multitask_env(cfg):
 	elif domain == 'mw': # Meta-World
 		if num_tasks == 5:
 			tasks = ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
+		elif num_tasks == 15:
+			tasks = ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-reach', 'mw-push', 'mw-pick-place', 'mw-assembly', 'mw-soccer', 'mw-faucet-close', 'mw-faucet-open', 'mw-door-open', 'mw-door-close', 'mw-window-open', 'mw-window-close']
 		else:
 			raise NotImplementedError()
 	else: # DMControl

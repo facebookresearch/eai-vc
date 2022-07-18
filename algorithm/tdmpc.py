@@ -26,8 +26,10 @@ class TOLD(nn.Module):
 		for m in [self._Q1, self._Q2]:
 			h.set_requires_grad(m, enable)
 
-	def h(self, obs):
+	def h(self, obs, task_vec=None):
 		"""Encodes an observation into its latent representation (h)."""
+		if task_vec is not None:
+			obs = torch.cat((obs, self._task_encoder(task_vec)), dim=-1)
 		return self._encoder(obs)
 
 	def next(self, z, a, task_vec=None):
@@ -147,13 +149,13 @@ class TDMPC():
 		num_pi_trajs = int(self.cfg.mixture_coef * self.cfg.num_samples)
 		if num_pi_trajs > 0:
 			pi_actions = torch.empty(horizon, num_pi_trajs, self.cfg.action_dim, device=self.device)
-			z = self.model.h(obs).repeat(num_pi_trajs, 1)
+			z = self.model.h(obs, task_vec).repeat(num_pi_trajs, 1)
 			for t in range(horizon):
 				pi_actions[t] = self.model.pi(z, task_vec, self.cfg.min_std)
 				z, _ = self.model.next(z, pi_actions[t], task_vec)
 
 		# Initialize state and parameters
-		z = self.model.h(obs).repeat(self.cfg.num_samples+num_pi_trajs, 1)
+		z = self.model.h(obs, task_vec).repeat(self.cfg.num_samples+num_pi_trajs, 1)
 		mean = torch.zeros(horizon, self.cfg.action_dim, device=self.device)
 		std = 2*torch.ones(horizon, self.cfg.action_dim, device=self.device)
 		if not t0 and hasattr(self, '_prev_mean'):
@@ -213,7 +215,7 @@ class TDMPC():
 	@torch.no_grad()
 	def _td_target(self, next_obs, reward, task_vec=None):
 		"""Compute the TD-target from a reward and the observation at the following time step."""
-		next_z = self.model.h(next_obs)
+		next_z = self.model.h(next_obs, task_vec)
 		td_target = reward + self.cfg.discount * \
 			torch.min(*self.model_target.Q(next_z, self.model.pi(next_z, task_vec, self.cfg.min_std), task_vec))
 		return td_target
@@ -226,7 +228,7 @@ class TDMPC():
 		self.model.train()
 
 		# Representation
-		z = self.model.h(self.aug(obs))
+		z = self.model.h(self.aug(obs), task_vec)
 		zs = [z.detach()]
 
 		consistency_loss, reward_loss, value_loss, priority_loss = 0, 0, 0, 0
@@ -237,7 +239,7 @@ class TDMPC():
 			z, reward_pred = self.model.next(z, action[t], task_vec)
 			with torch.no_grad():
 				next_obs = self.aug(next_obses[t])
-				next_z = self.model_target.h(next_obs)
+				next_z = self.model_target.h(next_obs, task_vec)
 				td_target = self._td_target(next_obs, reward[t], task_vec)
 			zs.append(z.detach())
 

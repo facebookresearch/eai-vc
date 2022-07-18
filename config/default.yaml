@@ -41,7 +41,7 @@ kappa: 0.1
 lr: 1e-3
 std_schedule: linear(0.5, ${min_std}, 25000)
 horizon_schedule: linear(1, ${horizon}, 25000)
-per: false
+per: true
 per_alpha: 0.6
 per_beta: 0.4
 grad_clip_norm: 10
@@ -94,12 +94,12 @@ goal_hidden: false
 resume: True
 hydra:
     job:
-        name: v1-again
+        name: mw-pixels
     launcher:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 660
+        timeout_min: 1200
         mem_gb: 48
         name: ${hydra.job.name}
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

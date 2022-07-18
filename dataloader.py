@@ -172,11 +172,8 @@ class DMControlDataset(OfflineDataset):
 	def _load_episodes(self):
 		datas = []
 		cumrews = []
-		for fp in self._fps:
+		for fp in tqdm(self._fps, 'Loading metadata'):
 			data = torch.load(fp)
-			# if data['metadata']['episode'] >= 50 or ('/mw-' in data['metadata']['name'] and '-state-v1-' in data['metadata']['name']):
-			# if '/mw-' in data['metadata']['name'] and '-state-v3-' in data['metadata']['name']:
-				# continue
 			datas.append(data)
 			cumrew = np.array(data['rewards']).sum()
 			cumrews.append(cumrew)
@@ -232,8 +229,14 @@ class DMControlDataset(OfflineDataset):
 			return episode
 
 		for data, idx in tqdm(zip(datas, idxs), desc='Loading episodes'):
-			episode = load_episode(data, idx)
-			self._episodes.append(episode)
+			try:
+				fp = self._fps[idx]
+				episode = load_episode(data, idx)
+				self._episodes.append(episode)
+			except Exception as e:
+				print(f'Failed to load episode {fp}, error: {e}')
+
+		print('Training with {} episodes'.format(len(self._episodes)))
 
 		if self._cfg.get('use_val', False):
 			self._val_episodes = []

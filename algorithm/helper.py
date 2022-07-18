@@ -182,7 +182,7 @@ def enc(cfg):
 	elif cfg.modality == 'features':
 		layers = [FeatureFuse(cfg)]
 	else:
-		layers = [nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+		layers = [nn.Linear(cfg.obs_shape[0]+(cfg.latent_dim if cfg.get('multitask', False) else 0), cfg.enc_dim), nn.ELU(),
 				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
 	print('Encoder parameters: {}'.format(sum(p.numel() for p in nn.Sequential(*layers).parameters())))
 	return nn.Sequential(*layers)
