@@ -112,6 +112,7 @@ class Flare(nn.Module):
 	"""Flow of latents."""
 	def __init__(self, latent_dim, num_frames):
 		super().__init__()
+		assert num_frames in {2, 3}
 		self.latent_dim = latent_dim
 		self.num_frames = num_frames
 	
@@ -119,9 +120,14 @@ class Flare(nn.Module):
 		assert x.shape[-1] == self.latent_dim*self.num_frames
 		x = x.view(x.size(0), self.num_frames, self.latent_dim)
 		deltas = x[:, 1:] - x[:, :-1]
-		ddelta = (x[:, -1] - x[:, 0]).unsqueeze(1)
-		dddelta = (deltas[:, -1] - deltas[:, 0]).unsqueeze(1)
-		return torch.cat([x, deltas, ddelta, dddelta], dim=1).view(x.size(0), -1)
+		if self.num_frames == 3:
+			ddelta = (x[:, -1] - x[:, 0]).unsqueeze(1)
+			dddelta = (deltas[:, -1] - deltas[:, 0]).unsqueeze(1)
+			return torch.cat([x, deltas, ddelta, dddelta], dim=1).view(x.size(0), -1)
+		elif self.num_frames == 2:
+			return torch.cat([x, deltas], dim=1).view(x.size(0), -1)
+		else:
+			raise ValueError('Invalid number of frames: {}'.format(self.num_frames))
 
 
 class FeatureFuse(nn.Module):
@@ -145,7 +151,7 @@ class FeatureFuse(nn.Module):
 		else:
 			self.layers = nn.Sequential(
 				Flare(cfg.enc_dim, cfg.frame_stack),
-				nn.Linear(cfg.enc_dim*7, cfg.enc_dim), nn.ELU(),
+				nn.Linear(cfg.enc_dim*(7 if cfg.frame_stack == 3 else 3), cfg.enc_dim), nn.ELU(),
 				nn.Linear(cfg.enc_dim, cfg.latent_dim))
 
 	def forward(self, x):

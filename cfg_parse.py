@@ -44,7 +44,7 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 			cfg.num_tasks = int(re.search(r'(mt\d+)', cfg.task).group(1)[2:])
 		except:
 			cfg.num_tasks = 5
-		cfg.eval_episodes = max(cfg.eval_episodes, cfg.num_tasks * 2)
+		cfg.eval_episodes = max(cfg.eval_episodes, cfg.num_tasks * 3)
 		cfg.eval_episodes = cfg.eval_episodes - (cfg.eval_episodes % cfg.num_tasks)
 	else:
 		cfg.num_tasks = 1

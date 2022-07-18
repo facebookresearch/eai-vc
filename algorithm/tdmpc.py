@@ -28,7 +28,7 @@ class TOLD(nn.Module):
 
 	def h(self, obs, task_vec=None):
 		"""Encodes an observation into its latent representation (h)."""
-		if task_vec is not None:
+		if task_vec is not None and self.cfg.modality == 'state':
 			obs = torch.cat((obs, self._task_encoder(task_vec)), dim=-1)
 		return self._encoder(obs)
 
