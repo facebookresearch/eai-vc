@@ -77,7 +77,7 @@ class FollowFtTrajPolicy:
         """
         Interpolate between waypoints in ftpos trajectory, and compute velocities
         For now, just try linear interpolation between waypoints,
-        with zero-order hold on linear velocity between waypoints
+        with finite difference approximation to compute linear velocities
         """
         ft_pos_traj =  c_utils.lin_interp_waypoints(ft_pos_traj_in, self.downsample_time_step,
                                                     time_step_out=self.time_step)

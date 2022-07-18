@@ -28,6 +28,7 @@ def main(args):
         enable_cameras=True,
         finger_type="trifingerpro",
         time_step=SIM_TIME_STEP,
+        camera_delay_steps=0,
     )
       
     for i, ckpt_path in enumerate(args.log_paths):
@@ -64,7 +65,7 @@ def main(args):
         observation = env.reset(goal_pose_dict=goal_pose, init_pose_dict=init_pose)
         if algo == "mbirl":
             ftpos_traj = ckpt_info["test_pred_traj_per_demo"][TEST_TRAJ_NUM].detach().numpy()
-            #ftpos_traj = expert_demo["ft_pos_cur"]
+            #ftpos_traj = expert_demo["ft_pos_cur"] # Use expert actions [FOR DEBUGGING]
             policy = FollowFtTrajPolicy(ftpos_traj, env.action_space, env.platform, time_step=SIM_TIME_STEP,
                                         downsample_time_step=downsample_time_step)
         elif algo == "bc":
@@ -96,7 +97,7 @@ def main(args):
         log_dir = os.path.join(exp_dir, "eval")
         if not os.path.exists(log_dir): os.makedirs(log_dir)
         log_path = os.path.join(log_dir, f"eval_traj_{TEST_TRAJ_NUM}_log.npz")
-        np.savez_compressed(log_path, data=observation_list, demo_data=demo_stats)
+        np.savez_compressed(log_path, data=observation_list, demo_data=[demo_stats])
         print(f"Saved episode {i} to {log_path}")
 
 def add_actions_to_obs(observation_list):
@@ -121,7 +122,6 @@ def parse_args():
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
     parser.add_argument("--no_collisions", "-nc", action="store_true", help="Visualize sim")
     parser.add_argument("--log_paths", "-l", nargs="*", type=str, help="Save sim log")
-    parser.add_argument("--algo", "-a", type=str, choices=["mbirl", "bc"])
     return parser.parse_args()
 
 if __name__ == "__main__":

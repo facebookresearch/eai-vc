@@ -43,8 +43,17 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
         traj_dict["image_180"] = image180
         traj_dict["image_300"] = image300
 
+    # Mode information
     if "ft_pos_targets_per_mode" in data[-1]["policy"]:
         traj_dict["ft_pos_targets_per_mode"] = scale * data[-1]["policy"]["ft_pos_targets_per_mode"]
+        
+        # Add "mode" 
+        if "mode" not in data[0]["policy"]:
+            traj_dict["mode"] = np.array([len(data[i]["policy"]["ft_pos_targets_per_mode"]) \
+                                            for i in range(len(data))])
+        else:
+            traj_dict["mode"] = np.array([data[i]["policy"]["mode"] for i in range(len(data))])
+            
 
     # Object vertices
     if "vertices" in data[0]["object_observation"]:
@@ -147,10 +156,11 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
 
             plt.plot(x, data["y"][:, i], marker=marker, label=label)
 
+        if plot_timestamp is not None:
+            plt.axvline(x=plot_timestamp, ls='--', c='k', lw=1)
+
     plt.legend()
 
-    if plot_timestamp is not None:
-        plt.axvline(x=plot_timestamp, ls='--', c='k', lw=1)
 
     if save_path is not None:
         plt.savefig(save_path)
@@ -159,16 +169,27 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
 
     plt.close()
 
-def load_trajs(exp_info_json_path, exp_dir):
+def load_trajs(exp_info, exp_dir=None):
     """
-    Load train and test trajectories fro exp_info_json_path json file
-    Save demo_info.pth in exp_dir
+    Load train and test trajectories from exp_info
+    
+    Args
+        exp_info (dict or path to .json file): should contain a dict in the following format:
+                        {
+                            "demo_dir"   : top-level directory containing demos ("demos/"),
+                            "difficulty" : difficulty level (1),
+                            "train_demos": list of demo ids for training ([0,1]),
+                            "test_demos" : list of demo ids for testing ([5]),
+                        }
+        exp_dir (str): If specified, save demo_info.pth in exp_dir/
     """
 
-    # TODO
     # Load json and get traj filepaths
-    with open(exp_info_json_path, "rb") as f:
-        info = json.load(f)
+    if type(exp_info) is dict:
+        info = exp_info
+    else:
+        with open(exp_info, "rb") as f:
+            info = json.load(f)
 
     demo_dir       = info["demo_dir"]
     train_demo_ids = info["train_demos"]
@@ -210,13 +231,14 @@ def load_trajs(exp_info_json_path, exp_dir):
     print(f"Loaded {len(test_trajs)} test demos")
     
     # Save demo info (train and test demos)
-    torch.save({
-        'train_demos'         : train_trajs,
-        'test_demos'          : test_trajs,
-        'train_demo_stats'    : train_demo_stats,
-        'test_demo_stats'     : test_demo_stats,
-        'downsample_time_step': downsample_time_step,
-    }, f=f'{exp_dir}/demo_info.pth')
+    if exp_dir is not None:
+        torch.save({
+            'train_demos'         : train_trajs,
+            'test_demos'          : test_trajs,
+            'train_demo_stats'    : train_demo_stats,
+            'test_demo_stats'     : test_demo_stats,
+            'downsample_time_step': downsample_time_step,
+        }, f=f'{exp_dir}/demo_info.pth')
 
     return train_trajs, test_trajs
 
