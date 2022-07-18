@@ -78,6 +78,7 @@ class BCPolicy:
 
     def reset(self):
         # initial joint positions (lifting the fingers up)
+        # Todo: this line doesn't do anything, right :)?
         self.joint_positions = self.joint_positions
 
         # mode and trajectory initializations
