@@ -25,7 +25,7 @@ def main(args):
         action_type=ActionType.TORQUE,
         visualization=args.visualize,
         no_collisions=args.no_collisions,
-        enable_cameras=True,
+        enable_cameras=(not args.disable_cameras),
         finger_type="trifingerpro",
         time_step=SIM_TIME_STEP,
         camera_delay_steps=0,
@@ -44,11 +44,12 @@ def main(args):
         # Load demo_info.pth and get object initial and goal pose, and test demo stats
         TEST_TRAJ_NUM = 0
         demo_info = torch.load(demo_info_path)
+        training_traj_scale = demo_info["scale"]
         expert_demo = demo_info["test_demos"][TEST_TRAJ_NUM]
-        obj_init_pos = expert_demo["o_pos_cur"][0, :]
-        obj_init_ori = expert_demo["o_ori_cur"][0, :]
-        obj_goal_pos = expert_demo["o_pos_des"][0, :]
-        obj_goal_ori = expert_demo["o_ori_des"][0, :]
+        obj_init_pos = expert_demo["o_pos_cur"][0, :] / training_traj_scale
+        obj_init_ori = expert_demo["o_ori_cur"][0, :] / training_traj_scale
+        obj_goal_pos = expert_demo["o_pos_des"][0, :] / training_traj_scale
+        obj_goal_ori = expert_demo["o_ori_des"][0, :] / training_traj_scale
         init_pose = {"position": obj_init_pos, "orientation": obj_init_ori}
         goal_pose = {"position": obj_goal_pos, "orientation": obj_goal_ori}
         downsample_time_step = demo_info["downsample_time_step"]
@@ -64,14 +65,14 @@ def main(args):
 
         observation = env.reset(goal_pose_dict=goal_pose, init_pose_dict=init_pose)
         if algo == "mbirl":
-            ftpos_traj = ckpt_info["test_pred_traj_per_demo"][TEST_TRAJ_NUM].detach().numpy()
+            ftpos_traj = ckpt_info["test_pred_traj_per_demo"][TEST_TRAJ_NUM].detach().numpy()[:, :9] / training_traj_scale
             #ftpos_traj = expert_demo["ft_pos_cur"] # Use expert actions [FOR DEBUGGING]
             policy = FollowFtTrajPolicy(ftpos_traj, env.action_space, env.platform, time_step=SIM_TIME_STEP,
                                         downsample_time_step=downsample_time_step)
         elif algo == "bc":
             policy = BCPolicy(ckpt_path, expert_demo, conf.bc_obs_type,
                               env.action_space, env.platform, time_step=SIM_TIME_STEP,
-                              downsample_time_step=downsample_time_step)
+                              downsample_time_step=downsample_time_step, training_traj_scale=training_traj_scale)
         else:
             raise ValueError("Invalid arg")
 
@@ -120,6 +121,7 @@ def add_actions_to_obs(observation_list):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
+    parser.add_argument("--disable_cameras", "-dc", action="store_true", help="Visualize goal")
     parser.add_argument("--no_collisions", "-nc", action="store_true", help="Visualize sim")
     parser.add_argument("--log_paths", "-l", nargs="*", type=str, help="Save sim log")
     return parser.parse_args()

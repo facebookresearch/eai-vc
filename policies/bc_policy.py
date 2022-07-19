@@ -25,7 +25,7 @@ class BCPolicy:
 
     def __init__(self, ckpt_path, expert_demo, obs_type,
                  action_space, platform, time_step=0.001,
-                 downsample_time_step=0.001, total_ep_steps=1000):
+                 downsample_time_step=0.001, total_ep_steps=1000, training_traj_scale=1):
         """
         ftpos_traj: fingertip position trajectory [T, 9]
         """
@@ -34,6 +34,7 @@ class BCPolicy:
         self.time_step = time_step
         self.total_ep_steps = total_ep_steps
         self.downsample_time_step = downsample_time_step
+        self.training_traj_scale = training_traj_scale
 
         # TODO hardcoded
         robot_properties_path = "../trifinger_simulation/trifinger_simulation/robot_properties_fingers"
@@ -106,9 +107,10 @@ class BCPolicy:
     def set_ft_traj(self, observation):
         # Run this every X timesteps (based on downsampling factor)
 
-        o_pos_cur = observation["object_observation"]["position"]
+        # Scale observation by training_traj_scale, for bc policy
+        o_pos_cur = observation["object_observation"]["position"] * self.training_traj_scale
         q_cur = observation["robot_observation"]["position"]
-        ft_pos_cur = self.get_ft_pos(q_cur)
+        ft_pos_cur = self.get_ft_pos(q_cur) * self.training_traj_scale
 
         obs_dict = {
                     "o_pos_cur" : o_pos_cur,
@@ -131,7 +133,8 @@ class BCPolicy:
         ft_pos_next = ft_pos_cur + pred_action
 
         # Lin interp from current ft pos to next ft waypoint
-        ft_traj = np.stack((ft_pos_cur, ft_pos_next))
+        # Scale back to meters
+        ft_traj = np.stack((ft_pos_cur / self.training_traj_scale, ft_pos_next / self.training_traj_scale))
         self.ft_pos_traj, self.ft_vel_traj = self.interp_ft_traj(ft_traj)
 
         # Reset traj counter
