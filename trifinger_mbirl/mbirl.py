@@ -47,7 +47,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
 
     for t_i, traj in enumerate(trajs):
  
-        x_init   = torch.Tensor(traj["ft_pos_cur"][0, :].squeeze())
+        obs_dict_init = d_utils.get_obs_dict_from_traj(traj, 0, "pos")
         traj_len = traj["ft_pos_cur"].shape[0]
         expert_demo = torch.Tensor(traj["ft_pos_cur"])
         time_horizon, s_dim = expert_demo.shape
@@ -59,7 +59,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
         for i in range(n_inner_iter):
             action_optimizer.zero_grad()
 
-            pred_traj = ftpos_mpc.roll_out(x_init.clone())
+            pred_traj = ftpos_mpc.roll_out(obs_dict_init.copy())
 
             # use the learned loss to update the action sequence
             target = get_target_for_cost_type(traj, cost_type)
@@ -68,7 +68,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
             action_optimizer.step()
 
         # Actually take the next step after optimizing the action
-        pred_state_traj_new = ftpos_mpc.roll_out(x_init.clone())
+        pred_state_traj_new = ftpos_mpc.roll_out(obs_dict_init.copy())
         eval_costs.append(irl_loss_fn(pred_state_traj_new, expert_demo, dist_scale=irl_loss_scale).mean())
 
         test_pred_trajs.append(pred_state_traj_new)
@@ -130,7 +130,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             learnable_cost_opt.zero_grad()
             expert_demo_dict = train_trajs[demo_i]
 
-            x_init   = torch.Tensor(expert_demo_dict["ft_pos_cur"][0, :].squeeze())
+            obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, "pos")
             traj_len = expert_demo_dict["ft_pos_cur"].shape[0]
             expert_demo = torch.Tensor(expert_demo_dict["ft_pos_cur"])
             expert_actions = expert_demo_dict["delta_ftpos"]
@@ -143,7 +143,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
 
             with higher.innerloop_ctx(ftpos_mpc, action_optimizer) as (fpolicy, diffopt):
                 for i in range(n_inner_iter):
-                    pred_traj = fpolicy.roll_out(x_init.clone())
+                    pred_traj = fpolicy.roll_out(obs_dict_init.copy())
 
                     # use the learned loss to update the action sequence
                     target = get_target_for_cost_type(expert_demo_dict, cost_type)
@@ -154,7 +154,7 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
 
                 actions = fpolicy.action_seq.data.detach().numpy()
                 # Compute traj with updated action sequence
-                pred_traj = fpolicy.roll_out(x_init)
+                pred_traj = fpolicy.roll_out(obs_dict_init.copy())
                 # compute task loss
                 irl_loss = irl_loss_fn(pred_traj, expert_demo, dist_scale=irl_loss_scale).mean()
                 # backprop gradient of learned cost parameters wrt irl loss

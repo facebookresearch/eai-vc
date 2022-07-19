@@ -36,21 +36,22 @@ class FTPosMPC(torch.nn.Module):
 
         x_next = x + u
         # Clip ft positions
-        x_next = self.clip_ftpos(x_next)
+        #x_next = self.clip_ftpos(x_next)
 
         return x_next
 
-    def roll_out(self, x_init):
+    def roll_out(self, obs_dict_init):
         """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
+        x_init = obs_dict_init["ft_state"]
         x_traj = []
         x_next = self.forward(x_init)
-        x_traj.append(x_next)
+        x_traj.append(torch.squeeze(x_next.clone()))
 
         for t in range(self.time_horizon):
             a = self.action_seq[t]
             x_next = self.forward(x_next, a)
-            x_next = self.clip_ftpos(x_next)
-            x_traj.append(x_next.clone())
+            #x_next = self.clip_ftpos(x_next)
+            x_traj.append(torch.squeeze(x_next.clone()))
 
         return torch.stack(x_traj)
 
@@ -86,12 +87,12 @@ def main(args):
     delta_ftpos = traj["delta_ftpos"]
     
     time_horizon = ft_pos_cur.shape[0]
-    x_init = ft_pos_cur[0, :]
+    obs_dict_init = d_utils.get_obs_dict_from_traj(traj, 0, "pos")
     
     # Run roll_out to get trajectory from initial state
     ftpos_mpc = FTPosMPC(time_horizon-1)
     ftpos_mpc.set_action_seq_for_testing(delta_ftpos)
-    x_traj = ftpos_mpc.roll_out(x_init)
+    x_traj = ftpos_mpc.roll_out(obs_dict_init)
     
     x_traj = x_traj.detach().numpy()
     
