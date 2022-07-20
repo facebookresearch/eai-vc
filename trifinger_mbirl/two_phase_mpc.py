@@ -16,7 +16,7 @@ import utils.data_utils as d_utils
 # Compute next state given current state and action (ft position deltas)
 class TwoPhaseMPC(torch.nn.Module):
 
-    def __init__(self, time_horizon, phase2_model_path, phase2_start_ind, f_num=3):
+    def __init__(self, time_horizon, phase2_model_path, f_num=3):
         super().__init__()
         self.time_horizon = time_horizon
         self.f_num = f_num
@@ -28,13 +28,12 @@ class TwoPhaseMPC(torch.nn.Module):
 
         # Load phase 2 model weights
         phase2_model_dict = torch.load(phase2_model_path) 
-        in_dim = phase2_model_dict["in_dim"]
-        out_dim = phase2_model_dict["out_dim"]
+        self.in_dim = phase2_model_dict["in_dim"]
+        self.out_dim = phase2_model_dict["out_dim"]
         hidden_dims = phase2_model_dict["hidden_dims"]
-        self.phase2_model = Phase2Model(in_dim, out_dim, hidden_dims)
+        self.phase2_model = Phase2Model(self.in_dim, self.out_dim, hidden_dims)
         self.phase2_model.load_state_dict(phase2_model_dict["model_state_dict"])
-
-        self.phase2_start_ind = phase2_start_ind
+        self.phase2_start_ind = phase2_model_dict["phase2_start_ind"]
 
         self.obj_state_type = phase2_model_dict["conf"].obj_state_type
 
@@ -90,7 +89,7 @@ class TwoPhaseMPC(torch.nn.Module):
         for t in range(self.time_horizon):
             a = self.action_seq[t]
             x_next = self.forward(obs_dict_next, a)
-            #x_next = self.clip_ftpos(x_next) # TODO implement clipping
+            x_next = self.clip_ftpos(x_next) # TODO implement clipping
 
             pred_traj.append(torch.squeeze(x_next.clone()))
 
@@ -115,12 +114,12 @@ class TwoPhaseMPC(torch.nn.Module):
         """ [FOR TESTING] Apply action to ground truth state at each timestep (don't use predicted next state as new initial state) """
         pred_traj = []
 
-        obs_dict = get_obs_dict_from_traj(expert_traj, 0, self.obj_state_type)
+        obs_dict = d_utils.get_obs_dict_from_traj(expert_traj, 0, self.obj_state_type)
         x_next = self.forward(obs_dict)
         pred_traj.append(torch.squeeze(x_next.clone()))
 
         for t in range(self.time_horizon):
-            obs_dict = get_obs_dict_from_traj(expert_traj, t, self.obj_state_type)
+            obs_dict = d_utils.get_obs_dict_from_traj(expert_traj, t, self.obj_state_type)
             a = self.action_seq[t]
             x_next = self.forward(obs_dict, a)
 
@@ -132,55 +131,35 @@ class TwoPhaseMPC(torch.nn.Module):
     def reset_actions(self):
         self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
 
-    #def clip_ftpos(self, ftpos):
-    #    arena_r = 0.2 # arena radius
-    #    ftpos_min = [-arena_r, -arena_r, 0.] * 3
-    #    ftpos_max = [arena_r, arena_r, 0.12] * 3
+    def clip_ftpos(self, ftpos):
+        ftpos_min = [-20] * self.out_dim
+        ftpos_max = [20] * self.out_dim
 
-    #    ftpos = torch.Tensor(ftpos)
-    #    ftpos_min = torch.Tensor(ftpos_min)
-    #    ftpos_max = torch.Tensor(ftpos_max)
+        ftpos = torch.Tensor(ftpos)
+        ftpos_min = torch.unsqueeze(torch.Tensor(ftpos_min), 0)
+        ftpos_max = torch.unsqueeze(torch.Tensor(ftpos_max), 0)
 
-    #    ftpos_clipped = torch.where(ftpos > ftpos_max, ftpos_max, ftpos)
-    #    ftpos_clipped = torch.where(ftpos < ftpos_min, ftpos_min, ftpos)
+        ftpos = torch.where(ftpos > ftpos_max, ftpos_max, ftpos)
+        ftpos = torch.where(ftpos < ftpos_min, ftpos_min, ftpos)
 
-    #    return ftpos_clipped
+        return ftpos
 
     def set_action_seq_for_testing(self, action_seq):
         self.action_seq.data = torch.Tensor(action_seq)
-
-def get_obs_dict_from_traj(traj, t, obj_state_type):
-
-    if obj_state_type == "pos":
-        o_state = traj["o_pos_cur"][t]
-    elif obj_state_type == "vertices":
-        o_state = traj["vertices"][t]
-    else: 
-        raise ValueError
-
-    obs_dict = {
-                "ft_state": torch.unsqueeze(torch.FloatTensor(traj["ft_pos_cur"][t]), 0),
-                "o_state" : torch.unsqueeze(torch.FloatTensor(o_state), 0),
-                "mode"    : traj["mode"][t],
-               }
-
-    return obs_dict
 
 def main(args):
 
     # Load demo.npz
     data = np.load(args.demo_path, allow_pickle=True)["data"]
-    traj = d_utils.get_traj_dict_from_obs_list(data)
+    traj = d_utils.get_traj_dict_from_obs_list(data, scale=100)
     traj = d_utils.downsample_traj_dict(traj, new_time_step=0.2)
 
     time_horizon = traj["ft_pos_cur"].shape[0]
 
-    # Find phase2 start index in trajectory
-    phase2_start_ind = traj["mode"].tolist().index(2)
-    
-    mpc = TwoPhaseMPC(time_horizon-1, args.phase2_model_path, phase2_start_ind)    
+    mpc = TwoPhaseMPC(time_horizon-1, args.phase2_model_path)    
+    phase2_start_ind = mpc.phase2_start_ind
 
-    obs_dict_init = get_obs_dict_from_traj(traj, 0, mpc.obj_state_type)
+    obs_dict_init = d_utils.get_obs_dict_from_traj(traj, 0, mpc.obj_state_type)
 
     # Run roll_out to get trajectory from initial state
     mpc.set_action_seq_for_testing(traj["delta_ftpos"])
@@ -246,10 +225,13 @@ def main(args):
     #                })
     #else:
     #    raise ValueError()
+       
+    print(np.amax(ft_pos_err, axis=0))
+    print(np.amax(o_state_err, axis=0))
 
     # Plot l2 distance between each ft and object state (pos or vertices)
     d_utils.plot_traj(
-            "ft position error (m)", 
+            "ft position error (cm)", 
             None,
             ["f1", "f2", "f3"],
             {
@@ -261,7 +243,7 @@ def main(args):
     # Object state
     if mpc.obj_state_type == "pos":
         d_utils.plot_traj(
-                "object position error (m)", 
+                "object position error (cm)", 
                 None,
                 ["pos"],
                 {
@@ -271,7 +253,7 @@ def main(args):
                 )
     elif mpc.obj_state_type == "vertices":
         d_utils.plot_traj(
-                f"object vertex position error (m)", 
+                f"object vertex position error (cm)", 
                 None,
                 ["v0","v1", "v2", "v3", "v4", "v5", "v6", "v7"],
                 {
