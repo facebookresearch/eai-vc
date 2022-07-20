@@ -880,19 +880,19 @@ RUN_EVAL_SCRIPT=true
 # NODES=5
 # run_training 0
 
-EXP_NAME="tmae_small_offset_4_real_estate_100"
-WEIGHTS_NAME="tmae_small_offset_4_real_estate_100.pth"
-BACKBONE="vit_small_patch16"
-EXTRA_CMDS="RL.POLICY.freeze_backbone False \
-            RL.POLICY.rnn_type LSTM \
-            RL.POLICY.randomize_augmentations_over_envs False \
-            RL.PPO.lr 6.25e-5 \
-            RL.POLICY.vit_global_pool False \
-            RL.POLICY.vit_use_fc_norm False"
-SPLIT="train_extra"
-NUM_ENV=8
-NODES=5
-run_training 0
+# EXP_NAME="tmae_small_offset_4_real_estate_100"
+# WEIGHTS_NAME="tmae_small_offset_4_real_estate_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
 
 # EXP_NAME="tmae_small_offset_4_real_estate_hm3d_gibson_100"
 # WEIGHTS_NAME="tmae_small_offset_4_real_estate_hm3d_gibson_100.pth"
@@ -907,3 +907,120 @@ run_training 0
 # NUM_ENV=8
 # NODES=5
 # run_training 0
+
+# EXP_NAME="mae_small_02_cj_100"
+# WEIGHTS_NAME="mae_small_02_cj_100.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False \
+#             TASK_CONFIG.TASK.TRAIN_SUCCESS.SUCCESS_DISTANCE 1.0"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_large_offset_4_RE10k_HGSP_random_views_reward_hack"
+# WEIGHTS_NAME="tmae_small_large_offset_4_RE10k_HGSP.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_decoder_large_offset_4_RE10k_HGSP_random_views"
+# WEIGHTS_NAME="tmae_small_decoder_large_offset_4_RE10k_HGSP_random_views.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="tmae_small_decoder_large_offset_4_RE10k_HGSP_random_views_1B"
+# WEIGHTS_NAME="tmae_small_decoder_large_offset_4_RE10k_HGSP_random_views.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# NUM_STEPS=1e9
+# run_training 0
+
+# EXP_NAME="tmae_small_decoder_large_offset_4_RE10k_HGSP_ego4d_random_views"
+# WEIGHTS_NAME="tmae_small_decoder_large_offset_4_RE10k_HGSP_ego4d_random_views.pth"
+# BACKBONE="vit_small_patch16"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs False \
+#             RL.PPO.lr 6.25e-5 \
+#             RL.POLICY.vit_global_pool False \
+#             RL.POLICY.vit_use_fc_norm False"
+# SPLIT="train_extra"
+# NUM_ENV=8
+# NODES=5
+# run_training 0
+
+# EXP_NAME="OVRL_new_reward"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
+# run_training 0
+
+# EXP_NAME="OVRL_new_reward"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
+# run_training 0
+
+# EXP_NAME="OVRL_new_reward_1B"
+# WEIGHTS_NAME="omnidata_DINO_02.pth"
+# BACKBONE="resnet50"
+# EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+#             RL.POLICY.rnn_type LSTM \
+#             RL.POLICY.randomize_augmentations_over_envs True \
+#             RL.PPO.lr 2.5e-4"
+# SPLIT="train_extra"
+# NUM_STEPS=1e9
+# run_training 0
+
+EXP_NAME="mae_vit_small_decoder_large_HGPS_RE10K_100"
+WEIGHTS_NAME="mae_vit_small_decoder_large_HGPS_RE10K_100.pth"
+BACKBONE="vit_small_patch16"
+EXTRA_CMDS="RL.POLICY.freeze_backbone False \
+            RL.POLICY.rnn_type LSTM \
+            RL.POLICY.randomize_augmentations_over_envs False \
+            RL.PPO.lr 6.25e-5 \
+            RL.POLICY.vit_global_pool False \
+            RL.POLICY.vit_use_fc_norm False"
+SPLIT="train_extra"
+NUM_ENV=8
+NODES=5
+run_training 0

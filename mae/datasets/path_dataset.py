@@ -22,6 +22,7 @@ class PathDataset(VisionDataset):
         self.files = []
         for folder in self.root:
             self.files.extend(sorted(glob.glob(os.path.join(folder, "*", "*", "*.jpg"))))
+            self.files.extend(sorted(glob.glob(os.path.join(folder, "*", "*", "*.png"))))
 
         self.transform = transform
         self.extra_transform = extra_transform
@@ -72,6 +73,7 @@ if __name__ == "__main__":
         std=[0.229, 0.224, 0.225],
     )
     loader = DataLoader(dataset, batch_size=2, shuffle=True)
+
     for imgs1, extra_imgs1, _ in loader:
         print(imgs1.shape, extra_imgs1.shape)
         break

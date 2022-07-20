@@ -29,6 +29,7 @@ class PathDataset(VisionDataset):
         self.files, self.idx_to_folder, file_idx = {}, {}, 0
         for folder_idx, folder in enumerate(self.folders):
             self.files[folder] = sorted(glob.glob(os.path.join(folder, "*.jpg")))
+            self.files[folder].extend(sorted(glob.glob(os.path.join(folder, "*.png"))))
             for idx in range(len(self.files[folder])):
                 self.idx_to_folder[file_idx + idx] = folder_idx
             file_idx += len(self.files[folder])

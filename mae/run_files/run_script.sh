@@ -166,3 +166,17 @@ python submitit_pretrain.py \
     --data_path /checkpoint/karmeshyadav/hm3d+gibson/v1/train \
     --output_dir /checkpoint/karmeshyadav/mae_training/ \
     --partition learnlab --use_volta32 --color_jitter
+
+python submitit_pretrain.py \
+    --wandb_name mae_vit_small_decoder_large_HGPS_RE10K \
+    --nodes 2 \
+    --batch_size 256 \
+    --model mae_vit_small_patch16_large_decoder \
+    --norm_pix_loss \
+    --mask_ratio 0.75 \
+    --epochs 400 \
+    --warmup_epochs 40 \
+    --blr 1.5e-4 --weight_decay 0.05 \
+    --data_path /checkpoint/karmeshyadav/hm3d+gibson/v1/train/ /checkpoint/karmeshyadav/real-estate-10k-frames-v0/ \
+    --output_dir /checkpoint/karmeshyadav/mae_training/ \
+    --partition learnlab --use_volta32
