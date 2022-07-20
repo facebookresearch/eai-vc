@@ -267,3 +267,24 @@ def get_obs_dict_from_traj(traj, t, obj_state_type):
 
     return obs_dict
 
+def parse_pred_traj(pred_traj, state, fnum=3):
+    """ 
+    Parse out relevant part of pred_traj
+    
+    args:
+        pred_traj: [T, state_dim] where each row is a state vector of the format [ftpos, o_state]
+    """
+
+    ftpos_dim = 3*fnum
+
+    if state == "ftpos":
+        return pred_traj[:, :ftpos_dim] # First part of pred_traj
+    elif state == "obj":
+        assert pred_traj.shape[1] > ftpos_dim, "State does not include object state. Try using mpc_type = two_phase"
+        return pred_traj[:, ftpos_dim:] # Last part of pred_traj
+    elif state == "ftpos_obj":
+        assert pred_traj.shape[1] > ftpos_dim, "State does not include object state. Try using mpc_type = two_phase"
+        return pred_traj
+    else:
+        raise ValueError(f"{state} is invalid state")
+    
