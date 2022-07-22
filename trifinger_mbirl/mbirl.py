@@ -123,13 +123,12 @@ def train(conf, learnable_cost, irl_loss_fn, mpc, train_trajs, test_trajs,
             with higher.innerloop_ctx(mpc, action_optimizer) as (fpolicy, diffopt):
                 for i in range(conf.n_inner_iter):
                     pred_traj = fpolicy.roll_out(obs_dict_init.copy())
-
                     # use the learned loss to update the action sequence
                     target = get_target_for_cost_type(expert_demo_dict, conf.cost_type, conf.cost_state)
                     pred_traj_for_cost = d_utils.parse_pred_traj(pred_traj, conf.cost_state)
                     learned_cost_val = learnable_cost(pred_traj_for_cost, target)
-
                     diffopt.step(learned_cost_val)
+
 
                 # Compute traj with updated action sequence
                 pred_traj = fpolicy.roll_out(obs_dict_init.copy())
@@ -177,11 +176,51 @@ def train(conf, learnable_cost, irl_loss_fn, mpc, train_trajs, test_trajs,
             for name, param in learnable_cost.weights_fn.named_parameters():
                 learnable_cost_params[name] = param
 
+        # Gradient info
+        print(f"mpc")
+        #print(mpc.phase2_model)
+        for name, p in mpc.named_parameters():
+        
+            #print(name, p.grad.shape)
+            if name != "action_seq": continue
+
+            if p.grad is not None:
+                grad = p.grad.detach()
+                print(name, grad.shape)
+                grad_min_mpc = torch.min(torch.abs(grad))
+                grad_max_mpc = torch.max(torch.abs(grad))
+                grad_norm_mpc = grad.norm()
+            else:
+                print("No gradient")
+                grad_min_mpc = np.nan 
+                grad_max_mpc = np.nan 
+                grad_norm_mpc = np.nan
+
+        print("cost")
+        for p in learnable_cost.parameters():
+            if p.grad is not None:
+                grad = p.grad.detach()
+                print(grad.shape)
+                grad_min_cost = torch.min(torch.abs(grad))
+                grad_max_cost = torch.max(torch.abs(grad))
+                grad_norm_cost = grad.norm()
+            else:
+                print("No gradient")
+                grad_min_cost = np.nan 
+                grad_max_cost = np.nan 
+                grad_norm_cost = np.nan 
+
         if not conf.no_wandb:
             # Plot losses with wandb
             loss_dict = {
                         "train_irl_loss": irl_loss_on_train[-1], 
                         "test_irl_loss": irl_loss_on_test[-1], 
+                        "grad_min_mpc": grad_min_mpc,
+                        "grad_max_mpc": grad_max_mpc,
+                        "grad_norm_mpc": grad_norm_mpc,
+                        "grad_min_cost": grad_min_cost,
+                        "grad_max_cost": grad_max_cost,
+                        "grad_norm_cost": grad_norm_cost,
                         }
             plot_loss(loss_dict, outer_i+1)
 
@@ -236,9 +275,12 @@ def get_mpc(mpc_type, time_horizon):
 
     elif mpc_type == "two_phase":
         # TODO hardcoded
-        #phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos/epoch_10_ckpt.pth"
-        phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos/epoch_1500_ckpt.pth"
-        #phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/scale_1/phase2_model_nt-100_ost-pos/epoch_1500_ckpt.pth"
+        ## Phase 2 model trained with cropped phase 2 demos
+        #phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-m2/epoch_1500_ckpt.pth"
+
+        ## Phase 2 model trained with full demos
+        phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-all/epoch_3000_ckpt.pth"
+
         return TwoPhaseMPC(time_horizon-1, phase2_model_path)
     else:
         raise ValueError(f"{mpc_type} is invalid mpc_type")
