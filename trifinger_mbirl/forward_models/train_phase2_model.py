@@ -17,6 +17,10 @@ import utils.data_utils as d_utils
 models_dir = os.path.dirname(os.path.realpath(__file__))
 LOG_DIR = os.path.join(models_dir, "runs")
 
+"""
+Train phase 2 model
+"""
+
 class NMSELoss(torch.nn.Module):
     def __init__(self, target_vars):
         self.target_vars = target_vars
@@ -90,7 +94,8 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
             # Find phase2 start index in trajectory
             phase2_start_ind = demo["mode"].tolist().index(2)
 
-            for i in (range(phase2_start_ind, num_obs-1)):
+            #for i in (range(phase2_start_ind, num_obs-1)):
+            for i in (range(num_obs-1)): # TODO train on full trajectories
                 # Object positions
                 o_pos_cur = demo["o_pos_cur"][i]
                 o_pos_next = demo["o_pos_cur"][i+1]
@@ -104,7 +109,7 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
                 ft_pos_next = demo["ft_pos_cur"][i+1]
 
                 # Action (fingertip position deltas)
-                action = torch.FloatTensor(demo['delta_ftpos'][i])
+                action = torch.FloatTensor(demo['delta_ftpos'][i])# * 10 # TODO scale action for testing
 
                 # Make state and action
                 if self.obj_state_type == "pos":
