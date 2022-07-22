@@ -31,6 +31,15 @@ args:
   * `--action_lr`: Policy learning rate
   * `--cost_lr`: Cost function learning rate
 
+#### Two-phase model code info
+
+* [Two-phase model code](https://github.com/fmeier/trifinger_claire/blob/main/trifinger_mbirl/two_phase_mpc.py)
+* [Script that defines and trains phase 2 model](https://github.com/fmeier/trifinger_claire/blob/main/trifinger_mbirl/forward_models/train_phase2_model.py)
+*  [Phase 1 model](https://github.com/fmeier/trifinger_claire/blob/main/trifinger_mbirl/forward_models/phase1_model.py)
+* 
+
+I've uploaded two trained phase 1 models to the repo [here](https://github.com/fmeier/trifinger_claire/tree/main/trifinger_mbirl/forward_models/runs) (one is trained on full demos, one is trained with phase 2 parts of demos). For now, I've hardcoded the two-phase model to use the model trained with full demos, but you can change which model is used by changing the hardcoded path in [this part of the `mbirl.py` code](https://github.com/fmeier/trifinger_claire/blob/f152cb9e03c00b9198b3a7021651839ef68632be/trifinger_mbirl/mbirl.py#L279).
+
 ### Launch mbirl training with a single train and test trajectory with this command:
 ```
 python trifinger_mbirl/train.py --file_path demos/data_diff-1_train-1_test-1.json -a mbirl --no_wandb --cost_type MPTimeDep --n_inner_iter 50
