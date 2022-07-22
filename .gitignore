@@ -1,0 +1,5 @@
+*.npz
+*.pyc
+*.png
+tmp/*
+trifinger_mbirl/logs/*
