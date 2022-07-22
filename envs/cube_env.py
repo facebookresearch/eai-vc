@@ -65,10 +65,10 @@ class BaseCubeEnv(gym.Env):
         # Basic initialization
         # ====================
 
-        if goal_pose is None:
-            self.goal = task.sample_goal(difficulty).to_dict()
-        else:
-            self.goal = goal_pose
+        #if goal_pose is None:
+        #    self.goal = task.sample_goal(difficulty).to_dict()
+        #else:
+        #    self.goal = goal_pose
 
         self.action_type = action_type
 
@@ -434,11 +434,12 @@ class SimCubeEnv(BaseCubeEnv):
                 self.info["time_index"], action
             )
 
-            reward += self.compute_reward(
-                observation["achieved_goal"],
-                observation["desired_goal"],
-                self.info,
-            )
+            reward = 0 # TODO not computing reward
+            #reward += self.compute_reward(
+            #    observation["achieved_goal"],
+            #    observation["desired_goal"],
+            #    self.info,
+            #)
 
             # Draw cube vertices from observation
             if self.draw_verts:
@@ -474,7 +475,10 @@ class SimCubeEnv(BaseCubeEnv):
 
         # if no goal is given, sample one randomly
         if goal_pose_dict is None:
-            self.goal = task.sample_goal(self.difficulty).to_dict()
+            if self.difficulty == 0:
+                self.goal = initial_object_pose.to_dict()
+            else:
+                self.goal = task.sample_goal(self.difficulty).to_dict()
         else:
             self.goal = goal_pose_dict
 
