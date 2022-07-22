@@ -107,6 +107,22 @@ def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
 
     return new_traj_dict
 
+def get_traj_mode(traj_dict, mode):
+    assert mode in [1, 2], "Invalid mode"
+
+    new_traj_dict = {}
+    
+    indices_to_take = np.where(traj_dict["mode"]==mode)[0]
+    for k, traj in traj_dict.items():
+        if k in NON_TRAJ_KEYS:
+            new_traj_dict[k] = traj
+            continue
+    
+        new_traj = traj[indices_to_take]
+        new_traj_dict[k] = new_traj
+
+    return new_traj_dict
+
 def crop_traj_dict(traj_dict, crop_range):
     """ crop_range: [crop_min, crop_max] """
 
@@ -176,7 +192,7 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
 
     plt.close()
 
-def load_trajs(exp_info, exp_dir=None, scale=1):
+def load_trajs(exp_info, exp_dir=None, scale=1, mode=None):
     """
     Load train and test trajectories from exp_info
     
@@ -189,6 +205,8 @@ def load_trajs(exp_info, exp_dir=None, scale=1):
                             "test_demos" : list of demo ids for testing ([5]),
                         }
         exp_dir (str): If specified, save demo_info.pth in exp_dir/
+        scale: amount to scale distances by
+        mode (int): 1 or 2; if specified, only return part of trajectory with this mode
     """
 
     # Load json and get traj filepaths
@@ -232,6 +250,9 @@ def load_trajs(exp_info, exp_dir=None, scale=1):
             # Full trajectory, downsampled
             traj = downsample_traj_dict(traj_original, new_time_step=downsample_time_step)
 
+            if mode is not None:
+                traj = get_traj_mode(traj, mode)
+
             traj_list.append(traj)
 
     print(f"Loaded {len(train_trajs)} training demos")
@@ -272,7 +293,8 @@ def parse_pred_traj(pred_traj, state, fnum=3):
     Parse out relevant part of pred_traj
     
     args:
-        pred_traj: [T, state_dim] where each row is a state vector of the format [ftpos, o_state]
+        pred_traj (nparray [T, state_dim]):  where each row is a state vector of the format [ftpos, o_state]
+        state (str): "ftpos" | "obj" | "ftpos_obj"
     """
 
     ftpos_dim = 3*fnum
