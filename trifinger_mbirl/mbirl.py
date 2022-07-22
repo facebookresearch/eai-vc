@@ -16,6 +16,7 @@ base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
 
+from trifinger_mbirl.dynamics_models import FTPosSim
 from trifinger_mbirl.ftpos_mpc import FTPosMPC
 from trifinger_mbirl.learnable_costs import *
 import utils.data_utils as d_utils
@@ -52,7 +53,8 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, trajs, plots_d
         expert_demo = torch.Tensor(traj["ft_pos_cur"])
         time_horizon, s_dim = expert_demo.shape
 
-        ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
+        #ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
+        ftpos_mpc = FTPosSim(time_horizon=time_horizon-1)
 
         action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
 
@@ -137,7 +139,8 @@ def train(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
             time_horizon, s_dim = expert_demo.shape
 
             # Forward rollout
-            ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
+            #ftpos_mpc = FTPosMPC(time_horizon=time_horizon-1)
+            ftpos_mpc = FTPosSim(time_horizon=time_horizon - 1)
 
             action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
 

@@ -15,6 +15,119 @@ from control.custom_pinocchio_utils import CustomPinocchioUtils
 SIM_TIME_STEP = 0.004
 
 
+# Compute next state given current state and action (ft position deltas)
+class FTPosMPC(torch.nn.Module):
+
+    def __init__(self, time_horizon, f_num=3):
+        super().__init__()
+        self.time_horizon = time_horizon
+        self.f_num = f_num
+        self.n_keypt_dim = self.f_num * 3
+        self.a_dim = self.f_num * 3
+        self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
+
+    def forward(self, x, u=0):
+        """
+        Given current state and action, compute next state
+
+        args:
+            x: current state (ft_pos)
+            u: action (delta ftpos)
+
+        return:
+            x_next: next state (ft_pos)
+        """
+
+        x_next = x + u
+        return x_next
+
+    def roll_out(self, x_init):
+        """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
+        x_traj = []
+        x_next = self.forward(x_init)
+        x_traj.append(x_next)
+
+        for t in range(self.time_horizon):
+            a = self.action_seq[t]
+            x_next = self.forward(x_next, a)
+            x_traj.append(x_next.clone())
+
+        return torch.stack(x_traj)
+
+    def reset_actions(self):
+        self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
+
+    def set_action_seq_for_testing(self, action_seq):
+        self.action_seq.data = torch.Tensor(action_seq)
+
+
+class Integrate(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, state, action):
+        ctx.save_for_backward(state, action)
+        xnp = state.detach().numpy()
+        unp = action.detach().numpy()
+        return torch.Tensor(xnp + unp)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        state, action = ctx.saved_tensors
+        #grad_state = grad_action = None
+
+        grad_state = grad_output.add(action)
+        grad_action = grad_output.add(state)
+
+        return grad_state, grad_action
+
+
+
+# Compute next state given current state and action (ft position deltas)
+class FTPosSim(torch.nn.Module):
+
+    def __init__(self, time_horizon, f_num=3):
+        super().__init__()
+        self.time_horizon = time_horizon
+        self.f_num = f_num
+        self.n_keypt_dim = self.f_num * 3
+        self.a_dim = self.f_num * 3
+        self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
+
+    def forward(self, x, u=torch.zeros(9)):
+        """
+        Given current state and action, compute next state
+
+        args:
+            x: current state (ft_pos)
+            u: action (delta ftpos)
+
+        return:
+            x_next: next state (ft_pos)
+        """
+
+        x_next = Integrate.apply(x, u)
+
+        return torch.Tensor(x_next)
+
+    def roll_out(self, x_init):
+        """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
+        x_traj = []
+        x_next = self.forward(x_init)
+        x_traj.append(x_next)
+
+        for t in range(self.time_horizon):
+            a = self.action_seq[t]
+            x_next = self.forward(x_next, a)
+            x_traj.append(x_next.clone())
+
+        return torch.stack(x_traj)
+
+    def reset_actions(self):
+        self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
+
+    def set_action_seq_for_testing(self, action_seq):
+        self.action_seq.data = torch.Tensor(action_seq)
+
+
 class DiffTrifingerSim(torch.nn.Module):
 
     def __init__(self, start_pose, goal_pose, downsample_time):
@@ -29,7 +142,7 @@ class DiffTrifingerSim(torch.nn.Module):
             time_step=SIM_TIME_STEP,
         )
 
-        self.env.reset(goal_pose_dict=goal_pose, init_pose_dict=start_pose)
+        self.observation = self.env.reset(goal_pose_dict=goal_pose, init_pose_dict=start_pose)
 
         self.downsample_time_step = downsample_time
         self.time_step = 0
@@ -61,9 +174,10 @@ class DiffTrifingerSim(torch.nn.Module):
         return ft_pos_traj, ft_vel_traj
 
     # actions are finger tip deltas
-    def forward(self, action):
+    #def forward(self, action):
+    def forward(self, observation, u=torch.zeros(9)):
 
-        ft_pos_next_des = self.ft_pos_cur + action
+        ft_pos_next_des = self.ft_pos_cur + u
 
         # Lin interp from current ft pos to next ft waypoint
         ft_start_goal = np.stack((self.ft_pos_cur, ft_pos_next_des))
@@ -78,6 +192,31 @@ class DiffTrifingerSim(torch.nn.Module):
             q_cur = observation["robot_observation"]["position"]
             dq_cur = observation["robot_observation"]["velocity"]
             torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
+            observation, reward, episode_done, info = self.env.step(torque)
+
+        return observation
+
+    def roll_out(self, x_init):
+        """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
+        x_traj = []
+        x_next = self.forward(x_init)
+        x_traj.append(x_next)
+
+        for t in range(self.time_horizon):
+            a = self.action_seq[t]
+            x_next = self.forward(x_next, a)
+            x_traj.append(x_next.clone())
+
+        return torch.stack(x_traj)
 
 
-        return
+    def get_observation(self):
+
+        obs = {"policy":
+                {
+                "controller": self.controller.get_observation(),
+                "t" : self.t,
+                }
+              }
+
+        return obs

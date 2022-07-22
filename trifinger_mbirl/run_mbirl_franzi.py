@@ -15,6 +15,7 @@ sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
 
 from trifinger_mbirl.ftposnn_mpc import FTPosMPCNN
+from trifinger_mbirl.dynamics_models import FTPosSim
 from trifinger_mbirl.learnable_costs import *
 import utils.data_utils as d_utils
 
@@ -141,7 +142,7 @@ def irl_training(conf, learnable_cost, irl_loss_fn, train_trajs, test_trajs,
 
     # Forward rollout
     time_horizon, s_dim = expert_demo.shape
-    ftpos_mpc = FTPosMPCNN(time_horizon=time_horizon - 1)
+    ftpos_mpc = FTPosSim(time_horizon=time_horizon - 1)
     action_optimizer = torch.optim.SGD(ftpos_mpc.parameters(), lr=action_lr)
 
     # Start of inverse RL loop
