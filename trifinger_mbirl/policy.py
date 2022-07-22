@@ -3,7 +3,7 @@ import torch
 
 class DeterministicPolicy(torch.nn.Module):
 
-    def __init__(self, in_dim, out_dim):
+    def __init__(self, in_dim, out_dim, device="cpu"):
         super().__init__()
         num_neurons = 100
         self.activation = torch.nn.Tanh
@@ -13,6 +13,7 @@ class DeterministicPolicy(torch.nn.Module):
                                           self.activation(),
                                           torch.nn.Linear(num_neurons, out_dim),
                                           torch.nn.Tanh())
+        self.policy.to(device)
 
         self.init_state = self.state_dict()
 

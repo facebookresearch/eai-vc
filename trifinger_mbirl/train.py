@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+#w Copyright (c) Facebook, Inc. and its affiliates.
 import random
 import os
 import sys
@@ -86,7 +86,7 @@ def main(conf):
         # Model
         in_dim = traindata[0][0].shape[0]
         out_dim = 9
-        policy = DeterministicPolicy(in_dim=in_dim, out_dim=out_dim)
+        policy = DeterministicPolicy(in_dim=in_dim, out_dim=out_dim, device=device)
 
         bc.train(conf, dataloader, policy, exp_dir)
     ### Invalid algo

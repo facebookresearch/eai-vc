@@ -43,9 +43,9 @@ class ImitationLearningDataset(torch.utils.data.Dataset):
                             "image_60"  : demo["image_60"][i],
                            }
 
-                obs = get_bc_obs(obs_dict, obs_type, r3m=r3m)
+                obs = get_bc_obs(obs_dict, obs_type, r3m=r3m, device=device)
 
-                action = torch.FloatTensor(demo['delta_ftpos'][i])
+                action = torch.FloatTensor(demo['delta_ftpos'][i]).to(device)
 
                 self.dataset.append((obs, action))
 
@@ -62,7 +62,7 @@ class ImitationLearningDataset(torch.utils.data.Dataset):
         return self.dataset[idx]
 
 
-def get_bc_obs(obs_dict, obs_type, r3m=None):
+def get_bc_obs(obs_dict, obs_type, r3m=None, device="cpu"):
     """
     Return obs for policy for given obs_type
 
@@ -92,7 +92,7 @@ def get_bc_obs(obs_dict, obs_type, r3m=None):
         image = obs_dict["image_60"]
         image_preproc = transforms(Image.fromarray(image.astype(np.uint8))).reshape(-1, 3, 224, 224)
         visual_obs = r3m(image_preproc * 255.0)[0].detach()
-        proprio_obs = torch.FloatTensor(obs_dict["ft_pos_cur"])
+        proprio_obs = torch.FloatTensor(obs_dict["ft_pos_cur"]).to(device)
         obs = torch.cat([visual_obs, proprio_obs])
 
     else:
