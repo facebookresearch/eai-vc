@@ -39,7 +39,7 @@ def get_log_paths(args):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--difficulty", "-d", type=int, choices=[1,2,3], help="Difficulty level", default=1)
+    parser.add_argument("--difficulty", "-d", type=int, choices=[0,1,2,3], help="Difficulty level", default=1)
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
     parser.add_argument("--num_demos", "-nd", type=int, help="Number of demos to generate")
     parser.add_argument("--demo_dir", type=str, default="/Users/clairelchen/logs/demos/", help="Directory for demo logs")

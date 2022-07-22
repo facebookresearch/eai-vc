@@ -16,7 +16,7 @@ class LearnableWeightedCost(torch.nn.Module):
 
     def forward(self, y_in, y_target):
         assert y_in.dim() == 2
-        mse = ((y_in[:,-self.dim:] - y_target[-self.dim:]) ** 2) # [time_horizon, dim]
+        mse = ((y_in - y_target) ** 2) # [time_horizon, dim]
 
         # weighted mse
         #wmse = torch.mm(mse, self.clip(self.weights))
@@ -38,7 +38,7 @@ class LearnableTimeDepWeightedCost(torch.nn.Module):
 
     def forward(self, y_in, y_target):
         assert y_in.dim() == 2
-        mse = ((y_in[:,-self.dim:] - y_target[-self.dim:]) ** 2).squeeze()
+        mse = ((y_in - y_target) ** 2).squeeze()
         # weighted mse
         #wmse = mse * self.clip(self.weights)
         wmse = mse * self.weights # [time_horizon, dim]
@@ -78,7 +78,7 @@ class LearnableRBFWeightedCost(torch.nn.Module):
 
     def forward(self, y_in, y_target):
         assert y_in.dim() == 2
-        mse = (y_in[:, -self.dim:] - y_target[-self.dim:]) ** 2
+        mse = (y_in - y_target) ** 2
 
         self.weights = self.weights_fn()
         wmse = self.weights * mse

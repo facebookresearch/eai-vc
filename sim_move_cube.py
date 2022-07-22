@@ -84,7 +84,7 @@ def add_actions_to_obs(observation_list):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--difficulty", "-d", type=int, choices=[1,2,3], help="Difficulty level", default=1)
+    parser.add_argument("--difficulty", "-d", type=int, choices=[0,1,2,3], help="Difficulty level", default=1)
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
     parser.add_argument("--no_collisions", "-nc", action="store_true", help="Visualize sim")
     parser.add_argument("--log_paths", "-l", nargs="*", type=str, help="Save sim log")

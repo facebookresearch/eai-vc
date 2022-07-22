@@ -7,6 +7,13 @@ import torch
 NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
 
 def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
+    """
+    Process list of observation dicts into dict of lists (trajectories for each quantity)
+
+    args:
+        data: list of observation dicts
+        scale: amount to scale all distances by. by default, all distances are in meters. convert to cm with scale=100
+    """
 
     position_error = np.array([data[i]["achieved_goal"]["position_error"] for i in range(len(data))])
     o_cur = np.array([data[i]["object_observation"]["position"] for i in range(len(data))])
@@ -100,6 +107,22 @@ def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
 
     return new_traj_dict
 
+def get_traj_mode(traj_dict, mode):
+    assert mode in [1, 2], "Invalid mode"
+
+    new_traj_dict = {}
+    
+    indices_to_take = np.where(traj_dict["mode"]==mode)[0]
+    for k, traj in traj_dict.items():
+        if k in NON_TRAJ_KEYS:
+            new_traj_dict[k] = traj
+            continue
+    
+        new_traj = traj[indices_to_take]
+        new_traj_dict[k] = new_traj
+
+    return new_traj_dict
+
 def crop_traj_dict(traj_dict, crop_range):
     """ crop_range: [crop_min, crop_max] """
 
@@ -169,7 +192,7 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp = None):
 
     plt.close()
 
-def load_trajs(exp_info, exp_dir=None):
+def load_trajs(exp_info, exp_dir=None, scale=1, mode=None):
     """
     Load train and test trajectories from exp_info
     
@@ -182,6 +205,8 @@ def load_trajs(exp_info, exp_dir=None):
                             "test_demos" : list of demo ids for testing ([5]),
                         }
         exp_dir (str): If specified, save demo_info.pth in exp_dir/
+        scale: amount to scale distances by
+        mode (int): 1 or 2; if specified, only return part of trajectory with this mode
     """
 
     # Load json and get traj filepaths
@@ -220,10 +245,13 @@ def load_trajs(exp_info, exp_dir=None):
             stats_list.append(demo_stats)
 
             data = np.load(demo_path, allow_pickle=True)["data"]
-            traj_original = get_traj_dict_from_obs_list(data)
+            traj_original = get_traj_dict_from_obs_list(data, scale=scale)
     
             # Full trajectory, downsampled
             traj = downsample_traj_dict(traj_original, new_time_step=downsample_time_step)
+
+            if mode is not None:
+                traj = get_traj_mode(traj, mode)
 
             traj_list.append(traj)
 
@@ -238,8 +266,47 @@ def load_trajs(exp_info, exp_dir=None):
             'train_demo_stats'    : train_demo_stats,
             'test_demo_stats'     : test_demo_stats,
             'downsample_time_step': downsample_time_step,
+            'scale'               : scale,
         }, f=f'{exp_dir}/demo_info.pth')
 
     return train_trajs, test_trajs
 
+def get_obs_dict_from_traj(traj, t, obj_state_type):
 
+    if obj_state_type == "pos":
+        o_state = traj["o_pos_cur"][t]
+    elif obj_state_type == "vertices":
+        o_state = traj["vertices"][t]
+    else: 
+        raise ValueError
+
+    obs_dict = {
+                "ft_state": torch.unsqueeze(torch.FloatTensor(traj["ft_pos_cur"][t]), 0),
+                "o_state" : torch.unsqueeze(torch.FloatTensor(o_state), 0),
+                "mode"    : traj["mode"][t],
+               }
+
+    return obs_dict
+
+def parse_pred_traj(pred_traj, state, fnum=3):
+    """ 
+    Parse out relevant part of pred_traj
+    
+    args:
+        pred_traj (nparray [T, state_dim]):  where each row is a state vector of the format [ftpos, o_state]
+        state (str): "ftpos" | "obj" | "ftpos_obj"
+    """
+
+    ftpos_dim = 3*fnum
+
+    if state == "ftpos":
+        return pred_traj[:, :ftpos_dim] # First part of pred_traj
+    elif state == "obj":
+        assert pred_traj.shape[1] > ftpos_dim, "State does not include object state. Try using mpc_type = two_phase"
+        return pred_traj[:, ftpos_dim:] # Last part of pred_traj
+    elif state == "ftpos_obj":
+        assert pred_traj.shape[1] > ftpos_dim, "State does not include object state. Try using mpc_type = two_phase"
+        return pred_traj
+    else:
+        raise ValueError(f"{state} is invalid state")
+    

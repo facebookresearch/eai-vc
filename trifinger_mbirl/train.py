@@ -18,12 +18,9 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 
 import utils.data_utils as d_utils
 
-from trifinger_mbirl.ftpos_mpc import FTPosMPC
-from trifinger_mbirl.learnable_costs import *
 import trifinger_mbirl.mbirl as mbirl
-
-from trifinger_mbirl.policy import DeterministicPolicy
 import trifinger_mbirl.bc as bc
+from trifinger_mbirl.policy import DeterministicPolicy
 
 # Set run logging directory to be trifinger_mbirl
 mbirl_dir = os.path.dirname(os.path.realpath(__file__))
@@ -38,7 +35,7 @@ def main(conf):
         device = "cuda"
     else:
         device = "cpu"
-        
+
     # Name experiment and make exp directory
     exp_str = get_exp_str(vars(conf))
     exp_dir = os.path.join(conf.log_dir, exp_str)
@@ -49,8 +46,7 @@ def main(conf):
     torch.save(conf, f=f'{exp_dir}/conf.pth')
 
     # Load train and test trajectories
-    train_trajs, test_trajs = d_utils.load_trajs(args.file_path, exp_dir)
-
+    train_trajs, test_trajs = d_utils.load_trajs(conf.file_path, exp_dir, scale=100, mode=conf.mode) # TODO scale hardcoded
 
     if not conf.no_wandb:
         # wandb init
@@ -61,36 +57,25 @@ def main(conf):
     if conf.algo == "mbirl":
         time_horizon, n_keypt_dim = train_trajs[0]["ft_pos_cur"].shape # xyz position for each fingertip
 
-        rbf_kernels  = conf.rbf_kernels
-        rbf_width    = conf.rbf_width
-        cost_type    = conf.cost_type
-
-        # Set learnable cost
-        if cost_type == 'Weighted':
-            learnable_cost = LearnableWeightedCost(dim=n_keypt_dim)
-        elif cost_type == 'TimeDep':
-            learnable_cost = LearnableTimeDepWeightedCost(time_horizon=time_horizon, dim=n_keypt_dim)
-        elif cost_type == 'RBF':
-            learnable_cost = LearnableRBFWeightedCost(time_horizon=time_horizon, dim=n_keypt_dim,
-                                                      width=rbf_width, kernels=rbf_kernels)
-        elif cost_type == 'Traj':
-            learnable_cost = LearnableFullTrajWeightedCost(time_horizon=time_horizon, dim=n_keypt_dim)
-        elif cost_type == 'MPTimeDep':
-            learnable_cost = LearnableMultiPhaseTimeDepWeightedCost(time_horizon=time_horizon, dim=n_keypt_dim)
-        else:
-            raise ValueError(f'Cost {cost_type} not implemented')
+        # Get MPC
+        mpc = mbirl.get_mpc(conf.mpc_type, time_horizon)
 
         # IRL loss
-        irl_loss_fn = mbirl.IRLLoss()
+        irl_loss_fn = mbirl.IRLLoss(conf.irl_loss_state)
 
+        # Get learnable cost function
+        learnable_cost = mbirl.get_learnable_cost(conf, time_horizon)
+        
         # Run training
         mbirl.train(conf,
                     learnable_cost, 
                     irl_loss_fn,
+                    mpc,
                     train_trajs, test_trajs,
                     model_data_dir=exp_dir,
                     no_wandb=conf.no_wandb,
                    )
+
     ### BC training
     elif conf.algo == "bc":
         
@@ -107,6 +92,7 @@ def main(conf):
     ### Invalid algo
     else:
         raise ValueError(f"{conf.algo} is invalid -algo")
+
 
 def get_exp_str(params_dict):
     
@@ -154,7 +140,14 @@ def parse_args():
     parser.add_argument("--cost_lr", type=float, default=0.01, help="Cost learning rate")
     parser.add_argument("--action_lr", type=float, default=0.01, help="Action learning rate")
     parser.add_argument("--n_inner_iter", type=int, default=1, help="Inner loop iterations")
-    parser.add_argument("--irl_loss_scale", type=float, default=100, help="IRL loss distance scale")
+    parser.add_argument("--irl_loss_scale", type=float, default=1, help="IRL loss distance scale")
+
+    parser.add_argument("--cost_state", type=str, default="ftpos", choices=["ftpos", "obj", "ftpos_obj"], help="State to use in cost")
+    parser.add_argument("--irl_loss_state", type=str, default="ftpos", choices=["ftpos", "obj", "ftpos_obj"], help="State to use in IRL")
+    
+    parser.add_argument("--mpc_type", type=str, default="ftpos", choices=["ftpos", "two_phase"], help="MPC to use")
+    parser.add_argument("--mode", type=int, choices=[1,2], help="For testing; only load parts of trajectories with this mode")
+
     # RBF kernel parameters
     parser.add_argument("--rbf_kernels", type=int, default=5, help="Number of RBF kernels")
     parser.add_argument("--rbf_width", type=float, default=2, help="RBF kernel width")

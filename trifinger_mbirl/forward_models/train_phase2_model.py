@@ -17,19 +17,75 @@ import utils.data_utils as d_utils
 models_dir = os.path.dirname(os.path.realpath(__file__))
 LOG_DIR = os.path.join(models_dir, "runs")
 
+"""
+Train phase 2 model
+"""
+
+class NMSELoss(torch.nn.Module):
+    def __init__(self, target_vars):
+        self.target_vars = target_vars
+        super(NMSELoss, self).__init__()
+
+    def forward(self, y_in, y_target):
+        assert y_in.dim() == 2
+        mse = ((y_in - y_target) ** 2).mean(dim=0)
+
+        assert mse.shape[-1] == y_in.shape[-1]
+        nmse = mse / self.target_vars
+
+        return nmse.mean()
+
 ## Dataset
 class Phase2ModelDataset(torch.utils.data.Dataset):
-    def __init__(self, demos, obj_state_type="vertices"):
+    def __init__(self, dataset_path, demo_list=None, obj_state_type="vertices"):
         """
-        demos: List of demo dicts
+        demo_list: List of demo dicts
         obj_state_type (str): "pos" or "vertices"
         """
         
         ### ONLY TAKE PHASE 2 PART OF TRAJECTORY
 
         assert obj_state_type in ["pos", "vertices"]
+        self.obj_state_type = obj_state_type
+    
+        if demo_list is not None:
+            # Make dataset from demo list, and save
+            self.dataset, self.phase2_start_ind = self.make_dataset_from_demo_list(demo_list)
 
-        self.dataset = []
+            # Save dataset as json
+            data_info_dict = {"dataset": self.dataset, "phase2_start_ind": self.phase2_start_ind}
+            
+            if dataset_path is not None:
+                demo_dir = os.path.dirname(dataset_path)
+                if not os.path.exists(demo_dir): os.makedirs(demo_dir)
+                torch.save(data_info_dict, f=dataset_path)
+                print(f"Saved dataset to {dataset_path}")
+        else:
+            if os.path.exists(dataset_path):
+                print(f"Loading dataset from {dataset_path}")
+                # Load dataset from json
+                data_info_dict = torch.load(dataset_path)
+                self.dataset = data_info_dict["dataset"]
+                self.phase2_start_ind = data_info_dict["phase2_start_ind"]
+            else:
+                raise ValueError(f"{dataset_path} does not exist")
+
+        # Obs dimensions
+        self.in_dim = 0
+        obs_dict = self.dataset[0]["obs"]
+        for k, v in obs_dict.items():
+            self.in_dim += v.shape[0]
+
+        # Next state dimensions
+        self.out_dim = self.dataset[0]["state_next"].shape[0]
+
+        variance = self.get_target_variance()
+        print(variance)
+
+    def make_dataset_from_demo_list(self, demos):
+        """ """
+
+        dataset = []
 
         for demo in demos:
 
@@ -38,7 +94,8 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
             # Find phase2 start index in trajectory
             phase2_start_ind = demo["mode"].tolist().index(2)
 
-            for i in (range(phase2_start_ind, num_obs-1)):
+            #for i in (range(phase2_start_ind, num_obs-1)):
+            for i in (range(num_obs-1)): # TODO train on full trajectories
                 # Object positions
                 o_pos_cur = demo["o_pos_cur"][i]
                 o_pos_next = demo["o_pos_cur"][i+1]
@@ -52,14 +109,14 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
                 ft_pos_next = demo["ft_pos_cur"][i+1]
 
                 # Action (fingertip position deltas)
-                action = torch.FloatTensor(demo['delta_ftpos'][i])
+                action = torch.FloatTensor(demo['delta_ftpos'][i])# * 10 # TODO scale action for testing
 
                 # Make state and action
-                if obj_state_type == "pos":
+                if self.obj_state_type == "pos":
                     o_state_cur = torch.FloatTensor(o_pos_cur)
                     o_state_next = torch.FloatTensor(o_pos_next)
 
-                elif obj_state_type == "vertices":
+                elif self.obj_state_type == "vertices":
                     o_state_cur = torch.FloatTensor(o_vert_cur)
                     o_state_next = torch.FloatTensor(o_vert_next)
 
@@ -80,15 +137,9 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
                              "state_next": state_next, 
                             }
 
-                self.dataset.append(data_dict)
+                dataset.append(data_dict)
 
-                # Obs dimensions
-                self.in_dim = 0
-                for k, v in obs_dict.items():
-                    self.in_dim += v.shape[0]
-
-                # Next state dimensions
-                self.out_dim = data_dict["state_next"].shape[0]
+        return dataset, phase2_start_ind
 
 
     def __len__(self):
@@ -96,6 +147,10 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return self.dataset[idx]
+
+    def get_target_variance(self):
+        state_next = torch.stack([self.dataset[i]["state_next"] for i in range(len(self.dataset))])
+        return state_next.var(dim=0)
 
 ## Model
 class Phase2Model(torch.nn.Module):
@@ -111,14 +166,15 @@ class Phase2Model(torch.nn.Module):
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.hidden_dims = hidden_dims
-        #self.activation = torch.nn.ReLU(inplace=True)
-        self.activation = torch.nn.Tanh()
+        self.activation = torch.nn.ReLU(inplace=True)
+        #self.activation = torch.nn.Tanh()
 
         dims = [in_dim] + list(hidden_dims) + [out_dim]
         module_list = []
         for i in range(len(dims) - 1):
             module_list.append(torch.nn.Linear(dims[i], dims[i+1]))
-            module_list.append(self.activation) 
+            if i < len(dims) - 2:
+                module_list.append(self.activation) 
 
         self.model_list = torch.nn.ModuleList(module_list)
 
@@ -131,7 +187,7 @@ class Phase2Model(torch.nn.Module):
         return x
 
 
-def train(conf, model, loss_fn, optimizer, dataloader, test_dataloader, model_data_dir=None):
+def train(conf, model, loss_fn, optimizer, dataloader, test_dataloader, phase2_start_ind, model_data_dir=None):
 
     for epoch in range(conf.n_epochs):
         model.train()
@@ -140,6 +196,7 @@ def train(conf, model, loss_fn, optimizer, dataloader, test_dataloader, model_da
             optimizer.zero_grad()
             pred_state_next = model(batch["obs"])
             loss = loss_fn(pred_state_next, batch["state_next"])
+            loss = loss.mean()
             loss.backward()
             optimizer.step()
         
@@ -153,6 +210,9 @@ def train(conf, model, loss_fn, optimizer, dataloader, test_dataloader, model_da
                 for i_batch, batch in enumerate(test_dataloader):
                     pred_state_next = model(batch["obs"])
                     test_loss = loss_fn(pred_state_next, batch["state_next"])
+                    test_loss_mean = test_loss.mean(dim=0)
+                    print(test_loss_mean / torch.max(test_loss_mean)) 
+                    test_loss = test_loss.mean()
                     print(f"Epoch: {epoch}, test loss: {test_loss.item()}")
 
     torch.save({
@@ -162,6 +222,7 @@ def train(conf, model, loss_fn, optimizer, dataloader, test_dataloader, model_da
         'in_dim'           : model.in_dim,
         'out_dim'          : model.out_dim,
         'hidden_dims'      : model.hidden_dims,
+        'phase2_start_ind' : phase2_start_ind,
     }, f=f'{model_data_dir}/epoch_{epoch+1}_ckpt.pth')
 
 def get_exp_str(params_dict):
@@ -200,20 +261,34 @@ def main(conf):
     else:
         device = "cpu"
 
+    DEMO_DIR = "/Users/clairelchen/logs/demos/"
+    SCALE = 100
     if args.file_path is not None:
-        train_trajs, test_trajs = d_utils.load_trajs(args.file_path)
+        train_trajs, test_trajs = d_utils.load_trajs(args.file_path, scale=SCALE)
+        train_data_path = None
+        test_data_path = None
     else:
-        train_demos = list(range(args.n_train+1))
-        train_demos.remove(5)
-        traj_info = {
-                "demo_dir"   : "/Users/clairelchen/logs/demos/",
-                "difficulty" : 1,
-                "train_demos": train_demos,
-                "test_demos" : [5]
-            }
+        TEST_DEMO_ID = 5 # ID of test trajectory
+        dataset_dir = os.path.join(DEMO_DIR, "datasets")
+        train_data_path = os.path.join(dataset_dir, f"dataset_train-{args.n_train}_ost-{args.obj_state_type}_s-{SCALE}.pth")
+        test_data_path = os.path.join(dataset_dir, f"dataset_test_id-{TEST_DEMO_ID}_ost-{args.obj_state_type}_s-{SCALE}.pth")
 
-        # Load train and test trajectories
-        train_trajs, test_trajs = d_utils.load_trajs(traj_info)
+        if os.path.exists(train_data_path) and os.path.exists(test_data_path):
+            # Dataset already saved, save time by not loading demo info
+            train_trajs, test_trajs = None, None
+        else:
+            # Load demo info for making dataset
+            train_demos = list(range(args.n_train+1))
+            train_demos.remove(TEST_DEMO_ID)
+            traj_info = {
+                    "demo_dir"   : DEMO_DIR,
+                    "difficulty" : 1,
+                    "train_demos": train_demos,
+                    "test_demos" : [TEST_DEMO_ID]
+                }
+
+            # Load train and test trajectories
+            train_trajs, test_trajs = d_utils.load_trajs(traj_info, scale=SCALE)
 
     # Name experiment and make exp directory
     exp_str = get_exp_str(vars(conf))
@@ -221,22 +296,27 @@ def main(conf):
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir)
 
-    # Train dataloader
-    train_dataset = Phase2ModelDataset(train_trajs, obj_state_type=conf.obj_state_type)
+    # Datasets and dataloaders
+    train_dataset = Phase2ModelDataset(train_data_path, demo_list=train_trajs,
+                                       obj_state_type=conf.obj_state_type)
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
 
-    test_dataset = Phase2ModelDataset(test_trajs, obj_state_type=conf.obj_state_type)
+    test_dataset = Phase2ModelDataset(test_data_path, demo_list=test_trajs,
+                                      obj_state_type=conf.obj_state_type)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=16, shuffle=False)
 
     in_dim = train_dataset.in_dim
     out_dim = train_dataset.out_dim
-    hidden_dims = [100, 25]
+    hidden_dims = [100]
 
     model = Phase2Model(in_dim, out_dim, hidden_dims)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    loss_fn = torch.nn.MSELoss()
+    print(model)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-5)
+    #target_var = train_dataset.get_target_variance()
+    #loss_fn = NMSELoss(target_vars=target_var)
+    loss_fn = torch.nn.MSELoss(reduction="none")
 
-    train(conf, model, loss_fn, optimizer, dataloader, test_dataloader,  model_data_dir=exp_dir)
+    train(conf, model, loss_fn, optimizer, dataloader, test_dataloader, train_dataset.phase2_start_ind, model_data_dir=exp_dir)
 
 def parse_args():
 
