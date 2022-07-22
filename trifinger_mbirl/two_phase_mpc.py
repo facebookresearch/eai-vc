@@ -16,13 +16,15 @@ import utils.data_utils as d_utils
 # Compute next state given current state and action (ft position deltas)
 class TwoPhaseMPC(torch.nn.Module):
 
-    def __init__(self, time_horizon, phase2_model_path, f_num=3):
+    def __init__(self, time_horizon, phase2_model_path, f_num=3, mode=None):
         super().__init__()
         self.time_horizon = time_horizon
         self.f_num = f_num
         self.n_keypt_dim = self.f_num * 3
         self.a_dim = self.f_num * 3
         self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
+
+        self.mode = mode
 
         self.phase1_model = Phase1Model()
 
@@ -37,9 +39,6 @@ class TwoPhaseMPC(torch.nn.Module):
 
         self.obj_state_type = phase2_model_dict["conf"].obj_state_type
 
-        # Write forward function
-        # Test on trajectory and plot predicted trajectory
-        
     def forward(self, obs_dict, action=None):
         """ 
         Given current state and action, and mode, compute next state
@@ -56,12 +55,14 @@ class TwoPhaseMPC(torch.nn.Module):
         """
 
         if action is None:
-            obs_dict["action"] = torch.FloatTensor(np.zeros((1, self.a_dim)))
+            return torch.cat([obs_dict["ft_state"], obs_dict["o_state"]], dim=1)
+            #obs_dict["action"] = torch.FloatTensor(np.zeros((1, self.a_dim)))
         else:
+            #if obs_dict["mode"] == 2: action = action * 10 # TODO for testing model with scaled actions
             obs_dict["action"] = torch.unsqueeze(action, 0)
 
         if obs_dict["mode"] == 1:
-            x_next = self.phase1_model.forward(obs_dict)
+            x_next = self.phase1_model(obs_dict)
         else: 
             # Mode 2
             x_next = self.phase2_model(obs_dict)
@@ -76,8 +77,12 @@ class TwoPhaseMPC(torch.nn.Module):
         ft_state = x_next[:, :self.a_dim]
         o_state = x_next[:, self.a_dim:]
         t_ind = 0
-        if t_ind < self.phase2_start_ind: mode = 1
-        else: mode = 2
+
+        if self.mode is None:
+            if t_ind < self.phase2_start_ind: mode = 1
+            else: mode = 2
+        else:
+            mode = self.mode
 
         obs_dict_next = {
                          "ft_state": ft_state,
@@ -97,8 +102,11 @@ class TwoPhaseMPC(torch.nn.Module):
             o_state = x_next[:, self.a_dim:]
 
             t_ind += 1
-            if t_ind < self.phase2_start_ind: mode = 1
-            else: mode = 2
+            if self.mode is None:
+                if t_ind < self.phase2_start_ind: mode = 1
+                else: mode = 2
+            else:
+                mode = self.mode
 
             obs_dict_next = {
                              "ft_state": ft_state,
@@ -195,24 +203,28 @@ def main(args):
 
     # Compare against ground truth trajectory to check that rollout is correct
     #d_utils.plot_traj(
-    #        "ft position", 
+    #        "ft position (cm)", 
     #        None,
     #        ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
     #        {
     #        "pred":  {"y": pred_ft_pos, "x": traj["t"], "marker": "x"},
     #        "demo": {"y": traj["ft_pos_cur"], "x": traj["t"]},
-    #        })
+    #        },
+    #        plot_timestamp = traj["t"][phase2_start_ind]
+    #        )
 
     ## Object state
     #if mpc.obj_state_type == "pos":
     #    d_utils.plot_traj(
-    #            "object position", 
+    #            "object position (cm)", 
     #            None,
     #            ["x", "y", "z"],
     #            {
     #            "pred":  {"y": pred_o_state, "x": traj["t"], "marker": "x"},
     #            "demo": {"y":  true_o_state, "x": traj["t"]},
-    #            })
+    #            },
+    #            plot_timestamp = traj["t"][phase2_start_ind]
+    #            )
     #elif mpc.obj_state_type == "vertices":
     #    for i in range(8):
     #        d_utils.plot_traj(
@@ -222,7 +234,9 @@ def main(args):
     #                {
     #                "pred":  {"y": pred_o_state[:, i*3:i*3+3], "x": traj["t"], "marker": "x"},
     #                "demo": {"y":  true_o_state[:, i*3:i*3+3], "x": traj["t"]},
-    #                })
+    #                },
+    #                plot_timestamp = traj["t"][phase2_start_ind]
+    #                )
     #else:
     #    raise ValueError()
        

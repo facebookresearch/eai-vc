@@ -46,7 +46,7 @@ def main(conf):
     torch.save(conf, f=f'{exp_dir}/conf.pth')
 
     # Load train and test trajectories
-    train_trajs, test_trajs = d_utils.load_trajs(conf.file_path, exp_dir, scale=100) # TODO scale hardcoded
+    train_trajs, test_trajs = d_utils.load_trajs(conf.file_path, exp_dir, scale=100, mode=conf.mode) # TODO scale hardcoded
 
     if not conf.no_wandb:
         # wandb init
@@ -146,6 +146,7 @@ def parse_args():
     parser.add_argument("--irl_loss_state", type=str, default="ftpos", choices=["ftpos", "obj", "ftpos_obj"], help="State to use in IRL")
     
     parser.add_argument("--mpc_type", type=str, default="ftpos", choices=["ftpos", "two_phase"], help="MPC to use")
+    parser.add_argument("--mode", type=int, choices=[1,2], help="For testing; only load parts of trajectories with this mode")
 
     # RBF kernel parameters
     parser.add_argument("--rbf_kernels", type=int, default=5, help="Number of RBF kernels")
