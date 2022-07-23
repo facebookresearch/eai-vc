@@ -1,0 +1,3 @@
+[submodule "third_party/habitat-lab"]
+	path = third_party/habitat-lab
+	url = git@github.com:facebookresearch/habitat-lab.git
