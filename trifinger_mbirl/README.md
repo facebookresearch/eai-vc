@@ -11,7 +11,7 @@ We will use the same `train.py` script, but I've added a few more args to suppor
 
 Example command to run mbirl training with two-phase model, with full-trajectory learned cost, and using both ftpos and object state in the cost function and IRL loss.
 ```
-python trifinger_mbirl/train.py --file_path demos/data_diff-1_train-1_test-1.json --algo mbirl --cost_type Traj --n_inner_iter 10  --mpc_type two_phase --irl_loss_state ftpos_obj --cost_state ftpos_obj --action_lr 1e-4 --no_wandb
+python trifinger_mbirl/train.py --file_path demos/data_diff-1_train-1_test-1.json --algo mbirl --cost_type Traj --n_inner_iter 10  --mpc_type ftpos_obj_two_phase --irl_loss_state ftpos_obj --cost_state ftpos_obj --action_lr 1e-4 --no_wandb
 ```
 
 args:
