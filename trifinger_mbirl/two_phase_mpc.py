@@ -38,6 +38,10 @@ class TwoPhaseMPC(torch.nn.Module):
         self.phase2_model.load_state_dict(phase2_model_dict["model_state_dict"])
         self.phase2_start_ind = phase2_model_dict["phase2_start_ind"]
 
+        # Freeze network params
+        for name, param in self.phase2_model.named_parameters():
+            param.requires_grad = False
+
         self.obj_state_type = phase2_model_dict["conf"].obj_state_type
 
     def forward(self, obs_dict, action=None):
