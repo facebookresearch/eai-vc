@@ -67,42 +67,47 @@ def get_args_list(args):
 
     ######################## MBIRL args ########################
     ALGO = "mbirl" 
-    MPC_TYPE = "two_phase"
+    mpc_type_l = ["ftpos_obj_two_phase", "ftpos_obj_learned_only"]
     #cost_type_l = ["MPTimeDep"]
-    cost_type_l = ["Traj", "Weighted", "TimeDep"]
+    cost_type_l = ["Traj"]
     n_inner_iter_l = [1, 20, 50]
-    cost_state_l = ["ftpos", "obj", "ftpos_obj"]
-    irl_state_l = ["ftpos", "obj", "ftpos_obj"]
-    EXP_ID = "two_phase_test_1" 
+    cost_state_l = ["ftpos_obj"]
+    irl_state_l = ["ftpos_obj"]
+    action_lr_l = [1e-2, 1e-3, 1e-4]
+    EXP_ID = "two_phase_test_lr" 
 
     for FILE_PATH in file_path_l:
         for COST_TYPE in cost_type_l:
             for COST_STATE in cost_state_l:
                 for IRL_LOSS_STATE in irl_state_l:
                     for N_INNER_ITER in n_inner_iter_l:
-                        arg_str = "\
-                                  --exp_id {EXP_ID} \
-                                  --run_id {RUN_ID} \
-                                  --file_path {FILE_PATH} \
-                                  --algo {ALGO} \
-                                  --mpc_type {MPC_TYPE} \
-                                  --cost_type {COST_TYPE} \
-                                  --cost_state {COST_STATE} \
-                                  --irl_loss_state {IRL_LOSS_STATE} \
-                                  --n_inner_iter {N_INNER_ITER} \
-                                  ".format(
-                                    EXP_ID       = EXP_ID,
-                                    RUN_ID       = RUN_ID, 
-                                    FILE_PATH    = FILE_PATH,
-                                    ALGO         = ALGO,
-                                    MPC_TYPE     = MPC_TYPE,
-                                    COST_TYPE    = COST_TYPE,
-                                    COST_STATE   = COST_STATE,
-                                    IRL_LOSS_STATE    = IRL_LOSS_STATE,
-                                    N_INNER_ITER = N_INNER_ITER,
-                                    )
-                        arg_str_list.append({"i_run": RUN_ID, "arg_str": arg_str})
-                        RUN_ID += 1
+                        for ACTION_LR in action_lr_l:
+                            for MPC_TYPE in mpc_type_l:
+                                arg_str = "\
+                                          --exp_id {EXP_ID} \
+                                          --run_id {RUN_ID} \
+                                          --file_path {FILE_PATH} \
+                                          --algo {ALGO} \
+                                          --mpc_type {MPC_TYPE} \
+                                          --action_lr {ACTION_LR} \
+                                          --cost_type {COST_TYPE} \
+                                          --cost_state {COST_STATE} \
+                                          --irl_loss_state {IRL_LOSS_STATE} \
+                                          --n_inner_iter {N_INNER_ITER} \
+                                          ".format(
+                                            EXP_ID         = EXP_ID,
+                                            RUN_ID         = RUN_ID, 
+                                            FILE_PATH      = FILE_PATH,
+                                            ALGO           = ALGO,
+                                            MPC_TYPE       = MPC_TYPE,
+                                            ACTION_LR      = ACTION_LR,
+                                            COST_TYPE      = COST_TYPE,
+                                            COST_STATE     = COST_STATE,
+                                            IRL_LOSS_STATE = IRL_LOSS_STATE,
+                                            N_INNER_ITER   = N_INNER_ITER,
+                                            )
+                                arg_str_list.append({"i_run": RUN_ID, "arg_str": arg_str})
+                                RUN_ID += 1
 
     return arg_str_list
  
