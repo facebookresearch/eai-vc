@@ -1,0 +1,7 @@
+suite: dmcontrol
+frame_stack: 3
+action_repeat: 2
+episode_length: 500
+train_steps: 250000
+eval_freq: 25000
+save_freq: 25000

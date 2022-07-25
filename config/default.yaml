@@ -1,24 +1,13 @@
 defaults:
     - modality@_global_: state
+    - suite@_global_: dmcontrol
+    - setting@_global_: online
     - override hydra/launcher: local
     - override hydra/output: local
 
-# offline training
-fraction: 1.0
-train_iter: 200000
-dump_filelist: false
-
-# encoder
-encoder:
-    arch: default
-    pretrained: false
-
 # environment
-task: quadruped-run
-action_repeat: 2
+task: ???
 discount: 0.99
-episode_length: 1000/${action_repeat}
-train_steps: 500000/${action_repeat}
 
 # planning
 iterations: 6
@@ -31,14 +20,14 @@ momentum: 0.1
 
 # learning
 algorithm: 'tdmpc'
-batch_size: 512
+batch_size: ???
 horizon: 5
 reward_coef: 0.5
 value_coef: 0.1
 consistency_coef: 2
 rho: 0.5
 kappa: 0.1
-lr: 1e-3
+lr: ???
 std_schedule: linear(0.5, ${min_std}, 25000)
 horizon_schedule: linear(1, ${horizon}, 25000)
 per: true
@@ -82,13 +71,11 @@ device: ???
 multitask: ???
 num_tasks: ???
 task_list: ???
-cameras: ???
 obs_shape: ???
 action_shape: ???
 action_dim: ???
 state_dim: ???
 demo: false
-goal_hidden: false
 
 # cluster
 resume: True
@@ -99,7 +86,7 @@ hydra:
         cpus_per_task: 8
         gpus_per_node: 1
         tasks_per_node: 1
-        timeout_min: 2600
-        mem_gb: 254
+        timeout_min: ???
+        mem_gb: ???
         name: ${hydra.job.name}
         submitit_folder: ${hydra.sweep.dir}/.submitit/%j

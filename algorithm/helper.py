@@ -165,7 +165,7 @@ class FeatureFuse(nn.Module):
 def enc(cfg):
 	"""Returns a TOLD encoder."""
 	if cfg.modality == 'pixels':
-		if cfg.encoder.arch == 'default+':
+		if cfg.encoder == 'default+':
 			C = int(3*cfg.frame_stack)
 			layers = [NormalizeImg(),
 					nn.Conv2d(C, cfg.num_channels, 3, stride=2), nn.ReLU(),
@@ -174,7 +174,7 @@ def enc(cfg):
 					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU()]
 			out_shape = _get_out_shape((C, cfg.img_size, cfg.img_size), layers)
 			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
-		elif cfg.encoder.arch == 'default':
+		elif cfg.encoder == 'default':
 			C = int(3*cfg.frame_stack)
 			layers = [NormalizeImg(),
 					nn.Conv2d(C, cfg.num_channels, 7, stride=2), nn.ReLU(),
@@ -184,7 +184,7 @@ def enc(cfg):
 			out_shape = _get_out_shape((C, cfg.img_size, cfg.img_size), layers)
 			layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
 		else:
-			raise ValueError('Unknown encoder arch: {}'.format(cfg.encoder.arch))
+			raise ValueError('Unknown encoder arch: {}'.format(cfg.encoder))
 	elif cfg.modality == 'features':
 		layers = [FeatureFuse(cfg)]
 	else:

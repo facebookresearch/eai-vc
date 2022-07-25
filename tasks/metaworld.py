@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import gym
 from gym.wrappers import TimeLimit
-from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE, ALL_V2_ENVIRONMENTS_GOAL_HIDDEN
+from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
 from encode_dataset import encode_resnet
 
 
@@ -79,8 +79,8 @@ class MetaWorldWrapper(gym.Wrapper):
 
 
 def make_metaworld_env(cfg):
-	env_id = cfg.task.split('-', 1)[-1] + ('-v2-goal-hidden' if cfg.get('goal_hidden', False) else '-v2-goal-observable')
-	env = (ALL_V2_ENVIRONMENTS_GOAL_HIDDEN if cfg.get('goal_hidden', False) else ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE)[env_id](seed=cfg.seed)
+	env_id = cfg.task.split('-', 1)[-1] + '-v2-goal-observable'
+	env = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[env_id](seed=cfg.seed)
 	env = MetaWorldWrapper(env, cfg)
 	env = TimeLimit(env, max_episode_steps=cfg.episode_length)
 	cfg.state_dim = 39

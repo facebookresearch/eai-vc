@@ -1,5 +1,5 @@
 modality: pixels
-train_steps: 2000000/${action_repeat}
-frame_stack: 3
-num_channels: 32
 img_size: 84
+num_channels: 32
+lr: 3e-4
+batch_size: 256

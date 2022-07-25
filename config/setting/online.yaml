@@ -1,0 +1,4 @@
+setting: online
+encoder: default
+enc_dim: 256
+mlp_dim: 512

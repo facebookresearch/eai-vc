@@ -1,0 +1,7 @@
+suite: mw
+frame_stack: 1
+action_repeat: 2
+episode_length: 250
+train_steps: 500000
+eval_freq: 50000
+save_freq: 50000

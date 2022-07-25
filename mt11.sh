@@ -1,1 +1,0 @@
-python train_offline.py -m task=walker-mt11 modality=features features=mocoego15 dynamics_obj=reconstruction consistency_coef=100 exp_name=mocoego15-first-50p-recon-c100-detach detach_rewval=true fraction=0.5 hydra/launcher=slurm

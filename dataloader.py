@@ -3,9 +3,8 @@ import os
 import glob
 import numpy as np
 import torch
-import pickle as pkl
 from pathlib import Path
-from collections import deque, defaultdict
+from collections import deque
 from PIL import Image
 from torch.utils.data import Dataset
 from algorithm.helper import Episode
@@ -245,62 +244,5 @@ class DMControlDataset(OfflineDataset):
 				self._val_episodes.append(episode)
 
 
-class RLBenchDataset(OfflineDataset):
-	def __init__(self, cfg, buffer=None):
-		self._data_dir = Path(cfg.data_dir) / 'rlbench'
-		tasks = [cfg.task]
-		super().__init__(cfg, tasks, None, buffer)
-	
-	def _locate_episodes(self):
-		return sorted(glob.glob(str(self._data_dir / '*/*/episodes/*/low_dim_obs.pkl')))
-
-	def _filter_episodes(self):
-		print('Found {} episodes before filtering'.format(len(self._fps)))
-		if self._tasks != '*':
-			tasks = [t.replace('rlb-', '').replace('-', '_') for t in self._tasks]
-			self._fps = [fp for fp in self._fps if np.any([f'/{t}/' in fp for t in tasks])]
-		print('Found {} episodes after filtering'.format(len(self._fps)))
-
-	def _load_episodes(self):
-		assert self._cfg.modality == 'pixels'
-		assert 'cameras' in self._cfg
-		for fp in tqdm(self._fps):
-			data = pkl.load(open(fp, 'rb'))
-
-			# Load data
-			obs = []
-			for eplen in range(self._cfg.episode_length+1):
-				frame_fps = [Path(os.path.dirname(fp)) / camera / f'{eplen}.png' for camera in self._cfg.cameras]
-				if not all(fp.exists() for fp in frame_fps):
-					break
-				_obs = np.concatenate([np.array(Image.open(fp)) for fp in frame_fps], axis=-1).transpose(2, 0, 1)
-				obs.append(_obs)
-			obs = np.stack(obs)
-			joint_velocities = np.stack([data._observations[i].joint_velocities for i in range(len(data._observations))], axis=0)[1:]
-			gripper_open = np.stack([data._observations[i].gripper_open for i in range(len(data._observations))], axis=0)[1:, None]
-			actions = np.concatenate([joint_velocities, gripper_open], axis=-1)
-			rewards = np.zeros(actions.shape[0], dtype=np.float32)
-			rewards[-2:] = 1.
-			states = np.stack([data._observations[i].task_low_dim_state[:24] for i in range(len(data._observations))], axis=0)
-
-			# Repeat the last element until the length is equal to the episode length
-			if eplen < self._cfg.episode_length:
-				obs = np.concatenate([obs, obs[-1:] * np.ones((self._cfg.episode_length - obs.shape[0] + 1, *obs.shape[1:]), dtype=obs.dtype)], axis=0)
-				noop = np.zeros_like(actions[-1])
-				noop[-1] = actions[-1,-1]
-				actions = np.concatenate([actions, noop * np.ones((self._cfg.episode_length - actions.shape[0], actions.shape[1]), dtype=actions.dtype)], axis=0)
-				rewards = np.concatenate([rewards, rewards[-1:] * np.ones((self._cfg.episode_length - rewards.shape[0],), dtype=rewards.dtype)], axis=0)
-				states = np.concatenate([states, states[-1:] * np.ones((self._cfg.episode_length - states.shape[0] + 1, *states.shape[1:]), dtype=states.dtype)], axis=0)
-
-			episode = Episode.from_trajectory(self._cfg, obs, actions, rewards)
-			episode.metadata = {'states': states}
-			episode.task_vec = torch.ones(1, dtype=torch.float32, device=episode.device)
-			episode.task_id = 0  # TODO
-			episode.filepath = fp
-			self._episodes.append(episode)
-			self._cumulative_rewards.append(episode.cumulative_reward)
-
-
 def make_dataset(cfg, buffer=None):
-	cls = defaultdict(lambda: DMControlDataset, {'rlb': RLBenchDataset})[cfg.domain]
-	return cls(cfg, buffer)
+	return DMControlDataset(cfg, buffer)

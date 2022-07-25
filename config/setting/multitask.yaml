@@ -1,0 +1,7 @@
+setting: multitask
+encoder: default+
+enc_dim: 512
+mlp_dim: 1024
+fraction: 1.0
+train_iter: 200000
+batch_size: 1024
