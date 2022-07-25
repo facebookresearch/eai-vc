@@ -11,8 +11,8 @@ class DeterministicPolicy(torch.nn.Module):
                                           self.activation(),
                                           torch.nn.Linear(num_neurons, num_neurons),
                                           self.activation(),
-                                          torch.nn.Linear(num_neurons, out_dim),
-                                          torch.nn.Tanh())
+                                          torch.nn.Linear(num_neurons, out_dim),)
+                                          #torch.nn.Tanh())
         self.policy.to(device)
 
         self.init_state = self.state_dict()

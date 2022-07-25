@@ -24,7 +24,7 @@ from trifinger_mbirl.policy import DeterministicPolicy
 
 # Set run logging directory to be trifinger_mbirl
 mbirl_dir = os.path.dirname(os.path.realpath(__file__))
-LOG_DIR = os.path.join(mbirl_dir, "logs/runs")
+LOG_DIR = os.path.join(mbirl_dir, "logs")
 
 def main(conf):
     random.seed(10)
@@ -37,8 +37,7 @@ def main(conf):
         device = "cpu"
 
     # Name experiment and make exp directory
-    exp_str = get_exp_str(vars(conf))
-    exp_dir = os.path.join(conf.log_dir, exp_str)
+    exp_dir = get_exp_dir(vars(conf))
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir)
     
@@ -94,18 +93,20 @@ def main(conf):
         raise ValueError(f"{conf.algo} is invalid -algo")
 
 
-def get_exp_str(params_dict):
+def get_exp_dir(params_dict):
     
     sorted_dict = collections.OrderedDict(sorted(params_dict.items()))
 
+    exp_id = params_dict["exp_id"]
     run_id = params_dict["run_id"]
     file_path = os.path.splitext(os.path.split(params_dict["file_path"])[1])[0]
  
-    exp_str = f"exp_{run_id}_{file_path}"
+    exp_dir = f"exp_{exp_id}"
+    exp_str = f"exp_{exp_id}_r_{run_id}_{file_path}"
 
     for key, val in sorted_dict.items():
         # exclude these keys from exp name
-        if key in ["file_path", "no_wandb", "log_dir", "run_id", "n_epoch_every_log"]: continue
+        if key in ["file_path", "no_wandb", "log_dir", "run_id", "exp_id", "n_epoch_every_log"]: continue
 
         # Abbreviate key
         splits = key.split("_")
@@ -115,7 +116,7 @@ def get_exp_str(params_dict):
     
         exp_str += "_{}-{}".format(short_key, str(val).replace(".", "p"))
 
-    return exp_str
+    return os.path.join(params_dict["log_dir"], exp_dir, exp_str)
        
 
 def parse_args():
@@ -130,7 +131,8 @@ def parse_args():
     parser.add_argument("--log_dir", type=str, default=LOG_DIR, help="Directory for run logs")
     parser.add_argument("--no_wandb", action="store_true", help="Don't log in wandb")
     parser.add_argument("--run_id", default="NOID", help="Run ID")
-    parser.add_argument("--n_outer_iter", type=int, default=1500, help="Outer loop iterations")
+    parser.add_argument("--exp_id", default="NONAME", help="Experiment ID")
+    parser.add_argument("--n_outer_iter", type=int, default=2000, help="Outer loop iterations")
     parser.add_argument("--n_epoch_every_log", type=int, default=100, help="Num epochs every log")
 
 
@@ -145,7 +147,7 @@ def parse_args():
     parser.add_argument("--cost_state", type=str, default="ftpos", choices=["ftpos", "obj", "ftpos_obj"], help="State to use in cost")
     parser.add_argument("--irl_loss_state", type=str, default="ftpos", choices=["ftpos", "obj", "ftpos_obj"], help="State to use in IRL")
     
-    parser.add_argument("--mpc_type", type=str, default="ftpos", choices=["ftpos", "two_phase"], help="MPC to use")
+    parser.add_argument("--mpc_type", type=str, default="ftpos", choices=["ftpos", "ftpos_obj_two_phase", "ftpos_obj_learned_only"], help="MPC to use")
     parser.add_argument("--mode", type=int, choices=[1,2], help="For testing; only load parts of trajectories with this mode")
 
     # RBF kernel parameters
