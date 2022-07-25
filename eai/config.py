@@ -176,6 +176,24 @@ _CONFIG.RL.PPO.use_double_buffered_sampler = False
 _CONFIG.RL.DDPPO.sync_frac = 0.6
 _CONFIG.RL.DDPPO.distrib_backend = "NCCL"
 
+_CONFIG.MODEL = CN()
+_CONFIG.MODEL.RGB_ENCODER = CN()
+_CONFIG.MODEL.RGB_ENCODER.image_size = 256
+_CONFIG.MODEL.RGB_ENCODER.backbone = "resnet50"
+_CONFIG.MODEL.RGB_ENCODER.resnet_baseplanes = 32
+_CONFIG.MODEL.RGB_ENCODER.vit_use_fc_norm = False
+_CONFIG.MODEL.RGB_ENCODER.vit_global_pool = False
+_CONFIG.MODEL.RGB_ENCODER.vit_use_cls = False
+_CONFIG.MODEL.RGB_ENCODER.vit_mask_ratio = None
+_CONFIG.MODEL.RGB_ENCODER.hidden_size = 512
+_CONFIG.MODEL.RGB_ENCODER.use_augmentations = True
+_CONFIG.MODEL.RGB_ENCODER.use_augmentations_test_time = True
+_CONFIG.MODEL.RGB_ENCODER.randomize_augmentations_over_envs = False
+_CONFIG.MODEL.RGB_ENCODER.pretrained_encoder = None
+_CONFIG.MODEL.RGB_ENCODER.freeze_backbone = False
+_CONFIG.MODEL.RGB_ENCODER.avgpooled_image = False
+_CONFIG.MODEL.RGB_ENCODER.augmentations_name = "jitter+shift"
+_CONFIG.MODEL.RGB_ENCODER.drop_path_rate = 0.0
 
 def get_config(
     config_paths: Optional[Union[List[str], str]] = None,

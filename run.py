@@ -5,7 +5,9 @@ import random
 from datetime import datetime
 
 import numpy as np
+import habitat
 import torch
+
 from habitat import logger
 from habitat.config import Config
 from habitat_baselines.common.baseline_registry import baseline_registry
