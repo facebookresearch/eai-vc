@@ -288,7 +288,7 @@ def get_mpc(mpc_type, time_horizon):
         #phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-m2/epoch_1500_ckpt.pth"
 
         ## Phase 2 model trained with full demos
-        phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-all/epoch_3000_ckpt.pth"
+        phase2_model_path = "trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-all/epoch_3000_ckpt.pth"
 
         if "learned_only" in mpc_type: learned_only = True
         else: learned_only = False

@@ -37,7 +37,7 @@ def main(conf):
         device = "cpu"
 
     # Name experiment and make exp directory
-    exp_dir = get_exp_dir(vars(conf))
+    exp_dir, exp_str = get_exp_dir(vars(conf))
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir)
     
@@ -116,7 +116,7 @@ def get_exp_dir(params_dict):
     
         exp_str += "_{}-{}".format(short_key, str(val).replace(".", "p"))
 
-    return os.path.join(params_dict["log_dir"], exp_dir, exp_str)
+    return os.path.join(params_dict["log_dir"], exp_dir, exp_str), exp_str
        
 
 def parse_args():
