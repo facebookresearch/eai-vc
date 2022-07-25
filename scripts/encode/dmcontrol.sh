@@ -1,9 +1,9 @@
-python encode_dataset.py \
-    -m task=$DMCONTROL \
+python encode_dataset.py -m \
+    task=cup-catch,finger-spin,cheetah-run,walker-walk,walker-run \
     suite=dmcontrol \
-    setting=online \
+    setting=offline \
     modality=pixels \
-    +features=mocoego,random \
+    +features=mocodmcontrol,mocoego,random \
     +use_all=true \
     hydra/launcher=slurm \
     hydra.job.name=dmc-enc \

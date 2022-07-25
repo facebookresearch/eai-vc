@@ -32,6 +32,10 @@ def parse_cfg(cfg: OmegaConf) -> OmegaConf:
 	cfg.task_title = cfg.task.replace('-', ' ').title()
 	cfg.device = 'cuda' if cfg.modality == 'state' else 'cpu'
 
+	if cfg.get('algorithm', None) != 'tdmpc':
+		assert cfg.get('algorithm', None) is not None, 'algorithm must be specified'
+		cfg.exp_name = cfg.algorithm + '-' + cfg.exp_name
+
 	cfg.exp_name = cfg.get('exp_name', 'default')
 	if cfg.modality == 'features':
 		assert cfg.get('features', None) is not None, 'features must be specified'

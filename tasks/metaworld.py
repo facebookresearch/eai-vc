@@ -34,7 +34,7 @@ class MetaWorldWrapper(gym.Wrapper):
 	
 	def _get_feature_obs(self):
 		obs = torch.from_numpy(self._get_pixel_obs()).unsqueeze(0).view(-1, 3, self.cfg.img_size, self.cfg.img_size)
-		obs = encode_resnet(obs, self.cfg, eval=True).view(-1).cpu().numpy()
+		obs = encode_resnet(obs, self.cfg).view(-1).cpu().numpy()
 		return obs
 
 	def _stacked_obs(self):

@@ -3,6 +3,7 @@ python train_offline.py -m \
     suite=dmcontrol \
     setting=offline \
     modality=state \
+    algorithm=bc \
     exp_name=offline-v1 \
     seed=1,2,3 \
     hydra/launcher=slurm \

@@ -3,9 +3,10 @@ python train_offline.py -m \
     suite=dmcontrol \
     setting=offline \
     modality=state \
-    exp_name=offline-v1 \
-    seed=1,2,3 \
+    exp_name=test \
+    +dump_histogram=true \
+    seed=1 \
     hydra/launcher=slurm \
-    hydra.job.name=dmc-state \
-    hydra.launcher.timeout_min=800 \
-    hydra.launcher.mem_gb=32
+    hydra.job.name=histogram \
+    hydra.launcher.timeout_min=30 \
+    hydra.launcher.mem_gb=24

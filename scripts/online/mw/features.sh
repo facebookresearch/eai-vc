@@ -1,9 +1,9 @@
-python train.py \
-    -m task=$MW \
+python train.py -m \
+    task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-push \
     suite=mw \
     setting=online \
     modality=features \
-    features=mocoego,random \
+    features=mocometaworld,mocoego,random \
     exp_name=v1 \
     seed=1,2,3 \
     hydra/launcher=slurm \

@@ -2,6 +2,8 @@ import os
 import numpy as np
 import wandb
 import pandas as pd
+from pathlib import Path
+from logger import make_dir
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -113,7 +115,7 @@ def main():
 	f.legend(h, l, loc='lower center', ncol=4, frameon=False)
 	plt.tight_layout()
 	f.subplots_adjust(bottom=0.16, wspace=0.15)
-	plt.savefig('plot_mt.png', bbox_inches='tight')
+	plt.savefig(Path(make_dir('plots')) / 'multitask.png', bbox_inches='tight')
 
 
 

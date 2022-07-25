@@ -1,5 +1,5 @@
-python evaluate_open_loop.py \
-    -m task=$DMCONTROL \
+python evaluate_open_loop.py -m \
+    task=cup-catch,finger-spin,cheetah-run,walker-walk,walker-run \
     suite=dmcontrol \
     setting=offline \
     modality=features \

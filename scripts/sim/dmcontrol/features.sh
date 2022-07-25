@@ -1,5 +1,5 @@
-python train_renderer.py \
-    -m task=$DMCONTROL \
+python train_renderer.py -m \
+    task=cup-catch,finger-spin,cheetah-run,walker-walk,walker-run \
     suite=dmcontrol \
     setting=sim \
     modality=features \

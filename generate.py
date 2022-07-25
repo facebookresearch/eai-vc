@@ -46,7 +46,7 @@ def evaluate(env, agent, cfg, step):
 		num_episodes = int(cfg.eval_episodes*task2factor[cfg.task])
 	else:
 		num_episodes = cfg.eval_episodes
-	for _ in tqdm(range(num_episodes), desc='Generating episodes for identifier {step}'):
+	for _ in tqdm(range(num_episodes), desc=f'Generating episodes for identifier {step}'):
 		state, done, ep_reward, t = env.reset(), False, 0, 0
 		states, actions, rewards, infos, phys_states = [state], [], [], [], [get_state(env)]
 		while not done:

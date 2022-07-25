@@ -42,8 +42,8 @@ detach_rewval: false
 dynamics_obj: consistency
 
 # architecture
-enc_dim: 512
-mlp_dim: 1024
+enc_dim: ???
+mlp_dim: ???
 latent_dim: 50
 
 # wandb

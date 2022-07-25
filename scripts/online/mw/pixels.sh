@@ -1,5 +1,5 @@
-python train.py \
-    -m task=$MW \
+python train.py -m \
+    task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-push \
     suite=mw \
     setting=online \
     modality=pixels \

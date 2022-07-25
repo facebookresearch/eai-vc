@@ -1,5 +1,5 @@
-python generate.py \
-    -m task=$MW \
+python generate.py -m \
+    task=task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-push \
     suite=mw \
     setting=online \
     modality=state \

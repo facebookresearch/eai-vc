@@ -10,7 +10,7 @@ from dm_control import suite
 suite.ALL_TASKS = suite.ALL_TASKS + suite._get_tasks('custom')
 suite.TASKS_BY_DOMAIN = suite._get_tasks_by_domain(suite.ALL_TASKS)
 import gym
-from encode_dataset import encode_clip, encode_resnet
+from encode_dataset import encode_resnet
 
 
 class ExtendedTimeStep(NamedTuple):
@@ -140,7 +140,7 @@ class FeaturesWrapper(dm_env.Environment):
 	def _encode(self, time_step):
 		_obs = torch.from_numpy(time_step.observation).unsqueeze(0)
 		_obs = _obs.view(-1, 3, 84, 84)
-		_obs = (encode_clip if self._features == 'clip' else encode_resnet)(_obs, self._cfg, eval=True).view(-1)
+		_obs = encode_resnet(_obs, self._cfg).view(-1)
 		return ExtendedTimeStep(observation=_obs.cpu().numpy(),
 								step_type=time_step.step_type,
 								action=time_step.action,

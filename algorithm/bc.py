@@ -18,7 +18,6 @@ class Policy(nn.Module):
 		return self._encoder(obs)
 
 	def pi(self, z, task_vec=None, std=0):
-		assert task_vec is not None
 		if task_vec is not None:
 			z = z + self._task_encoder(task_vec)
 		return torch.tanh(self._pi(z))
@@ -35,21 +34,26 @@ class BC():
 		self.model.eval()
 
 	def state_dict(self):
-		return {'model': self.model.state_dict()}
+		return {'model': self.model.state_dict(),
+				'optim': self.optim.state_dict()}
 
-	def save(self, fp):
-		torch.save(self.state_dict(), fp)
+	def save(self, fp, metadata={}):
+		state_dict = self.state_dict()
+		state_dict['metadata'] = metadata
+		torch.save(state_dict, fp)
 	
 	def load(self, fp):
-		d = torch.load(fp)
+		d = fp if isinstance(fp, dict) else torch.load(fp)
 		self.model.load_state_dict(d['model'])
+		self.optim.load_state_dict(d['optim'])
+		return d['metadata']
 
 	@torch.no_grad()
-	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True, demo_std_fraction=0):
+	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True, open_loop=False):
 		obs = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
 		if task_vec is not None:
 			task_vec = torch.tensor(task_vec, dtype=torch.float32, device=self.device).unsqueeze(0)
-		return self.model.pi(self.model.h(obs), task_vec)
+		return self.model.pi(self.model.h(obs), task_vec).squeeze(0)
 
 	def update(self, replay_buffer, step=int(1e6)):
 		obs, next_obses, action, _, _, _, task_vec, idxs, weights = replay_buffer.sample()
@@ -60,7 +64,7 @@ class BC():
 		obses = torch.cat((obs.unsqueeze(0), next_obses), dim=0)
 		total_loss = 0
 		for t in range(self.cfg.horizon):
-			a = self.model.pi(self.model.h(self.aug(obses[t])), task_vec[t])
+			a = self.model.pi(self.model.h(self.aug(obses[t])), task_vec)
 			total_loss += (self.cfg.rho ** t) * h.mse(a, action[t]).mean(dim=1)
 
 		# Optimize model

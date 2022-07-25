@@ -1,9 +1,9 @@
-python train_offline.py \
-    -m task=$DMCONTROL \
+python train_offline.py -m \
+    task=cup-catch,finger-spin,cheetah-run,walker-walk,walker-run \
     suite=dmcontrol \
     setting=offline \
     modality=pixels \
-    exp_name=v1 \
+    exp_name=offline-v1 \
     seed=1,2,3 \
     hydra/launcher=slurm \
     hydra.job.name=dmc-pixels \

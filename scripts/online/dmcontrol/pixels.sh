@@ -1,5 +1,5 @@
-python train.py \
-    -m task=$DMCONTROL \
+python train.py -m \
+    task=cup-catch,finger-spin,cheetah-run,walker-walk,walker-run \
     suite=dmcontrol \
     setting=online \
     modality=pixels \

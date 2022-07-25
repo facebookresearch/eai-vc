@@ -2,6 +2,8 @@ import os
 import numpy as np
 import wandb
 import pandas as pd
+from pathlib import Path
+from logger import make_dir
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -28,8 +30,8 @@ PROJECT = 'tdmpc2'
 
 def main():
 	tasks = {
-		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-run', 'quadruped-run'],
-		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
+		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-walk', 'walker-run'],
+		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-push']
 	}
 	exp_names = ['v1', 'offline-v1', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v1', 'mocometaworld-v1', 'mocometaworld-offline-v1', 'mocoego-v1', 'mocoego-offline-v1', 'random-v1', 'random-offline-v1']
 	experiment2label = {
@@ -104,9 +106,9 @@ def main():
 	df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment']).mean().reset_index()
 	df_metaworld = df_metaworld.groupby(['idx', 'experiment']).mean().reset_index()
 
-	# rescale reward
-	df_dmcontrol['reward'] = (df_dmcontrol['reward'] / 10).round()
-	df_metaworld['reward'] = (df_metaworld['reward'] / 45).round()
+	# normalize
+	df_dmcontrol['reward'] = (100 * df_dmcontrol['reward'] / df_dmcontrol[df_dmcontrol['experiment'] == 'State']['reward'].values[0]).round()
+	df_metaworld['reward'] = (100 * df_metaworld['reward'] / df_metaworld[df_metaworld['experiment'] == 'State']['reward'].values[0]).round()
 
 	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
@@ -114,7 +116,7 @@ def main():
 	ax = axs[0]
 	sns.barplot(data=df_dmcontrol, x='experiment', y='reward', ax=ax, ci=None)
 	ax.set_title('DMControl', fontweight='bold')
-	ax.set_ylim(0, 100)
+	ax.set_ylim(0, 120)
 	ax.set_xlabel('')
 	ax.set_ylabel('Normalized return')
 	ax.bar_label(ax.containers[0], fontsize=18)
@@ -127,7 +129,7 @@ def main():
 	ax = axs[1]
 	sns.barplot(data=df_metaworld, x='experiment', y='reward', ax=ax, ci=None)
 	ax.set_title('Meta-World', fontweight='bold')
-	ax.set_ylim(0, 100)
+	ax.set_ylim(0, 120)
 	ax.set_xlabel('')
 	ax.set_ylabel('')
 	ax.bar_label(ax.containers[0], fontsize=18)
@@ -140,9 +142,7 @@ def main():
 	f.legend(h, l, loc='lower center', ncol=4, frameon=False)
 	plt.tight_layout()
 	f.subplots_adjust(bottom=0.16, wspace=0.15)
-	plt.savefig('plot.png', bbox_inches='tight')
-
-
+	plt.savefig(Path(make_dir('plots')) / 'singletask.png', bbox_inches='tight')
 
 
 if __name__ == '__main__':
