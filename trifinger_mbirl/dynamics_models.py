@@ -65,7 +65,7 @@ class Integrate(torch.autograd.Function):
     @staticmethod
     def forward(ctx, state, action):
         ctx.save_for_backward(state, action)
-        xnp = state.detach().numpy()
+        xnp = state['ft_state'].detach().numpy()
         unp = action.detach().numpy()
         return torch.Tensor(xnp + unp)
 

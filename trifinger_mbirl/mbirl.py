@@ -21,6 +21,7 @@ import utils.data_utils as d_utils
 from trifinger_mbirl.learnable_costs import *
 from trifinger_mbirl.ftpos_mpc import FTPosMPC
 from trifinger_mbirl.two_phase_mpc import TwoPhaseMPC
+from trifinger_mbirl.dynamics_models import FTPosSim
 
 # The IRL Loss, the learning objective for the learnable cost functions.
 # Measures the distance between the demonstrated fingertip position trajectory and predicted trajectory
@@ -271,7 +272,9 @@ def get_mpc(mpc_type, time_horizon):
     """ Get MPC class """
 
     if mpc_type == "ftpos":
-        return FTPosMPC(time_horizon=time_horizon-1)
+        return FTPosSim(time_horizon=time_horizon-1)
+        #return FTPosMPC(time_horizon=time_horizon-1)
+
 
     elif mpc_type == "two_phase":
         # TODO hardcoded
