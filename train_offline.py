@@ -92,15 +92,28 @@ def train_offline(cfg: dict):
 		# 		agent.update(buffer, int(1e6))
 		# 	t1 = time.time()
 		# 	print(f'Update time: {t1-t0}')
-			### Timings (per 100) ###
-			# Regular replay buffer: 4s
-			# 4 workers: 84s
+		# 	exit(0)
+			### Timings (state, per 100) ###
+			# Regular buffer: 4s
 			# 8 workers: 43s
 			# 16 workers: 25s
 			# 32 workers: 15s
-			# 32 workers with amortized loading: 5s
+			# 8 workers, amortized: 12s
+			# 16 workers, amortized: 11s
+			# 32 workers, amortized: 5s
+			# 32 workers, full mem: 3s
 
-		if iteration % cfg.eval_freq == 0:
+			### Timings (features, per 100) ###
+			# Regular buffer: 8s
+			# 8 workers: 81s
+			# 16 workers: 47s
+			# 32 workers: 29s
+			# 8 workers, amortized: 23s
+			# 16 workers, amortized: 9s
+			# 32 workers, amortized: 9s
+			# 32 workers, full mem: 4s
+
+		if iteration % cfg.eval_freq == 0: # and not cfg.get('lazy_load', False):
 
 			# Evaluate agent
 			mean_reward, rewards = evaluate(env, agent, cfg, iteration, L.video)

@@ -477,7 +477,7 @@ class LazyReplayBufferIterable(IterableDataset):
 	"""
 	Child process for sampling from disk.
 	"""
-	def __init__(self, cfg, num_workers=1, max_episodes=10, fetch_every=4):
+	def __init__(self, cfg, num_workers, max_episodes, fetch_every):
 		self.cfg = cfg
 		self.num_workers = num_workers
 		self.max_episodes = max_episodes
@@ -485,39 +485,66 @@ class LazyReplayBufferIterable(IterableDataset):
 		self.obs_dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
 		self.obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
 		self._fps = []
-		self._episodes = [None] * max_episodes
 		self._i = 0
 		self._worker_id = None
 
 	def set_fps(self, fps):
 		self._fps = fps
 
+	# def _lazy_load_obs(self, idxs):
+	# 	episode_idxs = idxs // self.cfg.episode_length
+	# 	features = torch.empty((self.cfg.batch_size, self.cfg.episode_length+1, self.cfg.obs_shape[0]), dtype=torch.float32)
+	# 	for i, episode_idx in enumerate(episode_idxs):
+	# 		fp = self._fps[episode_idx]
+	# 		feature_dir = Path(os.path.dirname(fp)) / 'features' / self.cfg.features
+	# 		features[i] = torch.from_numpy(torch.load(feature_dir / os.path.basename(fp)))
+	# 	return features[episode_idxs, idxs % self.cfg.episode_length]
+
+	def _load_obs(self, fp, idxs):
+		if self.cfg.modality == 'features':
+			obs_dir = Path(os.path.dirname(fp)) / 'features' / self.cfg.features
+			obs = torch.from_numpy(torch.load(obs_dir / os.path.basename(fp)))[idxs]
+		return obs
+
 	def _sample(self):
-		# Initialize the worker if first time
+		# Initialize worker if first time
 		if self._worker_id is None:
 			try:
 				self._worker_id = torch.utils.data.get_worker_info().id
 			except:
 				self._worker_id = 0
 			total_fps = len(self._fps)
-			self._fps = self._fps[self._worker_id::self.num_workers]
-			print(f'Worker {self._worker_id} sampling from {len(self._fps)}/{total_fps} episodes')
+			if self.num_workers > 1:
+				self._fps = self._fps[self._worker_id::self.num_workers]
+				self.max_episodes = min(self.max_episodes, len(self._fps))
+			print(f'Worker {self._worker_id} sampling from {len(self._fps)}/{total_fps} episodes, keeping {self.max_episodes} episodes in cache')
+			self._episodes = [None] * self.max_episodes
 
 		# Load episode from disk
-		num_load = self.max_episodes if self._i == 0 else int(self._i % self.fetch_every == 0)
-		# print('Worker {} loading {} episodes'.format(self._worker_id, num_load))
+		num_load = self.max_episodes if self._i == 0 else int(self._i % self.fetch_every == 0 and self.max_episodes < len(self._fps))
 		for i in range(num_load):
 			fp = self._fps[np.random.randint(len(self._fps))]
-			self._episodes[(self._i + i) % self.max_episodes] = torch.load(fp)
+			ep_idx = (self._i + i) % self.max_episodes
+			self._episodes[ep_idx] = torch.load(fp)
+			if self.cfg.modality == 'features':
+				feat_dir = Path(os.path.dirname(fp)) / 'features' / self.cfg.features
+				self._episodes[ep_idx]['features'] = torch.from_numpy(torch.load(feat_dir / os.path.basename(fp)))
 		self._i += 1
 
-		# Sample a trajectory
+		# Sample trajectory
 		data = self._episodes[np.random.randint(self.max_episodes)]
-		idxs = np.random.randint(self.cfg.episode_length-self.cfg.horizon)
-		obs = torch.from_numpy(data['states'][idxs])
-		next_obs = torch.from_numpy(np.stack(data['states'][idxs+1:idxs+self.cfg.horizon+1]))
-		action = torch.from_numpy(np.stack(data['actions'][idxs:idxs+self.cfg.horizon])).float().clip(-1, 1)
-		reward = torch.from_numpy(np.stack(data['rewards'][idxs:idxs+self.cfg.horizon])).float()
+		idx = np.random.randint(self.cfg.episode_length-self.cfg.horizon)
+		if self.cfg.modality == 'features':
+			obs = data['features'][idx]
+			next_obs = data['features'][idx+1:idx+self.cfg.horizon+1]
+		elif self.cfg.modality == 'pixels':
+			obs = self._load_obs(fp, idx)
+			next_obs = self._load_obs(fp, np.arange(idx+1, idx+self.cfg.horizon+1))
+		else:
+			obs = torch.from_numpy(data['states'][idx])
+			next_obs = torch.from_numpy(np.stack(data['states'][idx+1:idx+self.cfg.horizon+1]))
+		action = torch.from_numpy(np.stack(data['actions'][idx:idx+self.cfg.horizon])).float().clip(-1, 1)
+		reward = torch.from_numpy(np.stack(data['rewards'][idx:idx+self.cfg.horizon])).float()
 		return obs, next_obs, action, reward
 
 	def __iter__(self):
@@ -539,13 +566,17 @@ class LazyReplayBuffer(ReplayBuffer):
 	"""
 	def __init__(self, cfg):
 		self.cfg = cfg
-		self.capacity = 1_000_000
-		self.num_workers = 32
+		self.num_workers = 16
+		self.capacity = 500_000
+		self.ep_per_worker = int((self.capacity / self.cfg.episode_length) / self.num_workers)
+		self.fetch_every = min(self.ep_per_worker, 8)
 
 	def init(self, fps):
 		self._fps = fps
 		iterable = LazyReplayBufferIterable(self.cfg,
-											num_workers=self.num_workers)
+											num_workers=self.num_workers,
+											max_episodes=self.ep_per_worker,
+											fetch_every=self.fetch_every)
 		iterable.set_fps(fps)
 		self._loader = torch.utils.data.DataLoader(iterable,
 												   batch_size=self.cfg.batch_size,

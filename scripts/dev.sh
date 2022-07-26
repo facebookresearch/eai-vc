@@ -1,5 +1,5 @@
 python train_offline.py \
-    task=cheetah-run \
+    task=mw-box-close \
     suite=mw \
     setting=offline \
     modality=state \
