@@ -5,11 +5,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import random
 from collections import defaultdict
 from pathlib import Path
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
-# from torch.utils.data import IterableDataset
+from torch.utils.data import IterableDataset
 
 
 __REDUCE__ = lambda b: 'mean' if b else 'none'
@@ -342,8 +343,9 @@ class Episode(object):
 class ReplayBuffer():
 	"""
 	Storage and sampling functionality for training TD-MPC / TOLD.
-	The replay buffer is stored in GPU memory when trainining state.
-	Uses prioritized experience replay by default."""
+	The replay buffer is stored in GPU memory when training from state.
+	Uses prioritized experience replay by default.
+	"""
 	def __init__(self, cfg):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
@@ -471,6 +473,115 @@ class ReplayBuffer():
 		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, next_state, task_vec, idxs.cuda(), weights.cuda()
 
 
+class LazyReplayBufferIterable(IterableDataset):
+	"""
+	Child process for sampling from disk.
+	"""
+	def __init__(self, cfg, num_workers=1, max_episodes=10, fetch_every=4):
+		self.cfg = cfg
+		self.num_workers = num_workers
+		self.max_episodes = max_episodes
+		self.fetch_every = fetch_every
+		self.obs_dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
+		self.obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
+		self._fps = []
+		self._episodes = [None] * max_episodes
+		self._i = 0
+		self._worker_id = None
+
+	def set_fps(self, fps):
+		self._fps = fps
+
+	def _sample(self):
+		# Initialize the worker if first time
+		if self._worker_id is None:
+			try:
+				self._worker_id = torch.utils.data.get_worker_info().id
+			except:
+				self._worker_id = 0
+			total_fps = len(self._fps)
+			self._fps = self._fps[self._worker_id::self.num_workers]
+			print(f'Worker {self._worker_id} sampling from {len(self._fps)}/{total_fps} episodes')
+
+		# Load episode from disk
+		num_load = self.max_episodes if self._i == 0 else int(self._i % self.fetch_every == 0)
+		# print('Worker {} loading {} episodes'.format(self._worker_id, num_load))
+		for i in range(num_load):
+			fp = self._fps[np.random.randint(len(self._fps))]
+			self._episodes[(self._i + i) % self.max_episodes] = torch.load(fp)
+		self._i += 1
+
+		# Sample a trajectory
+		data = self._episodes[np.random.randint(self.max_episodes)]
+		idxs = np.random.randint(self.cfg.episode_length-self.cfg.horizon)
+		obs = torch.from_numpy(data['states'][idxs])
+		next_obs = torch.from_numpy(np.stack(data['states'][idxs+1:idxs+self.cfg.horizon+1]))
+		action = torch.from_numpy(np.stack(data['actions'][idxs:idxs+self.cfg.horizon])).float().clip(-1, 1)
+		reward = torch.from_numpy(np.stack(data['rewards'][idxs:idxs+self.cfg.horizon])).float()
+		return obs, next_obs, action, reward
+
+	def __iter__(self):
+		while True:
+			yield self._sample()
+
+
+def _worker_init_fn(worker_id):
+	seed = np.random.get_state()[1][0] + worker_id
+	np.random.seed(seed)
+	random.seed(seed)
+
+
+class LazyReplayBuffer(ReplayBuffer):
+	"""
+	Replay buffer that uses a lazy loading mechanism for large buffer sizes.
+	Unlike the regular replay buffer, this one does not require the entire buffer to be loaded at once,
+	but also does not support prioritized sampling due to the buffer living in multiple processes.
+	"""
+	def __init__(self, cfg):
+		self.cfg = cfg
+		self.capacity = 1_000_000
+		self.num_workers = 32
+
+	def init(self, fps):
+		self._fps = fps
+		iterable = LazyReplayBufferIterable(self.cfg,
+											num_workers=self.num_workers)
+		iterable.set_fps(fps)
+		self._loader = torch.utils.data.DataLoader(iterable,
+												   batch_size=self.cfg.batch_size,
+											 	   num_workers=self.num_workers,
+											 	   pin_memory=True,
+											 	   worker_init_fn=_worker_init_fn)
+		self._iter = None
+	
+	@property
+	def full(self):
+		return False
+
+	def __add__(self, episode: Episode):
+		return self
+
+	def add(self, episode: Episode):
+		return self
+
+	def update_priorities(self, idxs, priorities):
+		pass
+
+	@property
+	def iter(self):
+		if self._iter is None:
+			self._iter = iter(self._loader)
+		return self._iter
+
+	def sample(self):
+		obs, next_obs, action, reward = next(self.iter)
+		return obs.cuda().float(), \
+			   next_obs.permute(1,0,2).cuda().float(), \
+			   action.permute(1,0,2).cuda(), \
+			   reward.unsqueeze(2).permute(1,0,2).cuda(), \
+			   None, None, None, None, 1.
+
+
 class RendererBuffer(ReplayBuffer):
 	"""
 	Storage and sampling functionality for training a renderer."""
@@ -560,31 +671,13 @@ class RendererBuffer(ReplayBuffer):
 			dictionary['state'] = state.cuda()
 			dictionary['next_state'] = next_state.cuda()
 		return dictionary
-
-
-# class LazyReplayBuffer(IterableDataset):
-# 	def __init__(self, cfg):
-# 		self.cfg = cfg
-# 		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1_000_000 + 1
-# 		self.obs_dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
-# 		self.obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
-# 		self._priorities = torch.ones((self.capacity,), dtype=torch.float32, device=self.device)
-# 		self._fps = []
-# 		self._eps = 1e-6
-
-# 	def set_fps(self, fps):
-# 		self._fps = fps
-	
-# 	def _sample(self):
 	
 
-# def make_buffer(cfg):
-# 	if cfg.buffer_type == 'default':
-# 		return ReplayBuffer(cfg)
-# 	elif cfg.buffer_type == 'lazy':
-# 		return LazyReplayBuffer(cfg)
-# 	else:
-# 		raise ValueError('Unknown buffer type: {}'.format(cfg.buffer_type))
+def make_buffer(cfg):
+	if cfg.get('lazy_load', False):
+		return LazyReplayBuffer(cfg)
+	else:
+		return ReplayBuffer(cfg)
 
 
 def linear_schedule(schdl, step):

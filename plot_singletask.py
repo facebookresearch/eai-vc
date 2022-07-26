@@ -33,20 +33,21 @@ def main():
 		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-walk', 'walker-run'],
 		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-push']
 	}
-	exp_names = ['v1', 'offline-v1', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v1', 'mocometaworld-v1', 'mocometaworld-offline-v1', 'mocoego-v1', 'mocoego-offline-v1', 'random-v1', 'random-offline-v1']
+	exp_names = ['v1', 'offline-v2', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v2', 'mocometaworld-v1', 'mocometaworld-offline-v2', 'mocoego-v1', 'mocoego-offline-v2', 'random-v1', 'random-offline-v2', 'bc-offline-v2']
 	experiment2label = {
 		'state-v1': 'State',
-		'state-offline-v1': '✻ State',
+		'state-offline-v2': '✻ State',
 		'pixels-v1': 'Pixels',
-		'pixels-offline-v1': '✻ Pixels',
+		'pixels-offline-v2': '✻ Pixels',
 		'features-mocodmcontrol-v1': 'In-domain',
-		'features-mocodmcontrol-offline-v1': '✻ In-domain',
+		'features-mocodmcontrol-offline-v2': '✻ In-domain',
 		'features-mocometaworld-v1': 'In-domain',
-		'features-mocometaworld-offline-v1': '✻ In-domain',
+		'features-mocometaworld-offline-v2': '✻ In-domain',
 		'features-mocoego-v1': 'Ego4D',
-		'features-mocoego-offline-v1': '✻ Ego4D',
+		'features-mocoego-offline-v2': '✻ Ego4D',
 		'features-random-v1': 'Random',
-		'features-random-offline-v1': '✻ Random',
+		'features-random-offline-v2': '✻ Random',
+		'state-bc-offline-v2': '✻ BC (State)',
 	}
 	num_seeds = 3
 	seeds = set(range(1, num_seeds+1))
@@ -83,9 +84,11 @@ def main():
 		idx = list(experiment2label.values()).index(label)
 		step = np.array(hist['_step'])
 		step = step[step <= 500_000]
+		if step[-1] < 70_000:
+			continue
 		reward = np.array(hist[key])
 		reward = reward[:min(len(step), len(reward))][-1]
-		print(f'Appending experiment {label} with reward {reward}')
+		print(f'Appending experiment {label} for task {task} with reward {reward} at step {step[-1]}')
 		entries.append(
 			(idx, cfg['task'], label, seed, reward)
 		)

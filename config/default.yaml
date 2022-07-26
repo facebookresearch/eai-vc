@@ -40,6 +40,8 @@ tau: 0.01
 steps_per_update: 1
 detach_rewval: false
 dynamics_obj: consistency
+bc_loss: false
+bc_coef: 2.5
 
 # architecture
 enc_dim: ???
@@ -78,7 +80,7 @@ state_dim: ???
 demo: false
 
 # cluster
-resume: True
+resume: false
 hydra:
     job:
         name: mw-pixels

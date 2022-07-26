@@ -13,7 +13,7 @@ from cfg_parse import parse_cfg
 from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
 from algorithm.bc import BC
-from algorithm.helper import ReplayBuffer
+from algorithm.helper import make_buffer
 from dataloader import make_dataset
 from termcolor import colored
 import logger
@@ -58,14 +58,16 @@ def train_offline(cfg: dict):
 	set_seed(cfg.seed)
 	work_dir = Path(cfg.logging_dir) / __LOGS__ / cfg.task / (cfg.get('features', cfg.modality)) / cfg.algorithm / cfg.exp_name / str(cfg.seed)
 	print(colored('Work dir:', 'yellow', attrs=['bold']), work_dir)
-	env, agent, buffer = make_env(cfg), make_agent(cfg), ReplayBuffer(cfg)
+	env, agent, buffer = make_env(cfg), make_agent(cfg), make_buffer(cfg)
 	print(agent.model)
 
 	# Load dataset
 	dataset = make_dataset(cfg, buffer)
-	print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity-1}')
-	dataset_summary = dataset.summary
-	print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset_summary}\n')
+	try:
+		print(f'Buffer contains {buffer.capacity if buffer.full else buffer.idx} transitions, capacity is {buffer.capacity-1}')
+		print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset.summary}\n')
+	except:
+		print('Using lazy replay buffer')
 	print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))
 
 	# Resume training (if applicable)
@@ -82,6 +84,21 @@ def train_offline(cfg: dict):
 
 		# Update model
 		train_metrics = agent.update(buffer, int(1e6))
+
+		# if cfg.get('lazy_load', False):
+		# 	# time the update
+		# 	t0 = time.time()
+		# 	for _ in range(100):
+		# 		agent.update(buffer, int(1e6))
+		# 	t1 = time.time()
+		# 	print(f'Update time: {t1-t0}')
+			### Timings (per 100) ###
+			# Regular replay buffer: 4s
+			# 4 workers: 84s
+			# 8 workers: 43s
+			# 16 workers: 25s
+			# 32 workers: 15s
+			# 32 workers with amortized loading: 5s
 
 		if iteration % cfg.eval_freq == 0:
 

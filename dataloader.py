@@ -48,8 +48,11 @@ class OfflineDataset(Dataset):
 
 		# Load episodes
 		self._buffer = buffer
-		self._load_episodes()
-		self._load_into_buffer()
+		if cfg.get('lazy_load', False):
+			self._buffer.init(self._fps)
+		else:
+			self._load_episodes()
+			self._load_into_buffer()
 	
 	def _locate_episodes(self):
 		raise NotImplementedError()

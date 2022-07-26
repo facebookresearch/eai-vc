@@ -3,9 +3,9 @@ python train_offline.py -m \
     suite=mw \
     setting=offline \
     modality=pixels \
-    exp_name=offline-v1 \
+    exp_name=offline-v2 \
     seed=1,2,3 \
     hydra/launcher=slurm \
     hydra.job.name=mw-pixels \
-    hydra.launcher.timeout_min=1000 \
+    hydra.launcher.timeout_min=1200 \
     hydra.launcher.mem_gb=48

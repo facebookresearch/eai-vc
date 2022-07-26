@@ -194,7 +194,7 @@ class TDMPC():
 			a += std * torch.randn(self.cfg.action_dim, device=std.device)
 		return a.clamp_(-1, 1)
 
-	def update_pi(self, zs, task_vec):
+	def update_pi(self, zs, action, task_vec):
 		"""Update policy using a sequence of latent states."""
 		self.pi_optim.zero_grad(set_to_none=True)
 		self.model.track_q_grad(False)
@@ -204,7 +204,11 @@ class TDMPC():
 		for t,z in enumerate(zs):
 			a = self.model.pi(z, task_vec, self.cfg.min_std)
 			Q = torch.min(*self.model.Q(z, a, task_vec))
-			pi_loss += -Q.mean() * (self.cfg.rho ** t)
+			if self.cfg.get('bc_loss', False):
+				lmbda = self.cfg.bc_coef/Q.abs().mean().detach()
+				pi_loss += (-lmbda * Q.mean() + h.mse(a, action[t]).mean()) * (self.cfg.rho ** t)
+			else:
+				pi_loss += -Q.mean() * (self.cfg.rho ** t)
 
 		pi_loss.backward()
 		torch.nn.utils.clip_grad_norm_(self.model._pi.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
@@ -269,7 +273,7 @@ class TDMPC():
 			replay_buffer.update_priorities(idxs, priority_loss.clamp(max=1e4).detach())
 
 		# Update policy + target network
-		pi_loss = self.update_pi(zs, task_vec)
+		pi_loss = self.update_pi(zs, action, task_vec)
 		if step % self.cfg.update_freq == 0:
 			h.soft_update_params(self.model, self.model_target, self.cfg.tau)
 
