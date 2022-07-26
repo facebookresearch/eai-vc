@@ -248,7 +248,16 @@ def get_target_for_cost_type(demo_dict, cost_type, cost_state):
     elif cost_type in ['Traj']:
         target = expert_demo
     elif cost_type in ['MPTimeDep']:
-        target = ft_pos_targets_per_mode
+        if cost_state == "ftpos":
+            target = ft_pos_targets_per_mode
+        elif cost_state in ["obj", "ftpos_obj"]:
+            # Get init and goal object pose 
+            # TODO for now, just get first and last state from demo traj; eventually use goal?? How to do when not using obj pos?
+            init = expert_demo[0, :]
+            goal = expert_demo[-1, :]
+            target = torch.stack([init, goal])
+        else:
+            raise ValueError
     else:
         raise ValueError(f'Cost {cost_type} not implemented')
 
@@ -276,15 +285,18 @@ def get_mpc(mpc_type, time_horizon):
         #return FTPosMPC(time_horizon=time_horizon-1)
 
 
-    elif mpc_type == "two_phase":
+    elif mpc_type in ["ftpos_obj_two_phase", "ftpos_obj_learned_only"]:
         # TODO hardcoded
         ## Phase 2 model trained with cropped phase 2 demos
         #phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-m2/epoch_1500_ckpt.pth"
 
         ## Phase 2 model trained with full demos
-        phase2_model_path = "/Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-all/epoch_3000_ckpt.pth"
+        phase2_model_path = "trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-all/epoch_3000_ckpt.pth"
 
-        return TwoPhaseMPC(time_horizon-1, phase2_model_path)
+        if "learned_only" in mpc_type: learned_only = True
+        else: learned_only = False
+        
+        return TwoPhaseMPC(time_horizon-1, phase2_model_path, learned_only=learned_only)
     else:
         raise ValueError(f"{mpc_type} is invalid mpc_type")
 
@@ -335,14 +347,12 @@ def plot_traj(plots_dir, outer_i, demo_i, pred_traj, expert_demo_dict, mpc_type)
     save_name = f"epoch_{outer_i+1}.png"
     save_path = os.path.join(traj_dir, save_name)
 
-    if mpc_type == "ftpos":
-        d_list = ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3"]
-        plot_expert_demo = get_expert_demo(expert_demo_dict, "ftpos")
-    elif mpc_type == "two_phase":
+    if "ftpos_obj" in mpc_type:
         d_list = ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3", "ox", "oy", "oz"]
         plot_expert_demo = get_expert_demo(expert_demo_dict, "ftpos_obj")
     else:
-        raise ValueError
+        d_list = ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3"]
+        plot_expert_demo = get_expert_demo(expert_demo_dict, "ftpos")
 
     d_utils.plot_traj(
             title, 
@@ -369,7 +379,7 @@ def plot_actions(plots_dir, outer_i, demo_i, pred_actions, expert_demo_dict):
             ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",],
             {
             "pred":  {"y": pred_actions, "x": expert_demo_dict["t"][:-1], "marker": "x"},
-            "demo":  {"y": expert_actions[:-1], "x": expert_demo_dict["t"][:-1],"marker": "."},
+            #"demo":  {"y": expert_actions[:-1], "x": expert_demo_dict["t"][:-1],"marker": "."},
             }
             )
 

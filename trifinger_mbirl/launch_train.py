@@ -5,6 +5,9 @@ import argparse
 import time
 from datetime import date, datetime
 
+"""
+Launch train.py jobs with various args
+"""
 
 def start_job(arg_dict):
     today_date = date.today().strftime("%m-%d-%y")
@@ -30,54 +33,81 @@ def start_job(arg_dict):
     return ret
 
 def get_args_list(args):
-    FILE_PATH = args.file_path
-
+    file_path_l = []
+    # Iterate through .json split info files
+    for item in os.listdir(args.file_path):
+        if item.endswith(".json"):
+            json_path = os.path.join(args.file_path, item)
+            file_path_l.append(json_path)
+     
     RUN_ID = 0
     arg_str_list = []
 
     ######################## BC args #########################
-    ALGO = "bc" 
-    bc_obs_type_l = ["goal_rel", "img_r3m"]
+    #ALGO = "bc" 
+    #bc_obs_type_l = ["goal_rel"]
+    ##bc_obs_type_l = ["goal_rel", "img_r3m"]
 
-    for BC_OBS_TYPE in bc_obs_type_l:
-        arg_str = "\
-                  --run_id {RUN_ID} \
-                  --file_path {FILE_PATH} \
-                  --no_wandb \
-                  --algo {ALGO} \
-                  --bc_obs_type {BC_OBS_TYPE} \
-                  ".format(
-                    RUN_ID       = RUN_ID, 
-                    FILE_PATH    = FILE_PATH,
-                    ALGO         = ALGO,
-                    BC_OBS_TYPE  = BC_OBS_TYPE,
-                    )
-        arg_str_list.append({"i_run": RUN_ID, "arg_str": arg_str})
-        RUN_ID += 1
+    #for FILE_PATH in file_path_l:
+    #    for BC_OBS_TYPE in bc_obs_type_l:
+    #        arg_str = "\
+    #                  --run_id {RUN_ID} \
+    #                  --file_path {FILE_PATH} \
+    #                  --no_wandb \
+    #                  --algo {ALGO} \
+    #                  --bc_obs_type {BC_OBS_TYPE} \
+    #                  ".format(
+    #                    RUN_ID       = RUN_ID, 
+    #                    FILE_PATH    = FILE_PATH,
+    #                    ALGO         = ALGO,
+    #                    BC_OBS_TYPE  = BC_OBS_TYPE,
+    #                    )
+    #        arg_str_list.append({"i_run": RUN_ID, "arg_str": arg_str})
+    #        RUN_ID += 1
 
     ######################## MBIRL args ########################
     ALGO = "mbirl" 
-    cost_type_l = ["MPTimeDep"]
-    n_inner_iter_l = [50]
+    mpc_type_l = ["ftpos_obj_two_phase", "ftpos_obj_learned_only"]
+    #cost_type_l = ["MPTimeDep"]
+    cost_type_l = ["Traj"]
+    n_inner_iter_l = [1, 20, 50]
+    cost_state_l = ["ftpos_obj"]
+    irl_state_l = ["ftpos_obj"]
+    action_lr_l = [1e-2, 1e-3, 1e-4]
+    EXP_ID = "two_phase_test_lr" 
 
-    for COST_TYPE in cost_type_l:
-        for N_INNER_ITER in n_inner_iter_l:
-            arg_str = "\
-                      --run_id {RUN_ID} \
-                      --file_path {FILE_PATH} \
-                      --no_wandb \
-                      --algo {ALGO} \
-                      --cost_type {COST_TYPE} \
-                      --n_inner_iter {N_INNER_ITER} \
-                      ".format(
-                        RUN_ID       = RUN_ID, 
-                        FILE_PATH    = FILE_PATH,
-                        ALGO         = ALGO,
-                        COST_TYPE    = COST_TYPE,
-                        N_INNER_ITER = N_INNER_ITER,
-                        )
-            arg_str_list.append({"i_run": RUN_ID, "arg_str": arg_str})
-            RUN_ID += 1
+    for FILE_PATH in file_path_l:
+        for COST_TYPE in cost_type_l:
+            for COST_STATE in cost_state_l:
+                for IRL_LOSS_STATE in irl_state_l:
+                    for N_INNER_ITER in n_inner_iter_l:
+                        for ACTION_LR in action_lr_l:
+                            for MPC_TYPE in mpc_type_l:
+                                arg_str = "\
+                                          --exp_id {EXP_ID} \
+                                          --run_id {RUN_ID} \
+                                          --file_path {FILE_PATH} \
+                                          --algo {ALGO} \
+                                          --mpc_type {MPC_TYPE} \
+                                          --action_lr {ACTION_LR} \
+                                          --cost_type {COST_TYPE} \
+                                          --cost_state {COST_STATE} \
+                                          --irl_loss_state {IRL_LOSS_STATE} \
+                                          --n_inner_iter {N_INNER_ITER} \
+                                          ".format(
+                                            EXP_ID         = EXP_ID,
+                                            RUN_ID         = RUN_ID, 
+                                            FILE_PATH      = FILE_PATH,
+                                            ALGO           = ALGO,
+                                            MPC_TYPE       = MPC_TYPE,
+                                            ACTION_LR      = ACTION_LR,
+                                            COST_TYPE      = COST_TYPE,
+                                            COST_STATE     = COST_STATE,
+                                            IRL_LOSS_STATE = IRL_LOSS_STATE,
+                                            N_INNER_ITER   = N_INNER_ITER,
+                                            )
+                                arg_str_list.append({"i_run": RUN_ID, "arg_str": arg_str})
+                                RUN_ID += 1
 
     return arg_str_list
  

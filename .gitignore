@@ -2,3 +2,9 @@ __pycache__
 .DS_Store
 logs
 wandb
+*.npz
+*.pyc
+*.png
+tmp/*
+wandb/*
+trifinger_mbirl/logs/*

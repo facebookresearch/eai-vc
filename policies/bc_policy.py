@@ -62,20 +62,20 @@ class BCPolicy:
 
         self.traj_counter = 0
 
+        if torch.cuda.is_available():
+            self.device = "cuda"
+        else:
+            self.device = "cpu"
+
         self.policy = self.load_policy(ckpt_path)
 
         self.obs_type = obs_type
         self.expert_demo = expert_demo
         self.expert_actions = expert_demo["delta_ftpos"]
 
-        if torch.cuda.is_available():
-            device = "cuda"
-        else:
-            device = "cpu"
-
         self.r3m = load_r3m("resnet50")  # resnet18, resnet34
         self.r3m.eval()
-        self.r3m.to(device)
+        self.r3m.to(self.device)
 
     def reset(self):
         # initial joint positions (lifting the fingers up)
@@ -101,7 +101,7 @@ class BCPolicy:
         info = torch.load(ckpt_path)
         in_dim = info["policy"]["policy.0.weight"].shape[1]
 
-        policy = DeterministicPolicy(in_dim=in_dim, out_dim=9)
+        policy = DeterministicPolicy(in_dim=in_dim, out_dim=9, device=self.device)
         policy.load_state_dict(info["policy"])
         return policy
 
@@ -122,10 +122,10 @@ class BCPolicy:
 
         # Get next ft waypoint
         # Get ft delta from policy
-        obs = bc_utils.get_bc_obs(obs_dict, self.obs_type, r3m=self.r3m)
+        obs = bc_utils.get_bc_obs(obs_dict, self.obs_type, r3m=self.r3m, device=self.device)
 
         #obs = torch.cat([torch.FloatTensor(o_pos_cur), torch.FloatTensor(ft_pos_cur)])
-        pred_action = self.policy(obs).detach().numpy()
+        pred_action = self.policy(obs).cpu().detach().numpy()
     
         # Use expert actions [FOR DEBUGGING]
         #pred_action = self.expert_actions[self.set_traj_counter, :]
