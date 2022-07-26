@@ -6,9 +6,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from collections import defaultdict
+from pathlib import Path
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
-import torchvision.models as models
+# from torch.utils.data import IterableDataset
 
 
 __REDUCE__ = lambda b: 'mean' if b else 'none'
@@ -294,8 +295,9 @@ class Episode(object):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
 		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
-		self.obs = torch.empty((cfg.episode_length+1, *init_obs.shape), dtype=dtype, device=self.device)
-		self.obs[0] = torch.tensor(init_obs, dtype=dtype, device=self.device)
+		if not cfg.get('lazy_load', False):
+			self.obs = torch.empty((cfg.episode_length+1, *init_obs.shape), dtype=dtype, device=self.device)
+			self.obs[0] = torch.tensor(init_obs, dtype=dtype, device=self.device)
 		self.action = torch.empty((cfg.episode_length, cfg.action_dim), dtype=torch.float32, device=self.device)
 		self.reward = torch.empty((cfg.episode_length,), dtype=torch.float32, device=self.device)
 		self.cumulative_reward = 0
@@ -305,13 +307,16 @@ class Episode(object):
 	@classmethod
 	def from_trajectory(cls, cfg, obs, action, reward, done=None):
 		"""Constructs an episode from a trajectory."""
-		episode = cls(cfg, obs[0])
-		episode.obs[1:] = torch.tensor(obs[1:], dtype=episode.obs.dtype, device=episode.device)
+		if cfg.get('lazy_load', False):
+			episode = cls(cfg, None)
+		else:
+			episode = cls(cfg, obs[0])
+			episode.obs[1:] = torch.tensor(obs[1:], dtype=episode.obs.dtype, device=episode.device)
 		episode.action = torch.tensor(action, dtype=episode.action.dtype, device=episode.device)
 		episode.reward = torch.tensor(reward, dtype=episode.reward.dtype, device=episode.device)
 		episode.cumulative_reward = torch.sum(episode.reward)
 		episode.done = True
-		episode._idx = len(obs)
+		episode._idx = cfg.episode_length+1
 		return episode
 	
 	def __len__(self):
@@ -345,8 +350,11 @@ class ReplayBuffer():
 		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1_000_000 + 1
 		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
 		obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
-		self._obs = torch.empty((self.capacity+1, *obs_shape), dtype=dtype, device=self.device)
-		self._last_obs = torch.empty((self.capacity//cfg.episode_length, *cfg.obs_shape), dtype=dtype, device=self.device)
+		if self.cfg.get('lazy_load', False):
+			self._fps = []
+		else:
+			self._obs = torch.empty((self.capacity+1, *obs_shape), dtype=dtype, device=self.device)
+			self._last_obs = torch.empty((self.capacity//cfg.episode_length, *cfg.obs_shape), dtype=dtype, device=self.device)
 		self._action = torch.empty((self.capacity, cfg.action_dim), dtype=torch.float32, device=self.device)
 		self._reward = torch.empty((self.capacity,), dtype=torch.float32, device=self.device)
 		self._state = torch.empty((self.capacity, 24), dtype=torch.float32, device=self.device) if cfg.modality != 'state' else None
@@ -368,9 +376,12 @@ class ReplayBuffer():
 
 	def add(self, episode: Episode):
 		assert not self.full, 'Replay buffer is full'
-		self._obs[self.idx:self.idx+self.cfg.episode_length] = episode.obs[:-1, -3:] if self.cfg.modality == 'pixels' else episode.obs[:-1]
-		self._last_obs[self.idx//self.cfg.episode_length] = episode.obs[-self.cfg.frame_stack:].view(self.cfg.frame_stack*3, *self.cfg.obs_shape[-2:]) \
-			if self.cfg.modality == 'pixels' and episode.obs.shape[1] == 3 else episode.obs[-1]
+		if self.cfg.get('lazy_load', False):
+			self._fps.append(episode.filepath)
+		else:
+			self._obs[self.idx:self.idx+self.cfg.episode_length] = episode.obs[:-1, -3:] if self.cfg.modality == 'pixels' else episode.obs[:-1]
+			self._last_obs[self.idx//self.cfg.episode_length] = episode.obs[-self.cfg.frame_stack:].view(self.cfg.frame_stack*3, *self.cfg.obs_shape[-2:]) \
+				if self.cfg.modality == 'pixels' and episode.obs.shape[1] == 3 else episode.obs[-1]
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
 		if self.cfg.modality != 'state' and 'states' in episode.__dict__:
@@ -407,6 +418,15 @@ class ReplayBuffer():
 			obs[:, -(i+1)*3:-i*3] = arr[_idxs].cuda()
 		return obs.float()
 
+	def _lazy_load_obs(self, idxs):
+		episode_idxs = idxs // self.cfg.episode_length
+		features = torch.empty((self.cfg.batch_size, self.cfg.episode_length+1, self.cfg.obs_shape[0]), dtype=torch.float32)
+		for i, episode_idx in enumerate(episode_idxs):
+			fp = self._fps[episode_idx]
+			feature_dir = Path(os.path.dirname(fp)) / 'features' / self.cfg.features
+			features[i] = torch.from_numpy(torch.load(feature_dir / os.path.basename(fp)))
+		return features[episode_idxs, idxs % self.cfg.episode_length]
+
 	def sample(self):
 		probs = (self._priorities if self._full else self._priorities[:self.idx]) ** self.cfg.per_alpha
 		probs /= probs.sum()
@@ -415,8 +435,12 @@ class ReplayBuffer():
 		weights = (total * probs[idxs]) ** (-self.cfg.per_beta)
 		weights /= weights.max()
 
-		obs = self._get_obs(self._obs, idxs)
-		next_obs_shape = (3*self.cfg.frame_stack, *self._last_obs.shape[-2:]) if self.cfg.modality == 'pixels' else self._last_obs.shape[1:]
+		if self.cfg.get('lazy_load', False):
+			obs = self._lazy_load_obs(idxs)
+			next_obs_shape = (self.cfg.obs_shape[0],)
+		else:
+			obs = self._get_obs(self._obs, idxs)
+			next_obs_shape = (3*self.cfg.frame_stack, *self._last_obs.shape[-2:]) if self.cfg.modality == 'pixels' else self._last_obs.shape[1:]
 		next_obs = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *next_obs_shape), dtype=obs.dtype, device=obs.device)
 		action = torch.empty((self.cfg.horizon+1, self.cfg.batch_size, *self._action.shape[1:]), dtype=torch.float32, device=self.device)
 		reward = torch.empty((self.cfg.horizon+1, self.cfg.batch_size), dtype=torch.float32, device=self.device)
@@ -425,14 +449,18 @@ class ReplayBuffer():
 		task_vec = self._task_vec[idxs].float() if self.cfg.multitask else None
 		for t in range(self.cfg.horizon+1):
 			_idxs = idxs + t
-			next_obs[t] = self._get_obs(self._obs, _idxs+1)
+			if self.cfg.get('lazy_load', False):
+				next_obs[t] = self._lazy_load_obs(_idxs+1)
+			else:
+				next_obs[t] = self._get_obs(self._obs, _idxs+1)
 			action[t] = self._action[_idxs]
 			reward[t] = self._reward[_idxs]
 			if state is not None:
 				next_state[t] = self._state[_idxs+1, :self._state_dim]
 
 		mask = (_idxs+1) % self.cfg.episode_length == 0
-		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(next_obs.device).float()
+		if not self.cfg.get('lazy_load', False):
+			next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(next_obs.device).float()
 		if task_vec is not None:
 			task_vec = task_vec.cuda()
 		if state is not None:
@@ -532,6 +560,31 @@ class RendererBuffer(ReplayBuffer):
 			dictionary['state'] = state.cuda()
 			dictionary['next_state'] = next_state.cuda()
 		return dictionary
+
+
+# class LazyReplayBuffer(IterableDataset):
+# 	def __init__(self, cfg):
+# 		self.cfg = cfg
+# 		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1_000_000 + 1
+# 		self.obs_dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
+# 		self.obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
+# 		self._priorities = torch.ones((self.capacity,), dtype=torch.float32, device=self.device)
+# 		self._fps = []
+# 		self._eps = 1e-6
+
+# 	def set_fps(self, fps):
+# 		self._fps = fps
+	
+# 	def _sample(self):
+	
+
+# def make_buffer(cfg):
+# 	if cfg.buffer_type == 'default':
+# 		return ReplayBuffer(cfg)
+# 	elif cfg.buffer_type == 'lazy':
+# 		return LazyReplayBuffer(cfg)
+# 	else:
+# 		raise ValueError('Unknown buffer type: {}'.format(cfg.buffer_type))
 
 
 def linear_schedule(schdl, step):

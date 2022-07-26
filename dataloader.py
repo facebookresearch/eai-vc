@@ -1,4 +1,3 @@
-from email.policy import default
 import os
 import glob
 import numpy as np
@@ -185,37 +184,42 @@ class DMControlDataset(OfflineDataset):
 
 		def load_episode(data, idx):
 			fp = self._fps[idx]
-			if self._cfg.modality == 'features' or self._cfg.get('all_modalities', False):
-				assert self._cfg.get('features', None) is not None, 'Features must be specified'
-				features_dir = Path(os.path.dirname(fp)) / 'features' / self._cfg.features
-				assert features_dir.exists(), 'No features directory found for {}'.format(fp)
-				obs = torch.load(features_dir / os.path.basename(fp))
-				_obs = np.empty((obs.shape[0], self._cfg.frame_stack*obs.shape[1]), dtype=np.float32)
-				obs = stack_frames(obs, _obs, self._cfg.frame_stack)
-				data['metadata']['states'] = data['states']
-				if 'phys_states' in data:
-					data['metadata']['phys_states'] = data['phys_states']
-				if self._cfg.get('all_modalities', False):
-					data['metadata']['features'] = obs
-			if self._cfg.modality == 'pixels' or self._cfg.get('all_modalities', False):
-				frames_dir = Path(os.path.dirname(fp)) / 'frames'
-				assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
-				frame_fps = [frames_dir / fn for fn in data['frames']]
-				obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
-				data['metadata']['states'] = data['states']
-				if 'phys_states' in data:
-					data['metadata']['phys_states'] = data['phys_states']
-				if self._cfg.get('all_modalities', False):
-					data['metadata']['pixels'] = obs
-					if self._cfg.modality == 'features':
-						obs = data['metadata']['features']
-			elif self._cfg.modality == 'state':
-				obs = data['states']
+			if self._cfg.get('lazy_load', False):
+				assert self._cfg.modality in {'features', 'pixels'} and self._cfg.get('multitask', False), \
+					f'Unexpected lazy load for modality {self._cfg.modality} and multitask={self._cfg.get("multitask", False)}'
+				obs = None
+			else:
+				if self._cfg.modality == 'features' or self._cfg.get('all_modalities', False):
+					assert self._cfg.get('features', None) is not None, 'Features must be specified'
+					features_dir = Path(os.path.dirname(fp)) / 'features' / self._cfg.features
+					assert features_dir.exists(), 'No features directory found for {}'.format(fp)
+					obs = torch.load(features_dir / os.path.basename(fp))
+					_obs = np.empty((obs.shape[0], self._cfg.frame_stack*obs.shape[1]), dtype=np.float32)
+					obs = stack_frames(obs, _obs, self._cfg.frame_stack)
+					data['metadata']['states'] = data['states']
+					if 'phys_states' in data:
+						data['metadata']['phys_states'] = data['phys_states']
+					if self._cfg.get('all_modalities', False):
+						data['metadata']['features'] = obs
+				if self._cfg.modality == 'pixels' or self._cfg.get('all_modalities', False):
+					frames_dir = Path(os.path.dirname(fp)) / 'frames'
+					assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
+					frame_fps = [frames_dir / fn for fn in data['frames']]
+					obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
+					data['metadata']['states'] = data['states']
+					if 'phys_states' in data:
+						data['metadata']['phys_states'] = data['phys_states']
+					if self._cfg.get('all_modalities', False):
+						data['metadata']['pixels'] = obs
+						if self._cfg.modality == 'features':
+							obs = data['metadata']['features']
+				elif self._cfg.modality == 'state':
+					obs = data['states']
 			actions = np.array(data['actions'], dtype=np.float32).clip(-1, 1)
 			if self._cfg.get('multitask', False):
 				task = fp.split('/')[-2]
 				data['metadata']['task'] = task
-				if self._cfg.modality == 'state' and obs[0].shape[0] < self._cfg.obs_shape[0]:
+				if self._cfg.modality == 'state' and obs is not None and obs[0].shape[0] < self._cfg.obs_shape[0]:
 					obs = [np.concatenate([_obs, np.zeros((self._cfg.obs_shape[0] - _obs.shape[0],))]) for _obs in obs]
 				if actions.shape[-1] < self._cfg.action_dim:
 					actions = np.concatenate([actions, np.zeros((actions.shape[0], self._cfg.action_dim - actions.shape[-1]))], axis=-1)
