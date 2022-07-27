@@ -49,7 +49,7 @@ class OfflineDataset(Dataset):
 		# Load episodes
 		self._buffer = buffer
 		if cfg.get('lazy_load', False):
-			self._buffer.init(self._fps)
+			self._buffer.init(self._fps, self._tasks)
 		else:
 			self._load_episodes()
 			self._load_into_buffer()

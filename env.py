@@ -142,6 +142,8 @@ def make_multitask_env(cfg):
 	elif domain == 'mw': # Meta-World
 		if num_tasks == 5:
 			tasks = ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
+		elif num_tasks == 10:
+			tasks = ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-reach', 'mw-push', 'mw-faucet-close', 'mw-faucet-open', 'mw-door-open', 'mw-window-close']
 		elif num_tasks == 15:
 			tasks = ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-reach', 'mw-push', 'mw-pick-place', 'mw-assembly', 'mw-soccer', 'mw-faucet-close', 'mw-faucet-open', 'mw-door-open', 'mw-door-close', 'mw-window-open', 'mw-window-close']
 		else:
@@ -174,9 +176,6 @@ def make_env(cfg):
 	domain, task = cfg.task.split('-', 1)
 	if task.startswith('mt'):
 		return make_multitask_env(cfg)
-	elif domain == 'rlb': # RLBench
-		from tasks.rlbench import make_rlbench_env
-		env = make_rlbench_env(cfg)
 	elif domain == 'mw': # Meta-World
 		from tasks.metaworld import make_metaworld_env
 		env = make_metaworld_env(cfg)

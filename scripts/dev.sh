@@ -1,8 +1,8 @@
 python train_offline.py \
-    task=mw-box-close \
+    task=mw-mt10 \
     suite=mw \
-    setting=offline \
-    modality=state \
-    +lazy_load=true \
+    setting=multitask \
+    modality=features \
+    features=mocoego \
     exp_name=test \
     seed=1
