@@ -1,4 +1,4 @@
-python train_offline.py \
+CUDA_VISIBLE_DEVICES=1 python train_offline.py \
     task=mw-mt10 \
     suite=mw \
     setting=multitask \

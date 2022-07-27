@@ -149,7 +149,8 @@ class FeatureFuse(nn.Module):
 			nn.Linear(cfg.enc_dim, cfg.enc_dim))
 		if cfg.frame_stack == 1:
 			self.layers = nn.Sequential(
-				nn.ELU(), nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
+				nn.ELU(), nn.Linear(cfg.enc_dim, cfg.mlp_dim), nn.ELU(),
+				nn.Linear(cfg.mlp_dim, cfg.enc_dim), nn.ELU(),
 				nn.Linear(cfg.enc_dim, cfg.latent_dim))
 		else:
 			self.layers = nn.Sequential(
@@ -446,20 +447,18 @@ class ReplayBuffer(object):
 		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, next_state, task_vec, idxs.cuda(), weights.cuda()
 
 
-class LazyReplayBufferIterable(IterableDataset):
+class LazyReplayBufferTaskSampler(object):
 	"""
-	Child process for sampling from disk.
+	Helper class that maintains sampling functionality for a single task.
 	"""
-	def __init__(self, cfg, max_episodes):
+	def __init__(self, cfg, max_episodes, fps, task_id):
 		self.cfg = cfg
 		self.max_episodes = max_episodes
+		self._fps = fps
+		self._task_id = task_id
 		self._worker_id = None
 		self._i = 0
-
-	def set(self, fps, tasks):
-		self._fps = fps
-		self._tasks = tasks
-
+	
 	def _load_pixels(self, fp, ep_idx, idxs):
 		frames_dir = Path(os.path.dirname(fp)) / 'frames'
 		frame_fps = [frames_dir / os.path.basename(fp).replace('.pt', f'_{idx:03d}.png') for idx in idxs]
@@ -481,7 +480,8 @@ class LazyReplayBufferIterable(IterableDataset):
 			if self.cfg.num_workers > 1:
 				self._fps = self._fps[self._worker_id::self.cfg.num_workers]
 			self.max_episodes = min(self.max_episodes, len(self._fps))
-			print(f'Worker {self._worker_id} sampling from {len(self._fps)}/{total_fps} episodes, keeping {self.max_episodes} episodes in cache')
+			if self._worker_id == 0 and self._task_id == 0:
+				print(f'Each worker samples from {len(self._fps)}/{total_fps} episodes per task (cache: {self.max_episodes})')
 			self._episodes = [None] * self.max_episodes
 			self._count = torch.zeros(self.max_episodes, dtype=torch.int32)
 
@@ -513,13 +513,42 @@ class LazyReplayBufferIterable(IterableDataset):
 			obs = torch.from_numpy(data['states'][idx])
 			next_obs = torch.from_numpy(np.stack(data['states'][idx+1:idx+self.cfg.horizon+1]))
 		action = torch.from_numpy(np.stack(data['actions'][idx:idx+self.cfg.horizon])).float().clip(-1, 1)
-		reward = torch.from_numpy(np.stack(data['rewards'][idx:idx+self.cfg.horizon])).float()
-		if self.cfg.multitask:
-			task_vec = torch.zeros((self.cfg.num_tasks,), dtype=torch.float32)
-			task_vec[self._tasks.index(data['metadata']['cfg']['task'])] = 1
+		reward = torch.from_numpy(np.stack(data['rewards'][idx:idx+self.cfg.horizon])).float().unsqueeze(-1)
+		return obs, next_obs, action, reward
+
+
+class LazyReplayBufferIterable(IterableDataset):
+	"""
+	Child process for sampling from disk.
+	"""
+	def __init__(self, cfg, max_episodes):
+		self.cfg = cfg
+		self.max_episodes = max_episodes
+
+	def set(self, fps, tasks):
+		self._multitask = len(tasks) > 1
+		self._tasks = tasks
+		if self._multitask:
+			self._fps = defaultdict(list)
+			for fp in fps:
+				for i,task in enumerate(tasks):
+					if task in fp:
+						self._fps[i].append(fp)
+						break
+			self._samplers = [LazyReplayBufferTaskSampler(self.cfg, int(self.max_episodes/len(tasks)), self._fps[i], i) for i in range(len(tasks))]
 		else:
-			task_vec = None
-		return obs, next_obs, action, reward, task_vec
+			self._fps = fps
+			self._samplers = [LazyReplayBufferTaskSampler(self.cfg, self.max_episodes, self._fps, 0)]
+
+	def _sample(self):
+		obs, next_obs, action, reward = [], [], [], []
+		for sampler in self._samplers:
+			_obs, _next_obs, _action, _reward = sampler._sample()
+			obs.append(_obs)
+			next_obs.append(_next_obs)
+			action.append(_action)
+			reward.append(_reward)
+		return torch.stack(obs), torch.stack(next_obs), torch.stack(action), torch.stack(reward)
 
 	def __iter__(self):
 		while True:
@@ -541,8 +570,8 @@ class LazyReplayBuffer(ReplayBuffer):
 	def __init__(self, cfg):
 		assert cfg.frame_stack == 1, 'Lazy replay buffer does not support frame stacking'
 		self.cfg = cfg
-		self.capacity = 1_000_000
-		self.ep_per_worker = int((self.capacity / self.cfg.episode_length) / max(cfg.num_workers, 1))
+		self.capacity = cfg.get('cache_size', 1_000_000)
+		self.ep_per_worker = int((self.capacity / cfg.episode_length) / max(cfg.num_workers, 1))
 		self.fetch_every = min(self.ep_per_worker, cfg.fetch_every)
 
 	def init(self, fps, tasks):
@@ -553,6 +582,7 @@ class LazyReplayBuffer(ReplayBuffer):
 		self._loader = torch.utils.data.DataLoader(iterable,
 												   batch_size=self.cfg.batch_size,
 											 	   num_workers=self.cfg.num_workers,
+												   prefetch_factor=self.cfg.prefetch_factor,
 											 	   pin_memory=True,
 											 	   worker_init_fn=_worker_init_fn)
 		self._iter = None
@@ -568,15 +598,13 @@ class LazyReplayBuffer(ReplayBuffer):
 		return self._iter
 
 	def sample(self):
-		obs, next_obs, action, reward, task_vec = next(self.iter)
-		dims = (2,3,4) if self.cfg.modality == 'pixels' else (2,)
-		return obs.cuda().float(), \
-			   next_obs.permute(1,0,*dims).cuda().float(), \
-			   action.permute(1,0,2).cuda(), \
-			   reward.unsqueeze(2).permute(1,0,2).cuda(), \
-			   None, None, \
-			   task_vec.cuda() if task_vec is not None else None, \
-			   None, 1.
+		obs, next_obs, action, reward = next(self.iter)
+		dims = (3,4,5) if self.cfg.modality == 'pixels' else (3,)
+		return obs.permute(1,0,2).cuda().float(), \
+			   next_obs.permute(1,2,0,*dims).cuda().float(), \
+			   action.permute(1,2,0,3).cuda(), \
+			   reward.permute(1,2,0,3).cuda(), \
+			   None, None, None, None, 1.
 
 
 class RendererBuffer(ReplayBuffer):

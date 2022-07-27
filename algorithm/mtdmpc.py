@@ -40,15 +40,14 @@ class MultiTOLD(nn.Module):
 		super().__init__()
 		self.cfg = cfg
 		self._encoder = h.enc(cfg)
-		self._dynamics = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, cfg.latent_dim)
+		self._dynamics = h.mlp(cfg.latent_dim+cfg.action_dim, 2*cfg.mlp_dim, cfg.latent_dim)
 		self._heads = nn.ModuleList([TaskTOLD(cfg) for _ in range(cfg.num_tasks)])
 		self._encoder.apply(h.orthogonal_init)
 		self._dynamics.apply(h.orthogonal_init)
 	
-	def track_q_grad(self, enable=True):
+	def track_q_grad(self, enable, task_id):
 		"""Utility function. Enables/disables gradient tracking of Q-networks."""
-		for head in self._heads:
-			head.track_q_grad(enable)
+		self._heads[task_id].track_q_grad(enable)
 
 	def h(self, obs):
 		"""Encodes an observation into its latent representation (h)."""
@@ -192,7 +191,7 @@ class MultiTDMPC():
 	def update_pi(self, zs, task_id):
 		"""Update policy using a sequence of latent states."""
 		self.pi_optims[task_id].zero_grad(set_to_none=True)
-		self.model.track_q_grad(False)
+		self.model.track_q_grad(False, task_id)
 
 		# Loss is a weighted sum of Q-values
 		pi_loss = 0
@@ -204,7 +203,7 @@ class MultiTDMPC():
 		pi_loss.backward()
 		torch.nn.utils.clip_grad_norm_(self.model._heads[task_id]._pi.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
 		self.pi_optims[task_id].step()
-		self.model.track_q_grad(True)
+		self.model.track_q_grad(True, task_id)
 		return pi_loss.item()
 
 	@torch.no_grad()
@@ -217,46 +216,62 @@ class MultiTDMPC():
 
 	def update(self, replay_buffer, step=int(1e6)):
 		"""Main update function. Corresponds to one iteration of the TOLD model learning."""
-		obs, next_obses, action, reward, _, _, task_vec, _, _ = replay_buffer.sample()
+		obs, next_obses, action, reward, _, _, _, _, _ = replay_buffer.sample()
 		self.optim.zero_grad(set_to_none=True)
 		self.std = h.linear_schedule(self.cfg.std_schedule, step)
 		self.model.train()
 
-		# Representation
-		z = self.model.h(self.aug(obs))
-		zs = [z.detach()]
+		# Encode first observation
+		T, B, f = obs.shape[0], obs.shape[1], obs.shape[2:]
+		obs = obs.contiguous().view(T*B, *f)
+		batched_z = self.model.h(self.aug(obs))
+		batched_z = batched_z.view(T, B, self.cfg.latent_dim)
 
-		consistency_loss, reward_loss, value_loss, priority_loss = 0, 0, 0, 0
-		for t in range(self.cfg.horizon):
+		# Iterate over tasks
+		total_loss = 0
+		zs = {task_id: [batched_z.detach()] for task_id in range(self.cfg.num_tasks)}
+		for task_id in range(self.cfg.num_tasks):
 
-			# Predictions
-			Q1, Q2 = self.model.Q(z, action[t], task_id=0)
-			z, reward_pred = self.model.next(z, action[t], task_id=0)
-			with torch.no_grad():
-				next_obs = self.aug(next_obses[t])
-				next_z = self.model_target.h(next_obs)
-				td_target = self._td_target(next_obs, reward[t], task_id=0)
-			zs.append(z.detach())
+			# Iterate over time steps
+			z = batched_z[task_id]
+			consistency_loss, reward_loss, value_loss, priority_loss = 0, 0, 0, 0
+			for t in range(self.cfg.horizon):
 
-			# Losses
-			rho = (self.cfg.rho ** t)
-			consistency_loss += rho * torch.mean(h.mse(z, next_z), dim=1, keepdim=True)
-			reward_loss += rho * h.mse(reward_pred, reward[t])
-			value_loss += rho * (h.mse(Q1, td_target) + h.mse(Q2, td_target))
-			priority_loss += rho * (h.l1(Q1, td_target) + h.l1(Q2, td_target))
+				# Predictions
+				Q1, Q2 = self.model.Q(z, action[task_id,t], task_id)
+				z, reward_pred = self.model.next(z, action[task_id,t], task_id)
+				with torch.no_grad():
+					next_obs = self.aug(next_obses[task_id,t])
+					next_z = self.model_target.h(next_obs)
+					td_target = self._td_target(next_obs, reward[task_id,t], task_id)
+				zs[task_id].append(z.detach())
 
-		# Optimize model
-		total_loss = self.cfg.consistency_coef * consistency_loss.clamp(max=1e4) + \
-					 self.cfg.reward_coef * reward_loss.clamp(max=1e4) + \
-					 self.cfg.value_coef * value_loss.clamp(max=1e4)
+				# Losses
+				rho = (self.cfg.rho ** t)
+				consistency_loss += rho * torch.mean(h.mse(z, next_z), dim=1, keepdim=True)
+				reward_loss += rho * h.mse(reward_pred, reward[t])
+				value_loss += rho * (h.mse(Q1, td_target) + h.mse(Q2, td_target))
+				priority_loss += rho * (h.l1(Q1, td_target) + h.l1(Q2, td_target))
+
+			# Compute total loss for task
+			total_loss += self.cfg.consistency_coef * consistency_loss.clamp(max=1e4) + \
+						self.cfg.reward_coef * reward_loss.clamp(max=1e4) + \
+						self.cfg.value_coef * value_loss.clamp(max=1e4)
+
+		# Compute loss across tasks
 		weighted_loss = total_loss.mean()
-		weighted_loss.register_hook(lambda grad: grad * (1/self.cfg.horizon))
+		weighted_loss.register_hook(lambda grad: grad * (1/(self.cfg.horizon*self.cfg.num_tasks)))
 		weighted_loss.backward()
+
+		# Update model
 		grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
 		self.optim.step()
 
 		# Update policy + target network
-		pi_loss = self.update_pi(zs, task_id=0)
+		pi_loss = 0
+		for task_id in range(self.cfg.num_tasks):
+			pi_loss += self.update_pi(zs[task_id], task_id)
+		pi_loss /= self.cfg.num_tasks
 		if step % self.cfg.update_freq == 0:
 			h.soft_update_params(self.model, self.model_target, self.cfg.tau)
 

@@ -69,6 +69,7 @@ def train_offline(cfg: dict):
 		print(f'\n{colored("Dataset statistics:", "yellow")}\n{dataset.summary}\n')
 	except:
 		print('Using lazy replay buffer')
+	print(cfg)
 	print(colored(f'Training: {work_dir}', 'blue', attrs=['bold']))
 
 	# Resume training (if applicable)

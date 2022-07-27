@@ -46,7 +46,7 @@ bc_coef: 2.5
 # architecture
 enc_dim: ???
 mlp_dim: ???
-latent_dim: 50
+latent_dim: ???
 
 # wandb
 wandb_project: tdmpc2
