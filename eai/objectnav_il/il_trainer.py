@@ -357,7 +357,7 @@ class ILEnvTrainer(BaseRLTrainer):
         )
 
         if self.wandb_initialized == False:
-            utils.setup_wandb(self.config, train=True)
+            utils.setup_wandb(self.config, train=True, project_name="objectnav_mae")
             self.wandb_initialized = True
 
 
@@ -534,7 +534,7 @@ class ILEnvTrainer(BaseRLTrainer):
             config = self.config.clone()
         
         if self.wandb_initialized == False:
-            utils.setup_wandb(self.config, train=False)
+            utils.setup_wandb(self.config, train=False, project_name="objectnav_mae")
             self.wandb_initialized = True
 
         il_cfg = config.IL.BehaviorCloning

@@ -19,7 +19,7 @@ OUTPUT_LOG_DIR: data/objectnav_mae/logs
 LOG_INTERVAL: 10
 LOG_METRICS: True
 CHECKPOINT_INTERVAL: 500
-SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+SENSORS: ['RGB_SENSOR'] #, 'DEPTH_SENSOR']
 RESULTS_DIR: "data/objectnav_mae/results/objectnav_il/overfitting/sem_seg_pred/{split}/{type}"
 EVAL_RESUTLS_DIR: "data/objectnav/results/"
 EVAL_SAVE_RESULTS: True
@@ -72,7 +72,7 @@ MODEL:
     backbone: "vit_small_patch16"
     pretrained_encoder: "data/visual_encoders/mae_vit_small_decoder_large_HGPS_RE10K_100.pth"
   DEPTH_ENCODER:
-    cnn_type: "VlnResnetDepthEncoder"
+    cnn_type: "None" #"VlnResnetDepthEncoder"
     output_size: 128
     backbone: "resnet50"
     trainable: False

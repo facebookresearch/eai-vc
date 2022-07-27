@@ -45,14 +45,14 @@ def load_encoder(encoder, path):
     else:
         raise ValueError("unknown encoder backbone")
 
-def setup_wandb(config, train):
+def setup_wandb(config, train, project_name="imagenav"):
     if train:
         file_name = "wandb_id.txt"
-        project_name = "imagenav_training"
+        project_name = project_name + "_training"
         run_name = config.WANDB_NAME + "_" + str(config.TASK_CONFIG.SEED)
     else:
         file_name = "wandb_id_eval_" + str(config.EVAL.SPLIT) + ".txt"
-        project_name = "imagenav_testing"
+        project_name = project_name + "_testing"
         ckpt_str = "_"
         if os.path.isfile(config.EVAL_CKPT_PATH_DIR):
             ckpt_str = "_" + config.EVAL_CKPT_PATH_DIR.split("/")[-1].split(".")[1] + "_"

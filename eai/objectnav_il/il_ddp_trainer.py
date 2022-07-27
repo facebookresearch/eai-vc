@@ -205,7 +205,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
             )
 
             if self.wandb_initialized == False:
-                utils.setup_wandb(self.config, train=True)
+                utils.setup_wandb(self.config, train=True, project_name="objectnav_mae")
                 self.wandb_initialized = True
 
         observations = self.envs.reset()
