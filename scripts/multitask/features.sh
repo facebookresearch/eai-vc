@@ -1,12 +1,13 @@
 python train_offline.py -m \
-    task=mw-mt15 \
+    task=mw-mt10 \
     suite=mw \
     setting=multitask \
     modality=features \
     features=mocoego,random \
-    exp_name=offline-v1 \
+    exp_name=offline-v2 \
     seed=1,2,3 \
     hydra/launcher=slurm \
-    hydra.job.name=mt15-features \
-    hydra.launcher.timeout_min=900 \
-    hydra.launcher.mem_gb=448
+    hydra.job.name=mt10-features \
+    hydra.launcher.timeout_min=1500 \
+    hydra.launcher.mem_gb=64 \
+    hydra.launcher.cpus_per_task=10

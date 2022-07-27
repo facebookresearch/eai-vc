@@ -3,7 +3,7 @@ python train_offline.py -m \
     suite=dmcontrol \
     setting=offline \
     modality=features \
-    features=mocoego \
+    features=mocodmcontrol,random \
     exp_name=offline-v2 \
     seed=1,2,3 \
     hydra/launcher=slurm \

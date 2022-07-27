@@ -5,14 +5,11 @@ from copy import deepcopy
 import algorithm.helper as h
 
 
-class TOLD(nn.Module):
-	"""Task-Oriented Latent Dynamics (TOLD) model used in TD-MPC."""
+class TaskTOLD(nn.Module):
+	"""Task head for the Muli-Task TOLD model."""
 	def __init__(self, cfg):
 		super().__init__()
 		self.cfg = cfg
-		self._encoder = h.enc(cfg)
-		self._task_encoder = h.task_enc(cfg)
-		self._dynamics = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, cfg.latent_dim)
 		self._reward = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, 1)
 		self._pi = h.mlp(cfg.latent_dim, cfg.mlp_dim, cfg.action_dim)
 		self._Q1, self._Q2 = h.q(cfg), h.q(cfg)
@@ -25,70 +22,66 @@ class TOLD(nn.Module):
 		"""Utility function. Enables/disables gradient tracking of Q-networks."""
 		for m in [self._Q1, self._Q2]:
 			h.set_requires_grad(m, enable)
+	
+	def pi(self, z):
+		return self._pi(z)
 
-	def h(self, obs, task_vec=None):
+	def R(self, z, a):
+		return self._reward(torch.cat([z, a], dim=-1))
+	
+	def Q(self, z, a):
+		x = torch.cat([z, a], dim=-1)
+		return self._Q1(x), self._Q2(x)
+
+
+class MultiTOLD(nn.Module):
+	"""Multi-Task Task-Oriented Latent Dynamics (TOLD) model used in multi-task TD-MPC."""
+	def __init__(self, cfg):
+		super().__init__()
+		self.cfg = cfg
+		self._encoder = h.enc(cfg)
+		self._dynamics = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, cfg.latent_dim)
+		self._heads = nn.ModuleList([TaskTOLD(cfg) for _ in range(cfg.num_tasks)])
+		self._encoder.apply(h.orthogonal_init)
+		self._dynamics.apply(h.orthogonal_init)
+	
+	def track_q_grad(self, enable=True):
+		"""Utility function. Enables/disables gradient tracking of Q-networks."""
+		for head in self._heads:
+			head.track_q_grad(enable)
+
+	def h(self, obs):
 		"""Encodes an observation into its latent representation (h)."""
-		if task_vec is not None and self.cfg.modality == 'state':
-			obs = torch.cat((obs, self._task_encoder(task_vec)), dim=-1)
 		return self._encoder(obs)
 
-	def next(self, z, a, task_vec=None):
+	def next(self, z, a, task_id):
 		"""Predicts next latent state (d) and single-step reward (R)."""
-		zd, zr = z, z
-		if self.cfg.detach_rewval:
-			zr = zr.detach()
-		if task_vec is not None:
-			zt = self._task_encoder(task_vec)
-			zd, zr = zd + zt, zr + zt
-		xd = torch.cat([zd, a], dim=-1)
-		xr = torch.cat([zr, a], dim=-1)
-		return self._dynamics(xd), self._reward(xr)
+		x = torch.cat([z, a], dim=-1)
+		return self._dynamics(x), self._heads[task_id].R(z, a)
 
-	def pi(self, z, task_vec=None, std=0):
+	def pi(self, z, task_id, std=0):
 		"""Samples an action from the learned policy (pi)."""
-		if task_vec is not None:
-			z = z + self._task_encoder(task_vec)
-		mu = torch.tanh(self._pi(z))
+		mu = torch.tanh(self._heads[task_id].pi(z))
 		if std > 0:
 			std = torch.ones_like(mu) * std
 			return h.TruncatedNormal(mu, std).sample(clip=0.3)
 		return mu
 
-	def Q(self, z, a, task_vec=None):
+	def Q(self, z, a, task_id):
 		"""Predict state-action value (Q)."""
-		if task_vec is not None:
-			z = z + self._task_encoder(task_vec)
-		x = torch.cat([z, a], dim=-1)
-		return self._Q1(x), self._Q2(x)
+		return self._heads[task_id].Q(z, a)
 
 
-class ReconstructionTOLD(TOLD):
-	"""TOLD but with a decoder."""
-	def __init__(self, cfg):
-		super().__init__(cfg)
-		self._decoder = h.dec(cfg)
-		self._decoder.apply(h.orthogonal_init)
-	
-	def g(self, z):
-		"""Decodes a latent representation (z) into an observation (g)."""
-		return self._decoder(z)
-
-
-class TDMPC():
+class MultiTDMPC():
 	"""Implementation of TD-MPC learning + inference."""
 	def __init__(self, cfg):
 		self.cfg = cfg
 		self.device = torch.device('cuda')
 		self.std = h.linear_schedule(cfg.std_schedule, 0)
-		if self.cfg.dynamics_obj == 'consistency':
-			self.model = TOLD(cfg).cuda()
-		elif self.cfg.dynamics_obj == 'reconstruction':
-			self.model = ReconstructionTOLD(cfg).cuda()
-		else:
-			raise ValueError('Unknown dynamics objective: {}'.format(self.cfg.dynamics_obj))
+		self.model = MultiTOLD(cfg).cuda()
 		self.model_target = deepcopy(self.model)
 		self.optim = torch.optim.Adam(self.model.parameters(), lr=self.cfg.lr)
-		self.pi_optim = torch.optim.Adam(self.model._pi.parameters(), lr=self.cfg.lr)
+		self.pi_optims = [torch.optim.Adam(self.model._heads[i]._pi.parameters(), lr=self.cfg.lr) for i in range(self.cfg.num_tasks)]
 		self.aug = h.RandomShiftsAug(cfg)
 		self.model.eval()
 		self.model_target.eval()
@@ -99,7 +92,7 @@ class TDMPC():
 		return {'model': self.model.state_dict(),
 				'model_target': self.model_target.state_dict(),
 				'optim': self.optim.state_dict(),
-				'pi_optim': self.pi_optim.state_dict()}
+				'pi_optims': [self.pi_optims[i].state_dict() for i in range(self.cfg.num_tasks)]}
 
 	def save(self, fp, metadata={}):
 		"""Save state dict of TOLD model to filepath."""
@@ -113,7 +106,8 @@ class TDMPC():
 		self.model.load_state_dict(d['model'])
 		self.model_target.load_state_dict(d['model_target'])
 		self.optim.load_state_dict(d['optim'])
-		self.pi_optim.load_state_dict(d['pi_optim'])
+		for i in range(self.cfg.num_tasks):
+			self.pi_optims[i].load_state_dict(d['pi_optims'][i])
 		return d['metadata']
 
 	@torch.no_grad()
@@ -137,25 +131,26 @@ class TDMPC():
 		t0: whether current step is the first step of an episode.
 		open_loop: whether to use open-loop dynamics.
 		"""
+		# Get task_id from task_vec
+		task_id = task_vec.argmax()
+
 		# Seed steps
 		if step < self.cfg.seed_steps and not eval_mode:
 			return torch.empty(self.cfg.action_dim, dtype=torch.float32, device=self.device).uniform_(-1, 1)
 		
 		# Sample policy trajectories
 		obs = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
-		if task_vec is not None:
-			task_vec = torch.tensor(task_vec, dtype=torch.float32, device=self.device).unsqueeze(0)
 		horizon = int(min(self.cfg.horizon, h.linear_schedule(self.cfg.horizon_schedule, step)))
 		num_pi_trajs = int(self.cfg.mixture_coef * self.cfg.num_samples)
 		if num_pi_trajs > 0:
 			pi_actions = torch.empty(horizon, num_pi_trajs, self.cfg.action_dim, device=self.device)
-			z = self.model.h(obs, task_vec).repeat(num_pi_trajs, 1)
+			z = self.model.h(obs).repeat(num_pi_trajs, 1)
 			for t in range(horizon):
-				pi_actions[t] = self.model.pi(z, task_vec, self.cfg.min_std)
-				z, _ = self.model.next(z, pi_actions[t], task_vec)
+				pi_actions[t] = self.model.pi(z, task_id, self.cfg.min_std)
+				z, _ = self.model.next(z, pi_actions[t], task_id)
 
 		# Initialize state and parameters
-		z = self.model.h(obs, task_vec).repeat(self.cfg.num_samples+num_pi_trajs, 1)
+		z = self.model.h(obs).repeat(self.cfg.num_samples+num_pi_trajs, 1)
 		mean = torch.zeros(horizon, self.cfg.action_dim, device=self.device)
 		std = 2*torch.ones(horizon, self.cfg.action_dim, device=self.device)
 		if not t0 and hasattr(self, '_prev_mean'):
@@ -169,7 +164,7 @@ class TDMPC():
 				actions = torch.cat([actions, pi_actions], dim=1)
 
 			# Compute elite actions
-			value = self.estimate_value(z, actions, task_vec, horizon).nan_to_num_(0)
+			value = self.estimate_value(z, actions, task_id, horizon).nan_to_num_(0)
 			elite_idxs = torch.topk(value.squeeze(1), self.cfg.num_elites, dim=0).indices
 			elite_value, elite_actions = value[elite_idxs], actions[:, elite_idxs]
 
@@ -194,68 +189,58 @@ class TDMPC():
 			a += std * torch.randn(self.cfg.action_dim, device=std.device)
 		return a.clamp_(-1, 1)
 
-	def update_pi(self, zs, action, task_vec):
+	def update_pi(self, zs, task_id):
 		"""Update policy using a sequence of latent states."""
-		self.pi_optim.zero_grad(set_to_none=True)
+		self.pi_optims[task_id].zero_grad(set_to_none=True)
 		self.model.track_q_grad(False)
 
 		# Loss is a weighted sum of Q-values
 		pi_loss = 0
 		for t,z in enumerate(zs):
-			a = self.model.pi(z, task_vec, self.cfg.min_std)
-			Q = torch.min(*self.model.Q(z, a, task_vec))
-			if self.cfg.get('bc_loss', False):
-				lmbda = self.cfg.bc_coef/Q.abs().mean().detach()
-				pi_loss += (-lmbda * Q.mean() + h.mse(a, action[t]).mean()) * (self.cfg.rho ** t)
-			else:
-				pi_loss += -Q.mean() * (self.cfg.rho ** t)
+			a = self.model.pi(z, task_id, self.cfg.min_std)
+			Q = torch.min(*self.model.Q(z, a, task_id))
+			pi_loss += -Q.mean() * (self.cfg.rho ** t)
 
 		pi_loss.backward()
-		torch.nn.utils.clip_grad_norm_(self.model._pi.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
-		self.pi_optim.step()
+		torch.nn.utils.clip_grad_norm_(self.model._heads[task_id]._pi.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
+		self.pi_optims[task_id].step()
 		self.model.track_q_grad(True)
 		return pi_loss.item()
 
 	@torch.no_grad()
-	def _td_target(self, next_obs, reward, task_vec=None):
+	def _td_target(self, next_obs, reward, task_id):
 		"""Compute the TD-target from a reward and the observation at the following time step."""
-		next_z = self.model.h(next_obs, task_vec)
+		next_z = self.model.h(next_obs)
 		td_target = reward + self.cfg.discount * \
-			torch.min(*self.model_target.Q(next_z, self.model.pi(next_z, task_vec, self.cfg.min_std), task_vec))
+			torch.min(*self.model_target.Q(next_z, self.model.pi(next_z, task_id, self.cfg.min_std), task_id))
 		return td_target
 
 	def update(self, replay_buffer, step=int(1e6)):
 		"""Main update function. Corresponds to one iteration of the TOLD model learning."""
-		obs, next_obses, action, reward, _, _, task_vec, idxs, weights = replay_buffer.sample()
+		obs, next_obses, action, reward, _, _, task_vec, _, _ = replay_buffer.sample()
 		self.optim.zero_grad(set_to_none=True)
 		self.std = h.linear_schedule(self.cfg.std_schedule, step)
 		self.model.train()
 
 		# Representation
-		z = self.model.h(self.aug(obs), task_vec)
+		z = self.model.h(self.aug(obs))
 		zs = [z.detach()]
 
 		consistency_loss, reward_loss, value_loss, priority_loss = 0, 0, 0, 0
 		for t in range(self.cfg.horizon):
 
 			# Predictions
-			Q1, Q2 = self.model.Q(z.detach() if self.cfg.detach_rewval else z, action[t], task_vec)
-			z, reward_pred = self.model.next(z, action[t], task_vec)
+			Q1, Q2 = self.model.Q(z, action[t], task_id=0)
+			z, reward_pred = self.model.next(z, action[t], task_id=0)
 			with torch.no_grad():
 				next_obs = self.aug(next_obses[t])
-				next_z = self.model_target.h(next_obs, task_vec)
-				td_target = self._td_target(next_obs, reward[t], task_vec)
+				next_z = self.model_target.h(next_obs)
+				td_target = self._td_target(next_obs, reward[t], task_id=0)
 			zs.append(z.detach())
 
 			# Losses
 			rho = (self.cfg.rho ** t)
-			if self.cfg.dynamics_obj == 'consistency':
-				consistency_loss += rho * torch.mean(h.mse(z, next_z), dim=1, keepdim=True)
-			elif self.cfg.dynamics_obj == 'reconstruction':
-				obs_pred = self.model.g(z)
-				consistency_loss += rho * torch.mean(h.mse(obs_pred, next_obs), dim=1, keepdim=True)
-			else:
-				raise ValueError('Unknown dynamics objective: {}'.format(self.cfg.dynamics_obj))
+			consistency_loss += rho * torch.mean(h.mse(z, next_z), dim=1, keepdim=True)
 			reward_loss += rho * h.mse(reward_pred, reward[t])
 			value_loss += rho * (h.mse(Q1, td_target) + h.mse(Q2, td_target))
 			priority_loss += rho * (h.l1(Q1, td_target) + h.l1(Q2, td_target))
@@ -264,16 +249,14 @@ class TDMPC():
 		total_loss = self.cfg.consistency_coef * consistency_loss.clamp(max=1e4) + \
 					 self.cfg.reward_coef * reward_loss.clamp(max=1e4) + \
 					 self.cfg.value_coef * value_loss.clamp(max=1e4)
-		weighted_loss = (total_loss * weights).mean()
+		weighted_loss = total_loss.mean()
 		weighted_loss.register_hook(lambda grad: grad * (1/self.cfg.horizon))
 		weighted_loss.backward()
 		grad_norm = torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg.grad_clip_norm, error_if_nonfinite=False)
 		self.optim.step()
-		if self.cfg.per:
-			replay_buffer.update_priorities(idxs, priority_loss.clamp(max=1e4).detach())
 
 		# Update policy + target network
-		pi_loss = self.update_pi(zs, action, task_vec)
+		pi_loss = self.update_pi(zs, task_id=0)
 		if step % self.cfg.update_freq == 0:
 			h.soft_update_params(self.model, self.model_target, self.cfg.tau)
 

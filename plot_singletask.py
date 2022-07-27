@@ -115,11 +115,25 @@ def main():
 
 	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
+	experiment2kwargs = {
+		'State': {'color': 'tab:blue'},
+		'✻ State': {'color': 'tab:blue'},
+		'Pixels': {'color': 'tab:green'},
+		'✻ Pixels': {'color': 'tab:green'},
+		'In-domain': {'color': 'tab:purple'},
+		'✻ In-domain': {'color': 'tab:purple'},
+		'Ego4D': {'color': 'tab:pink'},
+		'✻ Ego4D': {'color': 'tab:pink'},
+		'Random': {'color': 'tab:olive'},
+		'✻ Random': {'color': 'tab:olive'},
+		'✻ BC (State)': {'color': 'tab:grey'},
+	}
+
 	# dmcontrol
 	ax = axs[0]
 	sns.barplot(data=df_dmcontrol, x='experiment', y='reward', ax=ax, ci=None)
 	ax.set_title('DMControl', fontweight='bold')
-	ax.set_ylim(0, 120)
+	ax.set_ylim(0, 115)
 	ax.set_xlabel('')
 	ax.set_ylabel('Normalized return')
 	ax.bar_label(ax.containers[0], fontsize=18)
@@ -127,12 +141,16 @@ def main():
 	for i in range(1, len(df_dmcontrol), 2):
 		ax.containers[0].patches[i]._hatch = '//'
 		ax.containers[0].patches[i].set_facecolor(ax.containers[0].patches[i-1]._facecolor)
+	# for i in range(1, len(df_dmcontrol)):
+	# 	if '✻' in df_dmcontrol.iloc[i]['experiment']:
+	# 		ax.containers[0].patches[i]._hatch = '//'
+	# 	ax.containers[0].patches[i].set_facecolor(experiment2kwargs[df_dmcontrol.iloc[i]['experiment']]['color'])
 	
 	# metaworld
 	ax = axs[1]
 	sns.barplot(data=df_metaworld, x='experiment', y='reward', ax=ax, ci=None)
 	ax.set_title('Meta-World', fontweight='bold')
-	ax.set_ylim(0, 120)
+	ax.set_ylim(0, 115)
 	ax.set_xlabel('')
 	ax.set_ylabel('')
 	ax.bar_label(ax.containers[0], fontsize=18)

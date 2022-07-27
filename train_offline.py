@@ -12,6 +12,7 @@ from pathlib import Path
 from cfg_parse import parse_cfg
 from env import make_env, set_seed
 from algorithm.tdmpc import TDMPC
+from algorithm.mtdmpc import MultiTDMPC
 from algorithm.bc import BC
 from algorithm.helper import make_buffer
 from dataloader import make_dataset
@@ -46,7 +47,7 @@ def evaluate(env, agent, cfg, iteration, video):
 
 
 def make_agent(cfg):
-	algorithm2class = {'bc': BC, 'tdmpc': TDMPC}
+	algorithm2class = {'bc': BC, 'tdmpc': TDMPC, 'mtdmpc': MultiTDMPC}
 	return algorithm2class[cfg.algorithm](cfg)
 
 
