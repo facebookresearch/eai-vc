@@ -191,6 +191,10 @@ def enc(cfg):
 			raise ValueError('Unknown encoder arch: {}'.format(cfg.encoder))
 	elif cfg.modality == 'features':
 		layers = [FeatureFuse(cfg)]
+	elif cfg.algorithm == 'mtdmpc':
+		layers = [nn.Linear(cfg.obs_shape[0], cfg.enc_dim), nn.ELU(),
+				  nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
+				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
 	else:
 		layers = [nn.Linear(cfg.obs_shape[0]+(cfg.latent_dim if cfg.get('multitask', False) else 0), cfg.enc_dim), nn.ELU(),
 				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
@@ -600,7 +604,7 @@ class LazyReplayBuffer(ReplayBuffer):
 	def sample(self):
 		obs, next_obs, action, reward = next(self.iter)
 		dims = (3,4,5) if self.cfg.modality == 'pixels' else (3,)
-		return obs.permute(1,0,2).cuda().float(), \
+		return obs.permute(1,0,2,*dims[:-1]).cuda().float(), \
 			   next_obs.permute(1,2,0,*dims).cuda().float(), \
 			   action.permute(1,2,0,3).cuda(), \
 			   reward.permute(1,2,0,3).cuda(), \
