@@ -44,12 +44,15 @@ def main(conf):
     # Save conf
     torch.save(conf, f=f'{exp_dir}/conf.pth')
 
-    # Load train and test trajectories
-    traj_info = torch.load(conf.file_path)
-    torch.save(traj_info, f=f"{exp_dir}/demo_info.pth") # Re-save trajectory info in exp_dir
-    train_trajs = traj_info["train_demos"]
-    test_trajs = traj_info["test_demos"]
-    #train_trajs, test_trajs = d_utils.load_trajs(conf.file_path, exp_dir, scale=100, mode=conf.mode) # TODO scale hardcoded
+    if os.path.splitext(conf.file_path)[1] == ".pth":
+        # Load train and test trajectories
+        traj_info = torch.load(conf.file_path)
+        torch.save(traj_info, f=f"{exp_dir}/demo_info.pth") # Re-save trajectory info in exp_dir
+        train_trajs = traj_info["train_demos"]
+        test_trajs = traj_info["test_demos"]
+    else:
+        # Load trajectories from split defined in .json file
+        train_trajs, test_trajs = d_utils.load_trajs(conf.file_path, exp_dir, scale=100)#, mode=conf.mode) # TODO scale hardcoded
 
     if not conf.no_wandb:
         # wandb init
