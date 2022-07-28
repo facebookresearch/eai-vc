@@ -1,9 +1,8 @@
-CUDA_VISIBLE_DEVICES=1 python train_offline.py \
-    task=mw-mt10 \
+python encode_dataset.py \
+    task=mw-push \
     suite=mw \
-    setting=multitask \
-    algorithm=mtdmpc \
-    modality=features \
-    features=mocoego \
-    exp_name=test \
-    seed=1
+    setting=offline \
+    modality=pixels \
+    fraction=0.01 \
+    +features=maehoi \
+    +use_all=true

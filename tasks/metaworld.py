@@ -4,7 +4,7 @@ import torch
 import gym
 from gym.wrappers import TimeLimit
 from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
-from encode_dataset import encode_resnet
+from encode_dataset import encode
 
 
 class MetaWorldWrapper(gym.Wrapper):
@@ -20,6 +20,7 @@ class MetaWorldWrapper(gym.Wrapper):
 			features_to_dim = defaultdict(lambda: 2048) # default to RN50
 			features_to_dim.update({
 				'clip': 512,
+				'maehoi': 384,
 			})
 			self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self._num_frames*features_to_dim[cfg.features],), dtype=np.float32)
 		else: # state
@@ -34,7 +35,7 @@ class MetaWorldWrapper(gym.Wrapper):
 	
 	def _get_feature_obs(self):
 		obs = torch.from_numpy(self._get_pixel_obs()).unsqueeze(0).view(-1, 3, self.cfg.img_size, self.cfg.img_size)
-		obs = encode_resnet(obs, self.cfg).view(-1).cpu().numpy()
+		obs = encode(obs, self.cfg).view(-1).cpu().numpy()
 		return obs
 
 	def _stacked_obs(self):

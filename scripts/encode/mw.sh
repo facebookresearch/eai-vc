@@ -3,7 +3,7 @@ python encode_dataset.py -m \
     suite=mw \
     setting=offline \
     modality=pixels \
-    +features=mocometaworld,mocoego,random \
+    +features=maehoi \
     +use_all=true \
     hydra/launcher=slurm \
     hydra.job.name=mw-enc \

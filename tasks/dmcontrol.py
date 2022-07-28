@@ -10,7 +10,7 @@ from dm_control import suite
 suite.ALL_TASKS = suite.ALL_TASKS + suite._get_tasks('custom')
 suite.TASKS_BY_DOMAIN = suite._get_tasks_by_domain(suite.ALL_TASKS)
 import gym
-from encode_dataset import encode_resnet
+from encode_dataset import encode
 
 
 class ExtendedTimeStep(NamedTuple):
@@ -123,6 +123,7 @@ class FeaturesWrapper(dm_env.Environment):
 		features_to_dim = defaultdict(lambda: 2048) # default to resnet50
 		features_to_dim.update({
 			'clip': 512,
+			'maehoi': 384,
 			'random18': 1024,
 		})
 		self._obs_spec = specs.BoundedArray(shape=np.array([cfg.get('frame_stack', 1)*features_to_dim[cfg.features],]),
@@ -140,7 +141,7 @@ class FeaturesWrapper(dm_env.Environment):
 	def _encode(self, time_step):
 		_obs = torch.from_numpy(time_step.observation).unsqueeze(0)
 		_obs = _obs.view(-1, 3, 84, 84)
-		_obs = encode_resnet(_obs, self._cfg).view(-1)
+		_obs = encode(_obs, self._cfg).view(-1)
 		return ExtendedTimeStep(observation=_obs.cpu().numpy(),
 								step_type=time_step.step_type,
 								action=time_step.action,

@@ -39,30 +39,51 @@ def make_encoder(cfg):
 	"""Make an encoder."""
 	assert torch.cuda.is_available(), 'CUDA is not available'
 	assert cfg.get('features', None) is not None, 'Features must be specified'
-	encoder = torchvision.models.__dict__['resnet50'](pretrained=False).cuda()
-	if 'moco' in cfg.features:
-		if cfg.features == 'moco':
-			fn = 'moco_v2_800ep_pretrain.pth.tar'
-		elif cfg.features == 'mocodmcontrol':
-			fn = 'moco_v2_100ep_dmcontrol.pt'
-		elif cfg.features == 'mocometaworld':
-			fn = 'moco_v2_33ep_metaworld.pt'
-		elif cfg.features == 'mocoego':
-			fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
-		elif cfg.features == 'mocoegodmcontrol':
-			fn = 'moco_v2_15ep_pretrain_ego_dmcontrol_finetune.pth.tar'
-		else:
-			raise ValueError('Unknown MOCO model')
-		print(colored('Loading MOCO pretrained model: {}'.format(fn), 'green'))
-		state_dict = torch.load(os.path.join(cfg.encoder_dir, fn))['state_dict']
-		state_dict = {k.replace('module.encoder_q.', ''): v for k,v in state_dict.items() if not k.startswith('fc.')}
-		encoder.load_state_dict(state_dict, strict=False)
-	encoder.fc = nn.Identity()
-	encoder.eval()
+	if 'mae' in cfg.features:
+		import mvp
+		encoder = mvp.load("vits-mae-hoi").cuda()
+		encoder.freeze()
+	else:
+		encoder = torchvision.models.__dict__['resnet50'](pretrained=False).cuda()
+		if 'moco' in cfg.features:
+			if cfg.features == 'moco':
+				fn = 'moco_v2_800ep_pretrain.pth.tar'
+			elif cfg.features == 'mocodmcontrol':
+				fn = 'moco_v2_100ep_dmcontrol.pt'
+			elif cfg.features == 'mocometaworld':
+				fn = 'moco_v2_33ep_metaworld.pt'
+			elif cfg.features == 'mocoego':
+				fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
+			elif cfg.features == 'mocoegodmcontrol':
+				fn = 'moco_v2_15ep_pretrain_ego_dmcontrol_finetune.pth.tar'
+			else:
+				raise ValueError('Unknown MOCO model')
+			print(colored('Loading MOCO pretrained model: {}'.format(fn), 'green'))
+			state_dict = torch.load(os.path.join(cfg.encoder_dir, fn))['state_dict']
+			state_dict = {k.replace('module.encoder_q.', ''): v for k,v in state_dict.items() if not k.startswith('fc.')}
+			encoder.load_state_dict(state_dict, strict=False)
+		encoder.fc = nn.Identity()
+		encoder.eval()
 	preprocess = nn.Sequential(
 		K.Resize((224, 224), resample=Resample.BICUBIC),
 		K.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])).cuda()
 	return encoder, preprocess
+
+
+def encode_mae(obs, cfg):
+	"""Encode one or more observations using a MAE ViT-S model."""
+	global __ENCODER__, __PREPROCESS__
+	if __ENCODER__ is None:
+		__ENCODER__, __PREPROCESS__ = make_encoder(cfg)
+	assert isinstance(obs, (torch.Tensor, np.ndarray)), 'Observation must be a tensor or numpy array'
+	if isinstance(obs, np.ndarray):
+		obs = torch.from_numpy(obs)
+	assert obs.ndim >= 3, 'Observation must be at least 3D'
+	if obs.ndim == 3:
+		obs = obs.unsqueeze(0)
+	with torch.no_grad():
+		features = __ENCODER__(__PREPROCESS__(obs.cuda() / 255.))
+	return features
 
 
 def encode_resnet(obs, cfg):
@@ -81,8 +102,15 @@ def encode_resnet(obs, cfg):
 	return features
 
 
+def encode(obs, cfg):
+	"""Encode one or more observations using a pretrained model."""
+	features2encoder = {'maehoi': encode_mae}
+	fn = features2encoder.get(cfg.features, encode_resnet)
+	return fn(obs, cfg)
+
+
 @hydra.main(config_name='default', config_path='config')
-def encode(cfg: dict):
+def main(cfg: dict):
 	"""Encoding an image dataset using a pretrained model."""
 	assert cfg.get('features', None), 'Features must be specified'
 	cfg.modality = 'pixels'
@@ -98,7 +126,7 @@ def encode(cfg: dict):
 	for episode in tqdm(dataset.episodes):
 		
 		# Compute features
-		features = encode_resnet(episode.obs, cfg).cpu().numpy()
+		features = encode(episode.obs, cfg).cpu().numpy()
 
 		# Save features
 		feature_dir = make_dir(Path(os.path.dirname(episode.filepath)) / 'features' / cfg.features)
@@ -106,4 +134,4 @@ def encode(cfg: dict):
 
 
 if __name__ == '__main__':
-	encode()
+	main()
