@@ -1,4 +1,5 @@
 *.npz
+!*demo*.npz
 *.pyc
 *.png
 tmp/*
