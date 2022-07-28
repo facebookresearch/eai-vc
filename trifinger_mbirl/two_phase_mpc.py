@@ -4,6 +4,8 @@ import argparse
 import os
 import sys
 
+from r3m import load_r3m
+
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
@@ -165,6 +167,16 @@ class TwoPhaseMPC(torch.nn.Module):
 
 def main(args):
 
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+
+    # Load r3m model
+    r3m = load_r3m("resnet50")  # resnet18, resnet34
+    r3m.eval()
+    r3m.to(device)
+
     # Load demo.npz
     data = np.load(args.demo_path, allow_pickle=True)["data"]
     traj = d_utils.get_traj_dict_from_obs_list(data, scale=100)
@@ -172,7 +184,7 @@ def main(args):
 
     time_horizon = traj["ft_pos_cur"].shape[0]
 
-    mpc = TwoPhaseMPC(time_horizon-1, args.phase2_model_path)    
+    mpc = TwoPhaseMPC(time_horizon-1, args.phase2_model_path, learned_only=True)
     phase2_start_ind = mpc.phase2_start_ind
 
     obs_dict_init = d_utils.get_obs_dict_from_traj(traj, 0, mpc.obj_state_type)
@@ -190,6 +202,8 @@ def main(args):
         true_o_state = traj["o_pos_cur"]
     elif mpc.obj_state_type == "vertices":
         true_o_state = traj["vertices"]
+    elif mpc.obj_state_type == "img_r3m":
+        true_o_state = traj["image_60_r3m"]
     else:
         raise ValueError()
 
@@ -206,6 +220,8 @@ def main(args):
         for i in range(8):
             per_vert_err = np.linalg.norm((pred_o_state[:, i*3:i*3+3] - true_o_state[:, i*3:i*3+3]), axis=1)
             o_state_err[:, i] = per_vert_err
+    elif mpc.obj_state_type == "img_r3m":
+        o_state_err = np.expand_dims(np.linalg.norm((pred_o_state - true_o_state), axis=1), 1)
     else:
         raise ValueError()
 
@@ -278,6 +294,16 @@ def main(args):
                 f"object vertex position error (cm)", 
                 None,
                 ["v0","v1", "v2", "v3", "v4", "v5", "v6", "v7"],
+                {
+                "err":  {"y": o_state_err, "x": traj["t"], "marker": "x"},
+                },
+                plot_timestamp = traj["t"][phase2_start_ind]
+                )
+    elif mpc.obj_state_type == "img_r3m":
+        d_utils.plot_traj(
+                "R3M embedding L2 distance", 
+                None,
+                ["r3m"],
                 {
                 "err":  {"y": o_state_err, "x": traj["t"], "marker": "x"},
                 },

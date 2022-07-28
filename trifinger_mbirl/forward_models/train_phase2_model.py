@@ -6,6 +6,10 @@ import argparse
 import random
 import collections
 
+from r3m import load_r3m
+import torchvision.transforms as T
+from PIL import Image
+
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
@@ -37,7 +41,7 @@ class NMSELoss(torch.nn.Module):
 
 ## Dataset
 class Phase2ModelDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset_path, demo_list=None, obj_state_type="vertices"):
+    def __init__(self, dataset_path, demo_list=None, obj_state_type="vertices", device="cpu"):
         """
         demo_list: List of demo dicts
         obj_state_type (str): "pos" or "vertices"
@@ -45,7 +49,7 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
         
         ### ONLY TAKE PHASE 2 PART OF TRAJECTORY
 
-        assert obj_state_type in ["pos", "vertices"]
+        assert obj_state_type in ["pos", "vertices", "img_r3m"]
         self.obj_state_type = obj_state_type
     
         if demo_list is not None:
@@ -103,13 +107,13 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
                 # Object vertices
                 o_vert_cur = demo["vertices"][i]
                 o_vert_next = demo["vertices"][i+1]
-                
+
                 # Current fingertip positions
                 ft_pos_cur = demo["ft_pos_cur"][i]
                 ft_pos_next = demo["ft_pos_cur"][i+1]
 
                 # Action (fingertip position deltas)
-                action = torch.FloatTensor(demo['delta_ftpos'][i])# * 10 # TODO scale action for testing
+                action = torch.FloatTensor(demo['delta_ftpos'][i])
 
                 # Make state and action
                 if self.obj_state_type == "pos":
@@ -119,6 +123,10 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
                 elif self.obj_state_type == "vertices":
                     o_state_cur = torch.FloatTensor(o_vert_cur)
                     o_state_next = torch.FloatTensor(o_vert_next)
+
+                elif self.obj_state_type == "img_r3m":
+                    o_state_cur = torch.FloatTensor(demo["image_60_r3m"][i])
+                    o_state_next = torch.FloatTensor(demo["image_60_r3m"][i+1])
 
                 else:
                     raise ValueError("Invalid obj_state_type")    
@@ -151,6 +159,7 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
     def get_target_variance(self):
         state_next = torch.stack([self.dataset[i]["state_next"] for i in range(len(self.dataset))])
         return state_next.var(dim=0)
+
 
 ## Model
 class Phase2Model(torch.nn.Module):
@@ -215,15 +224,16 @@ def train(conf, model, loss_fn, optimizer, dataloader, test_dataloader, phase2_s
                     test_loss = test_loss.mean()
                     print(f"Epoch: {epoch}, test loss: {test_loss.item()}")
 
-    torch.save({
-        'loss_train'       : loss,
-        'model_state_dict' : model.state_dict(),
-        'conf'             : conf,
-        'in_dim'           : model.in_dim,
-        'out_dim'          : model.out_dim,
-        'hidden_dims'      : model.hidden_dims,
-        'phase2_start_ind' : phase2_start_ind,
-    }, f=f'{model_data_dir}/epoch_{epoch+1}_ckpt.pth')
+        if (epoch+1) % 500 == 0:
+            torch.save({
+                'loss_train'       : loss,
+                'model_state_dict' : model.state_dict(),
+                'conf'             : conf,
+                'in_dim'           : model.in_dim,
+                'out_dim'          : model.out_dim,
+                'hidden_dims'      : model.hidden_dims,
+                'phase2_start_ind' : phase2_start_ind,
+            }, f=f'{model_data_dir}/epoch_{epoch+1}_ckpt.pth')
 
 def get_exp_str(params_dict):
     
@@ -298,11 +308,11 @@ def main(conf):
 
     # Datasets and dataloaders
     train_dataset = Phase2ModelDataset(train_data_path, demo_list=train_trajs,
-                                       obj_state_type=conf.obj_state_type)
+                                       obj_state_type=conf.obj_state_type, device=device)
     dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
 
     test_dataset = Phase2ModelDataset(test_data_path, demo_list=test_trajs,
-                                      obj_state_type=conf.obj_state_type)
+                                      obj_state_type=conf.obj_state_type, device=device)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=16, shuffle=False)
 
     in_dim = train_dataset.in_dim
@@ -330,7 +340,7 @@ def parse_args():
     parser.add_argument("--n_epochs", type=int, default=1500, help="Number of epochs")
     parser.add_argument("--log_dir", type=str, default=LOG_DIR, help="Directory for run logs")
 
-    parser.add_argument("--obj_state_type", type=str, default="pos", choices=["pos", "vertices"],
+    parser.add_argument("--obj_state_type", type=str, default="pos", choices=["pos", "vertices", "img_r3m"],
                         help="Object state representation")
 
     parser.add_argument("--n_epoch_every_eval", type=int, default=100, help="Num epochs every eval")

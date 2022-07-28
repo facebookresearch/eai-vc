@@ -3,8 +3,15 @@ import matplotlib.pyplot as plt
 import json
 import os
 import torch
+from r3m import load_r3m
+import torchvision.transforms as T
+from PIL import Image
 
 NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
+
+r3m_model = load_r3m("resnet50")  # resnet18, resnet34
+r3m_model.eval()
+r3m_model.to("cpu") # TODO hardcoded
 
 def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
     """
@@ -49,6 +56,7 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
         traj_dict["image_60"] = image60
         traj_dict["image_180"] = image180
         traj_dict["image_300"] = image300
+
 
     # Mode information
     if "ft_pos_targets_per_mode" in data[-1]["policy"]:
@@ -104,6 +112,15 @@ def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
         delta = ft_pos[t+1] - ft_pos[t]
         new_delta_ftpos[t, :] = delta 
     new_traj_dict["delta_ftpos"] = new_delta_ftpos
+
+    # Compute r3m on image_60
+    image_60 = new_traj_dict["image_60"]
+    r3m_dim = get_r3m_img(r3m_model, image_60[0,:]).shape[0]
+    image_60_r3m = np.zeros((num_waypoints, r3m_dim))
+    for i in range(num_waypoints):
+        r3m_i = get_r3m_img(r3m_model, image_60[i,:])
+        image_60_r3m[i,:] = r3m_i 
+    new_traj_dict["image_60_r3m"] = image_60_r3m
 
     return new_traj_dict
 
@@ -271,12 +288,27 @@ def load_trajs(exp_info, exp_dir=None, scale=1, mode=None):
 
     return train_trajs, test_trajs
 
+def get_r3m_img(r3m_model, img):
+    if r3m_model is None:
+        r3m_model = load_r3m("resnet50")  # resnet18, resnet34
+        r3m_model.eval()
+        r3m_model.to("cpu") # TODO hardcoded
+
+    transforms = T.Compose([T.Resize(256),
+                 T.CenterCrop(224),
+                 T.ToTensor()]) # ToTensor() divides by 255
+
+    img_preproc = transforms(Image.fromarray(img.astype(np.uint8))).reshape(-1, 3, 224, 224)
+    return r3m_model(img_preproc * 255.0)[0].detach()
+
 def get_obs_dict_from_traj(traj, t, obj_state_type):
 
     if obj_state_type == "pos":
         o_state = traj["o_pos_cur"][t]
     elif obj_state_type == "vertices":
         o_state = traj["vertices"][t]
+    elif obj_state_type == "img_r3m":
+        o_state = traj["image_60_r3m"][t]
     else: 
         raise ValueError
 
