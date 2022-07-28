@@ -45,22 +45,29 @@ def main(conf):
     torch.save(conf, f=f'{exp_dir}/conf.pth')
 
     # Load train and test trajectories
-    train_trajs, test_trajs = d_utils.load_trajs(conf.file_path, exp_dir, scale=100, mode=conf.mode) # TODO scale hardcoded
+    traj_info = torch.load(conf.file_path)
+    torch.save(traj_info, f=f"{exp_dir}/demo_info.pth") # Re-save trajectory info in exp_dir
+    train_trajs = traj_info["train_demos"]
+    test_trajs = traj_info["test_demos"]
+    #train_trajs, test_trajs = d_utils.load_trajs(conf.file_path, exp_dir, scale=100, mode=conf.mode) # TODO scale hardcoded
 
     if not conf.no_wandb:
         # wandb init
         wandb.init(project='trifinger_mbirl', entity='clairec', name=exp_str, config=conf)
 
-
+    
     ### MBIRL training
     if conf.algo == "mbirl":
         time_horizon, n_keypt_dim = train_trajs[0]["ft_pos_cur"].shape # xyz position for each fingertip
 
         # Get MPC
         mpc = mbirl.get_mpc(conf.mpc_type, time_horizon)
+    
+        # Save obj_state_type in conf
+        conf.obj_state_type = mpc.obj_state_type
 
         # IRL loss
-        irl_loss_fn = mbirl.IRLLoss(conf.irl_loss_state)
+        irl_loss_fn = mbirl.IRLLoss(conf.irl_loss_state, conf.obj_state_type)
 
         # Get learnable cost function
         learnable_cost = mbirl.get_learnable_cost(conf, time_horizon)
@@ -132,8 +139,8 @@ def parse_args():
     parser.add_argument("--no_wandb", action="store_true", help="Don't log in wandb")
     parser.add_argument("--run_id", default="NOID", help="Run ID")
     parser.add_argument("--exp_id", default="NONAME", help="Experiment ID")
-    parser.add_argument("--n_outer_iter", type=int, default=2000, help="Outer loop iterations")
-    parser.add_argument("--n_epoch_every_log", type=int, default=100, help="Num epochs every log")
+    parser.add_argument("--n_outer_iter", type=int, default=500, help="Outer loop iterations")
+    parser.add_argument("--n_epoch_every_log", type=int, default=50, help="Num epochs every log")
 
 
     # MBIRL parameters (used if --algo=="mbirl")
@@ -148,7 +155,7 @@ def parse_args():
     parser.add_argument("--irl_loss_state", type=str, default="ftpos", choices=["ftpos", "obj", "ftpos_obj"], help="State to use in IRL")
     
     parser.add_argument("--mpc_type", type=str, default="ftpos", choices=["ftpos", "ftpos_obj_two_phase", "ftpos_obj_learned_only"], help="MPC to use")
-    parser.add_argument("--mode", type=int, choices=[1,2], help="For testing; only load parts of trajectories with this mode")
+    #parser.add_argument("--mode", type=int, choices=[1,2], help="For testing; only load parts of trajectories with this mode")
 
     # RBF kernel parameters
     parser.add_argument("--rbf_kernels", type=int, default=5, help="Number of RBF kernels")
