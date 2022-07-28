@@ -41,8 +41,9 @@ class FTPosMPC(torch.nn.Module):
         x_next = x + u
         return x_next
 
-    def roll_out(self, x_init):
+    def roll_out(self, obs_dict_init):
         """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
+        x_init = obs_dict_init["ft_state"]
         x_traj = []
         x_next = self.forward(x_init)
         x_traj.append(x_next)
@@ -65,7 +66,7 @@ class Integrate(torch.autograd.Function):
     @staticmethod
     def forward(ctx, state, action):
         ctx.save_for_backward(state, action)
-        xnp = state['ft_state'].detach().numpy()
+        xnp = state.detach().numpy()
         unp = action.detach().numpy()
         return torch.Tensor(xnp + unp)
 
@@ -74,8 +75,8 @@ class Integrate(torch.autograd.Function):
         state, action = ctx.saved_tensors
         #grad_state = grad_action = None
 
-        grad_state = grad_output.add(action)
-        grad_action = grad_output.add(state)
+        grad_state = grad_output.multiply(torch.ones_like(action))
+        grad_action = grad_output.multiply(torch.ones_like(action))
 
         return grad_state, grad_action
 
@@ -108,16 +109,19 @@ class FTPosSim(torch.nn.Module):
 
         return torch.Tensor(x_next)
 
-    def roll_out(self, x_init):
+    def roll_out(self, obs_dict_init):
         """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
         x_traj = []
+        x_init = obs_dict_init["ft_state"]
         x_next = self.forward(x_init)
-        x_traj.append(x_next)
+        #x_traj.append(x_next)
+        x_traj.append(torch.squeeze(x_next.clone()))
 
         for t in range(self.time_horizon):
             a = self.action_seq[t]
             x_next = self.forward(x_next, a)
-            x_traj.append(x_next.clone())
+            #x_traj.append(x_next.clone())
+            x_traj.append(torch.squeeze(x_next.clone()))
 
         return torch.stack(x_traj)
 
