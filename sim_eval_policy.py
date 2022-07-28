@@ -44,7 +44,10 @@ def main(args):
         # Load demo_info.pth and get object initial and goal pose, and test demo stats
         TEST_TRAJ_NUM = 0
         demo_info = torch.load(demo_info_path)
-        training_traj_scale = demo_info["scale"]
+        if "scale" in demo_info:
+            training_traj_scale = demo_info["scale"]
+        else:
+            training_traj_scale = 1
         expert_demo = demo_info["test_demos"][TEST_TRAJ_NUM]
         obj_init_pos = expert_demo["o_pos_cur"][0, :] / training_traj_scale
         obj_init_ori = expert_demo["o_ori_cur"][0, :] / training_traj_scale
@@ -55,6 +58,7 @@ def main(args):
         downsample_time_step = demo_info["downsample_time_step"]
         demo_stats = demo_info["test_demo_stats"][TEST_TRAJ_NUM]
         demo_stats["n_train_traj"] = len(demo_info["train_demos"]) # Number of training trajectories for policy
+        demo_t = expert_demo["t"] # Trajectory timestamps
 
         # Get checkpoint info
         ckpt_info = torch.load(ckpt_path)
@@ -65,6 +69,8 @@ def main(args):
 
         observation = env.reset(goal_pose_dict=goal_pose, init_pose_dict=init_pose)
         if algo == "mbirl":
+            demo_stats["pred_traj"] = ckpt_info["test_pred_traj_per_demo"][TEST_TRAJ_NUM].detach().numpy() / training_traj_scale
+            demo_stats["pred_traj_t"] = demo_t
             ftpos_traj = ckpt_info["test_pred_traj_per_demo"][TEST_TRAJ_NUM].detach().numpy()[:, :9] / training_traj_scale
             #ftpos_traj = expert_demo["ft_pos_cur"] # Use expert actions [FOR DEBUGGING]
             policy = FollowFtTrajPolicy(ftpos_traj, env.action_space, env.platform, time_step=SIM_TIME_STEP,
