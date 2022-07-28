@@ -37,10 +37,11 @@ class ImitationLearningDataset(torch.utils.data.Dataset):
 
             for i in range(num_obs):
                 obs_dict = {
-                            "o_pos_cur" : demo["o_pos_cur"][i],
-                            "ft_pos_cur": demo["ft_pos_cur"][i],
-                            "o_pos_des" : demo["o_pos_des"][0, :], # Goal object position
-                            "image_60"  : demo["image_60"][i],
+                            "o_pos_cur"      : demo["o_pos_cur"][i],
+                            "ft_pos_cur"     : demo["ft_pos_cur"][i],
+                            "o_pos_des"      : demo["o_pos_des"][0, :], # Goal object position
+                            "image_60"       : demo["image_60"][i],
+                            "image_60_goal"  : demo["image_60"][-1],
                            }
 
                 obs = get_bc_obs(obs_dict, obs_type, r3m=r3m, device=device)
@@ -93,7 +94,13 @@ def get_bc_obs(obs_dict, obs_type, r3m=None, device="cpu"):
         image_preproc = transforms(Image.fromarray(image.astype(np.uint8))).reshape(-1, 3, 224, 224)
         visual_obs = r3m(image_preproc * 255.0)[0].detach()
         proprio_obs = torch.FloatTensor(obs_dict["ft_pos_cur"]).to(device)
-        obs = torch.cat([visual_obs, proprio_obs])
+
+        # Goal image
+        image_goal = obs_dict["image_60_goal"]
+        image_goal_preproc = transforms(Image.fromarray(image_goal.astype(np.uint8))).reshape(-1, 3, 224, 224)
+        visual_obs_goal = r3m(image_goal_preproc * 255.0)[0].detach()
+
+        obs = torch.cat([visual_obs, proprio_obs, visual_obs_goal])
 
     else:
         raise ValueError("Invalid obs_type")
