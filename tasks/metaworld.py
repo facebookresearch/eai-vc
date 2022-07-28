@@ -30,6 +30,11 @@ class MetaWorldWrapper(gym.Wrapper):
 		self.env.model.cam_pos[2]=[0.75, 0.075, 0.7]
 		self.success = False
 	
+	@property
+	def state(self):
+		state = self._state_obs.astype(np.float32)
+		return np.concatenate((state[:4], state[18:18+4]))
+	
 	def _get_pixel_obs(self):
 		return self.render(width=self.cfg.img_size, height=self.cfg.img_size).transpose(2, 0, 1)
 	
@@ -45,6 +50,7 @@ class MetaWorldWrapper(gym.Wrapper):
 	def reset(self):
 		self.success = False
 		obs = self.env.reset()
+		self._state_obs = obs
 		if self.cfg.modality == 'pixels':
 			obs = self._get_pixel_obs()
 		elif self.cfg.modality == 'features':
@@ -58,6 +64,7 @@ class MetaWorldWrapper(gym.Wrapper):
 		for _ in range(self.cfg.action_repeat):
 			obs, r, _, info = self.env.step(action)
 			reward += r
+		self._state_obs = obs
 		if self.cfg.modality == 'pixels':
 			obs = self._get_pixel_obs()
 		elif self.cfg.modality == 'features':

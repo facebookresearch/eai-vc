@@ -49,7 +49,7 @@ class BC():
 		return d['metadata']
 
 	@torch.no_grad()
-	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True, open_loop=False):
+	def plan(self, obs, task_vec=None, state=None, eval_mode=False, step=None, t0=True, open_loop=False):
 		obs = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
 		if task_vec is not None:
 			task_vec = torch.tensor(task_vec, dtype=torch.float32, device=self.device).unsqueeze(0)

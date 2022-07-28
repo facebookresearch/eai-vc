@@ -3,7 +3,9 @@ algorithm: mtdmpc
 encoder: default+
 enc_dim: 512
 mlp_dim: 1024
-latent_dim: 50
+latent_dim: 96
+action_emb_dim: 32
+include_state: true
 fraction: 1.0
 train_iter: 200000
 lr: 1e-3

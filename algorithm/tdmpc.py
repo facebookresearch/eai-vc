@@ -128,7 +128,7 @@ class TDMPC():
 		return G
 
 	@torch.no_grad()
-	def plan(self, obs, task_vec=None, eval_mode=False, step=None, t0=True, open_loop=False):
+	def plan(self, obs, task_vec=None, state=None, eval_mode=False, step=None, t0=True, open_loop=False):
 		"""
 		Plan next action using TD-MPC inference.
 		obs: raw input observation.

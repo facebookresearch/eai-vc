@@ -1,5 +1,5 @@
 python encode_dataset.py -m \
-    task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-push \
+    task=mw-reach,mw-faucet-close,mw-faucet-open,mw-door-open,mw-window-close \
     suite=mw \
     setting=offline \
     modality=pixels \

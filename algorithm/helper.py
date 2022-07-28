@@ -142,6 +142,7 @@ class FeatureFuse(nn.Module):
 		features_to_dim = defaultdict(lambda: 2048)
 		features_to_dim.update({
 			'clip': 512,
+			'maehoi': 384,
 			'random18': 1024,
 		})
 		self.fn = nn.Sequential(
@@ -200,6 +201,24 @@ def enc(cfg):
 				  nn.Linear(cfg.enc_dim, cfg.latent_dim)]
 	print('Encoder parameters: {:,}'.format(sum(p.numel() for p in nn.Sequential(*layers).parameters())))
 	return nn.Sequential(*layers)
+
+
+def state_enc(cfg):
+	"""Returns a proprioceptive state encoder."""
+	if not cfg.get('include_state', False):
+		return (nn.Identity(), nn.Identity())
+	return (nn.Sequential(nn.Linear(8, cfg.enc_dim), nn.ELU(),
+						  nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
+						  nn.Linear(cfg.enc_dim, cfg.latent_dim)),
+		    nn.Sequential(nn.Linear(cfg.latent_dim, cfg.enc_dim), nn.ELU(),
+		   				  nn.Linear(cfg.enc_dim, cfg.latent_dim)))
+
+def action_enc(cfg):
+	"""Returns an action encoder."""
+	if cfg.get('action_emb_dim', cfg.action_dim) == cfg.action_dim:
+		return nn.Identity()
+	return nn.Sequential(nn.Linear(cfg.action_dim, cfg.enc_dim), nn.ELU(),
+						 nn.Linear(cfg.enc_dim, cfg.action_emb_dim))
 
 
 class ResidualBlock(nn.Module):
@@ -513,12 +532,19 @@ class LazyReplayBufferTaskSampler(object):
 			next_obs = data['features'][idx+1:idx+self.cfg.horizon+1]
 		elif self.cfg.modality == 'pixels':
 			obs, next_obs = self._load_pixels(data['fp'], ep_idx, np.arange(idx, idx+self.cfg.horizon+1))
+		if self.cfg.modality == 'state' or self.cfg.get('include_state', False):
+			state = torch.from_numpy(data['states'][idx]).float()
+			next_state = torch.from_numpy(np.stack(data['states'][idx+1:idx+self.cfg.horizon+1])).float()
+		if self.cfg.modality == 'state':
+			obs, next_obs = state, next_state
+		if self.cfg.get('include_state', False):
+			state = torch.cat((state[:4], state[18:18+4]))
+			next_state = torch.cat((next_state[:,:4], next_state[:,18:18+4]), axis=1)
 		else:
-			obs = torch.from_numpy(data['states'][idx])
-			next_obs = torch.from_numpy(np.stack(data['states'][idx+1:idx+self.cfg.horizon+1]))
+			state, next_state = None, None
 		action = torch.from_numpy(np.stack(data['actions'][idx:idx+self.cfg.horizon])).float().clip(-1, 1)
 		reward = torch.from_numpy(np.stack(data['rewards'][idx:idx+self.cfg.horizon])).float().unsqueeze(-1)
-		return obs, next_obs, action, reward
+		return obs, next_obs, action, reward, state, next_state
 
 
 class LazyReplayBufferIterable(IterableDataset):
@@ -546,13 +572,27 @@ class LazyReplayBufferIterable(IterableDataset):
 
 	def _sample(self):
 		obs, next_obs, action, reward = [], [], [], []
+		if self.cfg.get('include_state', False):
+			state, next_state = [], []
+		else:
+			state, next_state = None, None
 		for sampler in self._samplers:
-			_obs, _next_obs, _action, _reward = sampler._sample()
+			_obs, _next_obs, _action, _reward, _state, _next_state = sampler._sample()
 			obs.append(_obs)
 			next_obs.append(_next_obs)
 			action.append(_action)
 			reward.append(_reward)
-		return torch.stack(obs), torch.stack(next_obs), torch.stack(action), torch.stack(reward)
+			if self.cfg.get('include_state', False):
+				state.append(_state)
+				next_state.append(_next_state)
+		obs = torch.stack(obs)
+		next_obs = torch.stack(next_obs)
+		action = torch.stack(action)
+		reward = torch.stack(reward)
+		if self.cfg.get('include_state', False):
+			state = torch.stack(state)
+			next_state = torch.stack(next_state)
+		return obs, next_obs, action, reward, state, next_state
 
 	def __iter__(self):
 		while True:
@@ -602,13 +642,16 @@ class LazyReplayBuffer(ReplayBuffer):
 		return self._iter
 
 	def sample(self):
-		obs, next_obs, action, reward = next(self.iter)
+		obs, next_obs, action, reward, state, next_state = next(self.iter)
 		dims = (3,4,5) if self.cfg.modality == 'pixels' else (3,)
-		return obs.permute(1,0,2,*dims[:-1]).cuda().float(), \
-			   next_obs.permute(1,2,0,*dims).cuda().float(), \
-			   action.permute(1,2,0,3).cuda(), \
-			   reward.permute(1,2,0,3).cuda(), \
-			   None, None, None, None, 1.
+		obs = obs.permute(1,0,2,*dims[:-1]).cuda().float()
+		next_obs = next_obs.permute(1,2,0,*dims).cuda().float()
+		action = action.permute(1,2,0,3).cuda()
+		reward = reward.permute(1,2,0,3).cuda()
+		if self.cfg.get('include_state', False):
+			state = state.permute(1,0,2).cuda()
+			next_state = next_state.permute(1,2,0,3).cuda()
+		return obs, next_obs, action, reward, state, next_state, None, None, 1.
 
 
 class RendererBuffer(ReplayBuffer):

@@ -3,7 +3,7 @@ python encode_dataset.py -m \
     suite=dmcontrol \
     setting=offline \
     modality=pixels \
-    +features=mocodmcontrol,mocoego,random \
+    +features=maehoi \
     +use_all=true \
     hydra/launcher=slurm \
     hydra.job.name=dmc-enc \

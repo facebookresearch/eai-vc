@@ -34,8 +34,10 @@ def evaluate(env, agent, cfg, iteration, video):
 			enable_video = i == 0
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
 		if video: video.init(env, enabled=enable_video)
+		task_vec = env.task_vec if cfg.get('multitask', False) else None
 		while not done:
-			action = agent.plan(obs, env.task_vec if cfg.get('multitask', False) else None, eval_mode=True, step=int(1e6), t0=t==0)
+			state = env.state if cfg.get('include_state', False) else None
+			action = agent.plan(obs, task_vec, state, eval_mode=True, step=int(1e6), t0=t==0)
 			obs, reward, done, _ = env.step(action.cpu().numpy())
 			ep_reward += reward
 			if video: video.record(env)

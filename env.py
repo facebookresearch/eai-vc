@@ -101,14 +101,26 @@ class MultitaskWrapper(gym.Wrapper):
 		return vec
 
 	@property
+	def observation_spaces(self):
+		return [env.observation_space for env in self._envs]
+
+	@property
 	def observation_space(self):
 		obs_shapes = np.array([env.observation_space.shape[0] for env in self._envs])
 		return self._envs[np.argmax(obs_shapes)].observation_space
 
 	@property
+	def action_spaces(self):
+		return [env.action_space for env in self._envs]
+
+	@property
 	def action_space(self):
 		action_shapes = np.array([env.action_space.shape[0] for env in self._envs])
 		return self._envs[np.argmax(action_shapes)].action_space
+
+	@property
+	def state(self):
+		return self._env.state
 
 	def _reshape_obs(self, obs):
 		if self._cfg.modality == 'state' and obs.shape[0] < self.observation_space.shape[0]:
@@ -165,6 +177,10 @@ def make_multitask_env(cfg):
 	cfg.obs_shape = tuple(int(x) for x in env.observation_space.shape)
 	cfg.action_shape = tuple(int(x) for x in env.action_space.shape)
 	cfg.action_dim = env.action_space.shape[0]
+	cfg.obs_shapes = [tuple(int(x) for x in obs_space.shape) for obs_space in env.observation_spaces]
+	cfg.action_shapes = [tuple(int(x) for x in action_space.shape) for action_space in env.action_spaces]
+	cfg.action_dims = [action_space.shape[0] for action_space in env.action_spaces]
+	cfg.action_emb_dim = cfg.get('action_emb_dim', cfg.action_dim)
 	return env
 
 
@@ -189,5 +205,5 @@ def make_env(cfg):
 	cfg.obs_shape = tuple(int(x) for x in env.observation_space.shape)
 	cfg.action_shape = tuple(int(x) for x in env.action_space.shape)
 	cfg.action_dim = env.action_space.shape[0]
-
+	cfg.action_emb_dim = cfg.get('action_emb_dim', cfg.action_dim)
 	return env

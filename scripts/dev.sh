@@ -1,8 +1,10 @@
-python encode_dataset.py \
-    task=mw-push \
+python train_offline.py \
+    task=mw-mt10 \
     suite=mw \
-    setting=offline \
-    modality=pixels \
-    fraction=0.01 \
-    +features=maehoi \
-    +use_all=true
+    setting=multitask \
+    algorithm=mtdmpc \
+    modality=features \
+    features=mocoego \
+    include_state=true \
+    exp_name=test \
+    seed=1
