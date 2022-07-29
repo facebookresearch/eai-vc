@@ -4,10 +4,10 @@ python train_renderer.py -m \
     setting=sim \
     modality=features \
     target_modality=state \
-    features=mocoego,random \
-    exp_name=v1 \
+    features=mocodmcontrol,mocoego,random \
+    exp_name=offline-v2 \
     seed=1,2,3 \
     hydra/launcher=slurm \
-    hydra.job.name=sim-features \
-    hydra.launcher.timeout_min=1000 \
-    hydra.launcher.mem_gb=96
+    hydra.job.name=dmc-sim \
+    hydra.launcher.timeout_min=300 \
+    hydra.launcher.mem_gb=48

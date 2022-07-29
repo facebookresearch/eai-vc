@@ -9,5 +9,5 @@ python train_offline.py -m \
     hydra/launcher=slurm \
     hydra.job.name=mt10-features \
     hydra.launcher.timeout_min=1500 \
-    hydra.launcher.mem_gb=64 \
-    hydra.launcher.cpus_per_task=10
+    hydra.launcher.mem_gb=64
+    

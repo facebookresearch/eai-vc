@@ -148,7 +148,11 @@ class FeatureFuse(nn.Module):
 		self.fn = nn.Sequential(
 			nn.Linear(features_to_dim[cfg.features], cfg.enc_dim), nn.ELU(),
 			nn.Linear(cfg.enc_dim, cfg.enc_dim))
-		if cfg.frame_stack == 1:
+		if cfg.frame_stack == 1 and cfg.setting == 'sim':
+			self.layers = nn.Sequential(
+				nn.ELU(), nn.Linear(cfg.enc_dim, cfg.enc_dim), nn.ELU(),
+				nn.Linear(cfg.enc_dim, cfg.latent_dim))
+		elif cfg.frame_stack == 1:
 			self.layers = nn.Sequential(
 				nn.ELU(), nn.Linear(cfg.enc_dim, cfg.mlp_dim), nn.ELU(),
 				nn.Linear(cfg.mlp_dim, cfg.enc_dim), nn.ELU(),

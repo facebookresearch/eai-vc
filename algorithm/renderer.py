@@ -41,12 +41,10 @@ class LatentToState(nn.Module):
 	"""Predict state observation from latent representation."""
 	def __init__(self, cfg):
 		super().__init__()
-		# self._encoder = h.enc(cfg)
 		self._pred = h.mlp(cfg.latent_dim, 1024, 24)
 		self.apply(h.orthogonal_init)
 	
 	def forward(self, latent):
-		# return self._pred(self._encoder(latent))
 		return self._pred(latent)
 
 
@@ -60,7 +58,7 @@ class Renderer():
 		self._resize = transforms.Resize((64, 64), interpolation=transforms.InterpolationMode.BICUBIC)
 
 	def state_dict(self):
-		return {'decoder': self.decoder.state_dict()}
+		return {'decoder': self.decoder.state_dict(), 'optim': self.optim.state_dict()}
 
 	def save(self, fp):
 		torch.save(self.state_dict(), fp)
@@ -68,6 +66,7 @@ class Renderer():
 	def load(self, fp):
 		d = torch.load(fp)
 		self.decoder.load_state_dict(d['decoder'])
+		self.optim.load_state_dict(d['optim'])
 
 	def set_tdmpc_agent(self, agent):
 		self.agent = agent

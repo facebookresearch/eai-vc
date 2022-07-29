@@ -9,9 +9,9 @@ include_state: true
 fraction: 1.0
 train_iter: 200000
 lr: 1e-3
-batch_size: 64
+batch_size: 128
 lazy_load: true
-cache_size: 2000000
-num_workers: 8
+cache_size: 4000000
+num_workers: 16
 prefetch_factor: 4
 fetch_every: 12

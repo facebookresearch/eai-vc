@@ -3,10 +3,11 @@ python train_offline.py -m \
     suite=mw \
     setting=multitask \
     modality=state \
+    include_state=false \
     exp_name=offline-v2 \
     seed=1,2,3 \
     hydra/launcher=slurm \
     hydra.job.name=mt10-state \
     hydra.launcher.timeout_min=1100 \
-    hydra.launcher.mem_gb=32 \
-    hydra.launcher.cpus_per_task=10
+    hydra.launcher.mem_gb=32
+    

@@ -63,9 +63,18 @@ def render(cfg: dict):
 	run_name = 'renderer' + str(np.random.randint(0, int(1e6)))
 	run = wandb.init(job_type='renderer', entity=cfg.wandb_entity, project=cfg.wandb_project, name=run_name, tags='renderer')
 	agent = TDMPC(cfg)
-	tdmpc_artifact = f'{cfg.task}-{cfg.modality}-{cfg.exp_name}-{cfg.seed}-chkpt:v1'
-	print(f'Loading TDMPC artifact {tdmpc_artifact}')
-	artifact = run.use_artifact(tdmpc_artifact, type='model')
+	tdmpc_artifacts = [f'{cfg.task}-{cfg.modality}-{cfg.exp_name}-{cfg.seed}-chkpt:v{i}' for i in reversed(range(10))]
+	artifact = None
+	for tdmpc_artifact in tdmpc_artifacts:
+		try:
+			artifact = run.use_artifact(tdmpc_artifact, type='model')
+			print(f'Loading TDMPC artifact {tdmpc_artifact}')
+			break
+		except:
+			continue
+	if artifact is None:
+		print('No TDMPC artifact found. Skipping.')
+		return
 	artifact_dir = Path(artifact.download())
 	agent.load(artifact_dir / os.listdir(artifact_dir)[0])
 	renderer.set_tdmpc_agent(agent)

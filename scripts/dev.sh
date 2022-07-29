@@ -3,8 +3,6 @@ python train_offline.py \
     suite=mw \
     setting=multitask \
     algorithm=mtdmpc \
-    modality=features \
-    features=mocoego \
-    include_state=true \
+    modality=pixels \
     exp_name=test \
     seed=1

@@ -1,4 +1,5 @@
-import os
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -25,67 +26,66 @@ DEFAULT_PLOT_RC = {
 sns.set(style='whitegrid', rc=DEFAULT_PLOT_RC)
 
 
-def get_eval_mse(logging_dir, task, source, target, exp_name, seed):
+def get_metric(logging_dir, task, source, target, exp_name, seed, metric='eval_mse'):
 	fp = logging_dir / task / source / target / exp_name / str(seed) / 'metrics.csv'
-	df = pd.read_csv(fp)
-	try:
-		eval_mse = df['eval_mse'][50]
-	except:
-		# return last value instead + throw warning
-		eval_mse = df['eval_mse'].iloc[-1]
-		print('Experiment', task, source, target, exp_name, seed, 'only has', len(df['eval_mse']), 'entries')
-	return eval_mse
+	return pd.read_csv(fp)[metric].iloc[-1]
 
 
 def main():
 	tasks = {
-		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-run', 'quadruped-run'],
-		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
+		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-walk', 'walker-run'],
+		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-push']
 	}
 	logging_dir = Path('/private/home/nihansen/code/tdmpc2/renderer')
 
 	source2exp = {
-		'pixels': 'offline-v1',
-		'mocoego': 'mocoego-offline-v1',
-		'mocodmcontrol': 'mocodmcontrol-offline-v1',
-		'random': 'random-offline-v1',
+		'pixels': 'offline-v2',
+		'mocoego': 'mocoego-offline-v2',
+		'mocodmcontrol': 'mocodmcontrol-offline-v2',
+		# 'mocometaworld': 'mocometaworld-offline-v2',
+		'random': 'random-offline-v2',
 	}
 	source2label = {
 		'pixels': 'Pixels',
 		'mocodmcontrol': 'In-domain',
+		# 'mocometaworld': 'In-domain',
 		'mocoego': 'Ego4D',
 		'random': 'Random',
 	}
+	metric = 'total_loss'
 
 	entries = []
-	for task in tasks['dmcontrol']:
-		for source in ['pixels', 'mocoego', 'mocodmcontrol', 'random']:
+	for task in ['cheetah-run']: #tasks['dmcontrol'] + tasks['metaworld']:
+		for source in ['pixels', 'mocoego', 'mocodmcontrol', 'random']: # 'mocometaworld'
 			for target in ['pixels', 'state']:
 				for seed in range(1, 3+1):
 					try:
 						idx = list(source2label.keys()).index(source)
-						eval_mse = get_eval_mse(logging_dir, task, source, target, source2exp[source], seed)
+						val = get_metric(logging_dir, task, source, target, source2exp[source], seed, metric=metric)
 						entries.append(
-							(idx, task, source2label[source], target, seed, eval_mse)
+							(idx, task, source2label[source], target, seed, val)
 						)
 					except FileNotFoundError:
 						print('File not found:', task, source, target, seed)
 
-	df = pd.DataFrame(entries, columns=['idx', 'task', 'source', 'target', 'seed', 'eval_mse'])
+	df = pd.DataFrame(entries, columns=['idx', 'task', 'source', 'target', 'seed', metric])
 
-	# min across seeds
+	# mean across seeds
 	df = df.groupby(['idx', 'task', 'source', 'target']).min().reset_index()
 
-	# median across tasks
-	df = df.groupby(['idx', 'source', 'target']).median().reset_index()
+	# mean across tasks
+	# df = df.groupby(['idx', 'source', 'target']).median().reset_index()
+
+	# select a single task
+	df = df[df['task'] == 'cheetah-run']
 
 	# subgroup by target
 	df_pixels = df[df['target'] == 'pixels']
 	df_state = df[df['target'] == 'state']
 
 	# rescale mse by max value
-	df_state['eval_mse'] = (100 * df_state['eval_mse'] / df_state['eval_mse'].max()).round()
-	df_pixels['eval_mse'] = (100 * df_pixels['eval_mse'] / df_pixels['eval_mse'].max()).round()
+	df_state[metric] = (100 * df_state[metric] / df_state[metric].max()).round()
+	df_pixels[metric] = (100 * df_pixels[metric] / df_pixels[metric].max()).round()
 
 	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
@@ -94,7 +94,7 @@ def main():
 
 	# state
 	ax = axs[0]
-	sns.barplot(data=df_state, x='source', y='eval_mse', ax=ax, ci=None, palette=colors)
+	sns.barplot(data=df_state, x='source', y=metric, ax=ax, ci=None, palette=colors)
 	ax.set_title('State prediction', fontweight='bold')
 	ax.set_ylim(0, 110)
 	ax.set_xlabel('')
@@ -104,7 +104,7 @@ def main():
 	
 	# pixels
 	ax = axs[1]
-	sns.barplot(data=df_pixels, x='source', y='eval_mse', ax=ax, ci=None, palette=colors)
+	sns.barplot(data=df_pixels, x='source', y=metric, ax=ax, ci=None, palette=colors)
 	ax.set_title('Pixel prediction', fontweight='bold')
 	ax.set_ylim(0, 110)
 	ax.set_xlabel('')

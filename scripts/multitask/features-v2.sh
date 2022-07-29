@@ -5,10 +5,12 @@ python train_offline.py -m \
     algorithm=mtdmpc \
     modality=features \
     features=mocoego \
-    exp_name=offline-v2-mtdmpc \
+    latent_dim=50 \
+    mlp_dim=512 \
+    exp_name=offline-v2-prop-fast-small \
     seed=1,2,3 \
     hydra/launcher=slurm \
     hydra.job.name=mtdmpc-features \
-    hydra.launcher.timeout_min=2600 \
-    hydra.launcher.mem_gb=64 \
-    hydra.launcher.cpus_per_task=10
+    hydra.launcher.timeout_min=2900 \
+    hydra.launcher.mem_gb=96 \
+    hydra.launcher.cpus_per_task=20

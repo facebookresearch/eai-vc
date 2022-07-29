@@ -1,4 +1,5 @@
-import os
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import wandb
 import pandas as pd
@@ -30,23 +31,24 @@ PROJECT = 'tdmpc2'
 
 def main():
 	tasks = {
-		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-run', 'quadruped-run'],
-		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-pick-place']
+		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-walk', 'walker-run'],
+		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-push']
 	}
-	exp_names = ['v1', 'offline-v1', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v1', 'mocometaworld-v1', 'mocometaworld-offline-v1', 'mocoego-v1', 'mocoego-offline-v1', 'random-v1', 'random-offline-v1']
+	exp_names = ['v1', 'offline-v2', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v2', 'mocometaworld-v1', 'mocometaworld-offline-v2', 'mocoego-v1', 'mocoego-offline-v2', 'random-v1', 'random-offline-v2', 'bc-offline-v2']
 	experiment2label = {
 		'state-v1': 'State',
-		'state-offline-v1': '✻ State',
+		'state-offline-v2': '✻ State',
 		'pixels-v1': 'Pixels',
-		'pixels-offline-v1': '✻ Pixels',
+		'pixels-offline-v2': '✻ Pixels',
 		'features-mocodmcontrol-v1': 'In-domain',
-		'features-mocodmcontrol-offline-v1': '✻ In-domain',
+		'features-mocodmcontrol-offline-v2': '✻ In-domain',
 		'features-mocometaworld-v1': 'In-domain',
-		'features-mocometaworld-offline-v1': '✻ In-domain',
+		'features-mocometaworld-offline-v2': '✻ In-domain',
 		'features-mocoego-v1': 'Ego4D',
-		'features-mocoego-offline-v1': '✻ Ego4D',
+		'features-mocoego-offline-v2': '✻ Ego4D',
 		'features-random-v1': 'Random',
-		'features-random-offline-v1': '✻ Random',
+		'features-random-offline-v2': '✻ Random',
+		'state-bc-offline-v2': '✻ BC (State)',
 	}
 	num_seeds = 3
 	seeds = set(range(1, num_seeds+1))
@@ -74,7 +76,7 @@ def main():
 		   exp_name not in exp_names or \
 		   seed not in seeds:
 			continue
-		key = 'offline/total_time' if 'offline' in exp_name else 'eval/total_time'
+		key = 'offline/reward' if 'offline' in exp_name else 'eval/episode_reward'
 		hist = run.history(keys=[key], x_axis='_step')
 		if len(hist) < 4:
 			continue
@@ -83,14 +85,17 @@ def main():
 		idx = list(experiment2label.values()).index(label)
 		step = np.array(hist['_step'])
 		step = step[step <= 500_000]
-		walltime = np.array(hist[key])
-		walltime = 100_000 * walltime[:min(len(step), len(walltime))][-1] / step[-1]
-		print(f'Appending experiment {label} with walltime {round(walltime)}s per 100k steps')
+		if step[-1] < 70_000:
+			continue
+		reward = np.array(hist[key])
+		reward = reward[:min(len(step), len(reward))][-1]
+		print('experiment', experiment)
+		# print(f'Appending experiment {label} for task {task} with reward {reward} at step {step[-1]}')
 		entries.append(
-			(idx, cfg['task'], label, seed, walltime)
+			(idx, cfg['task'], label, seed, reward)
 		)
 	
-	df = pd.DataFrame(entries, columns=['idx', 'task', 'experiment', 'seed', 'walltime'])
+	df = pd.DataFrame(entries, columns=['idx', 'task', 'experiment', 'seed', 'reward'])
 	df_dmcontrol = df[df['task'].isin(tasks['dmcontrol'])]
 	df_metaworld = df[df['task'].isin(tasks['metaworld'])]
 
@@ -106,43 +111,48 @@ def main():
 	df_dmcontrol = df_dmcontrol.groupby(['idx', 'experiment']).mean().reset_index()
 	df_metaworld = df_metaworld.groupby(['idx', 'experiment']).mean().reset_index()
 
-	# rescale walltime
-	df_dmcontrol['walltime'] = (df_dmcontrol['walltime'] / 60).round()
-	df_metaworld['walltime'] = (df_metaworld['walltime'] / 60).round()
+	# normalize
+	df_dmcontrol['reward'] = (100 * df_dmcontrol['reward'] / df_dmcontrol[df_dmcontrol['experiment'] == 'State']['reward'].values[0]).round()
+	df_metaworld['reward'] = (100 * df_metaworld['reward'] / df_metaworld[df_metaworld['experiment'] == 'State']['reward'].values[0]).round()
 
 	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
+	# color palette
+	colors = []
+	for color in sns.color_palette('colorblind'):
+		colors.extend([color, color])
+
 	# dmcontrol
 	ax = axs[0]
-	sns.barplot(data=df_dmcontrol, x='experiment', y='walltime', ax=ax, ci=None)
+	sns.barplot(data=df_dmcontrol, x='experiment', y='reward', ax=ax, ci=None, palette=colors)
 	ax.set_title('DMControl', fontweight='bold')
-	ax.set_ylim(0, 550)
+	ax.set_ylim(0, 115)
 	ax.set_xlabel('')
-	ax.set_ylabel('Wall-time (min / 100k steps)')
+	ax.set_ylabel('Normalized return')
 	ax.bar_label(ax.containers[0], fontsize=18)
 	ax.tick_params(labelrotation=35)
-	for i in range(1, len(df_dmcontrol), 2):
-		ax.containers[0].patches[i]._hatch = '//'
-		ax.containers[0].patches[i].set_facecolor(ax.containers[0].patches[i-1]._facecolor)
+	for i in range(len(df_dmcontrol)):
+		if i % 2 == 1 or i == len(df_dmcontrol)-1:
+			ax.containers[0].patches[i]._hatch = '//'
 	
 	# metaworld
 	ax = axs[1]
-	sns.barplot(data=df_metaworld, x='experiment', y='walltime', ax=ax, ci=None)
+	sns.barplot(data=df_metaworld, x='experiment', y='reward', ax=ax, ci=None, palette=colors)
 	ax.set_title('Meta-World', fontweight='bold')
-	ax.set_ylim(0, 550)
+	ax.set_ylim(0, 115)
 	ax.set_xlabel('')
 	ax.set_ylabel('')
 	ax.bar_label(ax.containers[0], fontsize=18)
 	ax.tick_params(labelrotation=35)
-	for i in range(1, len(df_metaworld), 2):
-		ax.containers[0].patches[i]._hatch = '//'
-		ax.containers[0].patches[i].set_facecolor(ax.containers[0].patches[i-1]._facecolor)
+	for i in range(len(df_metaworld)):
+		if i % 2 == 1 or i == len(df_metaworld)-1:
+			ax.containers[0].patches[i]._hatch = '//'
 
 	h, l = axs[0].get_legend_handles_labels()
 	f.legend(h, l, loc='lower center', ncol=4, frameon=False)
 	plt.tight_layout()
 	f.subplots_adjust(bottom=0.16, wspace=0.15)
-	plt.savefig(Path(make_dir('plots')) / 'walltime.png', bbox_inches='tight')
+	plt.savefig(Path(make_dir('plots')) / 'singletask.png', bbox_inches='tight')
 
 
 if __name__ == '__main__':

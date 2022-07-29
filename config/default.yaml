@@ -84,12 +84,12 @@ state_dim: ???
 demo: false
 
 # cluster
-resume: false
+resume: true
 hydra:
     job:
         name: mw-pixels
     launcher:
-        cpus_per_task: 8
+        cpus_per_task: 10
         gpus_per_node: 1
         tasks_per_node: 1
         timeout_min: ???

@@ -4,10 +4,10 @@ python train_offline.py -m \
     setting=multitask \
     algorithm=mtdmpc \
     modality=pixels \
-    exp_name=offline-v2 \
+    exp_name=offline-v2-prop \
     seed=1,2,3 \
     hydra/launcher=slurm \
-    hydra.job.name=mt10-pixels \
+    hydra.job.name=mtdmpc-pixels \
     hydra.launcher.timeout_min=2900 \
-    hydra.launcher.mem_gb=80 \
-    hydra.launcher.cpus_per_task=10
+    hydra.launcher.mem_gb=80
+    
