@@ -11,7 +11,7 @@ class TOLD(nn.Module):
 		super().__init__()
 		self.cfg = cfg
 		self._encoder = h.enc(cfg)
-		self._task_encoder = h.task_enc(cfg)
+		self._state_encoder = nn.ModuleList(h.state_enc(cfg))
 		self._dynamics = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, cfg.latent_dim)
 		self._reward = h.mlp(cfg.latent_dim+cfg.action_dim, cfg.mlp_dim, 1)
 		self._pi = h.mlp(cfg.latent_dim, cfg.mlp_dim, cfg.action_dim)
@@ -26,38 +26,34 @@ class TOLD(nn.Module):
 		for m in [self._Q1, self._Q2]:
 			h.set_requires_grad(m, enable)
 
-	def h(self, obs, task_vec=None):
+	def h(self, obs, state):
 		"""Encodes an observation into its latent representation (h)."""
-		if task_vec is not None and self.cfg.modality == 'state':
-			obs = torch.cat((obs, self._task_encoder(task_vec)), dim=-1)
-		return self._encoder(obs)
+		assert not (self.cfg.get('include_state', False) and state is None)
+		x = self._encoder(obs)
+		if self.cfg.get('include_state', False):
+			x = x + self._state_encoder[0](state)
+			x = self._state_encoder[1](x)
+		return x
 
-	def next(self, z, a, task_vec=None):
+	def next(self, z, a):
 		"""Predicts next latent state (d) and single-step reward (R)."""
 		zd, zr = z, z
 		if self.cfg.detach_rewval:
 			zr = zr.detach()
-		if task_vec is not None:
-			zt = self._task_encoder(task_vec)
-			zd, zr = zd + zt, zr + zt
 		xd = torch.cat([zd, a], dim=-1)
 		xr = torch.cat([zr, a], dim=-1)
 		return self._dynamics(xd), self._reward(xr)
 
-	def pi(self, z, task_vec=None, std=0):
+	def pi(self, z, std=0):
 		"""Samples an action from the learned policy (pi)."""
-		if task_vec is not None:
-			z = z + self._task_encoder(task_vec)
 		mu = torch.tanh(self._pi(z))
 		if std > 0:
 			std = torch.ones_like(mu) * std
 			return h.TruncatedNormal(mu, std).sample(clip=0.3)
 		return mu
 
-	def Q(self, z, a, task_vec=None):
+	def Q(self, z, a):
 		"""Predict state-action value (Q)."""
-		if task_vec is not None:
-			z = z + self._task_encoder(task_vec)
 		x = torch.cat([z, a], dim=-1)
 		return self._Q1(x), self._Q2(x)
 
@@ -117,18 +113,18 @@ class TDMPC():
 		return d['metadata']
 
 	@torch.no_grad()
-	def estimate_value(self, z, actions, task_vec, horizon):
+	def estimate_value(self, z, actions, horizon):
 		"""Estimate value of a trajectory starting at latent state z and executing given actions."""
 		G, discount = 0, 1
 		for t in range(horizon):
-			z, reward = self.model.next(z, actions[t], task_vec)
+			z, reward = self.model.next(z, actions[t])
 			G += discount * reward
 			discount *= self.cfg.discount
-		G += discount * torch.min(*self.model.Q(z, self.model.pi(z, task_vec, self.cfg.min_std), task_vec))
+		G += discount * torch.min(*self.model.Q(z, self.model.pi(z, self.cfg.min_std)))
 		return G
 
 	@torch.no_grad()
-	def plan(self, obs, task_vec=None, state=None, eval_mode=False, step=None, t0=True, open_loop=False):
+	def plan(self, obs, task_vec, state, eval_mode=False, step=None, t0=True, open_loop=False):
 		"""
 		Plan next action using TD-MPC inference.
 		obs: raw input observation.
@@ -137,25 +133,28 @@ class TDMPC():
 		t0: whether current step is the first step of an episode.
 		open_loop: whether to use open-loop dynamics.
 		"""
+		assert task_vec is None, 'Use mtdmpc class for multi-task experiments'
+		assert not (self.cfg.get('include_state', False) and state is None)
+
 		# Seed steps
 		if step < self.cfg.seed_steps and not eval_mode:
 			return torch.empty(self.cfg.action_dim, dtype=torch.float32, device=self.device).uniform_(-1, 1)
 		
 		# Sample policy trajectories
 		obs = torch.tensor(obs, dtype=torch.float32, device=self.device).unsqueeze(0)
-		if task_vec is not None:
-			task_vec = torch.tensor(task_vec, dtype=torch.float32, device=self.device).unsqueeze(0)
+		if state is not None:
+			state = torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
 		horizon = int(min(self.cfg.horizon, h.linear_schedule(self.cfg.horizon_schedule, step)))
 		num_pi_trajs = int(self.cfg.mixture_coef * self.cfg.num_samples)
 		if num_pi_trajs > 0:
 			pi_actions = torch.empty(horizon, num_pi_trajs, self.cfg.action_dim, device=self.device)
-			z = self.model.h(obs, task_vec).repeat(num_pi_trajs, 1)
+			z = self.model.h(obs, state).repeat(num_pi_trajs, 1)
 			for t in range(horizon):
-				pi_actions[t] = self.model.pi(z, task_vec, self.cfg.min_std)
-				z, _ = self.model.next(z, pi_actions[t], task_vec)
+				pi_actions[t] = self.model.pi(z, self.cfg.min_std)
+				z, _ = self.model.next(z, pi_actions[t])
 
 		# Initialize state and parameters
-		z = self.model.h(obs, task_vec).repeat(self.cfg.num_samples+num_pi_trajs, 1)
+		z = self.model.h(obs, state).repeat(self.cfg.num_samples+num_pi_trajs, 1)
 		mean = torch.zeros(horizon, self.cfg.action_dim, device=self.device)
 		std = 2*torch.ones(horizon, self.cfg.action_dim, device=self.device)
 		if not t0 and hasattr(self, '_prev_mean'):
@@ -169,7 +168,7 @@ class TDMPC():
 				actions = torch.cat([actions, pi_actions], dim=1)
 
 			# Compute elite actions
-			value = self.estimate_value(z, actions, task_vec, horizon).nan_to_num_(0)
+			value = self.estimate_value(z, actions, horizon).nan_to_num_(0)
 			elite_idxs = torch.topk(value.squeeze(1), self.cfg.num_elites, dim=0).indices
 			elite_value, elite_actions = value[elite_idxs], actions[:, elite_idxs]
 
@@ -194,7 +193,7 @@ class TDMPC():
 			a += std * torch.randn(self.cfg.action_dim, device=std.device)
 		return a.clamp_(-1, 1)
 
-	def update_pi(self, zs, action, task_vec):
+	def update_pi(self, zs, action):
 		"""Update policy using a sequence of latent states."""
 		self.pi_optim.zero_grad(set_to_none=True)
 		self.model.track_q_grad(False)
@@ -202,8 +201,8 @@ class TDMPC():
 		# Loss is a weighted sum of Q-values
 		pi_loss = 0
 		for t,z in enumerate(zs):
-			a = self.model.pi(z, task_vec, self.cfg.min_std)
-			Q = torch.min(*self.model.Q(z, a, task_vec))
+			a = self.model.pi(z, self.cfg.min_std)
+			Q = torch.min(*self.model.Q(z, a))
 			if self.cfg.get('bc_loss', False):
 				lmbda = self.cfg.bc_coef/Q.abs().mean().detach()
 				pi_loss += (-lmbda * Q.mean() + h.mse(a, action[t]).mean()) * (self.cfg.rho ** t)
@@ -217,34 +216,36 @@ class TDMPC():
 		return pi_loss.item()
 
 	@torch.no_grad()
-	def _td_target(self, next_obs, reward, task_vec=None):
+	def _td_target(self, next_obs, next_state, reward):
 		"""Compute the TD-target from a reward and the observation at the following time step."""
-		next_z = self.model.h(next_obs, task_vec)
+		next_z = self.model.h(next_obs, next_state)
 		td_target = reward + self.cfg.discount * \
-			torch.min(*self.model_target.Q(next_z, self.model.pi(next_z, task_vec, self.cfg.min_std), task_vec))
+			torch.min(*self.model_target.Q(next_z, self.model.pi(next_z, self.cfg.min_std)))
 		return td_target
 
 	def update(self, replay_buffer, step=int(1e6)):
 		"""Main update function. Corresponds to one iteration of the TOLD model learning."""
-		obs, next_obses, action, reward, _, _, task_vec, idxs, weights = replay_buffer.sample()
+		obs, next_obses, action, reward, state, next_states, idxs, weights = replay_buffer.sample()
+		assert not (self.cfg.get('include_state', False) and state is None)
 		self.optim.zero_grad(set_to_none=True)
 		self.std = h.linear_schedule(self.cfg.std_schedule, step)
 		self.model.train()
 
 		# Representation
-		z = self.model.h(self.aug(obs), task_vec)
+		z = self.model.h(self.aug(obs), state)
 		zs = [z.detach()]
 
 		consistency_loss, reward_loss, value_loss, priority_loss = 0, 0, 0, 0
 		for t in range(self.cfg.horizon):
 
 			# Predictions
-			Q1, Q2 = self.model.Q(z.detach() if self.cfg.detach_rewval else z, action[t], task_vec)
-			z, reward_pred = self.model.next(z, action[t], task_vec)
+			Q1, Q2 = self.model.Q(z.detach() if self.cfg.detach_rewval else z, action[t])
+			z, reward_pred = self.model.next(z, action[t])
 			with torch.no_grad():
 				next_obs = self.aug(next_obses[t])
-				next_z = self.model_target.h(next_obs, task_vec)
-				td_target = self._td_target(next_obs, reward[t], task_vec)
+				next_state = next_states[t] if next_states is not None else None
+				next_z = self.model_target.h(next_obs, next_state)
+				td_target = self._td_target(next_obs, next_state, reward[t])
 			zs.append(z.detach())
 
 			# Losses
@@ -273,7 +274,7 @@ class TDMPC():
 			replay_buffer.update_priorities(idxs, priority_loss.clamp(max=1e4).detach())
 
 		# Update policy + target network
-		pi_loss = self.update_pi(zs, action, task_vec)
+		pi_loss = self.update_pi(zs, action)
 		if step % self.cfg.update_freq == 0:
 			h.soft_update_params(self.model, self.model_target, self.cfg.tau)
 
