@@ -89,8 +89,10 @@ def main():
 
 	f, axs = plt.subplots(1, 2, figsize=(18,6))
 
-	# colors (use tableau palette)
-	colors = sns.color_palette()[::2][1:]
+	# color palette
+	colors = []
+	for color in sns.color_palette('colorblind')[1:]:
+		colors.extend([color])
 
 	# state
 	ax = axs[0]
