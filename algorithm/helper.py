@@ -520,6 +520,7 @@ class LazyReplayBufferTaskSampler(object):
 			self._episodes[ep_idx] = torch.load(fp)
 			self._episodes[ep_idx]['fp'] = fp
 			self._episodes[ep_idx]['frames'] = {}
+			self._episodes[ep_idx]['rewards'] = np.array(self._episodes[ep_idx]['rewards']) * self.cfg.get('reward_scale', 1.)
 			self._count[ep_idx] = 0
 			if self.cfg.modality == 'features':
 				feat_dir = Path(os.path.dirname(fp)) / 'features' / self.cfg.features

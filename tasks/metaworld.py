@@ -71,7 +71,7 @@ class MetaWorldWrapper(gym.Wrapper):
 			obs = self._get_feature_obs()
 		self._frames.append(obs)
 		self.success = self.success or bool(info['success'])
-		return self._stacked_obs(), reward, False, info
+		return self._stacked_obs(), reward * self.cfg.get('reward_scale', 1.), False, info
 
 	def render(self, mode='rgb_array', width=None, height=None, camera_id=None):
 		return self.env.render(offscreen=True, resolution=(width, height), camera_name=self.camera_name)

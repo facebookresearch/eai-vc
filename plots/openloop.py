@@ -61,7 +61,6 @@ def main():
 			for horizon in [5, 50, 500]:
 				for seed in range(1, 3+1):
 					fp = logging_dir / task / source / source2exp[source] / str(horizon) / str(seed) / 'metrics.csv'
-					# breakpoint()
 					try:
 						df = pd.read_csv(fp)
 						df = df.groupby(['exp_name']).mean().reset_index()

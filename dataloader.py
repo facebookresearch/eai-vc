@@ -176,7 +176,7 @@ class DMControlDataset(OfflineDataset):
 		for fp in tqdm(self._fps, 'Loading metadata'):
 			data = torch.load(fp)
 			datas.append(data)
-			cumrew = np.array(data['rewards']).sum()
+			cumrew = np.array(data['rewards']).sum() * self._cfg.get('reward_scale', 1.)
 			cumrews.append(cumrew)
 		print('Loaded {} episodes'.format(len(datas)))
 		cumrews = np.array(cumrews)
@@ -226,7 +226,7 @@ class DMControlDataset(OfflineDataset):
 					obs = [np.concatenate([_obs, np.zeros((self._cfg.obs_shape[0] - _obs.shape[0],))]) for _obs in obs]
 				if actions.shape[-1] < self._cfg.action_dim:
 					actions = np.concatenate([actions, np.zeros((actions.shape[0], self._cfg.action_dim - actions.shape[-1]))], axis=-1)
-			episode = Episode.from_trajectory(self._cfg, obs, actions, data['rewards'])
+			episode = Episode.from_trajectory(self._cfg, obs, actions, np.array(data['rewards']) * self._cfg.get('reward_scale', 1.))
 			episode.info = data['infos']
 			episode.metadata = data['metadata']
 			episode.task_vec = torch.tensor([float(data['metadata']['cfg']['task'] == self._tasks[i]) for i in range(len(self._tasks))], dtype=torch.float32, device=episode.device)
