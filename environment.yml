@@ -14,14 +14,15 @@ dependencies:
   - cmake=3.22.1
   - cudatoolkit=11.3
   - habitat-sim==0.2.1
+  - headless
   - python=3.8
   - pytorch==1.10.2
   - tensorboard
-  - timm==0.4.12
   - torchvision==0.11.3
   - wandb
   - pip
   - pip:
+    - timm==0.6.5
     - black>=19.10
     - isort>=5.9.3
     - flake8>=4.0.1
