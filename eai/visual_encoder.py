@@ -8,7 +8,7 @@ from torch.nn import functional as F
 from habitat import logger
 
 from eai.models import resnet_gn as resnet
-from eai.models import vit
+from eai.models import vit, beit
 
 
 class VisualEncoder(nn.Module):
@@ -68,16 +68,35 @@ class VisualEncoder(nn.Module):
                 final_spatial,
             )
             self.output_size = np.prod(output_shape)
-        elif "vit" in backbone:
-            make_backbone = getattr(vit, backbone)
-            self.backbone = make_backbone(
-                img_size=image_size,
-                use_fc_norm=vit_use_fc_norm,
-                global_pool=vit_global_pool,
-                use_cls=vit_use_cls,
-                mask_ratio=vit_mask_ratio,
-                drop_path_rate=drop_path_rate,
-            )
+        elif "vit" in backbone or "beit" in backbone:
+            if self.avgpooled_image:
+                image_size = image_size // 2
+
+            if "vit" in backbone:
+                make_backbone = getattr(vit, backbone)
+                self.backbone = make_backbone(
+                    img_size=image_size,
+                    use_fc_norm=vit_use_fc_norm,
+                    global_pool=vit_global_pool,
+                    use_cls=vit_use_cls,
+                    mask_ratio=vit_mask_ratio,
+                    drop_path_rate=drop_path_rate,
+                )
+            else:
+                make_backbone = getattr(beit, backbone)
+                self.backbone = make_backbone(
+                    img_size=image_size,
+                    use_fc_norm=vit_use_fc_norm,
+                    global_pool=vit_global_pool,
+                    use_cls=vit_use_cls,
+                    mask_ratio=vit_mask_ratio,
+                    drop_path_rate=drop_path_rate,
+                    use_rel_pos_bias=False,
+                    use_shared_rel_pos_bias=True,
+                    use_abs_pos_emb=False,
+                    init_values=0.1,
+                )      
+
 
             if self.backbone.global_pool or self.backbone.use_cls:
                 self.compression = nn.Identity()

@@ -51,11 +51,11 @@ class EAINet(Net):
             name = augmentations_name
         if use_augmentations_test_time and run_type == "eval":
             name = augmentations_name
-        self.visual_transform = get_transform(name, size=128)
+        self.visual_transform = get_transform(name, size=observation_space.spaces['rgb'].shape[0])
         self.visual_transform.randomize_environments = randomize_augmentations_over_envs
 
         self.visual_encoder = VisualEncoder(
-            image_size=128,
+            image_size=observation_space.spaces['rgb'].shape[0],
             backbone=backbone,
             input_channels=3,
             resnet_baseplanes=resnet_baseplanes,
@@ -83,13 +83,13 @@ class EAINet(Net):
                 name = augmentations_name
             if use_augmentations_test_time and run_type == "eval":
                 name = augmentations_name
-            self.goal_transform = get_transform(name, size=128)
+            self.goal_transform = get_transform(name, size=observation_space.spaces['imagegoalrotation'].shape[0])
             self.goal_transform.randomize_environments = (
                 randomize_augmentations_over_envs
             )
 
             self.goal_visual_encoder = VisualEncoder(
-                image_size=128,
+                image_size=observation_space.spaces['imagegoalrotation'].shape[0],
                 backbone=backbone,
                 input_channels=3,
                 resnet_baseplanes=resnet_baseplanes,
