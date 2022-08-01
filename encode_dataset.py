@@ -38,30 +38,53 @@ def stack_frames(source, target, num_frames):
 def make_encoder(cfg):
 	"""Make an encoder."""
 	assert torch.cuda.is_available(), 'CUDA is not available'
-	assert cfg.get('features', None) is not None, 'Features must be specified'
-	if 'mae' in cfg.features:
+	features = cfg.get('features', cfg.encoder)
+	assert features is not None, 'Features must be specified'
+	if 'mae' in features:
 		import mvp
 		encoder = mvp.load("vits-mae-hoi").cuda()
 		encoder.freeze()
 	else:
-		encoder = torchvision.models.__dict__['resnet50'](pretrained=False).cuda()
-		if 'moco' in cfg.features:
-			if cfg.features == 'moco':
+		arch = 'resnet' + str(18 if features.endswith('18') else 50)
+		encoder = torchvision.models.__dict__[arch](pretrained=False).cuda()
+		if 'moco' in features:
+			# resnet50
+			if features == 'moco':
 				fn = 'moco_v2_800ep_pretrain.pth.tar'
-			elif cfg.features == 'mocodmcontrol':
+			elif features == 'mocodmcontrol':
 				fn = 'moco_v2_100ep_dmcontrol.pt'
-			elif cfg.features == 'mocometaworld':
+			elif features == 'mocometaworld':
 				fn = 'moco_v2_33ep_metaworld.pt'
-			elif cfg.features == 'mocoego':
+			elif features == 'mocoego':
 				fn = 'moco_v2_15ep_pretrain_ego4d.pth.tar'
-			elif cfg.features == 'mocoegodmcontrol':
+			elif features == 'mocoegodmcontrol':
 				fn = 'moco_v2_15ep_pretrain_ego_dmcontrol_finetune.pth.tar'
+			# resnet18
+			elif features == 'mocoego18':
+				fn = 'moco_v2_20ep_pretrain_ego4d_resnet18.pt'
 			else:
 				raise ValueError('Unknown MOCO model')
 			print(colored('Loading MOCO pretrained model: {}'.format(fn), 'green'))
 			state_dict = torch.load(os.path.join(cfg.encoder_dir, fn))['state_dict']
-			state_dict = {k.replace('module.encoder_q.', ''): v for k,v in state_dict.items() if not k.startswith('fc.')}
-			encoder.load_state_dict(state_dict, strict=False)
+			state_dict = {k.replace('module.encoder_q.', ''): v for k,v in state_dict.items() if not k.startswith('fc.') and 'encoder_k' not in k}
+			missing_keys, unexpected_keys = encoder.load_state_dict(state_dict, strict=False)
+			print('Missing keys:', missing_keys)
+			print('Unexpected keys:', unexpected_keys)
+		if cfg.get('feature_map', None) is not None:
+			# overwrite forward pass to use earlier features
+			def forward(self, x):
+				x = self.conv1(x)
+				x = self.bn1(x)
+				x = self.relu(x)
+				x = self.maxpool(x)
+				for i, layer in enumerate([self.layer1, self.layer2, self.layer3, self.layer4]):
+					x = layer(x)
+					if i+1 == cfg.feature_map:
+						break
+				return x
+			encoder.forward = lambda x: forward(encoder, x)
+			_x = torch.randn(1, 3, 224, 224).cuda()
+			print('Pretrained encoder output:', encoder(_x).shape)
 		encoder.fc = nn.Identity()
 		encoder.eval()
 	preprocess = nn.Sequential(
@@ -97,8 +120,20 @@ def encode_resnet(obs, cfg):
 	assert obs.ndim >= 3, 'Observation must be at least 3D'
 	if obs.ndim == 3:
 		obs = obs.unsqueeze(0)
-	with torch.no_grad():
-		features = __ENCODER__(__PREPROCESS__(obs.cuda() / 255.))
+	if cfg.modality == 'map':
+		obs = __PREPROCESS__(obs.cuda() / 255.)
+		with torch.no_grad(), torch.cuda.amp.autocast():
+			features = __ENCODER__(obs)
+		# breakpoint()
+		# save to disk
+		# for i in range(len(features)):
+		# 	for j in range(32):
+		# 		resize = K.Resize((224, 224), resample=Resample.BICUBIC)
+		# 		img = resize(features[i][j].float().clip(0, 1).cpu().unsqueeze(0).repeat(3, 1, 1))
+		# 		torchvision.utils.save_image(img, f'{cfg.logging_dir}/features_{i}_{j}.png')
+	else:
+		with torch.no_grad():
+			features = __ENCODER__(__PREPROCESS__(obs.cuda() / 255.))
 	return features
 
 
@@ -126,7 +161,7 @@ def main(cfg: dict):
 	for episode in tqdm(dataset.episodes):
 		
 		# Compute features
-		features = encode(episode.obs, cfg).cpu().numpy()
+		features = encode(episode.obs, cfg).cpu()
 
 		# Save features
 		feature_dir = make_dir(Path(os.path.dirname(episode.filepath)) / 'features' / cfg.features)

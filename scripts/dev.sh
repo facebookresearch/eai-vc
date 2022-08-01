@@ -1,10 +1,8 @@
-python train_offline.py \
-    task=mw-hammer \
-    suite=mw \
-    setting=offline \
-    algorithm=tdmpc \
-    modality=pixels \
-    +include_state=true \
-    fraction=0.01 \
+CUDA_VISIBLE_DEVICES=0 python train.py \
+    task=walker-walk \
+    suite=dmcontrol \
+    setting=online \
+    modality=map \
+    features=mocoego18 \
     exp_name=test \
     seed=1

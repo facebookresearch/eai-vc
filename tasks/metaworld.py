@@ -21,6 +21,7 @@ class MetaWorldWrapper(gym.Wrapper):
 			features_to_dim.update({
 				'clip': 512,
 				'maehoi': 384,
+				'mocoego18': 100352,
 			})
 			self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self._num_frames*features_to_dim[cfg.features],), dtype=np.float32)
 		else: # state

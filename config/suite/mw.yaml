@@ -3,6 +3,7 @@ frame_stack: 2
 action_repeat: 2
 episode_length: 250
 reward_scale: 0.2
+include_state: true
 train_steps: 500000
 eval_freq: 50000
 save_freq: 50000

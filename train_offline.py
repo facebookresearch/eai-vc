@@ -26,6 +26,7 @@ __LOGS__ = 'logs'
 def evaluate(env, agent, cfg, iteration, video):
 	"""Evaluate a trained agent."""
 	episode_rewards = []
+	episode_successes = []
 	for i in range(cfg.eval_episodes):
 		if cfg.get('multitask', False):
 			env.task_id = i % len(env.tasks)
@@ -38,14 +39,16 @@ def evaluate(env, agent, cfg, iteration, video):
 		while not done:
 			state = env.state if cfg.get('include_state', False) else None
 			action = agent.plan(obs, task_vec, state, eval_mode=True, step=int(1e6), t0=t==0)
-			obs, reward, done, _ = env.step(action.cpu().numpy())
+			obs, reward, done, info = env.step(action.cpu().numpy())
 			ep_reward += reward
 			if video: video.record(env)
 			t += 1
 		episode_rewards.append(ep_reward)
+		episode_successes.append(info.get('success', 0))
 		if video: video.save(iteration, f'videos/{env.task}') if cfg.get('multitask', False) else video.save(iteration)
 	episode_rewards = np.array(episode_rewards)
-	return np.nanmean(episode_rewards), episode_rewards
+	return np.nanmean(episode_rewards), episode_rewards, \
+		   np.nanmean(episode_successes), episode_successes
 
 
 def make_agent(cfg):
@@ -92,7 +95,7 @@ def train_offline(cfg: dict):
 		if iteration % cfg.eval_freq == 0:
 
 			# Evaluate agent
-			mean_reward, rewards = evaluate(env, agent, cfg, iteration, L.video)
+			mean_reward, rewards, mean_succ, succs = evaluate(env, agent, cfg, iteration, L.video)
 
 			# Log results
 			t = time.time()
@@ -103,17 +106,23 @@ def train_offline(cfg: dict):
 				'duration': t - common_metrics['t'],
 				't': t,
 				'reward': mean_reward,
+				'success': mean_succ,
 			}
 			common_metrics.update(train_metrics)
 			if cfg.get('multitask', False):
 				task_idxs = np.array([i % cfg.num_tasks for i in range(cfg.eval_episodes)])
 				task_rewards = np.empty((cfg.num_tasks, cfg.eval_episodes//cfg.num_tasks))
+				task_successes = np.empty((cfg.num_tasks, cfg.eval_episodes//cfg.num_tasks))
 				for i in range(cfg.num_tasks):
 					task_rewards[i] = rewards[task_idxs==i]
+					task_successes[i] = succs[task_idxs==i]
 				task_rewards = task_rewards.mean(axis=1)
+				task_successes = task_successes.mean(axis=1)
 				common_metrics.update({f'task_reward/{task}': task_rewards[i] for i, task in enumerate(env.tasks)})
+				common_metrics.update({f'task_success/{task}': task_successes[i] for i, task in enumerate(env.tasks)})
 			else:
 				common_metrics.update({f'task_reward/{cfg.task}': mean_reward})
+				common_metrics.update({f'task_success/{cfg.task}': mean_succ})
 			L.log(common_metrics, category='offline')
 			if iteration % cfg.save_freq == 0 and iteration > 0:
 				L.save_model(agent, 'chkpt', common_metrics)

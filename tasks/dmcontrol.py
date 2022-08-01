@@ -125,9 +125,14 @@ class FeaturesWrapper(dm_env.Environment):
 			'clip': 512,
 			'maehoi': 384,
 			'random18': 1024,
+			'mocoego18': 100352,
 		})
-		self._obs_spec = specs.BoundedArray(shape=np.array([cfg.get('frame_stack', 1)*features_to_dim[cfg.features],]),
-											dtype=np.float32,
+		if cfg.modality == 'map':
+			shape = np.array([cfg.get('frame_stack', 1)*cfg.feature_dims[0], *cfg.feature_dims[1:],])
+		else:
+			shape = np.array([cfg.get('frame_stack', 1)*features_to_dim[cfg.features],])
+		self._obs_spec = specs.BoundedArray(shape=shape,
+											dtype=np.float16 if cfg.modality == 'map' else np.float32,
 											minimum=-np.inf,
 											maximum=np.inf,
 											name='observation')
@@ -141,7 +146,11 @@ class FeaturesWrapper(dm_env.Environment):
 	def _encode(self, time_step):
 		_obs = torch.from_numpy(time_step.observation).unsqueeze(0)
 		_obs = _obs.view(-1, 3, 84, 84)
-		_obs = encode(_obs, self._cfg).view(-1)
+		_obs = encode(_obs, self._cfg)
+		if self._cfg.modality == 'map':
+			_obs = _obs.view(self._cfg.get('frame_stack', 1)*self._cfg.feature_dims[0], *self._cfg.feature_dims[1:])
+		else:
+			_obs = _obs.view(-1)
 		return ExtendedTimeStep(observation=_obs.cpu().numpy(),
 								step_type=time_step.step_type,
 								action=time_step.action,
@@ -221,7 +230,7 @@ class TimeStepToGymWrapper(object):
 	def __init__(self, env, domain, task, cfg):
 		try: # pixels
 			obs_shp = env.observation_spec().shape
-			assert cfg.modality in {'pixels', 'features'}
+			assert cfg.modality in {'pixels', 'features', 'map'}
 		except: # state
 			obs_shp = []
 			for v in env.observation_spec().values():
@@ -233,11 +242,15 @@ class TimeStepToGymWrapper(object):
 			obs_shp = (np.sum(obs_shp),)
 			assert cfg.modality != 'pixels'
 		act_shp = env.action_spec().shape
+		modality_to_dtype = {
+			'pixels': np.uint8,
+			'map': np.float16,
+		}
 		self.observation_space = gym.spaces.Box(
 			low=np.full(obs_shp, -np.inf if cfg.modality != 'pixels' else env.observation_spec().minimum),
 			high=np.full(obs_shp, np.inf if cfg.modality != 'pixels' else env.observation_spec().maximum),
 			shape=obs_shp,
-			dtype=np.float32 if cfg.modality != 'pixels' else np.uint8)
+			dtype=modality_to_dtype.get(cfg.modality, torch.float32))
 		self.action_space = gym.spaces.Box(
 			low=np.full(act_shp, env.action_spec().minimum),
 			high=np.full(act_shp, env.action_spec().maximum),
@@ -380,7 +393,7 @@ def make_dmcontrol_env(cfg):
 	env = action_scale.Wrapper(env, minimum=-1.0, maximum=+1.0)
 	cfg.state_dim = get_state_dim(env)
 
-	if cfg.modality in {'pixels', 'features'}:
+	if cfg.modality in {'pixels', 'features', 'map'}:
 		camera_id = dict(quadruped=2).get(domain, 0)
 		render_kwargs = dict(height=84, width=84, camera_id=camera_id)
 		env = pixels.Wrapper(env,
@@ -388,7 +401,7 @@ def make_dmcontrol_env(cfg):
 							render_kwargs=render_kwargs)
 		env = FrameStackWrapper(env, cfg.get('frame_stack', 1))
 	env = ExtendedTimeStepWrapper(env)
-	if cfg.modality == 'features':
+	if cfg.modality in {'features', 'map'}:
 		env = FeaturesWrapper(env, cfg)
 	env = TimeStepToGymWrapper(env, domain, task, cfg)
 

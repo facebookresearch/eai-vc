@@ -1,5 +1,6 @@
 # Misc
 *.pth
+.nfs*
 logs/
 outputs/
 multirun/
@@ -22,6 +23,7 @@ histograms/
 histograms_prev/
 openloop/
 xvfb/
+features/
 frames.mp4
 
 # Byte-compiled / optimized / DLL files

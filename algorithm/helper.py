@@ -1,4 +1,3 @@
-from email.policy import default
 import os
 import re
 import numpy as np
@@ -139,6 +138,7 @@ class FeatureFuse(nn.Module):
 		super().__init__()
 		self.cfg = cfg
 		assert cfg.modality == 'features'
+		assert cfg.features != 'mocoego18'
 		features_to_dim = defaultdict(lambda: 2048)
 		features_to_dim.update({
 			'clip': 512,
@@ -171,9 +171,95 @@ class FeatureFuse(nn.Module):
 		return self.layers(x)
 
 
+# class Flare(nn.Module):
+# 	"""Flow of latents."""
+# 	def __init__(self, latent_dim, num_frames):
+# 		super().__init__()
+# 		assert num_frames in {2, 3}
+# 		self.latent_dim = latent_dim
+# 		self.num_frames = num_frames
+	
+# 	def forward(self, x):
+# 		assert x.shape[-1] == self.latent_dim*self.num_frames
+# 		x = x.view(x.size(0), self.num_frames, self.latent_dim)
+# 		deltas = x[:, 1:] - x[:, :-1]
+# 		if self.num_frames == 3:
+# 			ddelta = (x[:, -1] - x[:, 0]).unsqueeze(1)
+# 			dddelta = (deltas[:, -1] - deltas[:, 0]).unsqueeze(1)
+# 			return torch.cat([x, deltas, ddelta, dddelta], dim=1).view(x.size(0), -1)
+# 		elif self.num_frames == 2:
+# 			return torch.cat([x, deltas], dim=1).view(x.size(0), -1)
+# 		else:
+# 			raise ValueError('Invalid number of frames: {}'.format(self.num_frames))
+
+
+class FeatureMapEncoder(nn.Module):
+	def __init__(self, cfg):
+		super(FeatureMapEncoder, self).__init__()
+		assert cfg.get('features', None) is not None
+		assert cfg.get('feature_dims', None) is not None
+		assert cfg.frame_stack in {1, 2, 3}
+		self.cfg = cfg
+		self.N = cfg.frame_stack if cfg.frame_stack == 1 else (cfg.frame_stack * 2) - 1
+		# self.fn = nn.Sequential(
+		# 	nn.Conv2d(encoder_to_channels[cfg.encoder], cfg.num_channels, 3, stride=1), nn.ReLU(),
+		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
+		# self.layers = nn.Sequential(
+		# 	nn.Conv2d(self.N*cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
+		# self.fn = nn.Sequential(
+		# 	nn.Conv2d(cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU(),
+		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
+		# self.layers = nn.Sequential(
+		# 	nn.Conv2d(self.N*cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
+		self.layers = nn.Sequential(nn.Conv2d(self.cfg.frame_stack*cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU(),
+					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
+	
+	def forward(self, x):
+		return self.layers(x)
+		# B, C, H, W = x.shape
+		# x = x.view(-1, C//self.cfg.frame_stack, H, W)
+		# x = self.fn(x)
+		# H, W = H-4, W-4
+		# if self.cfg.frame_stack in {2, 3}:
+		# 	x = x.view(B, self.cfg.frame_stack, self.cfg.num_channels, H, W)
+		# 	deltas = x[:, 1:] - x[:, :-1]
+		# 	x = torch.cat([x, deltas], dim=1)
+		# 	x = x.view(B, self.N*self.cfg.num_channels, H, W)
+		# else:
+		# 	x = x.view(B, self.cfg.frame_stack*self.cfg.num_channels, H, W)
+		# from encode_dataset import encode
+		# assert x.ndim >= 3
+		# if x.ndim == 3:
+		# 	x = x.unsqueeze(0)
+		# B, C, H, W = x.size()
+		# assert C == self.cfg.frame_stack*3
+		# x = x.view(B*C//3, 3, H, W)
+		# with torch.no_grad():
+		# 	x = encode(x, self.cfg)
+		# x = x.to(self.fn[0].weight.device)
+		# x = self.fn(x)
+		# if self.cfg.frame_stack in {2, 3}:
+		# 	x = x.view(B, self.cfg.frame_stack, self.cfg.num_channels, 24, 24)
+		# 	deltas = x[:, 1:] - x[:, :-1]
+		# 	x = torch.cat([x, deltas], dim=1)
+		# 	x = x.view(B, self.N*self.cfg.num_channels, 24, 24)
+		# else:
+		# 	x = x.view(B, self.cfg.frame_stack*self.cfg.num_channels, 24, 24)
+		# x = x.view(B, self.cfg.frame_stack*self.cfg.num_channels, 24, 24)
+		# x = self.layers(x)
+		# return x
+
 def enc(cfg):
 	"""Returns a TOLD encoder."""
-	if cfg.modality == 'pixels':
+	if cfg.modality == 'map':
+		layers = [FeatureMapEncoder(cfg)]
+		out_shape = _get_out_shape((cfg.frame_stack*cfg.feature_dims[0], *cfg.feature_dims[1:]), layers)
+		layers.extend([Flatten(), nn.Linear(np.prod(out_shape), cfg.latent_dim)])
+	elif cfg.modality == 'pixels':
 		if cfg.encoder == 'default+':
 			C = int(3*cfg.frame_stack)
 			layers = [NormalizeImg(),
@@ -254,6 +340,7 @@ def dec(cfg):
 		features_to_dim.update({
 			'clip': 512,
 			'random18': 1024,
+			'mocoego18': 100352,
 		})
 		layers = [nn.Linear(cfg.latent_dim, cfg.mlp_dim), nn.ELU(),
 				  nn.Linear(cfg.mlp_dim, cfg.enc_dim), nn.ELU(),
@@ -299,12 +386,17 @@ class RandomShiftsAug(nn.Module):
 	"""
 	def __init__(self, cfg):
 		super().__init__()
-		self.pad = int(cfg.img_size/21) if cfg.modality == 'pixels' else None
+		if cfg.modality == 'pixels':
+			self.pad = int(cfg.img_size/21)
+		elif cfg.modality == 'map':
+			self.pad = 1
+		else:
+			self.pad = None
 
 	def forward(self, x):
 		if not self.pad:
 			return x
-		n, c, h, w = x.size()
+		n, _, h, w = x.size()
 		assert h == w
 		padding = tuple([self.pad] * 4)
 		x = F.pad(x, padding, 'replicate')
@@ -324,7 +416,11 @@ class Episode(object):
 	def __init__(self, cfg, init_obs):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
-		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
+		modality_to_dtype = {
+			'pixels': torch.uint8,
+			'map': torch.float16,
+		}
+		dtype = modality_to_dtype.get(cfg.modality, torch.float32)
 		self.obs = torch.empty((cfg.episode_length+1, *init_obs.shape), dtype=dtype, device=self.device)
 		self.obs[0] = torch.tensor(init_obs, dtype=dtype, device=self.device)
 		self.action = torch.empty((cfg.episode_length, cfg.action_dim), dtype=torch.float32, device=self.device)
@@ -375,8 +471,17 @@ class ReplayBuffer(object):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
 		self.capacity = (cfg.num_tasks if cfg.get('multitask', False) else 1)*1_000_000 + 1
-		dtype = torch.uint8 if cfg.modality == 'pixels' else torch.float32
-		obs_shape = (3, *cfg.obs_shape[-2:]) if cfg.modality == 'pixels' else cfg.obs_shape
+		modality_to_dtype = {
+			'pixels': torch.uint8,
+			'map': torch.float16,
+		}
+		dtype = modality_to_dtype.get(cfg.modality, torch.float32)
+		if cfg.modality == 'pixels':
+			obs_shape = (3, *cfg.obs_shape[-2:])
+		elif cfg.modality == 'map':
+			obs_shape = cfg.feature_dims
+		else:
+			obs_shape = cfg.obs_shape
 		self._state_dim = 8
 		self._obs = torch.empty((self.capacity+1, *obs_shape), dtype=dtype, device=self.device)
 		self._last_obs = torch.empty((self.capacity//cfg.episode_length, *cfg.obs_shape), dtype=dtype, device=self.device)
@@ -399,9 +504,17 @@ class ReplayBuffer(object):
 
 	def add(self, episode: Episode):
 		assert not self.full, 'Replay buffer is full'
-		self._obs[self.idx:self.idx+self.cfg.episode_length] = episode.obs[:-1, -3:] if self.cfg.modality == 'pixels' else episode.obs[:-1]
-		self._last_obs[self.idx//self.cfg.episode_length] = episode.obs[-self.cfg.frame_stack:].view(self.cfg.frame_stack*3, *self.cfg.obs_shape[-2:]) \
-			if self.cfg.modality == 'pixels' and episode.obs.shape[1] == 3 else episode.obs[-1]
+		if self.cfg.modality == 'pixels':
+			obs = episode.obs[:-1, -3:]
+			last_obs = episode.obs[-self.cfg.frame_stack:].view(self.cfg.frame_stack*3, *self.cfg.obs_shape[-2:])
+		elif self.cfg.modality == 'map':
+			obs = episode.obs[:-1, -self.cfg.feature_dims[0]:]
+			last_obs = episode.obs[-1]
+		else:
+			obs = episode.obs[:-1]
+			last_obs = episode.obs[-1]
+		self._obs[self.idx:self.idx+self.cfg.episode_length] = obs
+		self._last_obs[self.idx//self.cfg.episode_length] = last_obs
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
 		if self.cfg.get('include_state', False):
@@ -424,17 +537,18 @@ class ReplayBuffer(object):
 		self._priorities[idxs] = priorities.squeeze(1).to(self.device) + self._eps
 
 	def _get_obs(self, arr, idxs):
-		if self.cfg.modality != 'pixels':
-			return arr[idxs]
-		obs = torch.empty((self.cfg.batch_size, 3*self.cfg.frame_stack, *arr.shape[-2:]), dtype=arr.dtype, device=torch.device('cuda'))
-		obs[:, -3:] = arr[idxs].cuda()
-		_idxs = idxs.clone()
-		mask = torch.ones_like(_idxs, dtype=torch.bool)
-		for i in range(1, self.cfg.frame_stack):
-			mask[_idxs % self.cfg.episode_length == 0] = False
-			_idxs[mask] -= 1
-			obs[:, -(i+1)*3:-i*3] = arr[_idxs].cuda()
-		return obs.float()
+		dim = self.cfg.feature_dims[0] if self.cfg.modality == 'map' else 3
+		if self.cfg.modality in {'map', 'pixels'}:
+			obs = torch.empty((self.cfg.batch_size, self.cfg.frame_stack*dim, *arr.shape[-2:]), dtype=arr.dtype, device=torch.device('cuda'))
+			obs[:, -dim:] = arr[idxs].cuda()
+			_idxs = idxs.clone()
+			mask = torch.ones_like(_idxs, dtype=torch.bool)
+			for i in range(1, self.cfg.frame_stack):
+				mask[_idxs % self.cfg.episode_length == 0] = False
+				_idxs[mask] -= 1
+				obs[:, -(i+1)*dim:-i*dim] = arr[_idxs].cuda()
+			return obs.float()
+		return arr[idxs]
 
 	def sample(self):
 		probs = (self._priorities if self._full else self._priorities[:self.idx]) ** self.cfg.per_alpha
