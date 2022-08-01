@@ -118,6 +118,7 @@ class BCPolicy:
                     "ft_pos_cur": ft_pos_cur,
                     "o_pos_des" : self.expert_demo["o_pos_des"][0, :], # Goal object position
                     "image_60"  : observation["camera_observation"]["camera60"]["image"],
+                    "image_60_goal": self.expert_demo["image_60"][-1, :]
                    }
 
         # Get next ft waypoint

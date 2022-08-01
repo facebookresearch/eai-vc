@@ -3,6 +3,7 @@ __pycache__
 logs
 wandb
 *.npz
+!*demo*.npz
 *.pyc
 *.png
 tmp/*

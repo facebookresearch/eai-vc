@@ -9,10 +9,6 @@ from PIL import Image
 
 NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
 
-r3m_model = load_r3m("resnet50")  # resnet18, resnet34
-r3m_model.eval()
-r3m_model.to("cpu") # TODO hardcoded
-
 def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
     """
     Process list of observation dicts into dict of lists (trajectories for each quantity)
@@ -88,6 +84,10 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
 def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
     """ Downsample each of the trajectories in traj_dict """
 
+    r3m_model = load_r3m("resnet50")  # resnet18, resnet34
+    r3m_model.eval()
+    r3m_model.to("cpu") # TODO hardcoded
+
     every_x_steps = max(1, int(new_time_step / cur_time_step))
     num_waypoints = int(traj_dict["t"].shape[0] / every_x_steps)
     indices_to_take = np.linspace(0, traj_dict["t"].shape[0]-1, num_waypoints, dtype=int)
@@ -118,7 +118,7 @@ def downsample_traj_dict(traj_dict, cur_time_step=0.004, new_time_step=0.1):
     r3m_dim = get_r3m_img(r3m_model, image_60[0,:]).shape[0]
     image_60_r3m = np.zeros((num_waypoints, r3m_dim))
     for i in range(num_waypoints):
-        r3m_i = get_r3m_img(r3m_model, image_60[i,:])
+        r3m_i = get_r3m_img(r3m_model, image_60[i,:]).cpu().numpy()
         image_60_r3m[i,:] = r3m_i 
     new_traj_dict["image_60_r3m"] = image_60_r3m
 
