@@ -16,7 +16,7 @@
 
 . /public/apps/anaconda3/5.0.1/etc/profile.d/conda.sh
 conda deactivate
-conda activate /private/home/$USER/.conda/envs/mae
+conda activate /private/home/$USER/.conda/envs/eai
 
 module purge
 module load cuda/11.0

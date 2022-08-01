@@ -9,11 +9,6 @@ __pycache__/
 *.vscode
 
 # data directory
-data/
-data/datasets
-data/scene_datasets
-data/image_datasets
-data/models
 tmae/data
 mae/data
 tmae/examples/output
