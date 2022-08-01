@@ -296,8 +296,8 @@ def get_mpc(mpc_type, time_horizon):
     """ Get MPC class """
 
     if mpc_type == "ftpos":
-        return FTPosSim(time_horizon=time_horizon-1)
-        #return FTPosMPC(time_horizon=time_horizon-1)
+        #return FTPosSim(time_horizon=time_horizon-1)
+        return FTPosMPC(time_horizon=time_horizon-1)
 
 
     elif mpc_type in ["ftpos_obj_two_phase", "ftpos_obj_learned_only"]:
