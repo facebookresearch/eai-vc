@@ -1,0 +1,10 @@
+defaults:
+    - _self_
+    - algo: mbirl
+
+file_path: /Users/clairelchen/projects/trifinger_claire/demos/exp_splits/one_traj/demo_info.pth
+log_dir: /Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/logs
+no_wandb: True
+run_id: ${hydra:job.num}
+exp_id: ${experiment.name}
+

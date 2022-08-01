@@ -28,10 +28,10 @@ class IRLLoss(object):
         self.irl_loss_state = irl_loss_state
         self.obj_state_type = obj_state_type
 
-    def __call__(self, full_pred_traj, expert_demo_dict, dist_scale=1):
+    def __call__(self, full_pred_traj, expert_demo_dict):
         pred_traj = d_utils.parse_pred_traj(full_pred_traj, self.irl_loss_state)
         target_traj = get_expert_demo(expert_demo_dict, self.irl_loss_state, self.obj_state_type)
-        loss = ((pred_traj * dist_scale - target_traj * dist_scale) ** 2).sum(dim=1)
+        loss = ((pred_traj - target_traj) ** 2).sum(dim=1)
         #print(loss.shape)
         #quit()
         return loss.mean()
@@ -54,7 +54,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, mpc, trajs, pl
 
     for t_i, expert_demo_dict in enumerate(trajs):
  
-        obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, conf.obj_state_type) # Initial state
+        obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, mpc.obj_state_type) # Initial state
 
         # Reset mpc for action optimization
         mpc.reset_actions()
@@ -67,7 +67,7 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, mpc, trajs, pl
             pred_traj = mpc.roll_out(obs_dict_init.copy())
 
             # use the learned loss to update the action sequence
-            target = get_target_for_cost_type(expert_demo_dict, conf.cost_type, conf.cost_state, conf.obj_state_type)
+            target = get_target_for_cost_type(expert_demo_dict, conf.cost_type, conf.cost_state, mpc.obj_state_type)
             pred_traj_for_cost = d_utils.parse_pred_traj(pred_traj, conf.cost_state)
             learned_cost_val = learned_cost(pred_traj_for_cost, target)
             learned_cost_val.backward(retain_graph=True)
@@ -75,13 +75,13 @@ def evaluate_action_optimization(conf, learned_cost, irl_loss_fn, mpc, trajs, pl
 
         # Actually take the next step after optimizing the action
         pred_state_traj_new = mpc.roll_out(obs_dict_init.copy())
-        eval_costs.append(irl_loss_fn(pred_state_traj_new, expert_demo_dict, dist_scale=conf.irl_loss_scale).mean())
+        eval_costs.append(irl_loss_fn(pred_state_traj_new, expert_demo_dict).mean())
 
         test_pred_trajs.append(pred_state_traj_new)
 
         # Plot predicted trajectories
         if plots_dir is not None:
-            plot_traj(plots_dir, outer_i, t_i, pred_state_traj_new, expert_demo_dict, conf.mpc_type, conf.obj_state_type)
+            plot_traj(plots_dir, outer_i, t_i, pred_state_traj_new, expert_demo_dict, conf.mpc_type, mpc.obj_state_type)
 
     return torch.stack(eval_costs).detach(), test_pred_trajs
 
@@ -116,7 +116,7 @@ def train(conf, learnable_cost, irl_loss_fn, mpc, train_trajs, test_trajs,
             learnable_cost_opt.zero_grad()
             expert_demo_dict = train_trajs[demo_i]
 
-            obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, conf.obj_state_type) # Initial state
+            obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, mpc.obj_state_type) # Initial state
 
             # Reset mpc for action optimization
             mpc.reset_actions()
@@ -127,7 +127,7 @@ def train(conf, learnable_cost, irl_loss_fn, mpc, train_trajs, test_trajs,
                 for i in range(conf.n_inner_iter):
                     pred_traj = fpolicy.roll_out(obs_dict_init.copy())
                     # use the learned loss to update the action sequence
-                    target = get_target_for_cost_type(expert_demo_dict, conf.cost_type, conf.cost_state, conf.obj_state_type)
+                    target = get_target_for_cost_type(expert_demo_dict, conf.cost_type, conf.cost_state, mpc.obj_state_type)
                     pred_traj_for_cost = d_utils.parse_pred_traj(pred_traj, conf.cost_state)
                     learned_cost_val = learnable_cost(pred_traj_for_cost, target)
                     diffopt.step(learned_cost_val)
@@ -136,7 +136,7 @@ def train(conf, learnable_cost, irl_loss_fn, mpc, train_trajs, test_trajs,
                 # Compute traj with updated action sequence
                 pred_traj = fpolicy.roll_out(obs_dict_init.copy())
                 # compute task loss
-                irl_loss = irl_loss_fn(pred_traj, expert_demo_dict, dist_scale=conf.irl_loss_scale).mean()
+                irl_loss = irl_loss_fn(pred_traj, expert_demo_dict).mean()
                 # backprop gradient of learned cost parameters wrt irl loss
                 irl_loss.backward(retain_graph=True)
 
@@ -149,7 +149,7 @@ def train(conf, learnable_cost, irl_loss_fn, mpc, train_trajs, test_trajs,
 
             # Plot
             if (outer_i+1) % conf.n_epoch_every_log == 0:
-                plot_traj(plots_dir, outer_i, demo_i, pred_traj, expert_demo_dict, conf.mpc_type, conf.obj_state_type)
+                plot_traj(plots_dir, outer_i, demo_i, pred_traj, expert_demo_dict, conf.mpc_type, mpc.obj_state_type)
                 pred_actions = fpolicy.action_seq.data.detach().numpy()
                 plot_actions(plots_dir, outer_i, demo_i, pred_actions, expert_demo_dict)
 
@@ -213,7 +213,7 @@ def train(conf, learnable_cost, irl_loss_fn, mpc, train_trajs, test_trajs,
                 grad_max_cost = np.nan 
                 grad_norm_cost = np.nan 
 
-        if not conf.no_wandb:
+        if not no_wandb:
             # Plot losses with wandb
             loss_dict = {
                         "train_irl_loss": irl_loss_on_train[-1], 
@@ -317,7 +317,7 @@ def get_mpc(mpc_type, time_horizon):
     else:
         raise ValueError(f"{mpc_type} is invalid mpc_type")
 
-def get_learnable_cost(conf, time_horizon):
+def get_learnable_cost(conf, time_horizon, obj_state_type):
     """ Get learnable cost """
 
     rbf_kernels  = conf.rbf_kernels
@@ -328,11 +328,11 @@ def get_learnable_cost(conf, time_horizon):
     
        
     # Set object state dim
-    if conf.obj_state_type == "pos":
+    if obj_state_type == "pos":
         o_state_dim = 3 # TODO hardcoded
-    elif conf.obj_state_type == "vertices":
+    elif obj_state_type == "vertices":
         o_state_dim = 8*3 # TODO hardcoded
-    elif conf.obj_state_type == "img_r3m":
+    elif obj_state_type == "img_r3m":
         o_state_dim = 2048 # TODO hardcoded
     else:
         raise ValueError("Invalid obj_state_type") 

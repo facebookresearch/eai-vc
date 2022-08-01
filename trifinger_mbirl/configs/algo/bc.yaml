@@ -1,0 +1,5 @@
+name: "bc"
+lr: 1e-3
+obs_type: "goal_rel"
+n_outer_iter: 500
+n_epoch_every_log: 50

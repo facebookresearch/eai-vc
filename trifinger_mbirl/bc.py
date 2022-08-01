@@ -120,7 +120,7 @@ def train(conf, dataloader, policy, model_data_dir):
 
     bc_loss = torch.nn.MSELoss()
 
-    optimizer = torch.optim.Adam(policy.parameters(), lr=conf.bc_lr)
+    optimizer = torch.optim.Adam(policy.parameters(), lr=conf.lr)
 
     for outer_i in range(conf.n_outer_iter):
         for batch, (obs, actions) in enumerate(dataloader):
