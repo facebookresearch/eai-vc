@@ -3,7 +3,7 @@ python train.py -m \
     suite=mw \
     setting=online \
     modality=pixels \
-    exp_name=v1 \
+    exp_name=v2-fs \
     seed=1,2,3 \
     hydra/launcher=slurm \
     hydra.job.name=mw-pixels \

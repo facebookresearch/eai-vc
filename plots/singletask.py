@@ -1,4 +1,5 @@
 import os, sys
+from re import L
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import wandb
@@ -34,7 +35,7 @@ def main():
 		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-walk', 'walker-run'],
 		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-push']
 	}
-	exp_names = ['v1', 'offline-v2', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v2', 'mocometaworld-v1', 'mocometaworld-offline-v2', 'mocoego-v1', 'mocoego-offline-v2', 'random-v1', 'random-offline-v2', 'bc-offline-v2']
+	exp_names = ['v1', 'offline-v2', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v2', 'mocometaworld-v1', 'mocometaworld-offline-v2-fs', 'mocoego-v1', 'mocoego-offline-v2', 'mocoego-offline-v2-fs', 'random-v1', 'random-offline-v2', 'bc-offline-v2']
 	experiment2label = {
 		'state-v1': 'State',
 		'state-offline-v2': '✻ State',
@@ -43,9 +44,10 @@ def main():
 		'features-mocodmcontrol-v1': 'In-domain',
 		'features-mocodmcontrol-offline-v2': '✻ In-domain',
 		'features-mocometaworld-v1': 'In-domain',
-		'features-mocometaworld-offline-v2': '✻ In-domain',
+		'features-mocometaworld-offline-v2-fs': '✻ In-domain',
 		'features-mocoego-v1': 'Ego4D',
 		'features-mocoego-offline-v2': '✻ Ego4D',
+		'features-mocoego-offline-v2-fs': '✻ Ego4D',
 		'features-random-v1': 'Random',
 		'features-random-offline-v2': '✻ Random',
 		'state-bc-offline-v2': '✻ BC (State)',
@@ -76,6 +78,8 @@ def main():
 		   exp_name not in exp_names or \
 		   seed not in seeds:
 			continue
+		if exp_name == 'mocoego-offline-v2' and task in tasks['metaworld']:
+			continue
 		key = 'offline/reward' if 'offline' in exp_name else 'eval/episode_reward'
 		hist = run.history(keys=[key], x_axis='_step')
 		if len(hist) < 4:
@@ -89,6 +93,8 @@ def main():
 			continue
 		reward = np.array(hist[key])
 		reward = reward[:min(len(step), len(reward))][-1]
+		if exp_name.endswith('-fs'):
+			reward *= 5
 		print('experiment', experiment)
 		# print(f'Appending experiment {label} for task {task} with reward {reward} at step {step[-1]}')
 		entries.append(

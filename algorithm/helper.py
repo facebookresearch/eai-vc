@@ -413,7 +413,7 @@ class RandomShiftsAug(nn.Module):
 
 class Episode(object):
 	"""Storage object for a single episode."""
-	def __init__(self, cfg, init_obs):
+	def __init__(self, cfg, init_obs, init_state=None):
 		self.cfg = cfg
 		self.device = torch.device(cfg.device)
 		modality_to_dtype = {
@@ -423,6 +423,10 @@ class Episode(object):
 		dtype = modality_to_dtype.get(cfg.modality, torch.float32)
 		self.obs = torch.empty((cfg.episode_length+1, *init_obs.shape), dtype=dtype, device=self.device)
 		self.obs[0] = torch.tensor(init_obs, dtype=dtype, device=self.device)
+		if cfg.get('include_state', False):
+			assert init_state is not None
+			self.state = torch.empty((cfg.episode_length+1, *init_state.shape), dtype=dtype, device=self.device)
+			self.state[0] = torch.tensor(init_state, dtype=dtype, device=self.device)
 		self.action = torch.empty((cfg.episode_length, cfg.action_dim), dtype=torch.float32, device=self.device)
 		self.reward = torch.empty((cfg.episode_length,), dtype=torch.float32, device=self.device)
 		self.cumulative_reward = 0
@@ -452,8 +456,10 @@ class Episode(object):
 		self.add(*transition)
 		return self
 
-	def add(self, obs, action, reward, done):
+	def add(self, obs, state, action, reward, done):
 		self.obs[self._idx+1] = torch.tensor(obs, dtype=self.obs.dtype, device=self.obs.device)
+		if self.cfg.get('include_state', False):
+			self.state[self._idx+1] = torch.tensor(state, dtype=self.state.dtype, device=self.state.device)
 		self.action[self._idx] = action
 		self.reward[self._idx] = reward
 		self.cumulative_reward += reward
@@ -506,20 +512,23 @@ class ReplayBuffer(object):
 		assert not self.full, 'Replay buffer is full'
 		if self.cfg.modality == 'pixels':
 			obs = episode.obs[:-1, -3:]
-			last_obs = episode.obs[-self.cfg.frame_stack:].view(self.cfg.frame_stack*3, *self.cfg.obs_shape[-2:])
 		elif self.cfg.modality == 'map':
 			obs = episode.obs[:-1, -self.cfg.feature_dims[0]:]
-			last_obs = episode.obs[-1]
 		else:
 			obs = episode.obs[:-1]
-			last_obs = episode.obs[-1]
+		last_obs = episode.obs[-1]
 		self._obs[self.idx:self.idx+self.cfg.episode_length] = obs
 		self._last_obs[self.idx//self.cfg.episode_length] = last_obs
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action
 		self._reward[self.idx:self.idx+self.cfg.episode_length] = episode.reward
 		if self.cfg.get('include_state', False):
-			states = torch.tensor(episode.metadata['states'], dtype=torch.float32)
-			states = torch.cat((states[:,:4], states[:,18:18+4]), dim=-1)
+			if 'state' in episode.__dict__:
+				states = torch.tensor(episode.state, dtype=torch.float32)
+			elif 'metadata' in episode.__dict__:
+				states = torch.tensor(episode.metadata['states'], dtype=torch.float32)
+				states = torch.cat((states[:,:4], states[:,18:18+4]), dim=-1)
+			else:
+				raise ValueError('Episode does not contain state or metadata')
 			self._state[self.idx:self.idx+self.cfg.episode_length, :self._state_dim] = states[:-1]
 			self._last_state[self.idx//self.cfg.episode_length, :self._state_dim] = states[-1]
 		if self._full:

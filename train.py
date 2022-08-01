@@ -20,15 +20,16 @@ torch.backends.cudnn.benchmark = True
 __CONFIG__, __MODELS__ = 'cfgs', 'models'
 
 
-def evaluate(env, agent, num_episodes, step, env_step, video):
+def evaluate(env, agent, cfg, step, env_step, video):
 	"""Evaluate a trained agent and optionally save a video."""
 	episode_rewards = []
 	episode_successes = []
-	for i in range(num_episodes):
+	for i in range(cfg.eval_episodes):
 		obs, done, ep_reward, t = env.reset(), False, 0, 0
 		if video: video.init(env, enabled=(i==0))
 		while not done:
-			action = agent.plan(obs, None, None, eval_mode=True, step=step, t0=t==0)
+			state = env.state if cfg.get('include_state', False) else None
+			action = agent.plan(obs, None, state, eval_mode=True, step=step, t0=t==0)
 			obs, reward, done, info = env.step(action.cpu().numpy())
 			ep_reward += reward
 			if video: video.record(env)
@@ -57,11 +58,13 @@ def train(cfg: dict):
 
 		# Collect trajectory
 		obs = env.reset()
-		episode = Episode(cfg, obs)
+		state = env.state if cfg.get('include_state', False) else None
+		episode = Episode(cfg, obs, state)
 		while not episode.done:
-			action = agent.plan(obs, None, None, step=step, t0=episode.first)
+			action = agent.plan(obs, None, state, step=step, t0=episode.first)
 			obs, reward, done, info = env.step(action.cpu().numpy())
-			episode += (obs, action, reward, done)
+			state = env.state if cfg.get('include_state', False) else None
+			episode += (obs, state, action, reward, done)
 		if len(episode) < cfg.episode_length:
 			print(len(episode), done, episode.reward[:len(episode)].sum().cpu().item())
 		assert len(episode) == cfg.episode_length
@@ -89,7 +92,7 @@ def train(cfg: dict):
 
 		# Evaluate agent periodically
 		if env_step % cfg.eval_freq == 0:
-			eval_rew, eval_succ = evaluate(env, agent, cfg.eval_episodes, step, env_step, L.video)
+			eval_rew, eval_succ = evaluate(env, agent, cfg, step, env_step, L.video)
 			common_metrics.update({
 				'episode_reward': eval_rew,
 				'episode_success': eval_succ})

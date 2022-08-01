@@ -3,7 +3,7 @@ python train_offline.py -m \
     suite=mw \
     setting=offline \
     modality=pixels \
-    exp_name=offline-v2 \
+    exp_name=offline-v2-fs \
     seed=1,2,3 \
     hydra/launcher=slurm \
     hydra.job.name=mw-pixels \

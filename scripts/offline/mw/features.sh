@@ -3,8 +3,7 @@ python train_offline.py -m \
     suite=mw \
     setting=offline \
     modality=features \
-    features=mocoego,mocometaworld \
-    +include_state=true \
+    features=random \
     exp_name=offline-v2-fs \
     seed=1,2,3 \
     hydra/launcher=slurm \

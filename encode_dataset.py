@@ -124,13 +124,6 @@ def encode_resnet(obs, cfg):
 		obs = __PREPROCESS__(obs.cuda() / 255.)
 		with torch.no_grad(), torch.cuda.amp.autocast():
 			features = __ENCODER__(obs)
-		# breakpoint()
-		# save to disk
-		# for i in range(len(features)):
-		# 	for j in range(32):
-		# 		resize = K.Resize((224, 224), resample=Resample.BICUBIC)
-		# 		img = resize(features[i][j].float().clip(0, 1).cpu().unsqueeze(0).repeat(3, 1, 1))
-		# 		torchvision.utils.save_image(img, f'{cfg.logging_dir}/features_{i}_{j}.png')
 	else:
 		with torch.no_grad():
 			features = __ENCODER__(__PREPROCESS__(obs.cuda() / 255.))
