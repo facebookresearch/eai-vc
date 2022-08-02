@@ -12,6 +12,7 @@ import wandb
 import hydra
 from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
+import logging
 
 #import trifinger_simulation.finger_types_data
 
@@ -25,6 +26,8 @@ import trifinger_mbirl.mbirl as mbirl
 import trifinger_mbirl.bc as bc
 from trifinger_mbirl.policy import DeterministicPolicy
 
+# A logger for this file
+log = logging.getLogger(__name__)
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(conf):
@@ -40,6 +43,8 @@ def main(conf):
 
     # Name experiment and make exp directory
     exp_dir, exp_str = get_exp_dir(conf)
+
+    log.info(f"Saving experiment logs in {exp_dir}")
 
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir)
@@ -60,7 +65,7 @@ def main(conf):
     if not conf.no_wandb:
         # wandb init
         wandb.init(project='trifinger_mbirl', entity='clairec', name=exp_str,
-                   config = OmegaConf.to_container(conf.algo, resolve=True, throw_on_missing=True),
+                   config = OmegaConf.to_container(conf, resolve=True, throw_on_missing=True),
                    settings=wandb.Settings(start_method="thread"))
     
     ### MBIRL training

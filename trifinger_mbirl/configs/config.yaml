@@ -8,3 +8,8 @@ no_wandb: True
 run_id: ${hydra:job.num}
 exp_id: ${experiment.name}
 
+hydra:
+    sweep:
+        dir: multirun/${now:%Y-%m-%d}/exp_${experiment.name}-${now:%H-%M-%S}
+        subdir: ${hydra.job.num}
+
