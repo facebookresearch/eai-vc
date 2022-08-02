@@ -491,13 +491,13 @@ class ReplayBuffer(object):
 		dim = self.cfg.feature_dims[0] if self.cfg.modality == 'map' else 3
 		if self.cfg.modality in {'map', 'pixels'}:
 			obs = torch.empty((self.cfg.batch_size, self.cfg.frame_stack*dim, *arr.shape[-2:]), dtype=arr.dtype, device=torch.device('cuda'))
-			obs[:, -dim:] = arr[idxs].cuda()
+			obs[:, -dim:] = arr[idxs].cuda(non_blocking=True)
 			_idxs = idxs.clone()
 			mask = torch.ones_like(_idxs, dtype=torch.bool)
 			for i in range(1, self.cfg.frame_stack):
 				mask[_idxs % self.cfg.episode_length == 0] = False
 				_idxs[mask] -= 1
-				obs[:, -(i+1)*dim:-i*dim] = arr[_idxs].cuda()
+				obs[:, -(i+1)*dim:-i*dim] = arr[_idxs].cuda(non_blocking=True)
 			return obs.float()
 		return arr[idxs]
 
@@ -524,13 +524,18 @@ class ReplayBuffer(object):
 				next_state[t] = self._state[_idxs+1, :self._state_dim]
 
 		mask = (_idxs+1) % self.cfg.episode_length == 0
-		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(next_obs.device).float()
+		next_obs[-1, mask] = self._last_obs[_idxs[mask]//self.cfg.episode_length].to(next_obs.device, non_blocking=True).float()
 		if state is not None:
-			state = state.cuda()
+			state = state.cuda(non_blocking=True)
 			next_state[-1, mask] = self._last_state[_idxs[mask]//self.cfg.episode_length, :self._state_dim].to(next_state.device).float()
-			next_state = next_state.cuda()
+			next_state = next_state.cuda(non_blocking=True)
+		next_obs = next_obs.cuda(non_blocking=True)
+		action = action.cuda(non_blocking=True)
+		reward = reward.unsqueeze(2).cuda(non_blocking=True)
+		idxs = idxs.cuda(non_blocking=True)
+		weights = weights.cuda(non_blocking=True)
 
-		return obs.cuda(), next_obs.cuda(), action.cuda(), reward.cuda().unsqueeze(2), state, next_state, idxs.cuda(), weights.cuda()
+		return obs, next_obs, action, reward, state, next_state, idxs, weights
 
 
 class LazyReplayBufferTaskSampler(object):
@@ -592,8 +597,15 @@ class LazyReplayBufferTaskSampler(object):
 		self._count[ep_idx] += 1
 		idx = np.random.randint(self.cfg.episode_length-self.cfg.horizon)
 		if self.cfg.modality == 'features':
-			obs = data['features'][idx]
-			next_obs = data['features'][idx+1:idx+self.cfg.horizon+1]
+			if self.cfg.frame_stack == 2: # currently only supports 2 frames
+				if idx > 0:
+					obs = torch.cat((data['features'][idx-1], data['features'][idx]), dim=-1)
+				else:
+					obs = torch.cat((data['features'][idx], data['features'][idx]), dim=-1)
+				next_obs = torch.cat((data['features'][idx:idx+self.cfg.horizon], data['features'][idx+1:idx+self.cfg.horizon+1]), dim=-1) #.contiguous()
+			else: # assume no frame stacking
+				obs = data['features'][idx]
+				next_obs = data['features'][idx+1:idx+self.cfg.horizon+1]
 		elif self.cfg.modality == 'pixels':
 			obs, next_obs = self._load_pixels(data['fp'], ep_idx, np.arange(idx, idx+self.cfg.horizon+1))
 		if self.cfg.modality == 'state' or self.cfg.get('include_state', False):
@@ -676,7 +688,7 @@ class LazyReplayBuffer(ReplayBuffer):
 	but also does not support prioritized sampling due to the buffer living in multiple processes.
 	"""
 	def __init__(self, cfg):
-		assert cfg.frame_stack == 1, 'Lazy replay buffer does not support frame stacking'
+		assert cfg.frame_stack == 1 or cfg.modality == 'features', 'Lazy replay buffer only supports frame stacking for features'
 		self.cfg = cfg
 		self.capacity = cfg.get('cache_size', 1_000_000)
 		self.ep_per_worker = int((self.capacity / cfg.episode_length) / max(cfg.num_workers, 1))
@@ -687,12 +699,19 @@ class LazyReplayBuffer(ReplayBuffer):
 		self._tasks = tasks
 		iterable = LazyReplayBufferIterable(self.cfg, max_episodes=self.ep_per_worker)
 		iterable.set(fps, tasks)
-		self._loader = torch.utils.data.DataLoader(iterable,
-												   batch_size=self.cfg.batch_size,
-											 	   num_workers=self.cfg.num_workers,
-												   prefetch_factor=self.cfg.prefetch_factor,
-											 	   pin_memory=True,
-											 	   worker_init_fn=_worker_init_fn)
+		if self.cfg.num_workers > 0:
+			self._loader = torch.utils.data.DataLoader(iterable,
+													batch_size=self.cfg.batch_size,
+													num_workers=self.cfg.num_workers,
+													prefetch_factor=self.cfg.prefetch_factor,
+													pin_memory=True,
+													worker_init_fn=_worker_init_fn)
+		else: # single process
+			self._loader = torch.utils.data.DataLoader(iterable,
+												batch_size=self.cfg.batch_size,
+												num_workers=0,
+												pin_memory=True,
+												worker_init_fn=_worker_init_fn)
 		self._iter = None
 	
 	@property
@@ -708,13 +727,13 @@ class LazyReplayBuffer(ReplayBuffer):
 	def sample(self):
 		obs, next_obs, action, reward, state, next_state = next(self.iter)
 		dims = (3,4,5) if self.cfg.modality == 'pixels' else (3,)
-		obs = obs.permute(1,0,2,*dims[:-1]).cuda().float()
-		next_obs = next_obs.permute(1,2,0,*dims).cuda().float()
-		action = action.permute(1,2,0,3).cuda()
-		reward = reward.permute(1,2,0,3).cuda()
+		obs = obs.permute(1,0,2,*dims[:-1]).cuda(non_blocking=True).float()
+		next_obs = next_obs.permute(1,2,0,*dims).cuda(non_blocking=True).float()
+		action = action.permute(1,2,0,3).cuda(non_blocking=True)
+		reward = reward.permute(1,2,0,3).cuda(non_blocking=True)
 		if self.cfg.get('include_state', False):
-			state = state.permute(1,0,2).cuda()
-			next_state = next_state.permute(1,2,0,3).cuda()
+			state = state.permute(1,0,2).cuda(non_blocking=True)
+			next_state = next_state.permute(1,2,0,3).cuda(non_blocking=True)
 		return obs, next_obs, action, reward, state, next_state, None, None, 1.
 
 

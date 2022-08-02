@@ -1,5 +1,5 @@
 python train.py -m \
-    task=cup-catch,finger-spin,cheetah-run,walker-walk,walker-run \
+    task=mw-drawer-close,mw-drawer-open,mw-hammer,mw-box-close,mw-push \
     suite=mw \
     setting=online \
     modality=map \

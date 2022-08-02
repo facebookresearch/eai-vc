@@ -251,7 +251,7 @@ class MultiTDMPC():
 				Q1, Q2 = self.model.Q(z, action[task_id, t], task_id)
 				z, reward_pred = self.model.next(z, action[task_id, t], task_id)
 				with torch.no_grad():
-					next_obs = self.aug(next_obses[task_id,t])
+					next_obs = self.aug(next_obses[task_id,t]).contiguous()
 					next_state = next_states[task_id,t] if next_states is not None else None
 					next_z = self.model_target.h(next_obs, next_state)
 					td_target = self._td_target(next_obs, next_state, reward[task_id,t], task_id)

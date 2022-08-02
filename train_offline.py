@@ -47,6 +47,7 @@ def evaluate(env, agent, cfg, iteration, video):
 		episode_successes.append(info.get('success', 0))
 		if video: video.save(iteration, f'videos/{env.task}') if cfg.get('multitask', False) else video.save(iteration)
 	episode_rewards = np.array(episode_rewards)
+	episode_successes = np.array(episode_successes)
 	return np.nanmean(episode_rewards), episode_rewards, \
 		   np.nanmean(episode_successes), episode_successes
 

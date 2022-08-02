@@ -1,8 +1,9 @@
-CUDA_VISIBLE_DEVICES=0 python train.py \
-    task=mw-push \
+python train_offline.py \
+    task=mw-mt10 \
     suite=mw \
-    setting=online \
-    modality=map \
-    features=mocoego18 \
+    setting=multitask \
+    algorithm=mtdmpc \
+    modality=features \
+    features=mocoego \
     exp_name=test \
     seed=1

@@ -64,7 +64,7 @@ class MetaWorldWrapper(gym.Wrapper):
 	
 	def reset(self):
 		self.success = False
-		obs = self.env.reset()
+		obs = self.env.reset().astype(np.float32)
 		self._state_obs = obs
 		if self.cfg.modality == 'pixels':
 			obs = self._get_pixel_obs()
@@ -79,6 +79,7 @@ class MetaWorldWrapper(gym.Wrapper):
 		for _ in range(self.cfg.action_repeat):
 			obs, r, _, info = self.env.step(action)
 			reward += r
+		obs = obs.astype(np.float32)
 		self._state_obs = obs
 		if self.cfg.modality == 'pixels':
 			obs = self._get_pixel_obs()
