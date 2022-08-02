@@ -7,6 +7,7 @@ from collections import deque
 from PIL import Image
 from torch.utils.data import Dataset
 from algorithm.helper import Episode
+from encode_dataset import encode
 from logger import make_dir
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -204,11 +205,14 @@ class DMControlDataset(OfflineDataset):
 						data['metadata']['phys_states'] = data['phys_states']
 					if self._cfg.get('all_modalities', False):
 						data['metadata']['features'] = obs
-				if self._cfg.modality == 'pixels' or self._cfg.get('all_modalities', False):
+				if self._cfg.modality in {'pixels', 'map'} or self._cfg.get('all_modalities', False):
 					frames_dir = Path(os.path.dirname(fp)) / 'frames'
 					assert frames_dir.exists(), 'No frames directory found for {}'.format(fp)
 					frame_fps = [frames_dir / fn for fn in data['frames']]
 					obs = np.stack([np.array(Image.open(fp)) for fp in frame_fps]).transpose(0, 3, 1, 2)
+					if self._cfg.modality == 'map':
+						obs = torch.from_numpy(obs)
+						obs = encode(obs, self._cfg).cpu().numpy()
 					data['metadata']['states'] = data['states']
 					if 'phys_states' in data:
 						data['metadata']['phys_states'] = data['phys_states']

@@ -35,22 +35,23 @@ def main():
 		'dmcontrol': ['cup-catch', 'finger-spin', 'cheetah-run', 'walker-walk', 'walker-run'],
 		'metaworld': ['mw-drawer-close', 'mw-drawer-open', 'mw-hammer', 'mw-box-close', 'mw-push']
 	}
-	exp_names = ['v1', 'offline-v2', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v2', 'mocometaworld-v1', 'mocometaworld-offline-v2-fs', 'mocoego-v1', 'mocoego-offline-v2', 'mocoego-offline-v2-fs', 'random-v1', 'random-offline-v2', 'bc-offline-v2']
-	experiment2label = {
+	exp_names = ['v1', 'offline-v2', 'offline-v2-fs', 'mocodmcontrol-v1', 'mocodmcontrol-offline-v2', 'mocometaworld-v1', 'mocometaworld-offline-v2-fs', 'mocoego-v1', 'mocoego-offline-v2', 'mocoego-offline-v2-fs', 'random-v1', 'random-offline-v2', 'bc-offline-v2']
+	experiment2label = { # ✻
 		'state-v1': 'State',
-		'state-offline-v2': '✻ State',
+		'state-offline-v2': ' State',
 		'pixels-v1': 'Pixels',
-		'pixels-offline-v2': '✻ Pixels',
+		'pixels-offline-v2': ' Pixels',
+		'pixels-offline-v2-fs': ' Pixels',
 		'features-mocodmcontrol-v1': 'In-domain',
-		'features-mocodmcontrol-offline-v2': '✻ In-domain',
+		'features-mocodmcontrol-offline-v2': ' In-domain',
 		'features-mocometaworld-v1': 'In-domain',
-		'features-mocometaworld-offline-v2-fs': '✻ In-domain',
+		'features-mocometaworld-offline-v2-fs': ' In-domain',
 		'features-mocoego-v1': 'Ego4D',
-		'features-mocoego-offline-v2': '✻ Ego4D',
-		'features-mocoego-offline-v2-fs': '✻ Ego4D',
+		'features-mocoego-offline-v2': ' Ego4D',
+		'features-mocoego-offline-v2-fs': ' Ego4D',
 		'features-random-v1': 'Random',
-		'features-random-offline-v2': '✻ Random',
-		'state-bc-offline-v2': '✻ BC (State)',
+		'features-random-offline-v2': ' Random',
+		'state-bc-offline-v2': 'BC (State)',
 	}
 	num_seeds = 3
 	seeds = set(range(1, num_seeds+1))
@@ -74,11 +75,12 @@ def main():
 			continue
 		task = cfg.get('task', None)
 		exp_name = cfg.get('exp_name', None)
+		modality = cfg.get('modality', None)
 		if task not in (tasks['dmcontrol'] + tasks['metaworld']) or \
 		   exp_name not in exp_names or \
 		   seed not in seeds:
 			continue
-		if exp_name == 'mocoego-offline-v2' and task in tasks['metaworld']:
+		if (exp_name == 'mocoego-offline-v2' or (exp_name == 'offline-v2' and modality == 'pixels')) and task in tasks['metaworld']:
 			continue
 		key = 'offline/reward' if 'offline' in exp_name else 'eval/episode_reward'
 		hist = run.history(keys=[key], x_axis='_step')

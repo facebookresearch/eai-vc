@@ -171,87 +171,24 @@ class FeatureFuse(nn.Module):
 		return self.layers(x)
 
 
-# class Flare(nn.Module):
-# 	"""Flow of latents."""
-# 	def __init__(self, latent_dim, num_frames):
-# 		super().__init__()
-# 		assert num_frames in {2, 3}
-# 		self.latent_dim = latent_dim
-# 		self.num_frames = num_frames
-	
-# 	def forward(self, x):
-# 		assert x.shape[-1] == self.latent_dim*self.num_frames
-# 		x = x.view(x.size(0), self.num_frames, self.latent_dim)
-# 		deltas = x[:, 1:] - x[:, :-1]
-# 		if self.num_frames == 3:
-# 			ddelta = (x[:, -1] - x[:, 0]).unsqueeze(1)
-# 			dddelta = (deltas[:, -1] - deltas[:, 0]).unsqueeze(1)
-# 			return torch.cat([x, deltas, ddelta, dddelta], dim=1).view(x.size(0), -1)
-# 		elif self.num_frames == 2:
-# 			return torch.cat([x, deltas], dim=1).view(x.size(0), -1)
-# 		else:
-# 			raise ValueError('Invalid number of frames: {}'.format(self.num_frames))
-
-
 class FeatureMapEncoder(nn.Module):
 	def __init__(self, cfg):
 		super(FeatureMapEncoder, self).__init__()
-		assert cfg.get('features', None) is not None
 		assert cfg.get('feature_dims', None) is not None
-		assert cfg.frame_stack in {1, 2, 3}
 		self.cfg = cfg
-		self.N = cfg.frame_stack if cfg.frame_stack == 1 else (cfg.frame_stack * 2) - 1
-		# self.fn = nn.Sequential(
-		# 	nn.Conv2d(encoder_to_channels[cfg.encoder], cfg.num_channels, 3, stride=1), nn.ReLU(),
-		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
-		# self.layers = nn.Sequential(
-		# 	nn.Conv2d(self.N*cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
-		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
-		# self.fn = nn.Sequential(
-		# 	nn.Conv2d(cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU(),
-		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
-		# self.layers = nn.Sequential(
-		# 	nn.Conv2d(self.N*cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
-		# 	nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
-		self.layers = nn.Sequential(nn.Conv2d(self.cfg.frame_stack*cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU(),
-					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
-					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
-					nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
+		if cfg.feature_dims[-1] == 28:
+			self.layers = nn.Sequential(nn.Conv2d(self.cfg.frame_stack*cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU(),
+						nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+						nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
+						nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
+		elif cfg.feature_dims[-1] == 14:
+			self.layers = nn.Sequential(nn.Conv2d(self.cfg.frame_stack*cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU())
+		else:
+			raise ValueError('Invalid feature dims: {}'.format(cfg.feature_dims))
 	
 	def forward(self, x):
 		return self.layers(x)
-		# B, C, H, W = x.shape
-		# x = x.view(-1, C//self.cfg.frame_stack, H, W)
-		# x = self.fn(x)
-		# H, W = H-4, W-4
-		# if self.cfg.frame_stack in {2, 3}:
-		# 	x = x.view(B, self.cfg.frame_stack, self.cfg.num_channels, H, W)
-		# 	deltas = x[:, 1:] - x[:, :-1]
-		# 	x = torch.cat([x, deltas], dim=1)
-		# 	x = x.view(B, self.N*self.cfg.num_channels, H, W)
-		# else:
-		# 	x = x.view(B, self.cfg.frame_stack*self.cfg.num_channels, H, W)
-		# from encode_dataset import encode
-		# assert x.ndim >= 3
-		# if x.ndim == 3:
-		# 	x = x.unsqueeze(0)
-		# B, C, H, W = x.size()
-		# assert C == self.cfg.frame_stack*3
-		# x = x.view(B*C//3, 3, H, W)
-		# with torch.no_grad():
-		# 	x = encode(x, self.cfg)
-		# x = x.to(self.fn[0].weight.device)
-		# x = self.fn(x)
-		# if self.cfg.frame_stack in {2, 3}:
-		# 	x = x.view(B, self.cfg.frame_stack, self.cfg.num_channels, 24, 24)
-		# 	deltas = x[:, 1:] - x[:, :-1]
-		# 	x = torch.cat([x, deltas], dim=1)
-		# 	x = x.view(B, self.N*self.cfg.num_channels, 24, 24)
-		# else:
-		# 	x = x.view(B, self.cfg.frame_stack*self.cfg.num_channels, 24, 24)
-		# x = x.view(B, self.cfg.frame_stack*self.cfg.num_channels, 24, 24)
-		# x = self.layers(x)
-		# return x
+		
 
 def enc(cfg):
 	"""Returns a TOLD encoder."""
@@ -516,7 +453,12 @@ class ReplayBuffer(object):
 			obs = episode.obs[:-1, -self.cfg.feature_dims[0]:]
 		else:
 			obs = episode.obs[:-1]
-		last_obs = episode.obs[-1]
+		if self.cfg.modality == 'pixels' and episode.obs.shape[1] == 3: # offline w/ frame-stacking
+			last_obs = episode.obs[-self.cfg.frame_stack:].view(self.cfg.frame_stack*3, *self.cfg.obs_shape[-2:])
+		elif self.cfg.modality == 'map' and episode.obs.shape[1] == self.cfg.feature_dims[0]: # offline w/ frame-stacking
+			last_obs = episode.obs[-self.cfg.frame_stack:].view(self.cfg.frame_stack*self.cfg.feature_dims[0], *self.cfg.obs_shape[1:])
+		else: # online or no frame-stacking
+			last_obs = episode.obs[-1]
 		self._obs[self.idx:self.idx+self.cfg.episode_length] = obs
 		self._last_obs[self.idx//self.cfg.episode_length] = last_obs
 		self._action[self.idx:self.idx+self.cfg.episode_length] = episode.action

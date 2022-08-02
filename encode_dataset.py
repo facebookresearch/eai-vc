@@ -6,12 +6,9 @@ os.environ['MUJOCO_GL'] = 'egl'
 import torch
 import numpy as np
 from pathlib import Path
-from cfg_parse import parse_cfg
-from dataloader import make_dataset
 from termcolor import colored
 from logger import make_dir
 from tqdm import tqdm
-from collections import deque
 import torch.nn as nn
 import torchvision
 import hydra
@@ -22,17 +19,6 @@ torch.backends.cudnn.benchmark = True
 
 __ENCODER__ = None
 __PREPROCESS__ = None
-
-
-def stack_frames(source, target, num_frames):
-    frames = deque([], maxlen=num_frames)
-    for _ in range(num_frames):
-        frames.append(source[0])
-    target[0] = torch.cat(list(frames), dim=0)
-    for i in range(1, target.shape[0]):
-        frames.append(source[i])
-        target[i] = torch.cat(list(frames), dim=0)
-    return target
 
 
 def make_encoder(cfg):
@@ -70,21 +56,21 @@ def make_encoder(cfg):
 			missing_keys, unexpected_keys = encoder.load_state_dict(state_dict, strict=False)
 			print('Missing keys:', missing_keys)
 			print('Unexpected keys:', unexpected_keys)
-		if cfg.get('feature_map', None) is not None:
+		if cfg.get('feature_dims', None) is not None:
 			# overwrite forward pass to use earlier features
 			def forward(self, x):
 				x = self.conv1(x)
 				x = self.bn1(x)
 				x = self.relu(x)
 				x = self.maxpool(x)
-				for i, layer in enumerate([self.layer1, self.layer2, self.layer3, self.layer4]):
+				for layer in [self.layer1, self.layer2, self.layer3, self.layer4]:
 					x = layer(x)
-					if i+1 == cfg.feature_map:
+					if x.shape[1:] == cfg.feature_dims:
 						break
 				return x
 			encoder.forward = lambda x: forward(encoder, x)
 			_x = torch.randn(1, 3, 224, 224).cuda()
-			print('Pretrained encoder output:', encoder(_x).shape)
+			print('Pretrained encoder output:', encoder(_x).shape[1:])
 		encoder.fc = nn.Identity()
 		encoder.eval()
 	preprocess = nn.Sequential(
@@ -140,6 +126,9 @@ def encode(obs, cfg):
 @hydra.main(config_name='default', config_path='config')
 def main(cfg: dict):
 	"""Encoding an image dataset using a pretrained model."""
+	from cfg_parse import parse_cfg
+	from dataloader import make_dataset
+
 	assert cfg.get('features', None), 'Features must be specified'
 	cfg.modality = 'pixels'
 	cfg = parse_cfg(cfg)

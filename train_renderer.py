@@ -15,8 +15,7 @@ from algorithm.tdmpc import TDMPC
 from algorithm.renderer import Renderer
 import algorithm.helper as h
 from algorithm.helper import RendererBuffer
-from dataloader import make_dataset
-from encode_dataset import stack_frames
+from dataloader import make_dataset, stack_frames
 from termcolor import colored
 from torchvision.utils import make_grid, save_image
 from tqdm import tqdm

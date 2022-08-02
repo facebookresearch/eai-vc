@@ -120,16 +120,14 @@ class FeaturesWrapper(dm_env.Environment):
 		self._env = env
 		self._cfg = cfg
 		self._features = cfg.features
-		features_to_dim = defaultdict(lambda: 2048) # default to resnet50
-		features_to_dim.update({
-			'clip': 512,
-			'maehoi': 384,
-			'random18': 1024,
-			'mocoego18': 100352,
-		})
 		if cfg.modality == 'map':
 			shape = np.array([cfg.get('frame_stack', 1)*cfg.feature_dims[0], *cfg.feature_dims[1:],])
 		else:
+			features_to_dim = defaultdict(lambda: 2048) # default to resnet50
+			features_to_dim.update({
+				'clip': 512,
+				'maehoi': 384,
+			})
 			shape = np.array([cfg.get('frame_stack', 1)*features_to_dim[cfg.features],])
 		self._obs_spec = specs.BoundedArray(shape=shape,
 											dtype=np.float16 if cfg.modality == 'map' else np.float32,

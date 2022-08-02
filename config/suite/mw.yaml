@@ -4,6 +4,6 @@ action_repeat: 2
 episode_length: 250
 reward_scale: 0.2
 include_state: true
-train_steps: 500000
-eval_freq: 50000
-save_freq: 50000
+train_steps: 250000
+eval_freq: 25000
+save_freq: 25000

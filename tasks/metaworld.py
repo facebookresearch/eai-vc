@@ -15,15 +15,25 @@ class MetaWorldWrapper(gym.Wrapper):
 		self._num_frames = cfg.get('frame_stack', 1)
 		self._frames = deque([], maxlen=self._num_frames)
 		if cfg.modality == 'pixels':
-			self.observation_space = gym.spaces.Box(low=0, high=255, shape=(self._num_frames*3, cfg.img_size, cfg.img_size), dtype=np.uint8)
+			self.observation_space = gym.spaces.Box(
+				low=0, high=255,
+				shape=(self._num_frames*3, cfg.img_size, cfg.img_size),
+				dtype=np.uint8)
+		elif cfg.modality == 'map':
+			self.observation_space = gym.spaces.Box(
+				low=-np.inf, high=np.inf,
+				shape=([cfg.get('frame_stack', 1)*cfg.feature_dims[0], *cfg.feature_dims[1:],]),
+				dtype=np.float32)
 		elif cfg.modality == 'features':
 			features_to_dim = defaultdict(lambda: 2048) # default to RN50
 			features_to_dim.update({
 				'clip': 512,
 				'maehoi': 384,
-				'mocoego18': 100352,
 			})
-			self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(self._num_frames*features_to_dim[cfg.features],), dtype=np.float32)
+			self.observation_space = gym.spaces.Box(
+				low=-np.inf, high=np.inf,
+				shape=(self._num_frames*features_to_dim[cfg.features],),
+				dtype=np.float32)
 		else: # state
 			self.observation_space = self.env.observation_space
 		self.action_space = self.env.action_space
@@ -41,8 +51,12 @@ class MetaWorldWrapper(gym.Wrapper):
 	
 	def _get_feature_obs(self):
 		obs = torch.from_numpy(self._get_pixel_obs()).unsqueeze(0).view(-1, 3, self.cfg.img_size, self.cfg.img_size)
-		obs = encode(obs, self.cfg).view(-1).cpu().numpy()
-		return obs
+		obs = encode(obs, self.cfg)
+		if self.cfg.modality == 'map':
+			obs = obs.squeeze(0)
+		else:
+			obs = obs.view(-1)
+		return obs.cpu().numpy()
 
 	def _stacked_obs(self):
 		assert len(self._frames) == self._num_frames
@@ -54,7 +68,7 @@ class MetaWorldWrapper(gym.Wrapper):
 		self._state_obs = obs
 		if self.cfg.modality == 'pixels':
 			obs = self._get_pixel_obs()
-		elif self.cfg.modality == 'features':
+		elif self.cfg.modality in {'features', 'map'}:
 			obs = self._get_feature_obs()
 		for _ in range(self._num_frames):
 			self._frames.append(obs)
@@ -68,7 +82,7 @@ class MetaWorldWrapper(gym.Wrapper):
 		self._state_obs = obs
 		if self.cfg.modality == 'pixels':
 			obs = self._get_pixel_obs()
-		elif self.cfg.modality == 'features':
+		elif self.cfg.modality in {'features', 'map'}:
 			obs = self._get_feature_obs()
 		self._frames.append(obs)
 		self.success = self.success or bool(info['success'])

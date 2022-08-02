@@ -1,6 +1,6 @@
 CUDA_VISIBLE_DEVICES=0 python train.py \
-    task=walker-walk \
-    suite=dmcontrol \
+    task=mw-push \
+    suite=mw \
     setting=online \
     modality=map \
     features=mocoego18 \
