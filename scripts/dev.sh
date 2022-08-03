@@ -1,9 +1,9 @@
-python train_offline.py \
-    task=mw-mt10 \
-    suite=mw \
-    setting=multitask \
-    algorithm=mtdmpc \
-    modality=features \
-    features=mocoego \
+python train.py \
+    task=walker-walk \
+    suite=dmcontrol \
+    setting=online \
+    modality=map \
+    features=mocoego18 \
+    feature_dims=[64,14,14] \
     exp_name=test \
     seed=1

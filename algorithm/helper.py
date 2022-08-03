@@ -182,7 +182,8 @@ class FeatureMapEncoder(nn.Module):
 						nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU(),
 						nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
 		elif cfg.feature_dims[-1] == 14:
-			self.layers = nn.Sequential(nn.Conv2d(self.cfg.frame_stack*cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU())
+			self.layers = nn.Sequential(nn.Conv2d(self.cfg.frame_stack*cfg.feature_dims[0], cfg.num_channels, 3, stride=2), nn.ReLU(),
+						nn.Conv2d(cfg.num_channels, cfg.num_channels, 3, stride=1), nn.ReLU())
 		else:
 			raise ValueError('Invalid feature dims: {}'.format(cfg.feature_dims))
 	

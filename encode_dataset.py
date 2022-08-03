@@ -14,6 +14,7 @@ import torchvision
 import hydra
 import kornia.augmentation as K
 from kornia.constants import Resample
+from einops.layers.torch import Reduce
 torch.backends.cudnn.benchmark = True
 
 
@@ -58,6 +59,8 @@ def make_encoder(cfg):
 			print('Unexpected keys:', unexpected_keys)
 		if cfg.get('feature_dims', None) is not None:
 			# overwrite forward pass to use earlier features
+			# downsample channels with group-wise max pooling (if applicable)
+			pool = Reduce('b g c h w -> b 1 c h w', cfg.pool_fn)
 			def forward(self, x):
 				x = self.conv1(x)
 				x = self.bn1(x)
@@ -65,8 +68,15 @@ def make_encoder(cfg):
 				x = self.maxpool(x)
 				for layer in [self.layer1, self.layer2, self.layer3, self.layer4]:
 					x = layer(x)
-					if x.shape[1:] == cfg.feature_dims:
+					if x.shape[-1] == cfg.feature_dims[-1]:
 						break
+				if x.shape[1] > cfg.feature_dims[0]:
+					assert x.shape[1] % cfg.feature_dims[0] == 0, 'Expected number of channels to be divisible by {}'.format(cfg.feature_dims[0])
+					G = x.shape[1] // cfg.feature_dims[0]
+					assert G == 4, 'Expected number of groups to be 4'
+					x = x.view(x.shape[0], G, cfg.feature_dims[0], x.shape[2], x.shape[3])
+					x = pool(x).squeeze(1)
+					assert x.shape[1:] == cfg.feature_dims, 'Expected feature dimensions {} but got {}'.format(cfg.feature_dims, x.shape[1:])
 				return x
 			encoder.forward = lambda x: forward(encoder, x)
 			_x = torch.randn(1, 3, 224, 224).cuda()
@@ -110,6 +120,16 @@ def encode_resnet(obs, cfg):
 		obs = __PREPROCESS__(obs.cuda() / 255.)
 		with torch.no_grad(), torch.cuda.amp.autocast():
 			features = __ENCODER__(obs)
+		# save features to disk
+		# features = features.cpu().float()[-1]
+		# for i, feature in enumerate(features):
+		# 	feature = feature.unsqueeze(0).repeat(3, 1, 1).clip(0, 1)
+		# 	# upscale feature with nearest neighbor interpolation
+		# 	# feature = K.Resize((140, 140))(feature)
+		# 	feature = nn.Upsample(scale_factor=16, mode='nearest')(feature.unsqueeze(0)).squeeze(0)
+		# 	torchvision.utils.save_image(feature, f'{cfg.logging_dir}/feature_{i}.png')
+		# 	if i == 24:
+		# 		exit(0)
 	else:
 		with torch.no_grad():
 			features = __ENCODER__(__PREPROCESS__(obs.cuda() / 255.))
