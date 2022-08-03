@@ -1,0 +1,8 @@
+epochs: 200
+start_epoch: 0
+batch_size: 256
+lr: 0.03
+momentum: 0.9
+weight_decay: 0.0001
+schedule: [120, 160]
+cos: True

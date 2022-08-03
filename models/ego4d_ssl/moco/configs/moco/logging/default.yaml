@@ -1,0 +1,13 @@
+print_freq: 10
+save_freq: 5
+name: 'exp'
+log_tb: True
+wandb_user: aravraj
+wandb_project: moco_ego4d
+ckpt_dir: '/checkpoint/aravraj/moco_diff_aug/${logging.name}/checkpoints/'
+tb_dir: '/checkpoint/aravraj/moco_diff_aug/${logging.name}/tblogs/'
+submitit_dir: '/checkpoint/aravraj/moco_diff_aug/${logging.name}/submitit_train_logs/'
+result_dir: '/checkpoint/aravraj/moco_diff_aug/${logging.name}/results/' 
+eval_freq: 5
+suffix: ''
+visualize: False
