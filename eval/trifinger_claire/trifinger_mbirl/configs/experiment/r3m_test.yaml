@@ -1,0 +1,13 @@
+# @package _global_
+experiment:
+    name: "r3m_test"
+hydra:
+  sweeper:
+    params:
+        file_path: demos/exp_splits/ten_traj/demo_info.pth 
+        algo.cost_lr: 1e-2, 1e-3
+        algo.action_lr: 1e-2, 1e-3
+        algo.mpc_type: ftpos_obj_learned_only
+        algo.cost_state: ftpos, obj, ftpos_obj
+        algo.irl_loss_state: ftpos, obj, ftpos_obj
+        algo.n_inner_iter: 50

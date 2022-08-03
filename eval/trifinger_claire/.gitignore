@@ -1,0 +1,11 @@
+__pycache__
+.DS_Store
+logs
+wandb
+*.npz
+!*demo*.npz
+*.pyc
+*.png
+tmp/*
+wandb/*
+trifinger_mbirl/logs/*

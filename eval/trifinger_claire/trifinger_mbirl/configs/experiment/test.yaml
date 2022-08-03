@@ -1,0 +1,9 @@
+# @package _global_
+experiment:
+    name: "test"
+hydra:
+  sweeper:
+    params:
+        algo.cost_lr: 1e-2, 1e-3
+        algo.mpc_type: ftpos
+        algo.cost_state: ftpos
