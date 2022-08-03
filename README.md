@@ -8,7 +8,8 @@
   - Then, follow the installation [instructions in their documentation](https://open-dynamic-robot-initiative.github.io/trifinger_simulation/getting_started/installation.html)
     - On Linux, there should be no issues following the instructions as is; all the pip packages in `requirements.txt` should install with no issues.
     - On my M1 mac, I had to  first create a conda env with python 3.8 and install each of the packages in `requirements.txt` one-by-one (except the`pin` package)
-      - The `pin` package only runs on Linux. For Mac, use conda to install `pinocchio`: `conda install pinocchio -c conda-forge`
+      - Using pip to install the `pin` package only works on Linux. For Mac, use conda to install `pinocchio`: `conda install pinocchio -c conda-forge`
+      - If you install `pinocchio` with conda, you'll need to comment out the lines in `trifinger_simulation/setup.py` and `trifinger_simulation/requirements.txt` that look for `pin` (Line 5 in `requirements.txt` and Line 47 in `setup.py`).
 
 ## Move cube:
 
