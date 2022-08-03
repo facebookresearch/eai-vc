@@ -73,7 +73,6 @@ def make_encoder(cfg):
 				if x.shape[1] > cfg.feature_dims[0]:
 					assert x.shape[1] % cfg.feature_dims[0] == 0, 'Expected number of channels to be divisible by {}'.format(cfg.feature_dims[0])
 					G = x.shape[1] // cfg.feature_dims[0]
-					assert G == 4, 'Expected number of groups to be 4'
 					x = x.view(x.shape[0], G, cfg.feature_dims[0], x.shape[2], x.shape[3])
 					x = pool(x).squeeze(1)
 					assert x.shape[1:] == cfg.feature_dims, 'Expected feature dimensions {} but got {}'.format(cfg.feature_dims, x.shape[1:])

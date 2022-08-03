@@ -23,11 +23,6 @@ torch.backends.cudnn.benchmark = True
 __LOGS__ = 'logs'
 
 
-def evaluate(env, agent, cfg):
-	"""Evaluate a trained agent."""
-	
-
-
 @hydra.main(config_name='default', config_path='config')
 def open_loop(cfg: dict):
 	"""Rendering script for evaluating learned representations."""

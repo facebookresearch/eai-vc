@@ -248,7 +248,7 @@ class TimeStepToGymWrapper(object):
 			low=np.full(obs_shp, -np.inf if cfg.modality != 'pixels' else env.observation_spec().minimum),
 			high=np.full(obs_shp, np.inf if cfg.modality != 'pixels' else env.observation_spec().maximum),
 			shape=obs_shp,
-			dtype=modality_to_dtype.get(cfg.modality, torch.float32))
+			dtype=modality_to_dtype.get(cfg.modality, np.float32))
 		self.action_space = gym.spaces.Box(
 			low=np.full(act_shp, env.action_spec().minimum),
 			high=np.full(act_shp, env.action_spec().maximum),
@@ -382,10 +382,23 @@ def make_dmcontrol_env(cfg):
 	domain, task = cfg.task.replace('-', '_').split('_', 1)
 	domain = dict(cup='ball_in_cup').get(domain, domain)
 
-	env = suite.load(domain,
-					task,
-					task_kwargs={'random': cfg.seed},
-					visualize_reward=False)
+	if cfg.get('distractors', False):
+		from tasks.dcs import suite as dc_suite
+		env = dc_suite.load(
+			domain,
+			task,
+			task_kwargs={'random': cfg.seed},
+			visualize_reward=False,
+			dynamic=True,
+			difficulty=0.025,
+			background_dataset_paths=['/private/home/nihansen/data/DAVIS/JPEGImages/480p'],
+			background_dataset_videos='train',
+		)
+	else:
+		env = suite.load(domain,
+						task,
+						task_kwargs={'random': cfg.seed},
+						visualize_reward=False)
 	env = ActionDTypeWrapper(env, np.float32)
 	env = ActionRepeatWrapper(env, cfg.action_repeat)
 	env = action_scale.Wrapper(env, minimum=-1.0, maximum=+1.0)
