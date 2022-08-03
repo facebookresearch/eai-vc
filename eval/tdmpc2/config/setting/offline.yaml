@@ -1,0 +1,7 @@
+setting: offline
+encoder: default+
+enc_dim: 512
+mlp_dim: 1024
+latent_dim: 50
+fraction: 1.0
+train_iter: 200000

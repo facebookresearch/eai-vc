@@ -1,0 +1,14 @@
+setting: sim
+encoder: default+
+enc_dim: 512
+mlp_dim: 1024
+latent_dim: 50
+fraction: 1.0
+train_iter: 10000
+eval_freq: 500
+save_freq: 5000
+batch_size: 128
+target_modality: state
+features: random
+use_val: true
+all_modalities: true

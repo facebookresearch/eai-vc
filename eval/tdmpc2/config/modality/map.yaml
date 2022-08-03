@@ -1,0 +1,9 @@
+modality: map
+img_size: 84
+features: mocoego18
+# feature_dims: [128, 28, 28]
+feature_dims: [256, 14, 14]
+pool_fn: max
+num_channels: 32
+lr: 3e-4
+batch_size: 256

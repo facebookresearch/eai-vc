@@ -1,0 +1,5 @@
+modality: pixels
+img_size: 84
+num_channels: 32
+lr: 3e-4
+batch_size: 256
