@@ -1,0 +1,14 @@
+name: cifar_linprobe
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.8
+  - pytorch=1.12
+  - torchvision
+  - cudatoolkit=11.6
+  - pip
+  - pip:
+    - wandb
+    - timm==0.6.5
