@@ -65,9 +65,8 @@ jobs:
             . ~/miniconda3/bin/activate
             conda activate cifar_linprobe
             pip install -e ./eaif-models
-      # TODO: run cifar linprobe
       - run:
-          name: Install eaif-models
+          name: Run CIFAR linear probe
           command: |
             . ~/miniconda3/bin/activate
             conda activate cifar_linprobe
