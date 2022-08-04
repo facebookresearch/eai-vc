@@ -6,6 +6,7 @@ install_requires = [
     "torch >= 1.10.2",
     "torchvision >= 0.11.3",
     "timm==0.6.5",
+    "hydra-core",
 ]
 
 setup(

@@ -8,7 +8,9 @@ dependencies:
   - pytorch=1.12
   - torchvision
   - cudatoolkit=11.6
+  - tqdm
   - pip
   - pip:
     - wandb
     - timm==0.6.5
+    - hydra-core

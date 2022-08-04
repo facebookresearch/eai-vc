@@ -1,5 +1,6 @@
 wandb/
 output_dir/
+outputs/
 .vscode/
 
 # Byte-compiled / optimized / DLL files
