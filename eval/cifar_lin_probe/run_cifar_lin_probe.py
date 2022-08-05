@@ -1,9 +1,14 @@
+import copy
 import torch
 import torchvision
 from tqdm import tqdm
 import hydra
 
 import eaif_models.utils.load_model
+
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 
 
 def compute_accuracy(dataloader, model, config):
@@ -59,7 +64,10 @@ def precompute_embeddings(model, dataset, config):
     labels = []
     with torch.no_grad():
         for data in tqdm(dataloader):
-            batch_x, batch_y = data
+            data_cp = copy.deepcopy(data)
+            del data
+
+            batch_x, batch_y = data_cp
             z = model(batch_x).detach().to('cpu')
             for idx in range(batch_x.shape[0]):
                 embeddings.append(z[idx])
