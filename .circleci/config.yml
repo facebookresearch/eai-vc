@@ -36,7 +36,7 @@ jobs:
           name: Create conda environment
           command: |
             . ~/miniconda3/bin/activate
-            [ -d /opt/conda/envs/cifar_linprobe ] || mamba env create -f eval/cifar_lin_probe/environment.yml
+            [ -d ~/miniconda3/envs/cifar_linprobe ] || mamba env create -f eval/cifar_lin_probe/environment.yml
       - run:
           name: Download CIFAR dataset
           command: |
