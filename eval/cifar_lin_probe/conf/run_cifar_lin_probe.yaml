@@ -7,7 +7,7 @@ embedding_dim: 1024
 transform: mae_transforms
 
 device: cuda
-batch_size: 32
+batch_size: 1024
 num_epochs: 25
 lr: 1e-3
 
