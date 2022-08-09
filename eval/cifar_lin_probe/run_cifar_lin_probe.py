@@ -4,6 +4,8 @@ import torchvision
 from tqdm import tqdm
 import hydra
 
+from eaif_models.utils.wandb import setup_wandb
+
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -75,6 +77,8 @@ def precompute_embeddings(model, dataset, config):
 
 @hydra.main(config_path="conf", config_name="run_cifar_lin_probe")
 def probe_model_eval(config):
+    wandb = setup_wandb()
+
     # Get base model, transform, and probing classifier
     model, embedding_dim, transform = hydra.utils.call(config["model"])
 
@@ -118,6 +122,8 @@ def probe_model_eval(config):
         print('===========================')
         print(f'epoch : %i | train accuracy : %3.2f | test accuracy : % 3.2f' % (epoch, train_accuracy, test_accuracy))
         print('===========================')
+        if wandb is not None:
+            wandb.log({"train_accuracy": train_accuracy, "test_accuracy": test_accuracy})
 
 
 

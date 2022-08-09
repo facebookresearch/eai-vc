@@ -11,6 +11,7 @@ install_requires = [
     "torchvision >= 0.11.3",
     "timm==0.6.5",
     "hydra-core",
+    "wandb",
 ]
 
 setup(
