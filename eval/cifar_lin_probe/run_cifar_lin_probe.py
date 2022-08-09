@@ -78,6 +78,8 @@ def probe_model_eval(config):
     # Get base model, transform, and probing classifier
     model, embedding_dim, transform = hydra.utils.call(config["model"])
 
+    breakpoint()
+
     probe = torch.nn.Sequential(torch.nn.BatchNorm1d(embedding_dim),
                                 torch.nn.Linear(embedding_dim, 10))
 

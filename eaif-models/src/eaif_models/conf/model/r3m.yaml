@@ -1,0 +1,1 @@
+_target_: eaif_models.models.resnet.r3m.load_model
