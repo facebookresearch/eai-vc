@@ -1,10 +1,5 @@
-
-model:
-  _target_: eaif_models.utils.load_model.MAE_embedding_model
-  checkpoint_path: /checkpoint/yixinlin/experiments/61004636/checkpoint-74.pth
-
-embedding_dim: 1024
-transform: mae_transforms
+defaults:
+- model: mae_large
 
 device: cuda
 batch_size: 1024

@@ -4,8 +4,6 @@ import torchvision
 from tqdm import tqdm
 import hydra
 
-import eaif_models.utils.load_model
-
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -78,9 +76,7 @@ def precompute_embeddings(model, dataset, config):
 @hydra.main(config_path="conf", config_name="run_cifar_lin_probe")
 def probe_model_eval(config):
     # Get base model, transform, and probing classifier
-    model = hydra.utils.instantiate(config["model"])
-    embedding_dim = config["embedding_dim"]
-    transform = getattr(eaif_models.utils.load_model, config["transform"])
+    model, embedding_dim, transform = hydra.utils.call(config["model"])
 
     probe = torch.nn.Sequential(torch.nn.BatchNorm1d(embedding_dim),
                                 torch.nn.Linear(embedding_dim, 10))

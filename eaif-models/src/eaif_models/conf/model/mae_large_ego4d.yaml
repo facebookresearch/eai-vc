@@ -1,0 +1,2 @@
+_target_: eaif_models.models.vit.vit_mae.load_model
+checkpoint_path: /checkpoint/yixinlin/experiments/61004636/checkpoint-74.pth

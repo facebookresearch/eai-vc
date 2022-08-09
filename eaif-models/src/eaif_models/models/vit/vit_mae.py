@@ -14,6 +14,9 @@ from functools import partial
 import torch
 import torch.nn as nn
 
+import torchvision.transforms as T
+from torchvision.transforms import InterpolationMode
+
 from timm.models.vision_transformer import PatchEmbed, Block
 
 from .util.pos_embed import get_2d_sincos_pos_embed
@@ -248,3 +251,27 @@ def mae_vit_huge_patch14_dec512d8b(**kwargs):
 mae_vit_base_patch16 = mae_vit_base_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_large_patch16 = mae_vit_large_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_huge_patch14 = mae_vit_huge_patch14_dec512d8b  # decoder: 512 dim, 8 blocks
+
+
+mae_transforms = T.Compose([
+                        T.Resize(256, interpolation=InterpolationMode.BICUBIC),
+                        T.CenterCrop(224),
+                        T.ToTensor(),
+                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                    ])
+
+class MAE_embedding_model(torch.nn.Module):
+    def __init__(self, checkpoint_path, arch='mae_vit_large_patch16'):
+        super().__init__()
+        # build model
+        self.mae_model = globals()[arch]()
+        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        self.mae_model.load_state_dict(checkpoint['model'], strict=False)
+    
+    def forward(self, imgs, mask_ratio=0.0):
+        latent, mask, ids_restore = self.mae_model.forward_encoder(imgs, mask_ratio)
+        cls_latent = latent[:, 0, :]
+        return cls_latent
+
+def load_model(checkpoint_path):
+    return MAE_embedding_model(checkpoint_path), 1024, mae_transforms
