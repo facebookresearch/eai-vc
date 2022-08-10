@@ -4,13 +4,18 @@
 
 This is the FAIR monorepo for investigating large-scale pretraining for embodied AI.
 
+## Installation
+
+See [INSTALLATION.md](INSTALLATION.md).
+
 ## Directory structure
 
 - `eaif-models`: contains a minimal-dependency pip-installable model loading code, as well as some shared-project utilities.
     - See [README](./eaif-models/README.md) for more details.
 - `train`: model training code. Currently composed of a heterogeneous set of repos / environments.
-- `eval`: model evaluation code. Currently composed of a heterogeneous set of repos / environments.
-    - The goal is to unify the evaluation framework under a single reproducible `environment.yml`.
+- `eval`: model evaluation code, unified under a single reproducible `environment.yml`.
+- `data`: Gitignored directory containing (symlinks to) datasets, models, etc.
+- `third_party`: Third party submodules which aren't expected to change often.
 
 ## Shared resources
 

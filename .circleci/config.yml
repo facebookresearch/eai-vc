@@ -1,11 +1,8 @@
 version: 2.1
-jobs:
-  cifar-linprobe:
-    machine:
-      image: ubuntu-2004-cuda-11.4:202110-01
-    resource_class: gpu.nvidia.medium
+
+commands:
+  initialize:
     steps:
-      - checkout
       - run:
           name: Initialize Git submodules
           command: |
@@ -25,25 +22,55 @@ jobs:
             sudo ln -s ~/miniconda3/etc/profile.d/conda.sh /etc/profile.d/conda.sh
             echo ". ~/miniconda3/etc/profile.d/conda.sh" >> ~/.bashrc
             echo "conda activate base" >> ~/.bashrc
-      - restore_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "eval/cifar_lin_probe/environment.yml" }}
       - run:
           name: Install mamba
           command: |
             . ~/miniconda3/bin/activate
             conda install -y -c conda-forge mamba -n base
+
+jobs:
+  build:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.small
+    steps:
+      - checkout
+      - initialize
+      - restore_cache:
+          key: deps9-{{ .Branch }}-{{ checksum "environment.yml" }}
       - run:
           name: Create conda environment
           command: |
             . ~/miniconda3/bin/activate
-            [ -d ~/miniconda3/envs/cifar_linprobe ] || mamba env create -f eval/cifar_lin_probe/environment.yml
+            [ -d ~/miniconda3/envs/eaif ] || mamba env create -f environment.yml
+      - save_cache:
+          key: deps9-{{ .Branch }}-{{ checksum "environment.yml" }}
+          paths:
+            - "/home/circleci/miniconda3/"
+  cifar-linprobe:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.medium
+    steps:
+      - checkout
+      - initialize
+      - restore_cache:
+          key: deps9-{{ .Branch }}-{{ checksum "environment.yml" }}
+      - run:
+          name: Install eaif-models
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+            pip install -e ./eaif-models
+      - restore_cache:
+          key: cifar-linprobe-data-{{ .Branch }}
       - run:
           name: Download CIFAR dataset
           command: |
             if [ ! -f ./data/cifar-10-python.tar.gz ]
             then
               . ~/miniconda3/bin/activate
-              conda activate cifar_linprobe
+              conda activate eaif
               python -c "import torchvision; torchvision.datasets.CIFAR10(root='./data', download=True)"
             fi
       - run:
@@ -55,21 +82,14 @@ jobs:
               curl https://dl.fbaipublicfiles.com/mae/pretrain/$FNAME > ./data/$FNAME
             fi
       - save_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "eval/cifar_lin_probe/environment.yml" }}
+          key: cifar-linprobe-data-{{ .Branch }}
           paths:
-            - "/home/circleci/miniconda3/envs"
             - "/home/circleci/project/data"
-      - run:
-          name: Install eaif-models
-          command: |
-            . ~/miniconda3/bin/activate
-            conda activate cifar_linprobe
-            pip install -e ./eaif-models
       - run:
           name: Run CIFAR linear probe
           command: |
             . ~/miniconda3/bin/activate
-            conda activate cifar_linprobe
+            conda activate eaif
             python eval/cifar_lin_probe/run_cifar_lin_probe.py \
               data_root=$PWD/data/ \
               model.checkpoint_path=$PWD/data/mae_pretrain_vit_large.pth
@@ -77,4 +97,7 @@ jobs:
 workflows:
   build:
     jobs:
-      - cifar-linprobe
+      - build
+      - cifar-linprobe:
+          requires:
+            - build
