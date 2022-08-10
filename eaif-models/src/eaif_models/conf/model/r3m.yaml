@@ -1,1 +1,3 @@
 _target_: eaif_models.models.resnet.r3m.load_model
+resnet_name: resnet50
+home_dir: /checkpoint/yixinlin/eaif/models/r3m/

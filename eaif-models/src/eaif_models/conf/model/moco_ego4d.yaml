@@ -1,2 +1,2 @@
 _target_: eaif_models.models.resnet.moco_v2.load_model
-checkpoint_path: /checkpoint/aravraj/moco_diff_aug/ego4d_5m/checkpoints/ego4d_5m/checkpoint_0010.pth
+checkpoint_path: /checkpoint/yixinlin/eaif/models/moco_ego4d/moco_ego4d_5m.pth
