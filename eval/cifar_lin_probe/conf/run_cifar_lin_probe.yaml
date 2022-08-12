@@ -1,9 +1,11 @@
 defaults:
-- model: mae_large
+  - _self_
+  - model: mae_large
+  - wandb: eaif
 
 device: cuda
-batch_size: 1024
+batch_size: 512
 num_epochs: 25
 lr: 1e-3
 
-data_root: "./data"
+data_root: "/datasets01/cifar-pytorch/11222017/"

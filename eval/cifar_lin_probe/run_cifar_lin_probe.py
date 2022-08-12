@@ -4,6 +4,7 @@ import torchvision
 from tqdm import tqdm
 import hydra
 
+from eaif_models.utils import get_model_tag
 from eaif_models.utils.wandb import setup_wandb
 
 import torch.multiprocessing
@@ -77,10 +78,11 @@ def precompute_embeddings(model, dataset, config):
 
 @hydra.main(config_path="conf", config_name="run_cifar_lin_probe")
 def probe_model_eval(config):
-    wandb = setup_wandb(project_name="run_cifar_lin_probe")
+    wandb = setup_wandb(config)
 
     # Get base model, transform, and probing classifier
-    model, embedding_dim, transform = hydra.utils.call(config["model"])
+    model, embedding_dim, transform, metadata = hydra.utils.call(config["model"])
+    print(f"Loaded model {get_model_tag(metadata)}")
 
     probe = torch.nn.Sequential(torch.nn.BatchNorm1d(embedding_dim),
                                 torch.nn.Linear(embedding_dim, 10))

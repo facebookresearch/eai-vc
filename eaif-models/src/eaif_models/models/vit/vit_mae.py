@@ -273,5 +273,5 @@ class MAE_embedding_model(torch.nn.Module):
         cls_latent = latent[:, 0, :]
         return cls_latent
 
-def load_model(checkpoint_path):
-    return MAE_embedding_model(checkpoint_path), 1024, mae_transforms
+def load_model(checkpoint_path, metadata=None):
+    return MAE_embedding_model(checkpoint_path), 1024, mae_transforms, metadata

@@ -1,0 +1,7 @@
+_target_: eaif_models.models.resnet.resnet_base.load_resnet
+version: resnet50
+imagenet_pretrained: True
+metadata:
+  algo: sup
+  model: resnet50
+  data: imagenet

@@ -205,6 +205,6 @@ _resnet_transforms = T.Compose([
                     ])
 
 
-def load_model(checkpoint_path):
+def load_model(checkpoint_path, metadata=None):
     model, embedding_dim = moco_conv5_model(checkpoint_path)
-    return model, embedding_dim, _resnet_transforms
+    return model, embedding_dim, _resnet_transforms, metadata
