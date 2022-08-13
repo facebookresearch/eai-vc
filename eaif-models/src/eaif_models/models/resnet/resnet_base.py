@@ -8,7 +8,7 @@ _resnet_transforms = T.Compose([
                         T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
                     ])
 
-def load_resnet(version='resnet50', imagenet_pretrained=True, checkpoint=None,
+def load_resnet(version='resnet50', imagenet_pretrained=True, metadata=None,
                 *args, **kwargs):
     """
     Load a resnet model with random weights, imagenet pretrained weights, or from a checkpoint.
@@ -22,4 +22,4 @@ def load_resnet(version='resnet50', imagenet_pretrained=True, checkpoint=None,
         model = models.resnet18(pretrained=imagenet_pretrained, progress=False)
     model.fc = torch.nn.modules.linear.Identity()
     embedding_dim, transforms = 2048, _resnet_transforms
-    return model, embedding_dim, _resnet_transforms
+    return model, embedding_dim, _resnet_transforms, metadata
