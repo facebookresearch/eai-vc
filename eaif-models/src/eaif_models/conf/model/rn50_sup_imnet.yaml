@@ -1,4 +1,4 @@
-_target_: eaif_models.models.resnet.resnet_base.load_resnet
+_target_: eaif_models.models.resnet.resnet_base.load_model
 version: resnet50
 imagenet_pretrained: True
 metadata:
