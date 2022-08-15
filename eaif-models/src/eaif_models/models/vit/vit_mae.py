@@ -62,6 +62,7 @@ class MaskedAutoencoderViT(nn.Module):
         # --------------------------------------------------------------------------
 
         self.norm_pix_loss = norm_pix_loss
+        self.embed_dim = embed_dim
 
         self.initialize_weights()
 
@@ -222,6 +223,19 @@ class MaskedAutoencoderViT(nn.Module):
         loss = self.forward_loss(imgs, pred, mask)
         return loss, pred, mask
 
+def mae_vit_small_patch16_dec512d8b(**kwargs):
+    model = MaskedAutoencoderViT(
+        patch_size=16, embed_dim=384, depth=12, num_heads=6,
+        decoder_embed_dim=512, decoder_depth=8, decoder_num_heads=16,
+        mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    return model
+
+def mae_vit_small_patch16_dec256d8b(**kwargs):
+    model = MaskedAutoencoderViT(
+        patch_size=16, embed_dim=384, depth=12, num_heads=6,
+        decoder_embed_dim=256, decoder_depth=8, decoder_num_heads=8,
+        mlp_ratio=4, norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    return model
 
 def mae_vit_base_patch16_dec512d8b(**kwargs):
     model = MaskedAutoencoderViT(
@@ -247,7 +261,10 @@ def mae_vit_huge_patch14_dec512d8b(**kwargs):
     return model
 
 
+
 # set recommended archs
+mae_vit_small_patch16_large_decoder = mae_vit_small_patch16_dec512d8b # decoder: 512 dim, 8 block
+mae_vit_small_patch16 = mae_vit_small_patch16_dec256d8b  # decoder: 256 dim, 8 blocks
 mae_vit_base_patch16 = mae_vit_base_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_large_patch16 = mae_vit_large_patch16_dec512d8b  # decoder: 512 dim, 8 blocks
 mae_vit_huge_patch14 = mae_vit_huge_patch14_dec512d8b  # decoder: 512 dim, 8 blocks
@@ -268,10 +285,15 @@ class MAE_embedding_model(torch.nn.Module):
         checkpoint = torch.load(checkpoint_path, map_location='cpu')
         self.mae_model.load_state_dict(checkpoint['model'], strict=False)
     
+    @property
+    def embedding_dim(self):
+        return self.mae_model.embed_dim
+    
     def forward(self, imgs, mask_ratio=0.0):
         latent, mask, ids_restore = self.mae_model.forward_encoder(imgs, mask_ratio)
         cls_latent = latent[:, 0, :]
         return cls_latent
 
-def load_model(checkpoint_path, metadata=None):
-    return MAE_embedding_model(checkpoint_path), 1024, mae_transforms, metadata
+def load_model(checkpoint_path, model_name, metadata=None):
+    model = MAE_embedding_model(checkpoint_path, arch=model_name)
+    return model, model.embedding_dim, mae_transforms, metadata

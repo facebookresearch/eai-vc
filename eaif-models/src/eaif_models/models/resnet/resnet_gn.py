@@ -1,9 +1,10 @@
 import math
 
 import torch.nn as nn
+import torchvision.transforms as T
 
-__all__ = ["ResNet", "resnet18", "resnet50", "resnet101"]
 
+__all__ = ["ResNet", "resnet18", "resnet50", "resnet101", "load_model"]
 
 # fmt: off
 def conv3x3(in_planes, out_planes, stride=1):
@@ -115,7 +116,8 @@ def gn_init(m, zero_init=False):
 
 class ResNet(nn.Module):
     def __init__(
-        self, in_channels, base_planes, ngroups, block, layers, dropout_prob=0.0
+        self, in_channels, base_planes, ngroups, block, layers, dropout_prob=0.0,
+        use_avgpool_and_flatten=False
     ):
         self.inplanes = base_planes
         super(ResNet, self).__init__()
@@ -136,8 +138,10 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(
             block, ngroups, base_planes * 8, layers[3], stride=2
         )
-        # self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        # self.fc = nn.Linear(512 * block.expansion, num_classes)
+        self.avgpool_and_flatten = nn.Identity()
+        if use_avgpool_and_flatten:
+            self.avgpool_and_flatten = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten())
+
         self.final_channels = self.inplanes
         self.final_spatial_compress = 1.0 / (2**5)
 
@@ -193,14 +197,12 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        # x = self.avgpool(x)
-        # x = x.view(x.size(0), -1)
-        # x = self.fc(x)
-
+        x = self.avgpool_and_flatten(x)
+        
         return x
 
 
-def resnet18(in_channels, base_planes, ngroups, dropout_prob=0.0):
+def resnet18(in_channels, base_planes, ngroups, dropout_prob=0.0, use_avgpool_and_flatten=False):
     model = ResNet(
         in_channels,
         base_planes,
@@ -208,12 +210,12 @@ def resnet18(in_channels, base_planes, ngroups, dropout_prob=0.0):
         BasicBlock,
         [2, 2, 2, 2],
         dropout_prob=dropout_prob,
+        use_avgpool_and_flatten=use_avgpool_and_flatten,
     )
-    # model = ResNet(in_channels, base_planes, ngroups, Bottleneck, [2, 2, 2, 2])
     return model
 
 
-def resnet50(in_channels, base_planes, ngroups, dropout_prob=0.0):
+def resnet50(in_channels, base_planes, ngroups, dropout_prob=0.0, use_avgpool_and_flatten=False):
     model = ResNet(
         in_channels,
         base_planes,
@@ -221,11 +223,12 @@ def resnet50(in_channels, base_planes, ngroups, dropout_prob=0.0):
         Bottleneck,
         [3, 4, 6, 3],
         dropout_prob=dropout_prob,
+        use_avgpool_and_flatten=use_avgpool_and_flatten,
     )
     return model
 
 
-def resnet101(in_channels, base_planes, ngroups, dropout_prob=0.0):
+def resnet101(in_channels, base_planes, ngroups, dropout_prob=0.0, use_avgpool_and_flatten=False):
     model = ResNet(
         in_channels,
         base_planes,
@@ -233,5 +236,27 @@ def resnet101(in_channels, base_planes, ngroups, dropout_prob=0.0):
         Bottleneck,
         [3, 4, 23, 3],
         dropout_prob=dropout_prob,
+        use_avgpool_and_flatten=use_avgpool_and_flatten,
     )
     return model
+
+_resnet_transforms = T.Compose([
+                        T.Resize(256, interpolation=3),
+                        T.CenterCrop(224),
+                        T.ToTensor(),
+                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                    ])
+
+def load_encoder(model, path):
+    assert os.path.exists(path)
+    state_dict = torch.load(path, map_location="cpu")["teacher"]
+    state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
+    return model.load_state_dict(state_dict=state_dict, strict=False)
+
+def load_model(home_dir, resnet_name="resnet50", metadata=None):
+    model = globals()[resnet_name](3, 32, 16, use_avgpool_and_flatten=True)
+    model = model.eval()
+    embedding_dim = 1024
+    transforms = _resnet_transforms
+
+    return model, embedding_dim, transforms, metadata

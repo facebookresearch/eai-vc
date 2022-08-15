@@ -22,7 +22,7 @@ Setup Mujoco/mj_envs/mjrl:
 
 ```bash
 # If you don't have Mujoco yet: copy Mujoco files, keys
-cp -r /checkpoint/yixinlin/eaif/libraries/mujoco ~/.mujoco
+cp -r /checkpoint/yixinlin/eaif/libraries/mujoco/. ~/.mujoco
 
 # Install mujoco-py (GPU-compiled)
 pip install -e ./third_party/mujoco-py
@@ -53,7 +53,7 @@ Install local packages:
 ```bash
 pip install -e ./eaif-models  # Install model-loading API
 pip install -e ./train/mae-for-eai  # Install Habitat tasks
-pip install -e ./eval/rep_eval  # Install Habitat tasks
+pip install -e ./eval/rep_eval  # Install Visual IL tasks
 ```
 
 ## Optional

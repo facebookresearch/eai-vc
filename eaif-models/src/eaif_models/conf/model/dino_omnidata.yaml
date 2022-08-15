@@ -1,0 +1,7 @@
+_target_: eaif_models.models.resnet.resnet_gn.load_model
+resnet_name: resnet50
+home_dir: /checkpoint/yixinlin/eaif/models/dino_habitat/
+metadata:
+  algo: dino
+  model: resnet50
+  data: omnidata

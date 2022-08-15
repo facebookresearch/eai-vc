@@ -12,7 +12,7 @@ def setup_wandb(config):
     wandb_cfg_dict = config["wandb"]
 
     try:
-        log.info(f"wand initializing...")
+        log.info(f"wandb initializing...")
         import wandb
 
         wandb.require("service")
