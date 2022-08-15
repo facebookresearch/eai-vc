@@ -20,7 +20,7 @@ See [INSTALLATION.md](INSTALLATION.md).
 ## Shared resources
 
 **Shared directory**: On FAIR Cluster, we have 20TB allocated to the shared directory `/checkpoint/yixinlin/eaif/`, which includes shared (processed) datasets, third-party libraries, model run results, experiments/sandbox.
-Please feel free to use it as the shared directory for this project; the directory is owned by the group `eaif`, which you can add your unixname to by raising a task for Penguin.
+Please feel free to use it as the shared directory for this project; the directory is owned by the group `eaif`, which you can add your unixname to by with `sudo usermod -a -G eaif $USER` or raising a task for Penguin.
 
 **Shared public wandb**:
 
