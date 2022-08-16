@@ -19,6 +19,11 @@ conda env create -f environment.yml
 conda activate eaif  # Alternatively, `direnv allow`
 ```
 
+Some notes on the conda environment:
+- If conda is unable to resolve the environment, you may need to update conda to a newer version (e.g. try downloading a local version of miniconda instead of the module-loaded cluster-wide one).
+- [mamba](https://github.com/mamba-org/mamba) is a significantly faster drop-in replacement for conda.
+- [direnv](https://direnv.net/) with the [anaconda](https://github.com/direnv/direnv/wiki/Python#anaconda) plugin removes the need to `conda activate` when in current working directory.
+
 Setup Mujoco/mj_envs/mjrl:
 
 ```bash
@@ -79,4 +84,10 @@ Completed in 0.3s: 1.354ms, 738.7 FPS
 main(): start benchmarking                 
 Completed in 2.7s: 13.451ms, 74.3 FPS
 '
+```
+
+If you are unable to load `mujoco_py` with error `ImportError: cannot import name 'load_model_from_path' from 'mujoco_py' (unknown location)`, try running
+
+```bash
+rm -rf ~/.local/lib/python3.8/site-packages/mujoco_py
 ```
