@@ -23,6 +23,7 @@ dependencies:
   - ipdb
   - ipython
   - jupyter
+  - mamba
   - mkl-service
   - moviepy
   - numpy
@@ -54,3 +55,4 @@ dependencies:
     - gym==0.22.0
     - setuptools==59.5.0
     - timm==0.6.5
+    - git+https://github.com/openai/CLIP.git

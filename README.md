@@ -14,17 +14,18 @@ See [INSTALLATION.md](INSTALLATION.md).
     - See [README](./eaif-models/README.md) for more details.
 - `train`: model training code. Currently composed of a heterogeneous set of repos / environments.
 - `eval`: model evaluation code, unified under a single reproducible `environment.yml`.
+    - [cifar_lin_probe](./eval/cifar_lin_probe/): a basic unit test check that you're able to load models.
 - `data`: Gitignored directory containing (symlinks to) datasets, models, etc.
 - `third_party`: Third party submodules which aren't expected to change often.
 
 ## Shared resources
 
 **Shared directory**: On FAIR Cluster, we have 20TB allocated to the shared directory `/checkpoint/yixinlin/eaif/`, which includes shared (processed) datasets, third-party libraries, model run results, experiments/sandbox.
-Please feel free to use it as the shared directory for this project; the directory is owned by the group `eaif`, which you can add your unixname to by with `sudo usermod -a -G eaif $USER` or raising a task for Penguin.
+Please feel free to use it as the shared directory for this project; the directory is owned by the group `eaif` by raising a task for Penguin (example [task](T128888137)).
 
 **Shared public wandb**:
 
-We have a (public-cloud) team on Weights and Biases (outside of the FAIR cluster), with the team `eai-foundations`. Ping Yixin to be added.
+We have a (public-cloud) team on Weights and Biases (outside of the FAIR cluster), with the team `eai-foundations`. Add anyone on the team through [this link](https://wandb.ai/eai-foundations/members).
 
 If you were logged into the FAIR instance, you may need to relogin:
 

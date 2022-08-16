@@ -4,7 +4,8 @@ We will use CIFAR-10 classification as a quick and simple computer vision task f
 
 To launch a linear probing experiment on the cluster with multiple models, use the following command:
 ```
-python run_cifar_lin_probe.py -m +hydra/launcher=submitit_slurm \
+# From repo root directory
+python eval/cifar_lin_probe/run_cifar_lin_probe.py -m +hydra/launcher=submitit_slurm \
   model=moco,moco_ego4d,mae_large,mae_large_ego4d,r3m,rn50_sup_imnet
 ```
 

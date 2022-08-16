@@ -5,7 +5,8 @@ Clone the repo:
 ```bash
 git clone git@github.com:facebookresearch/eai-foundations.git
 cd eai-foundations
-git submodule update --init --recursive
+
+git submodule update --init --recursive  # Also necessary if we updated any submodules
 ```
 
 Create the Conda environment:
@@ -30,6 +31,7 @@ pip install -e ./third_party/mujoco-py
 # Install mj_envs/mjrl
 pip install -e ./third_party/mj_envs
 pip install -e ./third_party/mjrl
+pip install -e ./third_party/dmc2gym
 ```
 
 
@@ -78,4 +80,3 @@ main(): start benchmarking
 Completed in 2.7s: 13.451ms, 74.3 FPS
 '
 ```
-

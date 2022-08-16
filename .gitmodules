@@ -13,3 +13,6 @@
 [submodule "third_party/habitat-lab"]
 	path = third_party/habitat-lab
 	url = git@github.com:1heart/habitat-lab.git
+[submodule "third_party/dmc2gym"]
+	path = third_party/dmc2gym
+	url = git@github.com:aravindr93/dmc2gym.git
