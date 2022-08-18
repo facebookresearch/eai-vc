@@ -1,0 +1,7 @@
+_target_: eaif_models.models.vit.vit_mae.load_model
+checkpoint_path: /checkpoint/yixinlin/eaif/models/mae_ego4d/mae_pretrain_vit_small_ego4d.pth
+model_name: mae_vit_small_patch16_large_decoder
+metadata:
+  algo: mae
+  model: vits
+  data: ego4d
