@@ -29,11 +29,13 @@ def main(args):
         time_step=SIM_TIME_STEP,
         camera_delay_steps=0,
     )
-      
+
     if args.log_paths:
         num_episodes = len(args.log_paths)
     else:
         num_episodes = 6
+
+    policy = MoveCubePolicy(env.action_space, env.platform, time_step=SIM_TIME_STEP)
 
     for i in range(num_episodes):
         print(f"Running episode {i}")
@@ -41,7 +43,6 @@ def main(args):
         is_done = False
 
         observation = env.reset()
-        policy = MoveCubePolicy(env.action_space, env.platform, time_step=SIM_TIME_STEP)
         policy.reset()
 
         observation_list = []
@@ -53,14 +54,14 @@ def main(args):
             policy_observation = policy.get_observation()
 
             is_done = policy.done or episode_done
-        
+
             full_observation = {**observation, **policy_observation}
 
             if args.log_paths is not None: observation_list.append(full_observation)
 
         if args.log_paths is not None:
             # Compute actions (ftpos and joint state deltas) across trajectory
-            add_actions_to_obs(observation_list) 
+            add_actions_to_obs(observation_list)
             log_path = args.log_paths[i]
             np.savez_compressed(log_path, data=observation_list)
             print(f"Saved episode {i} to {log_path}")
@@ -72,13 +73,13 @@ def add_actions_to_obs(observation_list):
         ftpos_next = observation_list[t+1]["policy"]["controller"]["ft_pos_cur"]
         delta_ftpos = ftpos_next - ftpos_cur
 
-        q_cur  = observation_list[t]["robot_observation"]["position"]
-        q_next = observation_list[t+1]["robot_observation"]["position"]
+        q_cur  = observation_list[t]["robot_position"]
+        q_next = observation_list[t+1]["robot_position"]
         delta_q = q_next - q_cur
 
         action_dict = {"delta_ftpos": delta_ftpos, "delta_q": delta_q}
         observation_list[t]["action"] = action_dict
-        
+
     action_dict = {"delta_ftpos": np.zeros(delta_ftpos.shape), "delta_q": np.zeros(delta_q.shape)}
     observation_list[-1]["action"] = action_dict
 

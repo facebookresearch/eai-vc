@@ -21,6 +21,7 @@ class FTPosMPC(torch.nn.Module):
         self.n_keypt_dim = self.f_num * 3
         self.a_dim = self.f_num * 3
         self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
+        self.obj_state_type = "na"
 
     def forward(self, x, u=0):
         """ 

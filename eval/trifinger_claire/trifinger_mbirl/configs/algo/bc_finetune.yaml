@@ -1,0 +1,4 @@
+name: "bc_finetune"
+lr: 1e-3
+n_outer_iter: 1000
+n_epoch_every_log: 50

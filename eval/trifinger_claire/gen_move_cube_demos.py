@@ -7,18 +7,26 @@ import time
 from datetime import date, datetime
 import multiprocessing
 
+DIFFICULTY_CHOICES = [0,1,2,3]
+RANDOM_ACTION_IDS = [8,9]
 
 def main(args):
     
+    if args.difficulty in RANDOM_ACTION_IDS:
+        assert args.seed_demos_path is not None, "Need to specify --seed_demos_path to preloaded_demos.pth"
+    
     log_paths = get_log_paths(args)
-
 
     log_paths_str = " ".join(log_paths)
     arg_str = "-d {DIFFICULTY} -l {LOG_PATHS}".format(DIFFICULTY = args.difficulty, LOG_PATHS = log_paths_str)
         
     if args.visualize: arg_str += " -v"
 
-    cmd = f"python sim_move_cube.py {arg_str}"
+    if args.difficulty in [0,1,2,3]:
+        cmd = f"python sim_move_cube.py {arg_str}"
+    else:
+        arg_str += f" -s {args.seed_demos_path}"
+        cmd = f"python sim_random_actions.py {arg_str}"
 
     # Run sim_move_cube.py
     os.system(cmd)
@@ -38,11 +46,13 @@ def get_log_paths(args):
     return log_path_list
 
 def parse_args():
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--difficulty", "-d", type=int, choices=[0,1,2,3], help="Difficulty level", default=1)
+    parser.add_argument("--difficulty", "-d", type=int, choices=DIFFICULTY_CHOICES+RANDOM_ACTION_IDS, help="Difficulty level", default=1)
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
     parser.add_argument("--num_demos", "-nd", type=int, help="Number of demos to generate")
-    parser.add_argument("--demo_dir", type=str, default="/Users/clairelchen/logs/demos/", help="Directory for demo logs")
+    parser.add_argument("--demo_dir", type=str, default="test/demos/", help="Directory for demo logs")
+    parser.add_argument("--seed_demos_path", "-s", type=str, help="Path to preloaded_demos.pth")
     # TODO num proc
     return parser.parse_args()
 

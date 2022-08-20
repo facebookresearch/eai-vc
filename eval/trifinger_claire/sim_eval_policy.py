@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 
 from envs.cube_env import SimCubeEnv, ActionType
 from policies.follow_ft_traj_policy import FollowFtTrajPolicy
+from policies.execute_ftpos_delta_policy import ExecuteFtposDeltasPolicy
 from policies.bc_policy import BCPolicy
 
 SIM_TIME_STEP = 0.004
@@ -37,11 +38,13 @@ def test_single_traj(train_or_test, traj_num, env, conf, ckpt_path, demo_info, e
         training_traj_scale = 1
 
     expert_demo = demo_info[f"{train_or_test}_demos"][traj_num]
+    diff =demo_info[f"{train_or_test}_demo_stats"][traj_num]["diff"]
+    traj_i =demo_info[f"{train_or_test}_demo_stats"][traj_num]["id"]
 
     obj_init_pos = expert_demo["o_pos_cur"][0, :] / training_traj_scale
-    obj_init_ori = expert_demo["o_ori_cur"][0, :] / training_traj_scale
+    obj_init_ori = expert_demo["o_ori_cur"][0, :]
     obj_goal_pos = expert_demo["o_pos_des"][0, :] / training_traj_scale
-    obj_goal_ori = expert_demo["o_ori_des"][0, :] / training_traj_scale
+    obj_goal_ori = expert_demo["o_ori_des"][0, :]
     init_pose = {"position": obj_init_pos, "orientation": obj_init_ori}
     goal_pose = {"position": obj_goal_pos, "orientation": obj_goal_ori}
 
@@ -52,11 +55,8 @@ def test_single_traj(train_or_test, traj_num, env, conf, ckpt_path, demo_info, e
 
     print(f"Testing {train_or_test} traj {traj_num}")
 
-    #algo = conf["algo"]["name"]
-    #if "bc_obs_type" in conf["algo"]: bc_obs_type = conf["algo"]["bc_obs_type"]
-
-    algo = conf.algo
-    bc_obs_type = conf.bc_obs_type
+    algo = conf["algo"]["name"]
+    if "bc_obs_type" in conf["algo"]: bc_obs_type = conf["algo"]["bc_obs_type"]
 
     observation = env.reset(goal_pose_dict=goal_pose, init_pose_dict=init_pose)
     if algo == "mbirl":
@@ -66,11 +66,17 @@ def test_single_traj(train_or_test, traj_num, env, conf, ckpt_path, demo_info, e
         demo_stats["pred_traj"] = ckpt_info[f"{train_or_test}_pred_traj_per_demo"][traj_num].detach().numpy() / training_traj_scale
         demo_stats["pred_traj_t"] = demo_t
         ftpos_traj = ckpt_info[f"{train_or_test}_pred_traj_per_demo"][traj_num].detach().numpy()[:, :9] / training_traj_scale
-        #ftpos_traj = expert_demo["ft_pos_cur"] # Use expert actions [FOR DEBUGGING]
-        policy = FollowFtTrajPolicy(ftpos_traj, env.action_space, env.platform, time_step=SIM_TIME_STEP,
+        ftpos_deltas = ckpt_info[f"{train_or_test}_pred_actions_per_demo"][traj_num] / training_traj_scale
+
+        #ftpos_traj = expert_demo["ft_pos_cur"] # Use expert demos [FOR DEBUGGING]
+        #policy = FollowFtTrajPolicy(ftpos_traj, env.action_space, env.platform, time_step=SIM_TIME_STEP,
+        #                            downsample_time_step=downsample_time_step)
+
+        policy = ExecuteFtposDeltasPolicy(ftpos_deltas, env.action_space, env.platform, time_step=SIM_TIME_STEP,
                                     downsample_time_step=downsample_time_step)
+
     elif algo == "bc":
-        policy = BCPolicy(ckpt_path, expert_demo, bc_obs_type,
+        policy = BCPolicy(ckpt_path, expert_demo, conf["algo"]["obs_type"],
                           env.action_space, env.platform, time_step=SIM_TIME_STEP,
                           downsample_time_step=downsample_time_step, training_traj_scale=training_traj_scale)
     else:
@@ -98,11 +104,11 @@ def test_single_traj(train_or_test, traj_num, env, conf, ckpt_path, demo_info, e
     add_actions_to_obs(observation_list) 
     log_dir = os.path.join(exp_dir, "eval", train_or_test)
     if not os.path.exists(log_dir): os.makedirs(log_dir)
-    log_path = os.path.join(log_dir, f"traj_{traj_num}_log.npz")
+    log_path = os.path.join(log_dir, f"diff-{diff}_traj-{traj_i}.npz")
     np.savez_compressed(log_path, data=observation_list, demo_data=[demo_stats])
     print(f"Saved {train_or_test} traj {traj_num} log to {log_path}")
 
-    final_obj_pos_err = observation_list[-1]["achieved_goal"]["position_error"]
+    final_obj_pos_err = observation_list[-1]["achieved_goal_position_error"]
     return final_obj_pos_err
 
 def main(args):
@@ -146,8 +152,8 @@ def add_actions_to_obs(observation_list):
         ftpos_next = observation_list[t+1]["policy"]["controller"]["ft_pos_cur"]
         delta_ftpos = ftpos_next - ftpos_cur
 
-        q_cur  = observation_list[t]["robot_observation"]["position"]
-        q_next = observation_list[t+1]["robot_observation"]["position"]
+        q_cur  = observation_list[t]["robot_position"]
+        q_next = observation_list[t+1]["robot_position"]
         delta_q = q_next - q_cur
 
         action_dict = {"delta_ftpos": delta_ftpos, "delta_q": delta_q}

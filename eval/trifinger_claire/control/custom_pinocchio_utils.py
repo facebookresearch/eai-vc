@@ -110,12 +110,23 @@ class CustomPinocchioUtils(Kinematics):
     def get_hand_g(self, q_cur, J):
         """ Get joint space gravity vector for 3-fingered hand """
 
-        g = np.zeros(9)
-    
-        for f_id in range(3):
-            g_i = self.get_finger_g(f_id, q_cur, J)
-            g += g_i
+        return(self.inverse_dyn(q_cur))
 
-        return g
+        # This doesn't work well, fingers droop slightly when trying to hold position. Depends on accurate model.
+        #g = np.zeros(9)
+    
+        #for f_id in range(3):
+        #    g_i = self.get_finger_g(f_id, q_cur, J)
+        #    g += g_i
+
+        #return g
+
+    def inverse_dyn(self, q):
+        #q = pinocchio.neutral(self.robot_model)
+        v = pinocchio.utils.zero(self.robot_model.nv)
+        a = pinocchio.utils.zero(self.robot_model.nv)
+         
+        tau = pinocchio.rnea(self.robot_model,self.data,q,v,a)
+        return tau
     
 

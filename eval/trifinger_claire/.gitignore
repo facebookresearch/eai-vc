@@ -9,3 +9,6 @@ wandb
 tmp/*
 wandb/*
 trifinger_mbirl/logs/*
+multirun/*
+outputs/*
+0_VRDemoSettings.txt

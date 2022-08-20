@@ -2,6 +2,7 @@ import torch
 import os
 import sys
 import numpy as np
+from scipy.optimize import approx_fprime
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
@@ -224,3 +225,77 @@ class DiffTrifingerSim(torch.nn.Module):
               }
 
         return obs
+
+
+### Franzi: copied from another project - this shows how we cmoputed gradients via "sampling" ###
+class AbstractDynamicsModel(object):
+    def predict_next_state(self, state, action):
+        raise NotImplementedError("Subclass must implement this function")
+
+    def train(self, training_dataset, testing_dataset, training_params):
+        raise NotImplementedError("Subclass must implement this function")
+
+    def reset(self):
+        pass
+
+    # return Jacobian of the model with respect to input
+    # the input of the model is x (state) and u (action) - concatenated.
+    # the Jacobian is of size state_dim x (state_dim + action_dim)
+    def dM_dxu(self, x, u):
+        raise NotImplementedError("Subclass must implement this function")
+
+    def type(self):
+        raise NotImplementedError("Subclass must implement this function")
+
+
+class GroundTruthForwardDynamics(AbstractDynamicsModel):
+
+    # don't really need the torque/joint limits
+    def __init__(self, model):
+        model.params.gui = False
+        self.dynamics_model = hydra.utils.instantiate(model)
+
+    def __call__(self, state, u):
+        return self._eval(state, u)
+
+    def _eval(self, state, u):
+        self.dynamics_model.reset_then_step(state, u)
+        new_state = self.dynamics_model.get_current_joint_state()
+        return new_state
+
+    def predict_next_state(self, state, action):
+        # TODO: have to decide whehter we always return mean and variance prediction, and what to do in case
+        # we don't have a variance
+        return self._eval(state, action), np.zeros_like(state)
+
+    def train(self, training_dataset, testing_dataset, training_params):
+        pass
+
+    def _dx(self, x, u, eps=1e-6):
+        J = np.vstack(
+            [
+                approx_fprime(x, lambda x: self._eval(x, u)[i], eps)
+                for i in range(len(x))
+            ]
+        )
+        return J
+
+    def _du(self, x, u, eps=1e-6):
+        J = np.vstack(
+            [
+                approx_fprime(u, lambda u: self._eval(x, u)[i], eps)
+                for i in range(len(x))
+            ]
+        )
+        return J
+
+    def dM_dxu(self, x, u, eps=1e-6):
+        return self.dM_dxu_finite_diff(x, u, eps)
+
+    def dM_dxu_finite_diff(self, x, u, eps=1e-6):
+        dx = self._dx(x, u, eps)
+        du = self._du(x, u, eps)
+        return dx, du
+
+    def type(self):
+        return "GroundTruthDynamicsModel"

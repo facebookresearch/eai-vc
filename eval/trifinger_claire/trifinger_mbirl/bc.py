@@ -83,7 +83,7 @@ def get_bc_obs(obs_dict, obs_type, r3m=None, device="cpu"):
         ft_pos_rel = np.repeat(obs_dict["o_pos_des"], 3) - obs_dict["ft_pos_cur"]
         o_pos_rel  = obs_dict["o_pos_des"] - obs_dict["o_pos_cur"]
 
-        obs = torch.cat([torch.FloatTensor(ft_pos_rel), torch.FloatTensor(o_pos_rel)])
+        obs = torch.cat([torch.FloatTensor(ft_pos_rel), torch.FloatTensor(o_pos_rel)]).to(device)
 
     elif obs_type == "img_r3m":
         transforms = T.Compose([T.Resize(256),
@@ -101,7 +101,6 @@ def get_bc_obs(obs_dict, obs_type, r3m=None, device="cpu"):
         visual_obs_goal = r3m(image_goal_preproc * 255.0)[0].detach()
 
         obs = torch.cat([visual_obs, proprio_obs, visual_obs_goal])
-
     else:
         raise ValueError("Invalid obs_type")
 

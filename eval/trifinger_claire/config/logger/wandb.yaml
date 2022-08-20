@@ -1,0 +1,11 @@
+_target_: imitation_learning.utils.logging.WbLogger
+_recursive_: False
+wb_proj_name: ???
+wb_entity: ???
+run_name: ""
+seed: ${seed}
+log_dir: "./data/vids/"
+group_name: ""
+vid_dir: "./data/vids/"
+save_dir: "./data/checkpoints/"
+smooth_len: 10

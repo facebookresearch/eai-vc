@@ -54,9 +54,6 @@ class FollowFtTrajPolicy:
 
         self.controller = ImpedanceController(self.kinematics)
 
-        self.ft_pos_traj, self.ft_vel_traj = self.interp_ft_traj(self.ft_pos_traj_in)
-        self.traj_counter = 0
-
     def reset(self, ft_pos_traj_in=None):
         # initial joint positions (lifting the fingers up)
         self.joint_positions = self.joint_positions
@@ -67,27 +64,13 @@ class FollowFtTrajPolicy:
         # Initial ft pos and vel trajectories
         if ft_pos_traj_in is not None:
             self.ft_pos_traj_in = ft_pos_traj_in
-        self.ft_pos_traj, self.ft_vel_traj = self.interp_ft_traj(self.ft_pos_traj_in)
+        self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(self.ft_pos_traj_in,
+                                                                         self.downsample_time_step,
+                                                                         self.time_step)
 
         self.t = 0
 
         self.done = False
-
-    def interp_ft_traj(self, ft_pos_traj_in):
-        """
-        Interpolate between waypoints in ftpos trajectory, and compute velocities
-        For now, just try linear interpolation between waypoints,
-        with finite difference approximation to compute linear velocities
-        """
-        ft_pos_traj =  c_utils.lin_interp_waypoints(ft_pos_traj_in, self.downsample_time_step,
-                                                    time_step_out=self.time_step)
-        
-        ft_vel_traj = np.zeros(ft_pos_traj.shape)
-        for i in range(ft_pos_traj.shape[0] - 1):
-            v = (ft_pos_traj[i+1,:] - ft_pos_traj[i,:]) / self.time_step
-            ft_vel_traj[i, :] = v
-
-        return ft_pos_traj, ft_vel_traj
 
     def get_ft_des(self, observation):
         """ Get fingertip desired pos based on current self.mode """

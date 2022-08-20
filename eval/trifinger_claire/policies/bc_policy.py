@@ -58,7 +58,7 @@ class BCPolicy:
                 self.platform.simfinger.tip_link_names,
                 self.platform.simfinger.link_names)
 
-        self.controller = ImpedanceController(self.kinematics, kp = [2000] * 9,)
+        self.controller = ImpedanceController(self.kinematics, kp = [2000] * 9)
 
         self.traj_counter = 0
 
@@ -109,8 +109,8 @@ class BCPolicy:
         # Run this every X timesteps (based on downsampling factor)
 
         # Scale observation by training_traj_scale, for bc policy
-        o_pos_cur = observation["object_observation"]["position"] * self.training_traj_scale
-        q_cur = observation["robot_observation"]["position"]
+        o_pos_cur = observation["object_position"] * self.training_traj_scale
+        q_cur = observation["robot_position"]
         ft_pos_cur = self.get_ft_pos(q_cur) * self.training_traj_scale
 
         obs_dict = {
@@ -137,28 +137,15 @@ class BCPolicy:
         # Lin interp from current ft pos to next ft waypoint
         # Scale back to meters
         ft_traj = np.stack((ft_pos_cur / self.training_traj_scale, ft_pos_next / self.training_traj_scale))
-        self.ft_pos_traj, self.ft_vel_traj = self.interp_ft_traj(ft_traj)
+        self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_traj,
+                                                                         self.downsample_time_step,
+                                                                         self.time_step)
 
         # Reset traj counter
         self.traj_counter = 0
 
         self.set_traj_counter += 1
 
-    def interp_ft_traj(self, ft_pos_traj_in):
-        """
-        Interpolate between waypoints in ftpos trajectory, and compute velocities
-        For now, just try linear interpolation between waypoints,
-        with finite difference approximation to compute linear velocities
-        """
-        ft_pos_traj =  c_utils.lin_interp_waypoints(ft_pos_traj_in, self.downsample_time_step,
-                                                    time_step_out=self.time_step)
-        
-        ft_vel_traj = np.zeros(ft_pos_traj.shape)
-        for i in range(ft_pos_traj.shape[0] - 1):
-            v = (ft_pos_traj[i+1,:] - ft_pos_traj[i,:]) / self.time_step
-            ft_vel_traj[i, :] = v
-
-        return ft_pos_traj, ft_vel_traj
 
     def get_ft_des(self, observation):
         """ Get fingertip desired pos  """
@@ -187,8 +174,8 @@ class BCPolicy:
         x_des, dx_des = self.get_ft_des(observation)
 
         #4. Get torques from controller
-        q_cur = observation["robot_observation"]["position"]
-        dq_cur = observation["robot_observation"]["velocity"]
+        q_cur = observation["robot_position"]
+        dq_cur = observation["robot_velocity"]
         torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
     
         self.t += 1

@@ -1,0 +1,4 @@
+name: decoder
+lr: 1e-3
+n_epochs: 2000
+n_epoch_every_save: 100

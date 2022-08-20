@@ -11,7 +11,7 @@ sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
 
 from trifinger_mbirl.forward_models.train_phase2_model import Phase2Model
-from trifinger_mbirl.forward_models.phase1_model import Phase1Model
+from trifinger_mbirl.forward_models.models.phase1_model import Phase1Model
 import utils.data_utils as d_utils
 
 

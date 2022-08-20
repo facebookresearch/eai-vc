@@ -15,7 +15,8 @@ def main(args):
     cost_weights = data["cost_parameters"]["weights"].detach().numpy()
 
 
-    d_list = ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",]
+    d_list = ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3","ox", "oy", "oz"]
+    #d_list = ["x1", "y1", "z1", "x2", "y2", "z2", "x3", "y3", "z3",]
 
     if args.save:
         exp_dir = os.path.split(args.file_path)[0]
@@ -23,7 +24,26 @@ def main(args):
     else:
         save_path = None
 
-    plot_MPTimeDep("Learned cost weights", cost_weights, d_list, save_path=save_path)
+    if cost_type == "MPTimeDep":
+        plot_MPTimeDep("Learned cost weights", cost_weights, d_list, save_path=save_path)
+    elif cost_type == "Weighted":
+        plot_Weighted("Learned cost weights", cost_weights, d_list, save_path=save_path)
+    else:
+        raise ValueError(f"cost type {cost_type} is not supported")
+
+def plot_Weighted(title, cost_weights, d_list, save_path=None):
+
+    plt.figure(figsize=(10, 10), dpi=200)
+    plt.title(title)
+
+    plt.bar(d_list, cost_weights[:,0], width=0.4)
+
+    if save_path is not None:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
+    plt.close()
 
 def plot_MPTimeDep(title, cost_weights, d_list, save_path=None):
     """ Plot multi-phase time dependent cost weights """

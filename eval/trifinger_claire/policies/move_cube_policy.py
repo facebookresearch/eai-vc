@@ -24,9 +24,9 @@ class MoveCubePolicy:
     """
 
     Move cube
-    
+
     - Compute contact points on cube given cube init pose
-    - Get ft_pos in world frame 
+    - Get ft_pos in world frame
     - Move fingers to cube
     - Compute ft goal positions give cube goal pose, contact poinst
     """
@@ -95,13 +95,13 @@ class MoveCubePolicy:
 
         self.ft_pos_targets_per_mode = [] # List of fingertip position targets per mode
 
-    def state_machine(self, observation, t): 
+    def state_machine(self, observation, t):
         """ Define mode transition logic """
 
         self.prev_mode = self.mode
-        
-        q_cur = observation["robot_observation"]["position"]
-        dq_cur = observation["robot_observation"]["velocity"]
+
+        q_cur = observation["robot_position"]
+        dq_cur = observation["robot_velocity"]
 
         if self.mode == Mode.INIT:
             self.mode = Mode.GRASP
@@ -132,16 +132,19 @@ class MoveCubePolicy:
 
         return ft_pos_des, ft_vel_des
 
-    
+    def _to_obj_dict(self, ort, pos):
+        return {"orientation":ort, "position":pos}
+
     def set_ft_traj(self, observation):
         """ Given self.mode, set self.ft_pos_traj and self.ft_vel_traj; reset self.traj_counter """
-        
-        obj_pose = observation["object_observation"]
 
-        goal_pose  = {"position": observation["desired_goal"]["position"],
-                      "orientation": obj_pose["orientation"]}
+        obj_orientation = observation["object_orientation"]
+        obj_position = observation["object_position"]
 
-        q_cur = observation["robot_observation"]["position"]
+        goal_pose  = {"position": observation["desired_goal"][:3],
+                      "orientation": obj_orientation}
+
+        q_cur = observation["robot_position"]
         ft_pos_cur = self.get_ft_pos(q_cur)
 
         if self.mode == Mode.INIT:
@@ -149,23 +152,24 @@ class MoveCubePolicy:
             self.ft_vel_traj = np.zeros((1,9))
 
         elif self.mode == Mode.GRASP:
+            obj_pose = self._to_obj_dict(obj_orientation, obj_position)
             self.cp_params = c_utils.get_cp_params(obj_pose)
             ft_pos = c_utils.get_cp_pos_wf_from_cp_params(self.cp_params, obj_pose)
             ft_pos = np.concatenate(ft_pos)
 
-            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_pos_cur, ft_pos, 1.5, time_step=self.time_step)
+            self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_two_points(ft_pos_cur, ft_pos, 1.5, time_step=self.time_step)
 
             self.ft_pos_targets_per_mode.append(ft_pos)
 
         elif self.mode == Mode.MOVE_CUBE:
             # Get object trajectory
-            o_traj, do_traj = c_utils.lin_interp_pos_traj(obj_pose["position"], goal_pose["position"], 2.5, time_step=self.time_step)
+            o_traj, do_traj = c_utils.lin_interp_pos_two_points(obj_position, goal_pose["position"], 2.5, time_step=self.time_step)
 
             # Get ft pos trajectory from object trajectory
             ft_pos_traj = np.zeros((o_traj.shape[0], 9))
             for i in range(o_traj.shape[0]):
                 o_des = o_traj[i, :]
-                o_pose = {"position": o_des[:3], "orientation": obj_pose["orientation"]}
+                o_pose = {"position": o_des[:3], "orientation": obj_orientation}
                 ft_pos = np.concatenate(c_utils.get_cp_pos_wf_from_cp_params(self.cp_params, o_pose))
                 ft_pos_traj[i, :] = ft_pos
 
@@ -193,7 +197,7 @@ class MoveCubePolicy:
 
         # 1. Call state_machine() to determine mode
         self.state_machine(observation, t)
-        
+
         # 2. If entering new mode, set new finger tip traj
         if self.prev_mode != self.mode and self.mode != Mode.DONE:
             self.set_ft_traj(observation)
@@ -202,10 +206,10 @@ class MoveCubePolicy:
         x_des, dx_des = self.get_ft_des(observation)
 
         #4. Get torques from controller
-        q_cur = observation["robot_observation"]["position"]
-        dq_cur = observation["robot_observation"]["velocity"]
+        q_cur = observation["robot_position"]
+        dq_cur = observation["robot_velocity"]
         torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
-    
+
         self.t += 1
 
         return self.clip_to_space(torque)
@@ -223,7 +227,7 @@ class MoveCubePolicy:
 
     def get_observation(self):
 
-        obs = {"policy": 
+        obs = {"policy":
                 {
                 "controller": self.controller.get_observation(),
                 "ft_pos_targets_per_mode": np.array(self.ft_pos_targets_per_mode),
@@ -232,4 +236,3 @@ class MoveCubePolicy:
               }
 
         return obs
-

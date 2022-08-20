@@ -316,10 +316,16 @@ def get_of_from_wf(p, obj_pose):
 # Non-cube specific functions TODO move somewhere else
 ##############################################################################
 
-def lin_interp_pos_traj(x_cur, x_des, T, time_step=0.001):
+def lin_interp_pos_two_points(x_cur, x_des, T, time_step=0.001):
     """
     Linearly interpolate x_cur, x_des positions to get waypoints
     No orientation
+
+    args:
+        x_cur: start position
+        x_des: end position
+        T: duration of trajectory, in seconds
+        time_step: timestep between waypoints (simulation timestep)
     """
 
     delta_x = x_des - x_cur
@@ -331,9 +337,9 @@ def lin_interp_pos_traj(x_cur, x_des, T, time_step=0.001):
 
     return x_traj, dx_traj
 
-def lin_interp_waypoints(x, time_step_in, time_step_out=0.001):
+def lin_interp_pos(x, time_step_in, time_step_out=0.001):
     """
-    Linearly interpolate between all waypoints in x (between each row) [T, dim]
+    Linearly interpolate between all position waypoints in x (between each row) [T, dim]
     """
 
     T = x.shape[0]
@@ -351,6 +357,21 @@ def lin_interp_waypoints(x, time_step_in, time_step_out=0.001):
     x_interpolated = itp_x(row_coord_out)
     return x_interpolated
 
+
+def lin_interp_pos_traj(x_in, time_step_in, time_step_out):
+    """
+    Linearly interpolate between all position waypoints in x (between each row) [T, dim]
+    Output position and velocity trajectories
+    """
+
+    x_pos_traj =  lin_interp_pos(x_in, time_step_in, time_step_out)
+    
+    x_vel_traj = np.zeros(x_pos_traj.shape)
+    for i in range(x_pos_traj.shape[0] - 1):
+        v = (x_pos_traj[i+1,:] - x_pos_traj[i,:]) / time_step_out
+        x_vel_traj[i, :] = v
+
+    return x_pos_traj, x_vel_traj
 
 ##############################################################################
 # Private functions

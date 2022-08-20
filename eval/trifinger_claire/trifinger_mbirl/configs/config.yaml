@@ -1,15 +1,15 @@
 defaults:
     - _self_
-    - algo: mbirl
+    - algo: bc_finetune
 
-file_path: /Users/clairelchen/projects/trifinger_claire/demos/exp_splits/one_traj/demo_info.pth
-log_dir: /Users/clairelchen/projects/trifinger_claire/trifinger_mbirl/logs
+demo_path: demos/preloaded_demos/demos_d-1_train-1_test-1_scale-100.pth
+log_dir: trifinger_mbirl/logs
 no_wandb: True
 run_id: ${hydra:job.num}
-exp_id: ${experiment.name}
+seed: 10
 
 hydra:
     sweep:
-        dir: multirun/${now:%Y-%m-%d}/exp_${experiment.name}-${now:%H-%M-%S}
+        dir: multirun/${now:%Y-%m-%d}/exp_${hydra.runtime.choices.experiment}-${now:%Y-%m-%d}-${now:%H-%M-%S}
         subdir: ${hydra.job.num}
 

@@ -11,6 +11,9 @@ import trifinger_simulation
 import trifinger_simulation.visual_objects
 from trifinger_simulation import trifingerpro_limits
 import trifinger_simulation.tasks.move_cube as task
+from imitation_learning.utils.envs.registry import full_env_registry
+from dataclasses import dataclass
+import torch
 
 try:
     import robot_fingers
@@ -111,6 +114,28 @@ class BaseCubeEnv(gym.Env):
                 ),
             }
         )
+        observation_state_space = gym.spaces.Box(
+            low=np.append(trifingerpro_limits.robot_position.low,
+                        trifingerpro_limits.object_position.low),
+            high=np.append(trifingerpro_limits.robot_position.high,
+                        trifingerpro_limits.object_position.high)
+        )
+        position_error_state_space =  gym.spaces.Box(
+                                low=np.full(3,-999999,dtype=np.float32),
+                                high=np.full(3,999999,dtype=np.float32)
+                            )
+        orientation_error_state_space =  gym.spaces.Box(
+                                low=np.full(4,-999999,dtype=np.float32),
+                                high=np.full(4,999999,dtype=np.float32)
+                            )
+
+
+        goal_state_space = gym.spaces.Box(
+            low=np.append(trifingerpro_limits.object_position.low,
+                        trifingerpro_limits.object_orientation.low),
+            high=np.append(trifingerpro_limits.object_position.high,
+                        trifingerpro_limits.object_orientation.high)
+        )
 
         if self.action_type == ActionType.TORQUE:
             self.action_space = robot_torque_space
@@ -134,22 +159,21 @@ class BaseCubeEnv(gym.Env):
 
         self.observation_space = gym.spaces.Dict(
             {
-                "robot_observation": gym.spaces.Dict(
-                    {
-                        "position": robot_position_space,
-                        "velocity": robot_velocity_space,
-                        "torque": robot_torque_space,
-                    }
-                ),
-                "object_observation": gym.spaces.Dict(
-                    {
-                        "position": object_state_space["position"],
-                        "orientation": object_state_space["orientation"],
-                    }
-                ),
+                "t": gym.spaces.Discrete(task.EPISODE_LENGTH),
+                "robot_position": robot_position_space,
+                "robot_velocity": robot_velocity_space,
+                "robot_torque": robot_torque_space,
+                # "object_vertices":object_state_space["position"], #TODO are these limits different
+                "object_position": object_state_space["position"],
+                "object_orientation": object_state_space["orientation"],
+                "observation": observation_state_space,
                 "action": self.action_space,
-                "desired_goal": object_state_space["position"],
-                "achieved_goal": object_state_space["position"],
+                "desired_goal": goal_state_space,
+                "achieved_goal": goal_state_space,
+                "achieved_goal_position": object_state_space["position"],
+                "achieved_goal_orientation":  object_state_space["orientation"],
+                "achieved_goal_position_error": position_error_state_space,
+                "achieved_goal_orientation_error":  orientation_error_state_space
             }
         )
 
@@ -178,10 +202,9 @@ class BaseCubeEnv(gym.Env):
                     info,
                 )
         """
-
         return -task.evaluate_state(
-            task.Pose.from_dict(desired_goal),
-            task.Pose.from_dict(achieved_goal),
+            task.Pose(desired_goal[:3],desired_goal[3:]), #expects pos + orientation
+            task.Pose(achieved_goal[:3],achieved_goal[3:]),
             info["difficulty"],
         )
 
@@ -228,15 +251,21 @@ class BaseCubeEnv(gym.Env):
         task.seed(seed)
         return [seed]
 
+    def _goal_orientation(self):
+        return self.goal[3:]
+
+    def _goal_pos(self):
+        return self.goal[:3]
+
     def _create_observation(self, t, action):
         robot_observation = self.platform.get_robot_observation(t)
         camera_observation = self.platform.get_camera_observation(t)
         object_observation = camera_observation.filtered_object_pose
-        
-        position_error = np.linalg.norm(object_observation.position - self.goal["position"])
+
+        position_error = np.linalg.norm(object_observation.position - self._goal_pos())
 
         # From trifinger_simulation tasks/move_cube/__init__.py evaluate_state()
-        goal_rot = Rotation.from_quat(self.goal["orientation"])
+        goal_rot = Rotation.from_quat(self._goal_orientation())
         actual_rot = Rotation.from_quat(object_observation.orientation)
         error_rot = goal_rot.inv() * actual_rot
         orientation_error = error_rot.magnitude()
@@ -244,27 +273,22 @@ class BaseCubeEnv(gym.Env):
         # Get cube vertices
         obj_pose = {"position": object_observation.position, "orientation": object_observation.orientation}
         v_wf_dict = c_utils.get_vertices_wf(obj_pose)
-
         observation = {
             "t": t,
-            "robot_observation": {
-                "position": robot_observation.position,
-                "velocity": robot_observation.velocity,
-                "torque": robot_observation.torque,
-            },
-            "object_observation": {
-                "position": object_observation.position,
-                "orientation": object_observation.orientation,
-                "vertices": v_wf_dict,
-            },
+            "robot_position": robot_observation.position,
+            "robot_velocity": robot_observation.velocity,
+            "robot_torque": robot_observation.torque,
+            "object_position": object_observation.position,
+            "object_orientation": object_observation.orientation,
+            "observation": np.append(robot_observation.position,object_observation.position),
+            # "object_vertices": v_wf_dict,
             "action": action,
             "desired_goal": self.goal,
-            "achieved_goal": {
-                "position": object_observation.position,
-                "orientation": object_observation.orientation,
-                "position_error": position_error,
-                "orientation_error": orientation_error,
-            },
+            "achieved_goal_position": object_observation.position,
+            "achieved_goal_orientation": object_observation.orientation,
+            "achieved_goal_position_error": position_error,
+            "achieved_goal_orientation_error": orientation_error,
+            "achieved_goal": np.append(object_observation.position,object_observation.orientation)
         }
 
         # Save camera observation images
@@ -297,7 +321,7 @@ class BaseCubeEnv(gym.Env):
 
         return robot_action
 
-
+@full_env_registry.register_env("SimCubeEnv-v0")
 class SimCubeEnv(BaseCubeEnv):
     """Gym environment for moving cubes with simulated TriFingerPro."""
 
@@ -326,7 +350,7 @@ class SimCubeEnv(BaseCubeEnv):
             visualization (bool): If true, the pyBullet GUI is run for
                 visualization.
             no_collisions (bool): If true, turn of collisions between platform and object.
-            enable_cameras (bool): If true, enable cameras that capture RGB image 
+            enable_cameras (bool): If true, enable cameras that capture RGB image
                 observations.
             finger_type (str): Finger type ("trifingerpro", "trifingeredu")
             camera_delay_steps (int):  Number of time steps by which camera
@@ -369,6 +393,9 @@ class SimCubeEnv(BaseCubeEnv):
             self.draw_verts = False
         self.vert_markers = None
 
+    def set_info_dict_reader(self, info_dict_reader=None):
+        self.reader = info_dict_reader
+
     def step(self, action):
         """Run one timestep of the environment's dynamics.
 
@@ -391,7 +418,8 @@ class SimCubeEnv(BaseCubeEnv):
         """
         if self.platform is None:
             raise RuntimeError("Call `reset()` before starting to step.")
-
+        #TODO figure out a better way for this
+        action = np.clip(action,self.action_space.low,self.action_space.high)
         if not self.action_space.contains(np.array(action, dtype=np.float32)):
             raise ValueError(
                 "Given action is not contained in the action space."
@@ -434,12 +462,12 @@ class SimCubeEnv(BaseCubeEnv):
                 self.info["time_index"], action
             )
 
-            reward = 0 # TODO not computing reward
-            #reward += self.compute_reward(
-            #    observation["achieved_goal"],
-            #    observation["desired_goal"],
-            #    self.info,
-            #)
+            reward = 0
+            reward += self.compute_reward(
+               observation["achieved_goal"],
+               observation["desired_goal"],
+               self.info,
+            )
 
             # Draw cube vertices from observation
             if self.draw_verts:
@@ -452,7 +480,7 @@ class SimCubeEnv(BaseCubeEnv):
 
         return observation, reward, is_done, self.info
 
-    def reset(self, goal_pose_dict=None, init_pose_dict=None):
+    def reset(self, goal_pose_dict=None, init_pose_dict=None, init_robot_position=None):
         """ Reset the environment. """
 
         ##hard-reset simulation
@@ -465,7 +493,7 @@ class SimCubeEnv(BaseCubeEnv):
         else:
             initial_object_pose = task.Pose.from_dict(init_pose_dict)
 
-        self.platform.reset(initial_object_pose)
+        self.platform.reset(initial_object_pose = initial_object_pose, initial_robot_position = init_robot_position)
 
         # Set pybullet GUI params
         self._set_sim_params()
@@ -475,19 +503,21 @@ class SimCubeEnv(BaseCubeEnv):
 
         # if no goal is given, sample one randomly
         if goal_pose_dict is None:
-            if self.difficulty == 0:
-                self.goal = initial_object_pose.to_dict()
+            if self.difficulty == 0 or self.difficulty not in [1,2,3]:
+                self.goal = np.append(initial_object_pose.position, initial_object_pose.orientation)
             else:
-                self.goal = task.sample_goal(self.difficulty).to_dict()
+                pose = task.sample_goal(self.difficulty)
+                self.goal = np.append(pose.position, pose.orientation)
         else:
-            self.goal = goal_pose_dict
+            pose = goal_pose_dict
+            self.goal = np.append(pose["position"], pose["orientation"])
 
         # visualize the goal
         if self.visualization and not self.enable_cameras:
             self.goal_marker = trifinger_simulation.visual_objects.CubeMarker(
                 width=task._CUBE_WIDTH,
-                position=self.goal["position"],
-                orientation=self.goal["orientation"],
+                position=self._goal_pos(),
+                orientation=self._goal_orientation(),
                 pybullet_client_id=self.platform.simfinger._pybullet_client_id,
             )
 
@@ -507,16 +537,19 @@ class SimCubeEnv(BaseCubeEnv):
 
         self.step_count = 0
 
-        return self._create_observation(0, self._initial_action)
+        new_obs = self._create_observation(0, self._initial_action)
+
+        return new_obs
 
     def _set_sim_params(self):
         """ Set pybullet GUI params """
 
         pybullet.configureDebugVisualizer(pybullet.COV_ENABLE_GUI, 0) # Turn off debug camera visuals
+        pybullet.configureDebugVisualizer(pybullet.COV_ENABLE_SHADOWS, 0) # Turn off debug camera visuals
 
     def disable_collisions(self):
         """ Disable collisions between finger and object, for debugging finger controllers """
-        
+
         obj_id = self.platform.cube._object_id
         robot_id = self.platform.simfinger.finger_id
         obj_link_id = -1
@@ -526,6 +559,22 @@ class SimCubeEnv(BaseCubeEnv):
         for link_id in finger_link_ids:
             pybullet.setCollisionFilterPair(robot_id, obj_id, link_id, obj_link_id, enableCollision=0)
 
-        # Make object invisible 
+        # Make object invisible
         #pybullet.changeVisualShape(obj_id, obj_link_id, rgbaColor=[0,0,0,0])
 
+
+@dataclass(frozen=True)
+class SimCubeEnvParams:
+    """
+    TODO explain params
+    :param force_eval_start_dist: Generate the start positions from the eval offset.
+    """
+    env: str = 'SimCubeEnv',
+    goal_pose: torch.Tensor = None,
+    action_type: ActionType = ActionType.TORQUE,
+    visualization: bool = False,
+    no_collisions: bool = True,
+    enable_cameras: bool = True,
+    finger_type: str = "trifingerpro",
+    time_step: int = 0,
+    camera_delay_steps: int = 0

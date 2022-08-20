@@ -1,6 +1,0 @@
-{
-    "demo_dir"   : "demos/",
-    "difficulty" : 1,
-    "train_demos": [0, 1, 2, 3, 4],
-    "test_demos" : [5]
-}

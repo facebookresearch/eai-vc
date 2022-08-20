@@ -60,8 +60,6 @@ class Phase2ModelDataset(torch.utils.data.Dataset):
             data_info_dict = {"dataset": self.dataset, "phase2_start_ind": self.phase2_start_ind}
             
             if dataset_path is not None:
-                demo_dir = os.path.dirname(dataset_path)
-                if not os.path.exists(demo_dir): os.makedirs(demo_dir)
                 torch.save(data_info_dict, f=dataset_path)
                 print(f"Saved dataset to {dataset_path}")
         else:
@@ -241,13 +239,13 @@ def get_exp_str(params_dict):
 
     exp_str = f"phase2_model"
 
-    if params_dict["file_path"] is not None:
-        file_path = os.path.splitext(os.path.split(params_dict["file_path"])[1])[0]
+    if params_dict["demo_path"] is not None:
+        file_path = os.path.splitext(os.path.split(params_dict["demo_path"])[1])[0]
         exp_str += f"_{file_path}"
 
     for key, val in sorted_dict.items():
         # exclude these keys from exp name
-        if key in ["file_path", "no_wandb", "log_dir", "run_id", "n_epoch_every_eval", "n_epochs"]: continue
+        if key in ["demo_path", "no_wandb", "log_dir", "run_id", "n_epoch_every_eval", "n_epochs"]: continue
 
         # Abbreviate key
         splits = key.split("_")
@@ -271,40 +269,28 @@ def main(conf):
     else:
         device = "cpu"
 
-    DEMO_DIR = "/Users/clairelchen/logs/demos/"
-    SCALE = 100
-    if args.file_path is not None:
-        train_trajs, test_trajs = d_utils.load_trajs(args.file_path, scale=SCALE)
-        train_data_path = None
-        test_data_path = None
-    else:
-        TEST_DEMO_ID = 5 # ID of test trajectory
-        dataset_dir = os.path.join(DEMO_DIR, "datasets")
-        train_data_path = os.path.join(dataset_dir, f"dataset_train-{args.n_train}_ost-{args.obj_state_type}_s-{SCALE}.pth")
-        test_data_path = os.path.join(dataset_dir, f"dataset_test_id-{TEST_DEMO_ID}_ost-{args.obj_state_type}_s-{SCALE}.pth")
-
-        if os.path.exists(train_data_path) and os.path.exists(test_data_path):
-            # Dataset already saved, save time by not loading demo info
-            train_trajs, test_trajs = None, None
-        else:
-            # Load demo info for making dataset
-            train_demos = list(range(args.n_train+1))
-            train_demos.remove(TEST_DEMO_ID)
-            traj_info = {
-                    "demo_dir"   : DEMO_DIR,
-                    "difficulty" : 1,
-                    "train_demos": train_demos,
-                    "test_demos" : [TEST_DEMO_ID]
-                }
-
-            # Load train and test trajectories
-            train_trajs, test_trajs = d_utils.load_trajs(traj_info, scale=SCALE)
-
     # Name experiment and make exp directory
     exp_str = get_exp_str(vars(conf))
     exp_dir = os.path.join(conf.log_dir, exp_str)
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir)
+
+    # Load or make datasets
+    dataset_dir = os.path.join(base_path, "datasets")
+    if not os.path.exists(dataset_dir): os.makedirs(dataset_dir)
+
+    demo_info_str = os.path.splitext(os.path.split(conf.demo_path)[1])[0]
+    train_data_path = os.path.join(dataset_dir, f"dataset_train-{demo_info_str}.pth")
+    test_data_path = os.path.join(dataset_dir, f"dataset_test-{demo_info_str}.pth")
+
+    if os.path.exists(train_data_path) and os.path.exists(test_data_path):
+        # Dataset already saved, save time by not loading demo info
+        train_trajs, test_trajs = None, None
+    else:
+        # Load train and test trajectories for making dataset
+        traj_info = torch.load(args.demo_path)
+        train_trajs = traj_info["train_demos"]
+        test_trajs = traj_info["test_demos"]
 
     # Datasets and dataloaders
     train_dataset = Phase2ModelDataset(train_data_path, demo_list=train_trajs,
@@ -333,9 +319,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     # Required for specifying training and test trajectories
-    parser.add_argument("--file_path", default=None, help="""Filepath of trajectory to load""")
-    # OR
-    parser.add_argument("--n_train", type=int, default=20, help="Number of training trajectories")
+    parser.add_argument("--demo_path", default=None, help="""Filepath of preloaded demos to load""")
 
     parser.add_argument("--n_epochs", type=int, default=1500, help="Number of epochs")
     parser.add_argument("--log_dir", type=str, default=LOG_DIR, help="Directory for run logs")
