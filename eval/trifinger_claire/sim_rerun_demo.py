@@ -63,7 +63,8 @@ def main(args):
                                     time_step=SIM_TIME_STEP,
                                     downsample_time_step=downsample_time_step)
 
-        # TODO replay actions - don't use for now; figuring out small bug in interpolation
+        # TODO replay actions - don't use for now
+        # Only works when replaying down-sampled actions (not actions at SIM_TIME_STEP freq)
         #ftpos_deltas = traj["delta_ftpos"]
         #policy = ExecuteFtposDeltasPolicy(ftpos_deltas, env.action_space, env.platform,
         #                                  time_step=SIM_TIME_STEP,
@@ -114,7 +115,6 @@ def add_actions_to_obs(observation_list):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--difficulty", "-d", type=int, choices=[8,9], help="Difficulty level", default=8)
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
     parser.add_argument("--no_collisions", "-nc", action="store_true", help="Visualize sim")
     parser.add_argument("--log_paths", "-l", nargs="*", type=str, help="Save sim log")

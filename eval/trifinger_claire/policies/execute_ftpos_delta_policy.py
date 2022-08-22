@@ -103,6 +103,9 @@ class ExecuteFtposDeltasPolicy:
                                                                          self.downsample_time_step,
                                                                          self.time_step)
 
+        self.ft_pos_traj = self.ft_pos_traj[1:]
+        self.ft_vel_traj = self.ft_vel_traj[1:]
+
         # Reset traj counter
         self.traj_counter = 0
 
