@@ -22,6 +22,13 @@ import utils.data_utils as d_utils
 
 SIM_TIME_STEP = 0.004
 
+"""
+Re-run demo; will save new demo-*.npz log in demo_dir/reruns/
+
+Example command:
+python sim_rerun_demo.py --log_path test/demos/difficulty-1/demo-0000.npz -v
+"""
+
 def main(args):
     env = SimCubeEnv(
         goal_pose=None,  # passing None to sample a random trajectory
