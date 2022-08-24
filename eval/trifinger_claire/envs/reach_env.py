@@ -15,6 +15,8 @@ import trifinger_simulation.tasks.move_cube as task
 from imitation_learning.utils.envs.registry import full_env_registry
 from dataclasses import dataclass
 import torch
+from control.impedance_controller import ImpedanceController
+from control.custom_pinocchio_utils import CustomPinocchioUtils
 
 try:
     import robot_fingers
@@ -30,6 +32,10 @@ import control.cube_utils as c_utils
 FIRST_DEFAULT_GOAL = np.array([0, 0, 0.10])
 SECOND_DEFAULT_GOAL = np.array([0, 0, 0.13])
 THIRD_DEFAULT_GOAL = np.array([0, 0, 0.16])
+
+# FIRST_DEFAULT_GOAL = np.array([0.063217,0.8894027,-0.93611709])
+# SECOND_DEFAULT_GOAL = np.array([0.0625135,0.88934364,-0.93207197])
+# THIRD_DEFAULT_GOAL = np.array([ 0.06272959,0.89063181,-0.94276638])
 
 @full_env_registry.register_env("ReachEnv-v0")
 class ReachEnv(gym.Env):
@@ -90,6 +96,8 @@ class ReachEnv(gym.Env):
             camera_delay_steps=camera_delay_steps,
         )
 
+        self.hand_kinematics = HandKinematics(self.platform)
+
         # visualize the cube vertices
         if self.visualization and not self.enable_cameras:
             self.draw_verts = True
@@ -126,14 +134,15 @@ class ReachEnv(gym.Env):
             high=trifingerpro_limits.robot_velocity.high,
         )
 
+        #TODO fix these
         observation_state_space = gym.spaces.Box(
-            low=trifingerpro_limits.robot_position.low,
-            high=trifingerpro_limits.robot_position.high
+            low=trifingerpro_limits.robot_position.low *10,
+            high=trifingerpro_limits.robot_position.high*10
         )
 
         goal_state_space = gym.spaces.Box(
-            low=trifingerpro_limits.robot_position.low,
-            high=trifingerpro_limits.robot_position.high
+            low=trifingerpro_limits.robot_torque.low,
+            high=trifingerpro_limits.robot_torque.high
         )
 
         if self.action_type == ActionType.TORQUE:
@@ -159,6 +168,7 @@ class ReachEnv(gym.Env):
         self.observation_space = gym.spaces.Dict(
             {
                 "t": gym.spaces.Discrete(task.EPISODE_LENGTH),
+                "robot_position":robot_position_space,
                 "robot_velocity": robot_velocity_space,
                 "robot_torque": robot_torque_space,
                 "observation": observation_state_space, # position of fingertips
@@ -194,6 +204,19 @@ class ReachEnv(gym.Env):
         """
         return 10 - np.linalg.norm(desired_goal-achieved_goal)
 
+    def _scale_action(self,action):
+        #receive action between -1,1
+        #assume action is dx_des, change in the fingertip positions in space
+        
+        #compute x_des
+        # delta = (self.action_space.high - self.action_space.low) / 2
+        # action = action + 1
+        # action = (action * delta) + self.action_space.low
+        x_des =  self.hand_kinematics.get_ft_pos(self.observation["robot_position"]) + action
+        action = self.hand_kinematics.get_torque(x_des, action, self.observation["robot_position"], self.observation["robot_velocity"])
+        return np.clip(action,self.action_space.low,self.action_space.high)
+
+
     def step(self, action):
         """Run one timestep of the environment's dynamics.
 
@@ -216,8 +239,8 @@ class ReachEnv(gym.Env):
         """
         if self.platform is None:
             raise RuntimeError("Call `reset()` before starting to step.")
-        #TODO figure out a better way for this
-        action = np.clip(action,self.action_space.low,self.action_space.high)
+        action = self._scale_action(action)
+       
         if not self.action_space.contains(np.array(action, dtype=np.float32)):
             raise ValueError(
                 "Given action is not contained in the action space."
@@ -261,9 +284,10 @@ class ReachEnv(gym.Env):
             )
 
             reward = 0
+            achieved_position = self.hand_kinematics.get_ft_pos(observation["observation"])
             reward += self.compute_reward(
                observation["desired_goal"],
-               observation["observation"],
+               achieved_position,
                self.info,
             )
 
@@ -356,8 +380,9 @@ class ReachEnv(gym.Env):
         camera_observation = self.platform.get_camera_observation(t)
         object_observation = camera_observation.filtered_object_pose
 
-        observation = {
+        self.observation = {
             "t": t,
+            "robot_position": robot_observation.position,
             "robot_velocity": robot_observation.velocity,
             "robot_torque": robot_observation.torque,
             "observation": robot_observation.position,
@@ -376,9 +401,9 @@ class ReachEnv(gym.Env):
                                                      "timestamp": camera_observation.cameras[2].timestamp},
                                       }
 
-            observation["camera_observation"] = camera_observation_dict
+            self.observation["camera_observation"] = camera_observation_dict
 
-        return observation
+        return self.observation
 
     def _gym_action_to_robot_action(self, gym_action):
         # construct robot action depending on action type
@@ -415,3 +440,27 @@ class ReachEnv(gym.Env):
 
         # Make object invisible
         #pybullet.changeVisualShape(obj_id, obj_link_id, rgbaColor=[0,0,0,0])
+
+
+#kinematics wrapper
+class HandKinematics:
+    def __init__(self,platform):
+        self.Nf = 3 # Number of fingers
+        self.Nq = self.Nf * 3 # Number of joints in hand
+        self.platform = platform
+        # class with kinematics functions
+        self.kinematics = CustomPinocchioUtils(
+                self.platform.simfinger.finger_urdf_path,
+                self.platform.simfinger.tip_link_names,
+                self.platform.simfinger.link_names)
+
+        self.controller = ImpedanceController(self.kinematics)
+        
+    def get_ft_pos(self, q):
+        """ Get fingertip positions given current joint configuration q """
+       
+        ft_pos = np.array(self.kinematics.forward_kinematics(q)).reshape(self.Nq)
+        return ft_pos
+    
+    def  get_torque(self, x_des, dx_des, q_cur, dq_cur):
+        return self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
