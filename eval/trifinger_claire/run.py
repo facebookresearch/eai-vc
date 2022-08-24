@@ -42,7 +42,7 @@ def main(cfg) -> Dict[str, float]:
         if hasattr(env.action_space, "seed"):
             env.action_space.seed(full_seed)
         return env
-    
+
     dummy_env = gym.make(cfg.env.env_name)
     dummy_env.seed(cfg.seed)
     reader = flatten_info_dict_reader(cfg.info_keys)
@@ -67,6 +67,7 @@ def main(cfg) -> Dict[str, float]:
     cfg.obs_shape = dummy_env.observation_space['observation'].shape #TODO obs dict -> array
     cfg.action_dim = dummy_env.action_space.shape[0]
     cfg.action_is_discrete = isinstance(cfg.action_dim, spaces.Discrete)
+
     cfg.total_num_updates = num_updates
 
     logger: Logger = hydra_instantiate(cfg.logger, full_cfg=cfg)
@@ -185,11 +186,11 @@ def make_single_gym_env(num_envs,
         'camera_delay_steps':0,
     }
 
-    cube_env = gym.make("SimCubeEnv-v0")
+    cube_env = gym.make(cfg.env.env_name)
     gym_env = GymWrapper(cube_env)
     tensordict = gym_env.reset()
     tensordict = gym_env.rand_step(tensordict)
     return gym_env
-        
+
 if __name__ == "__main__":
     main()

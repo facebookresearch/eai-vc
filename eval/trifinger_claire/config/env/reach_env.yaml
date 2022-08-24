@@ -1,0 +1,5 @@
+env_name: "ReachEnv-v0"
+env_settings:
+  params:
+    _target_: envs.cube_env.SimCubeEnvParams
+  set_eval: False
