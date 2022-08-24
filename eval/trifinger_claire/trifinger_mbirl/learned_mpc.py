@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 from trifinger_mbirl.forward_models.models.forward_model import ForwardModel, get_obs_vec_from_obs_dict
 from trifinger_mbirl.forward_models.models.decoder_model import DecoderModel
 import utils.data_utils as d_utils
-
+from trifinger_mbirl.policy import DeterministicPolicy
 
 # Compute next state given current state and action (ft position deltas)
 class LearnedMPC(torch.nn.Module):
@@ -26,13 +26,23 @@ class LearnedMPC(torch.nn.Module):
         self.f_num = f_num
         self.f_state_dim = self.f_num * 3
         self.a_dim = self.f_num * 3
-        self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
+        self.policy_type = "nn"
 
         self.in_dim = model_dict["in_dim"]
         self.out_dim = model_dict["out_dim"]
         hidden_dims = model_dict["hidden_dims"]
         self.model = ForwardModel(self.in_dim, self.out_dim, hidden_dims)
         self.model.load_state_dict(model_dict["model_state_dict"])
+
+        if self.policy_type == "actions":
+            self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
+        elif self.policy_type == "nn":
+            self.policy = DeterministicPolicy(in_dim=self.out_dim, out_dim=self.a_dim)
+            self.action_seq = torch.Tensor(np.zeros([time_horizon, self.a_dim]))
+        else:
+            raise ValueError("Invalid policy_type.")
+
+        self.max_a = 2.0 # cm
 
         # Freeze network params
         for name, param in self.model.named_parameters():
@@ -83,6 +93,9 @@ class LearnedMPC(torch.nn.Module):
 
     def roll_out(self, obs_dict_init):
         """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
+        # Clip actions
+        #self.action_seq.data.clamp_(-self.max_a, self.max_a)
+
         pred_traj = []
         x_next = self.forward(obs_dict_init)
 
@@ -95,9 +108,24 @@ class LearnedMPC(torch.nn.Module):
         pred_traj.append(torch.squeeze(x_next.clone()))
 
         for t in range(self.time_horizon):
-            a = self.action_seq[t]
+            if self.policy_type == "actions":
+                a = self.action_seq[t]
+            elif self.policy_type == "nn":
+                a = self.policy(x_next.detach())[0]
+                # Clip actions
+                #print("before a ", a)
+                a = torch.where(a > self.max_a, torch.tensor([self.max_a]), a)
+                a = torch.where(a < -self.max_a, -torch.tensor([self.max_a]), a)
+                #print("after a ", a)
+                self.action_seq[t, :] = a.detach()
+            else:
+                raise ValueError("Invalid policy_type.")
+
+
+            #print(obs_dict_next)
             x_next = self.forward(obs_dict_next, a)
             x_next = self.clip(x_next)
+            #print(x_next)
 
             pred_traj.append(torch.squeeze(x_next.clone()))
 
@@ -131,8 +159,19 @@ class LearnedMPC(torch.nn.Module):
         pred_traj = torch.stack(pred_traj)
         return pred_traj
 
-    def reset_actions(self):
-        self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
+    def reset_actions(self, init_a=None):
+        if self.policy_type == "actions":
+            if init_a is None:
+                #self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
+                # Random actions between [-1., 1.]
+                self.action_seq.data = torch.rand((self.time_horizon, self.a_dim)) * 2. - 1.
+            else:
+                rand = torch.rand((self.time_horizon, self.a_dim)) * 2.0 - 1.0
+                self.action_seq.data = torch.Tensor(init_a)# + rand
+        elif self.policy_type == "nn":
+            self.policy.reset()
+        else:
+            raise ValueError("Invalid policy_type.")
 
     def clip(self, x):
         # TODO hardcoded ranges

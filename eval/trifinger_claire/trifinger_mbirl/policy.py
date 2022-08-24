@@ -5,8 +5,9 @@ class DeterministicPolicy(torch.nn.Module):
 
     def __init__(self, in_dim, out_dim, device="cpu"):
         super().__init__()
-        num_neurons = 100
-        self.activation = torch.nn.Tanh
+        num_neurons = 2000
+        #self.activation = torch.nn.Tanh
+        self.activation = torch.nn.ReLU
         self.policy = torch.nn.Sequential(torch.nn.Linear(in_dim, num_neurons),
                                           self.activation(),
                                           torch.nn.Linear(num_neurons, num_neurons),
@@ -15,7 +16,7 @@ class DeterministicPolicy(torch.nn.Module):
                                           #torch.nn.Tanh())
         self.policy.to(device)
 
-        self.init_state = self.state_dict()
+        self.init_state = self.policy.state_dict()
 
     def forward(self, state):
         action = self.policy(state)
