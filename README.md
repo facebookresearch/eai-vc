@@ -8,6 +8,10 @@ This is the FAIR monorepo for investigating large-scale pretraining for embodied
 
 See [INSTALLATION.md](INSTALLATION.md).
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) to get started contributing code.
+
 ## Directory structure
 
 - `eaif-models`: contains a minimal-dependency pip-installable model loading code, as well as some shared-project utilities.
