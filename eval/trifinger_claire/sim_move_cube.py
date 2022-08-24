@@ -10,12 +10,13 @@ import numpy as np
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
-sys.path.insert(0, os.path.join(base_path, '..'))
+sys.path.insert(0, os.path.join(base_path, ".."))
 
 from envs.cube_env import SimCubeEnv, ActionType
 from policies.move_cube_policy import MoveCubePolicy
 
 SIM_TIME_STEP = 0.004
+
 
 def main(args):
     env = SimCubeEnv(
@@ -57,7 +58,8 @@ def main(args):
 
             full_observation = {**observation, **policy_observation}
 
-            if args.log_paths is not None: observation_list.append(full_observation)
+            if args.log_paths is not None:
+                observation_list.append(full_observation)
 
         if args.log_paths is not None:
             # Compute actions (ftpos and joint state deltas) across trajectory
@@ -66,30 +68,45 @@ def main(args):
             np.savez_compressed(log_path, data=observation_list)
             print(f"Saved episode {i} to {log_path}")
 
+
 def add_actions_to_obs(observation_list):
 
     for t in range(len(observation_list) - 1):
-        ftpos_cur  = observation_list[t]["policy"]["controller"]["ft_pos_cur"]
-        ftpos_next = observation_list[t+1]["policy"]["controller"]["ft_pos_cur"]
+        ftpos_cur = observation_list[t]["policy"]["controller"]["ft_pos_cur"]
+        ftpos_next = observation_list[t + 1]["policy"]["controller"]["ft_pos_cur"]
         delta_ftpos = ftpos_next - ftpos_cur
 
-        q_cur  = observation_list[t]["robot_position"]
-        q_next = observation_list[t+1]["robot_position"]
+        q_cur = observation_list[t]["robot_position"]
+        q_next = observation_list[t + 1]["robot_position"]
         delta_q = q_next - q_cur
 
         action_dict = {"delta_ftpos": delta_ftpos, "delta_q": delta_q}
         observation_list[t]["action"] = action_dict
 
-    action_dict = {"delta_ftpos": np.zeros(delta_ftpos.shape), "delta_q": np.zeros(delta_q.shape)}
+    action_dict = {
+        "delta_ftpos": np.zeros(delta_ftpos.shape),
+        "delta_q": np.zeros(delta_q.shape),
+    }
     observation_list[-1]["action"] = action_dict
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--difficulty", "-d", type=int, choices=[0,1,2,3], help="Difficulty level", default=1)
+    parser.add_argument(
+        "--difficulty",
+        "-d",
+        type=int,
+        choices=[0, 1, 2, 3],
+        help="Difficulty level",
+        default=1,
+    )
     parser.add_argument("--visualize", "-v", action="store_true", help="Visualize sim")
-    parser.add_argument("--no_collisions", "-nc", action="store_true", help="Visualize sim")
+    parser.add_argument(
+        "--no_collisions", "-nc", action="store_true", help="Visualize sim"
+    )
     parser.add_argument("--log_paths", "-l", nargs="*", type=str, help="Save sim log")
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     args = parse_args()

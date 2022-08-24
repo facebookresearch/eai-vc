@@ -12,8 +12,8 @@ import random
 import os
 import numpy as np
 
-os.environ['MKL_THREADING_LAYER'] = 'GNU'
-os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
+os.environ["MKL_THREADING_LAYER"] = "GNU"
+os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 
 MAIN_PID = os.getpid()
 SIGNAL_RECEIVED = False
@@ -41,7 +41,7 @@ def update_pythonpath_relative_hydra():
             path = original_cwd / path
         paths.append(path.resolve())
     os.environ["PYTHONPATH"] = ":".join([str(x) for x in paths])
-    log.info('PYTHONPATH: {}'.format(os.environ["PYTHONPATH"]))
+    log.info("PYTHONPATH: {}".format(os.environ["PYTHONPATH"]))
 
 
 class Worker:
@@ -61,15 +61,16 @@ class Worker:
         import torch.utils.data
         import torch.utils.data.distributed
         import torch.backends.cudnn as cudnn
+
         cudnn.benchmark = True
         args = copy.deepcopy(origargs)
         np.set_printoptions(precision=3)
         if args.environment.seed == 0:
             args.environment.seed = None
-        socket_name = os.popen(
-            "ip r | grep default | awk '{print $5}'").read().strip('\n')
-        print(
-            "Setting GLOO and NCCL sockets IFNAME to: {}".format(socket_name))
+        socket_name = (
+            os.popen("ip r | grep default | awk '{print $5}'").read().strip("\n")
+        )
+        print("Setting GLOO and NCCL sockets IFNAME to: {}".format(socket_name))
         os.environ["GLOO_SOCKET_IFNAME"] = socket_name
         # not sure if the next line is really affect anything
         # os.environ["NCCL_SOCKET_IFNAME"] = socket_name
@@ -77,15 +78,21 @@ class Worker:
         if args.environment.slurm:
             job_env = submitit.JobEnvironment()
             args.environment.rank = job_env.global_rank
-            hostname_first_node = os.popen(
-                "scontrol show hostnames $SLURM_JOB_NODELIST").read().split(
-                    "\n")[0]
-            args.environment.dist_url = f'tcp://{job_env.hostnames[0]}:{args.environment.port}'
+            hostname_first_node = (
+                os.popen("scontrol show hostnames $SLURM_JOB_NODELIST")
+                .read()
+                .split("\n")[0]
+            )
+            args.environment.dist_url = (
+                f"tcp://{job_env.hostnames[0]}:{args.environment.port}"
+            )
         else:
-            args.environment.dist_url = f'tcp://{args.environment.node}:{args.environment.port}'
-        print('Using url {}'.format(args.environment.dist_url))
+            args.environment.dist_url = (
+                f"tcp://{args.environment.node}:{args.environment.port}"
+            )
+        print("Using url {}".format(args.environment.dist_url))
 
-        print('Using url {}'.format(args.environment.dist_url))
+        print("Using url {}".format(args.environment.dist_url))
 
         # writer = None
         # if args.logging.log_tb:
@@ -98,20 +105,26 @@ class Worker:
         if args.environment.seed is not None:
             random.seed(args.environment.seed)
             torch.manual_seed(args.environment.seed)
-            warnings.warn('You have chosen to seed training. '
-                          'This will turn on the CUDNN deterministic setting, '
-                          'which can slow down your training considerably! '
-                          'You may see unexpected behavior when restarting '
-                          'from checkpoints.')
-        if args.environment.gpu != '':
             warnings.warn(
-                'You have chosen a specific GPU. This will completely '
-                'disable data parallelism.')
+                "You have chosen to seed training. "
+                "This will turn on the CUDNN deterministic setting, "
+                "which can slow down your training considerably! "
+                "You may see unexpected behavior when restarting "
+                "from checkpoints."
+            )
+        if args.environment.gpu != "":
+            warnings.warn(
+                "You have chosen a specific GPU. This will completely "
+                "disable data parallelism."
+            )
 
         if args.environment.dist_url == "env://" and args.environment.world_size == -1:
             args.environment.world_size = int(os.environ["WORLD_SIZE"])
 
-        args.environment.distributed = args.environment.world_size > 1 or args.environment.multiprocessing_distributed
+        args.environment.distributed = (
+            args.environment.world_size > 1
+            or args.environment.multiprocessing_distributed
+        )
         ngpus_per_node = torch.cuda.device_count()
         if args.environment.multiprocessing_distributed:
             # Since we have ngpus_per_node processes per node, the total world_size
@@ -119,23 +132,26 @@ class Worker:
             args.environment.world_size = ngpus_per_node * args.environment.world_size
             # Use torch.multiprocessing.spawn to launch distributed processes: the
             # main_worker process function
-            mp.spawn(main_worker,
-                     nprocs=ngpus_per_node,
-                     args=(ngpus_per_node, args))
+            mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, args))
         else:
             # Simply call main_worker function
             main_worker(args.environment.gpu, ngpus_per_node, args)
 
-    def checkpoint(self, *args,
-                   **kwargs) -> submitit.helpers.DelayedSubmission:
+    def checkpoint(self, *args, **kwargs) -> submitit.helpers.DelayedSubmission:
         return submitit.helpers.DelayedSubmission(
-            self, *args, **kwargs)  # submits to requeuing
+            self, *args, **kwargs
+        )  # submits to requeuing
 
 
 def load_jobs(N=1000, end_after="$(date +%Y-%m-%d-%H:%M)"):
-    jobs = (os.popen(
-        f'sacct -u $USER --format="JobID,JobName,Partition,State,End,Comment" '
-        f'-X -P -S "{end_after}" | tail -n {N}').read().split("\n"))
+    jobs = (
+        os.popen(
+            f'sacct -u $USER --format="JobID,JobName,Partition,State,End,Comment" '
+            f'-X -P -S "{end_after}" | tail -n {N}'
+        )
+        .read()
+        .split("\n")
+    )
     jobs_parsed = []
     for line in jobs:
         row = line.strip().split("|")
@@ -155,39 +171,37 @@ def load_jobs(N=1000, end_after="$(date +%Y-%m-%d-%H:%M)"):
             print("Error parsing job: ", job_id)
             continue
         jobs_parsed.append(
-            [job_id_raw, name, partition, status, end, comment, sort_key])
+            [job_id_raw, name, partition, status, end, comment, sort_key]
+        )
     jobs_parsed = sorted(jobs_parsed, key=lambda el: el[-1])
     return jobs_parsed
 
 
-@hydra.main(config_path='./configs/moco', config_name='config')
+@hydra.main(config_path="./configs/moco", config_name="config")
 def main(args):
     update_pythonpath_relative_hydra()
     args.logging.ckpt_dir = hydra_utils.to_absolute_path(args.logging.ckpt_dir)
     args.logging.tb_dir = hydra_utils.to_absolute_path(args.logging.tb_dir)
-    args.data.train_filelist = hydra_utils.to_absolute_path(
-        args.data.train_filelist)
-    args.data.val_filelist = hydra_utils.to_absolute_path(
-        args.data.val_filelist)
+    args.data.train_filelist = hydra_utils.to_absolute_path(args.data.train_filelist)
+    args.data.val_filelist = hydra_utils.to_absolute_path(args.data.val_filelist)
 
     # If job is running, ignore
     jobdets = load_jobs()
     jobnames = [j[1] for j in jobdets]
-    if (args.logging.name).replace('.',
-                                   '_') in jobnames and args.environment.slurm:
-        print('Skipping {} because already in queue'.format(args.logging.name))
+    if (args.logging.name).replace(".", "_") in jobnames and args.environment.slurm:
+        print("Skipping {} because already in queue".format(args.logging.name))
         return
 
     # If model is trained, ignore
-    ckpt_fname = os.path.join(args.logging.ckpt_dir, args.logging.name,
-                              'checkpoint_{:04d}.pth')
+    ckpt_fname = os.path.join(
+        args.logging.ckpt_dir, args.logging.name, "checkpoint_{:04d}.pth"
+    )
     if os.path.exists(ckpt_fname.format(args.optim.epochs - 1)):
-        print('Skipping {}'.format(args.logging.name))
+        print("Skipping {}".format(args.logging.name))
         return
 
     executor = submitit.AutoExecutor(
-        folder=os.path.join(args.logging.submitit_dir,
-                            '{}'.format(args.logging.name)),
+        folder=os.path.join(args.logging.submitit_dir, "{}".format(args.logging.name)),
         max_num_timeout=100,
         cluster=None if args.environment.slurm else "debug",
     )
@@ -198,12 +212,13 @@ def main(args):
         gpus_per_node=args.environment.ngpu,
         nodes=args.environment.world_size,
         tasks_per_node=1,
-        mem_gb=256)
+        mem_gb=256,
+    )
     executor.update_parameters(name=args.logging.name)
     job = executor.submit(Worker(), args)
     if not args.environment.slurm:
         job.result()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

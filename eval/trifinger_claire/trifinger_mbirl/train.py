@@ -1,4 +1,4 @@
-#w Copyright (c) Facebook, Inc. and its affiliates.
+# w Copyright (c) Facebook, Inc. and its affiliates.
 import random
 import os
 import sys
@@ -13,7 +13,7 @@ import logging
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
-sys.path.insert(0, os.path.join(base_path, '..'))
+sys.path.insert(0, os.path.join(base_path, ".."))
 
 import utils.data_utils as d_utils
 import utils.train_utils as t_utils
@@ -24,6 +24,7 @@ from trifinger_mbirl.policy import DeterministicPolicy
 
 # A logger for this file
 log = logging.getLogger(__name__)
+
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(conf):
@@ -44,24 +45,32 @@ def main(conf):
 
     log.info(f"Running experiment with config:\n{OmegaConf.to_yaml(conf)}\n")
     log.info(f"Saving experiment logs in {exp_dir}")
-    
+
     # Save conf
-    torch.save(conf, f=f'{exp_dir}/conf.pth')
+    torch.save(conf, f=f"{exp_dir}/conf.pth")
 
     # Load train and test trajectories
     traj_info = torch.load(conf.demo_path)
-    torch.save(traj_info, f=f"{exp_dir}/demo_info.pth") # Re-save trajectory info in exp_dir
+    torch.save(
+        traj_info, f=f"{exp_dir}/demo_info.pth"
+    )  # Re-save trajectory info in exp_dir
     train_trajs = traj_info["train_demos"]
     test_trajs = traj_info["test_demos"]
 
     if not conf.no_wandb:
-        conf_for_wandb = OmegaConf.to_container(conf, resolve=True, throw_on_missing=True)
-        conf_for_wandb["exp_id"] = exp_id # Add experiment id to conf, for wandb
+        conf_for_wandb = OmegaConf.to_container(
+            conf, resolve=True, throw_on_missing=True
+        )
+        conf_for_wandb["exp_id"] = exp_id  # Add experiment id to conf, for wandb
         # wandb init
-        wandb.init(project='trifinger_mbirl', entity='clairec', name=exp_str,
-                   config = conf_for_wandb,
-                   settings=wandb.Settings(start_method="thread"))
-    
+        wandb.init(
+            project="trifinger_mbirl",
+            entity="clairec",
+            name=exp_str,
+            config=conf_for_wandb,
+            settings=wandb.Settings(start_method="thread"),
+        )
+
     ### MBIRL training
     if conf.algo.name == "mbirl":
 
@@ -70,11 +79,13 @@ def main(conf):
 
     ### BC training
     elif conf.algo.name == "bc":
-        
+
         # Make dataset and dataloader
-        traindata = bc.ImitationLearningDataset(train_trajs, obs_type=conf.algo.obs_type, device=device)
+        traindata = bc.ImitationLearningDataset(
+            train_trajs, obs_type=conf.algo.obs_type, device=device
+        )
         dataloader = torch.utils.data.DataLoader(traindata, batch_size=16, shuffle=True)
-        
+
         # Model
         in_dim = traindata[0][0].shape[0]
         out_dim = 9
@@ -90,7 +101,7 @@ def main(conf):
         dataloader = torch.utils.data.DataLoader(traindata, batch_size=16, shuffle=True)
 
         # Model
-        in_dim = 4105 #traindata[0][0].shape[0]
+        in_dim = 4105  # traindata[0][0].shape[0]
         out_dim = 9
         policy = DeterministicPolicy(in_dim=in_dim, out_dim=out_dim, device=device)
 
@@ -100,6 +111,6 @@ def main(conf):
     else:
         raise ValueError(f"{conf.algo.name} is invalid algo")
 
-if __name__ == '__main__':
-    main()
 
+if __name__ == "__main__":
+    main()

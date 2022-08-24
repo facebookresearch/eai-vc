@@ -15,13 +15,12 @@ from r3m import load_r3m
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
-sys.path.insert(0, os.path.join(base_path, '..'))
+sys.path.insert(0, os.path.join(base_path, ".."))
 
 import utils.data_utils as d_utils
 
 # A logger for this file
 log = logging.getLogger(__name__)
-
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
@@ -46,25 +45,27 @@ def main(conf):
 
     if not conf.no_wandb:
         # wandb init
-        wandb.init(project='trifinger_forward_model', entity='clairec', name=exp_str,
-                   config=OmegaConf.to_container(conf, resolve=True, throw_on_missing=True),
-                   settings=wandb.Settings(start_method="thread"))
+        wandb.init(
+            project="trifinger_forward_model",
+            entity="clairec",
+            name=exp_str,
+            config=OmegaConf.to_container(conf, resolve=True, throw_on_missing=True),
+            settings=wandb.Settings(start_method="thread"),
+        )
 
     # Load train and test trajectories for making dataset and for testing MPC
     traj_info = torch.load(conf.demo_path)
     train_trajs = traj_info["train_demos"]
     test_trajs = traj_info["test_demos"]
 
-
-    r3m = load_r3m("resnet50") # resnet18, resnet34
+    r3m = load_r3m("resnet50")  # resnet18, resnet34
     r3m.eval()
     r3m.to(device)
 
     ## DEFINE PREPROCESSING
-    transforms = T.Compose([T.Resize(256),
-                            T.CenterCrop(224),
-                            T.ToTensor()]) # ToTensor() divides by 255
-
+    transforms = T.Compose(
+        [T.Resize(256), T.CenterCrop(224), T.ToTensor()]
+    )  # ToTensor() divides by 255
 
 
 def get_exp_dir(params_dict):
@@ -97,6 +98,5 @@ def get_exp_dir(params_dict):
     return hydra_output_dir, exp_str
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

@@ -7,6 +7,9 @@
     - If you need to update the repo with new changes, pull main: `git checkout main && git pull origin main && git submodule update --init --recursive`
     - Create your branch: `git checkout -b <unixname>/<branch-name>`
 1. Push your branch to the repo, and create a pull request.
+    - We use [black](https://github.com/psf/black) to autoformat our code. You can either
+        2. Push your code; if there are formatting violations, our bot will automatically fix them. You can then pull the branch.
+        1. Run `black .` before pushing your code. You can automatically [set this to run on save in VSCode](https://dev.to/adamlombard/how-to-use-the-black-python-code-formatter-in-vscode-3lo0).
     - Push your branch: `git push --set-upstream origin <unixname>/<branch-name>`
     - Create a pull request: https://github.com/facebookresearch/eai-foundations/pull/new/unixname/branch-name
     - Fill out the [PR template](.github/PULL_REQUEST_TEMPLATE.md).

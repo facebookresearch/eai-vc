@@ -23,54 +23,74 @@ though.
 """
 import numpy as np
 
-DIFFICULTY_NUM_VIDEOS = {'0.025': 2, '0.05': 2, '0.1': 4, '0.15': 6, '0.2': 8, '0.3': None, '0.4': None, '0.5': None}
+DIFFICULTY_NUM_VIDEOS = {
+    "0.025": 2,
+    "0.05": 2,
+    "0.1": 4,
+    "0.15": 6,
+    "0.2": 8,
+    "0.3": None,
+    "0.4": None,
+    "0.5": None,
+}
 DEFAULT_BACKGROUND_PATH = "$HOME/davis/"
 
 
 def get_color_kwargs(scale, dynamic):
-  max_delta = scale
-  step_std = 0.03 * scale if dynamic else 0.0
-  return dict(max_delta=max_delta, step_std=step_std)
+    max_delta = scale
+    step_std = 0.03 * scale if dynamic else 0.0
+    return dict(max_delta=max_delta, step_std=step_std)
 
 
 def get_camera_kwargs(domain_name, scale, dynamic):
-  assert scale >= 0.0
-  assert scale <= 1.0
-  return dict(
-      vertical_delta=np.pi / 2 * scale,
-      horizontal_delta=np.pi / 2 * scale,
-      # Limit camera to -90 / 90 degree rolls.
-      roll_delta=np.pi / 2. * scale,
-      vel_std=.1 * scale if dynamic else 0.,
-      max_vel=.4 * scale if dynamic else 0.,
-      roll_std=np.pi / 300 * scale if dynamic else 0.,
-      max_roll_vel=np.pi / 50 * scale if dynamic else 0.,
-      max_zoom_in_percent=.5 * scale,
-      max_zoom_out_percent=1.5 * scale,
-      limit_to_upper_quadrant='reacher' not in domain_name,
-  )
+    assert scale >= 0.0
+    assert scale <= 1.0
+    return dict(
+        vertical_delta=np.pi / 2 * scale,
+        horizontal_delta=np.pi / 2 * scale,
+        # Limit camera to -90 / 90 degree rolls.
+        roll_delta=np.pi / 2.0 * scale,
+        vel_std=0.1 * scale if dynamic else 0.0,
+        max_vel=0.4 * scale if dynamic else 0.0,
+        roll_std=np.pi / 300 * scale if dynamic else 0.0,
+        max_roll_vel=np.pi / 50 * scale if dynamic else 0.0,
+        max_zoom_in_percent=0.5 * scale,
+        max_zoom_out_percent=1.5 * scale,
+        limit_to_upper_quadrant="reacher" not in domain_name,
+    )
 
 
-def get_background_kwargs(domain_name,
-                          num_videos,
-                          dynamic,
-                          dataset_paths,
-                          dataset_videos=None,
-                          shuffle=False,
-                          video_alpha=1.0):
-  if domain_name == 'reacher':
-    ground_plane_alpha = 0.0
-  elif domain_name in ['walker', 'cheetah', 'hopper', 'quadruped', 'fish', 'swimmer', 'humanoid', 'dog']:
-    ground_plane_alpha = 1.0
-  else:
-    ground_plane_alpha = 0.3
+def get_background_kwargs(
+    domain_name,
+    num_videos,
+    dynamic,
+    dataset_paths,
+    dataset_videos=None,
+    shuffle=False,
+    video_alpha=1.0,
+):
+    if domain_name == "reacher":
+        ground_plane_alpha = 0.0
+    elif domain_name in [
+        "walker",
+        "cheetah",
+        "hopper",
+        "quadruped",
+        "fish",
+        "swimmer",
+        "humanoid",
+        "dog",
+    ]:
+        ground_plane_alpha = 1.0
+    else:
+        ground_plane_alpha = 0.3
 
-  return dict(
-      num_videos=num_videos,
-      video_alpha=video_alpha,
-      ground_plane_alpha=ground_plane_alpha,
-      dynamic=dynamic,
-      dataset_paths=dataset_paths,
-      dataset_videos=dataset_videos,
-      shuffle_buffer_size=100 if shuffle else None,
-  )
+    return dict(
+        num_videos=num_videos,
+        video_alpha=video_alpha,
+        ground_plane_alpha=ground_plane_alpha,
+        dynamic=dynamic,
+        dataset_paths=dataset_paths,
+        dataset_videos=dataset_videos,
+        shuffle_buffer_size=100 if shuffle else None,
+    )

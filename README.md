@@ -1,6 +1,8 @@
 # EAI Foundations
 
 [![CircleCI](https://dl.circleci.com/status-badge/img/gh/facebookresearch/eai-foundations/tree/main.svg?style=svg&circle-token=52b92efd205cf081e310aaad27be9c74a86190b3)](https://dl.circleci.com/status-badge/redirect/gh/facebookresearch/eai-foundations/tree/main)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 
 This is the FAIR monorepo for investigating large-scale pretraining for embodied AI.
 
