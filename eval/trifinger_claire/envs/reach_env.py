@@ -69,7 +69,8 @@ class ReachEnv(gym.Env):
             time_step (float): Simulation timestep
         """
         super().__init__()
-
+        if(render_mode=="human"):
+            visualization = True
         self.visualization = visualization
         self.no_collisions = no_collisions
         self.enable_cameras = enable_cameras
