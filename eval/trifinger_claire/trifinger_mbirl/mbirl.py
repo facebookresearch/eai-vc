@@ -22,6 +22,7 @@ from trifinger_mbirl.two_phase_mpc import TwoPhaseMPC
 from trifinger_mbirl.learned_mpc import LearnedMPC
 from trifinger_mbirl.dynamics_models import FTPosSim
 from trifinger_mbirl.forward_models.models.decoder_model import DecoderModel
+from trifinger_mbirl.sim_mpc import SimMPC
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ class MBIRL:
         
         self.conf = conf
         self.traj_info = traj_info
+        self.downsample_time_step = traj_info["downsample_time_step"]
 
         # Get MPC
         self.mpc = get_mpc(conf.mpc_type, time_horizon, conf.mpc_forward_model_ckpt)
@@ -75,6 +77,8 @@ class MBIRL:
             self.decoder.load_state_dict(decoder_model_dict["model_state_dict"])
         else:
             self.decoder = None
+
+        self.sim = SimMPC(downsample_time_step=self.downsample_time_step)
 
     def train(self, model_data_dir=None, no_wandb=False):
         """ Training loop for MBIRL """
@@ -110,22 +114,52 @@ class MBIRL:
                 learnable_cost_opt.zero_grad()
                 expert_demo_dict = train_trajs[demo_i]
 
+                # Init state
                 obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, self.mpc.obj_state_type) # Initial state
 
                 # Reset mpc for action optimization
+                expert_actions = expert_demo_dict["delta_ftpos"][:-1]
                 self.mpc.reset_actions()
+                #self.mpc.reset_actions(init_a=expert_actions)
 
-                action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
-
+                action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
+                action_optimizer.zero_grad()
                 with higher.innerloop_ctx(self.mpc, action_optimizer) as (fpolicy, diffopt):
-                    for i in range(self.conf.n_inner_iter):
+                    #################### Inner loop: policy optimization ############################
+                    for inner_i in range(self.conf.n_inner_iter):
                         pred_traj = fpolicy.roll_out(obs_dict_init.copy())
+                        irl_loss = self.irl_loss_fn(pred_traj, expert_demo_dict).mean()
                         # use the learned loss to update the action sequence
                         target = self.get_target_for_cost_type(expert_demo_dict)
                         pred_traj_for_cost = d_utils.parse_pred_traj(pred_traj, self.conf.cost_state,
                                                                         mpc_use_ftpos=self.mpc_use_ftpos)
                         learned_cost_val = self.learnable_cost(pred_traj_for_cost, target)
                         diffopt.step(learned_cost_val)
+                        # Log learned_cost_val, plots epoch_{outer_i}_inner_{inner_i}
+                        # TODO for testing; need to make new plot for each traj
+                        #print(inner_i)
+                        #print(learned_cost_val)
+                        #print(fpolicy.action_seq)
+                        #if not no_wandb:
+                        #    inner_loss_dict = {
+                        #        "train_inner_learned_cost_val": learned_cost_val
+                        #    }
+                        #    t_utils.plot_loss(inner_loss_dict, (outer_i*self.conf.n_inner_iter+inner_i+1))
+
+                        #if (inner_i+1) % 10 == 0:
+                        #    diff = self.traj_info["train_demo_stats"][demo_i]["diff"]
+                        #    traj_i = self.traj_info["train_demo_stats"][demo_i]["id"]
+                        #    traj_plots_dir = os.path.join(plots_dir, f"diff-{diff}_traj-{traj_i}")
+                        #    if not os.path.exists(traj_plots_dir): os.makedirs(traj_plots_dir)
+                        #    pred_actions = fpolicy.action_seq.data.detach().numpy()
+                        #    self.plot(traj_plots_dir, (outer_i*self.conf.n_inner_iter+inner_i), pred_traj, pred_actions, expert_demo_dict)
+                        #    
+                        #    torch.save({
+                        #        'train_pred_traj_per_demo'   : pred_traj.detach(), 
+                        #        'train_pred_actions_per_demo': pred_actions,
+                        #        'conf'                       : self.conf,
+                        #    }, f=f'{ckpts_dir}/epoch_{outer_i*self.conf.n_inner_iter+inner_i+1}_ckpt.pth')
+                    #################### End inner loop: policy optimization ############################
 
                     # Compute traj with updated action sequence
                     pred_traj = fpolicy.roll_out(obs_dict_init.copy())
@@ -135,6 +169,8 @@ class MBIRL:
                     irl_loss.backward(retain_graph=True)
 
                     pred_actions = fpolicy.action_seq.data.detach().numpy()
+
+                    #self.sim.rollout_actions(expert_demo_dict, pred_actions)
 
                 # Update cost parameters
                 learnable_cost_opt.step()
@@ -150,24 +186,13 @@ class MBIRL:
                     traj_i = self.traj_info["train_demo_stats"][demo_i]["id"]
                     traj_plots_dir = os.path.join(plots_dir, f"diff-{diff}_traj-{traj_i}")
                     if not os.path.exists(traj_plots_dir): os.makedirs(traj_plots_dir)
-
-                    if self.mpc_use_ftpos:
-                        plot_traj(traj_plots_dir, outer_i, pred_traj, expert_demo_dict, self.conf.mpc_type, self.mpc.obj_state_type)
-
-                    if self.conf.mpc_type=="learned" and self.decoder is not None:
-                        ft_states, o_states = self.mpc.get_states_from_x_next(pred_traj)
-                        with torch.no_grad(): # TODO need to freeze decoder weights??
-                            pred_imgs = self.decoder(torch.Tensor(o_states))
-                            self.decoder.save_gif(pred_imgs, os.path.join(traj_plots_dir, f'r3m_epoch_{outer_i+1}.gif'))
-
-                    pred_actions = fpolicy.action_seq.data.detach().numpy()
-                    plot_actions(traj_plots_dir, outer_i, pred_actions, expert_demo_dict)
+                    self.plot(traj_plots_dir, outer_i, pred_traj, pred_actions, expert_demo_dict)
 
             irl_loss_on_train.append(torch.Tensor(irl_loss_per_demo).mean())
             print("irl loss (on train) training iter: {} loss: {}".format(outer_i + 1, irl_loss_on_train[-1]))
 
             # Evaluate current learned cost on test trajectories
-            # Plot test traj predictions every 25 steps
+            # Plot test traj predictions every n_epoch_every_log epochs
             if (outer_i+1) % self.conf.n_epoch_every_log == 0:
                 test_dir_name = test_plots_dir
             else:
@@ -188,50 +213,16 @@ class MBIRL:
                     learnable_cost_params[name] = param
 
             # Gradient info
-            for name, p in self.mpc.named_parameters():
-            
-                #print(name, p.grad.shape)
-                if name != "action_seq": continue
-
-                if p.grad is not None:
-                    grad = p.grad.detach()
-                    #print(name, grad.shape)
-                    grad_min_mpc = torch.min(torch.abs(grad))
-                    grad_max_mpc = torch.max(torch.abs(grad))
-                    grad_norm_mpc = grad.norm()
-                else:
-                    #print("No gradient")
-                    grad_min_mpc = np.nan 
-                    grad_max_mpc = np.nan 
-                    grad_norm_mpc = np.nan
-
-            #print("cost")
-            for p in self.learnable_cost.parameters():
-                if p.grad is not None:
-                    grad = p.grad.detach()
-                    #print(grad.shape)
-                    grad_min_cost = torch.min(torch.abs(grad))
-                    grad_max_cost = torch.max(torch.abs(grad))
-                    grad_norm_cost = grad.norm()
-                else:
-                    #print("No gradient")
-                    grad_min_cost = np.nan 
-                    grad_max_cost = np.nan 
-                    grad_norm_cost = np.nan 
+            grad_dict = self.get_grad_dict()
 
             if not no_wandb:
                 # Plot losses with wandb
                 loss_dict = {
                             "train_irl_loss": irl_loss_on_train[-1], 
                             "test_irl_loss": irl_loss_on_test[-1], 
-                            "grad_min_mpc": grad_min_mpc,
-                            "grad_max_mpc": grad_max_mpc,
-                            "grad_norm_mpc": grad_norm_mpc,
-                            "grad_min_cost": grad_min_cost,
-                            "grad_max_cost": grad_max_cost,
-                            "grad_norm_cost": grad_norm_cost,
                             }
-                t_utils.plot_loss(loss_dict, outer_i+1)
+                all_dict = {**loss_dict, **grad_dict}
+                t_utils.plot_loss(all_dict, outer_i+1)
 
             if (outer_i+1) % self.conf.n_epoch_every_log == 0:
                 torch.save({
@@ -259,11 +250,14 @@ class MBIRL:
             obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, self.mpc.obj_state_type) # Initial state
 
             # Reset mpc for action optimization
+            expert_actions = expert_demo_dict["delta_ftpos"][:-1]
             self.mpc.reset_actions()
+            #self.mpc.reset_actions(init_a=expert_actions)
 
-            action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
+            #action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
+            action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
 
-            for i in range(self.conf.n_inner_iter):
+            for inner_i in range(self.conf.n_inner_iter):
                 action_optimizer.zero_grad()
 
                 pred_traj = self.mpc.roll_out(obs_dict_init.copy())
@@ -291,16 +285,8 @@ class MBIRL:
                 traj_i = self.traj_info["test_demo_stats"][t_i]["id"]
                 traj_plots_dir = os.path.join(plots_dir, f"diff-{diff}_traj-{traj_i}")
                 if not os.path.exists(traj_plots_dir): os.makedirs(traj_plots_dir)
+                self.plot(traj_plots_dir, outer_i, pred_state_traj_new, pred_actions, expert_demo_dict)
         
-                if self.mpc_use_ftpos:
-                    plot_traj(traj_plots_dir, outer_i, pred_state_traj_new, expert_demo_dict, self.conf.mpc_type, self.mpc.obj_state_type)
-                if self.conf.mpc_type=="learned":
-                    ft_states, o_states = self.mpc.get_states_from_x_next(pred_state_traj_new)
-                    with torch.no_grad(): # TODO need to freeze decoder weights??
-                        pred_imgs = self.decoder(torch.Tensor(o_states))
-                        self.decoder.save_gif(pred_imgs, os.path.join(traj_plots_dir, f'r3m_epoch_{outer_i+1}.gif'))
-                plot_actions(traj_plots_dir, outer_i, pred_actions, expert_demo_dict)
-
         return torch.stack(eval_costs).detach(), test_pred_trajs, test_pred_actions
 
 
@@ -334,6 +320,64 @@ class MBIRL:
 
         return target
 
+    def plot(self, traj_plots_dir, outer_i, pred_traj, pred_actions, expert_demo_dict):
+
+        if self.mpc_use_ftpos:
+            plot_traj(traj_plots_dir, outer_i, pred_traj, expert_demo_dict, self.conf.mpc_type, self.mpc.obj_state_type)
+
+        if self.conf.mpc_type=="learned" and self.decoder is not None:
+            ft_states, o_states = self.mpc.get_states_from_x_next(pred_traj)
+            with torch.no_grad(): # TODO need to freeze decoder weights??
+                pred_imgs = self.decoder(torch.Tensor(o_states))
+                self.decoder.save_gif(pred_imgs, os.path.join(traj_plots_dir, f'r3m_epoch_{outer_i+1}.gif'))
+
+        plot_actions(traj_plots_dir, outer_i, pred_actions, expert_demo_dict)
+
+    def get_grad_dict(self):
+        return {} # TODO don't log gradients, no support for nn policy
+
+        # Gradient info
+        for name, p in self.mpc.named_parameters():
+        
+            #print(name, p.grad.shape)
+            if name != "action_seq": continue
+
+            if p.grad is not None:
+                grad = p.grad.detach()
+                #print(name, grad.shape)
+                grad_min_mpc = torch.min(torch.abs(grad))
+                grad_max_mpc = torch.max(torch.abs(grad))
+                grad_norm_mpc = grad.norm()
+            else:
+                #print("No gradient")
+                grad_min_mpc = np.nan 
+                grad_max_mpc = np.nan 
+                grad_norm_mpc = np.nan
+
+        #print("cost")
+        for p in self.learnable_cost.parameters():
+            if p.grad is not None:
+                grad = p.grad.detach()
+                #print(grad.shape)
+                grad_min_cost = torch.min(torch.abs(grad))
+                grad_max_cost = torch.max(torch.abs(grad))
+                grad_norm_cost = grad.norm()
+            else:
+                #print("No gradient")
+                grad_min_cost = np.nan 
+                grad_max_cost = np.nan 
+                grad_norm_cost = np.nan 
+
+        grad_dict = {
+                    "grad_min_mpc": grad_min_mpc,
+                    "grad_max_mpc": grad_max_mpc,
+                    "grad_norm_mpc": grad_norm_mpc,
+                    "grad_min_cost": grad_min_cost,
+                    "grad_max_cost": grad_max_cost,
+                    "grad_norm_cost": grad_norm_cost,
+                    }
+        return grad_dict
+
 def get_mpc(mpc_type, time_horizon, mpc_forward_model_ckpt=None):
     """ Get MPC class """
 
@@ -341,7 +385,7 @@ def get_mpc(mpc_type, time_horizon, mpc_forward_model_ckpt=None):
         #return FTPosSim(time_horizon=time_horizon-1)
         return FTPosMPC(time_horizon=time_horizon-1)
 
-    elif mpc_type in ["ftpos_obj_two_phase", "ftpos_obj_learned_only"]:
+    elif mpc_type == "two_phase":
         if mpc_forward_model_ckpt is None: raise ValueError("Missing mpc_forward_model_ckpt")
 
         ## Phase 2 model trained with cropped phase 2 demos
@@ -349,9 +393,7 @@ def get_mpc(mpc_type, time_horizon, mpc_forward_model_ckpt=None):
         ## Phase 2 model trained with full demos
         #phase2_model_path = "trifinger_mbirl/forward_models/runs/phase2_model_nt-100_ost-pos_train-all/epoch_3000_ckpt.pth"
 
-        if "learned_only" in mpc_type: learned_only = True
-        else: learned_only = False
-        return TwoPhaseMPC(time_horizon-1, mpc_forward_model_ckpt, learned_only=learned_only)
+        return TwoPhaseMPC(time_horizon-1, mpc_forward_model_ckpt)
 
     elif mpc_type == "learned":
         model_dict = torch.load(mpc_forward_model_ckpt) 

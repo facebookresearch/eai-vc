@@ -18,7 +18,7 @@ import utils.data_utils as d_utils
 # Compute next state given current state and action (ft position deltas)
 class TwoPhaseMPC(torch.nn.Module):
 
-    def __init__(self, time_horizon, phase2_model_path, f_num=3, mode=None, learned_only=False):
+    def __init__(self, time_horizon, phase2_model_path, f_num=3, mode=None):
         super().__init__()
         self.time_horizon = time_horizon
         self.f_num = f_num
@@ -27,7 +27,6 @@ class TwoPhaseMPC(torch.nn.Module):
         self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
 
         self.mode = mode
-        self.learned_only = learned_only
 
         self.phase1_model = Phase1Model()
 
@@ -68,13 +67,10 @@ class TwoPhaseMPC(torch.nn.Module):
             #if obs_dict["mode"] == 2: action = action * 10 # TODO for testing model with scaled actions
             obs_dict["action"] = torch.unsqueeze(action, 0)
 
-        if not self.learned_only:
-            if obs_dict["mode"] == 1:
-                x_next = self.phase1_model(obs_dict)
-            else: 
-                # Mode 2
-                x_next = self.phase2_model(obs_dict)
-        else:
+        if obs_dict["mode"] == 1:
+            x_next = self.phase1_model(obs_dict)
+        else: 
+            # Mode 2
             x_next = self.phase2_model(obs_dict)
         
         return x_next
@@ -184,7 +180,7 @@ def main(args):
 
     time_horizon = traj["ft_pos_cur"].shape[0]
 
-    mpc = TwoPhaseMPC(time_horizon-1, args.phase2_model_path, learned_only=True)
+    mpc = TwoPhaseMPC(time_horizon-1, args.phase2_model_path)
     phase2_start_ind = mpc.phase2_start_ind
 
     obs_dict_init = d_utils.get_obs_dict_from_traj(traj, 0, mpc.obj_state_type)
