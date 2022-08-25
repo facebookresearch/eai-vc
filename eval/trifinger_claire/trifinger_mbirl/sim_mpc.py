@@ -9,7 +9,6 @@ import argparse
 import numpy as np
 import pybullet
 import random
-import torch
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
@@ -27,10 +26,11 @@ python sim_rerun_demo.py --log_path test/demos/difficulty-1/demo-0000.npz -v
 """
 
 class SimMPC:
-    def __init__(self, downsample_time_step):
+    def __init__(self, downsample_time_step=0.2, traj_scale=1):
         
         self.sim_time_step = 0.004
         self.downsample_time_step = downsample_time_step
+        self.traj_scale=traj_scale
 
         self.env = SimCubeEnv(
             goal_pose=None,  # passing None to sample a random trajectory
@@ -45,13 +45,15 @@ class SimMPC:
 
     def rollout_actions(self, traj, actions):
 
-        obj_init_pos = traj["o_pos_cur"][0, :]
+        obj_init_pos = traj["o_pos_cur"][0, :] / self.traj_scale
         obj_init_ori = traj["o_ori_cur"][0, :]
-        obj_goal_pos = traj["o_pos_des"][0, :]
+        obj_goal_pos = traj["o_pos_des"][0, :] / self.traj_scale
         obj_goal_ori = traj["o_ori_des"][0, :]
         init_pose = {"position": obj_init_pos, "orientation": obj_init_ori}
         goal_pose = {"position": obj_goal_pos, "orientation": obj_goal_ori}
         qpos_init = traj["robot_pos"][0, :]
+
+        actions = actions / self.traj_scale
 
         observation = self.env.reset(goal_pose_dict=goal_pose, init_pose_dict=init_pose,
                                 init_robot_position=qpos_init)
@@ -78,6 +80,12 @@ class SimMPC:
 
         # Compute actions (ftpos and joint state deltas) across trajectory
         add_actions_to_obs(observation_list)
+        
+        traj_dict = d_utils.get_traj_dict_from_obs_list(observation_list, scale=self.traj_scale)
+        traj_dict = d_utils.downsample_traj_dict(traj_dict, new_time_step=self.downsample_time_step)
+
+        return np.array(traj_dict["image_60_r3m"])
+        
         #demo_dir = os.path.split(demo_path)[0]
         #demo_name = os.path.splitext(os.path.split(demo_path)[1])[0]
         #log_dir = os.path.join(demo_dir, "reruns")

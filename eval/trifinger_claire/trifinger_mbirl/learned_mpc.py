@@ -20,7 +20,7 @@ from trifinger_mbirl.policy import DeterministicPolicy
 # Compute next state given current state and action (ft position deltas)
 class LearnedMPC(torch.nn.Module):
 
-    def __init__(self, time_horizon, model_dict=None, f_num=3):
+    def __init__(self, time_horizon, model_dict=None, f_num=3, device="cpu"):
         super().__init__()
         self.time_horizon = time_horizon
         self.f_num = f_num
@@ -33,11 +33,12 @@ class LearnedMPC(torch.nn.Module):
         hidden_dims = model_dict["hidden_dims"]
         self.model = ForwardModel(self.in_dim, self.out_dim, hidden_dims)
         self.model.load_state_dict(model_dict["model_state_dict"])
+        self.model.to(device)
 
         if self.policy_type == "actions":
             self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
         elif self.policy_type == "nn":
-            self.policy = DeterministicPolicy(in_dim=self.out_dim, out_dim=self.a_dim)
+            self.policy = DeterministicPolicy(in_dim=self.out_dim, out_dim=self.a_dim, device=device)
             self.action_seq = torch.Tensor(np.zeros([time_horizon, self.a_dim]))
         else:
             raise ValueError("Invalid policy_type.")

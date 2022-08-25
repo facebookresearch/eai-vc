@@ -45,16 +45,17 @@ class IRLLoss(object):
 
 
 class MBIRL:
-    def __init__(self, conf, traj_info):
+    def __init__(self, conf, traj_info, device):
 
         time_horizon = traj_info["train_demos"][0]["ft_pos_cur"].shape[0]
         
         self.conf = conf
+        self.device = device
         self.traj_info = traj_info
         self.downsample_time_step = traj_info["downsample_time_step"]
 
         # Get MPC
-        self.mpc = get_mpc(conf.mpc_type, time_horizon, conf.mpc_forward_model_ckpt)
+        self.mpc = get_mpc(conf.mpc_type, time_horizon, self.device, conf.mpc_forward_model_ckpt)
         log.info(f"Loaded MPC type {self.conf.mpc_type} with obj_state_type = {self.mpc.obj_state_type}")
 
         # Ensure mpc_type and cost/irl_loss states are compatible
@@ -72,13 +73,13 @@ class MBIRL:
 
         # Load and use decoder to viz pred_o_states
         if conf.path_to_decoder_ckpt is not None:
-            decoder_model_dict = torch.load(conf.path_to_decoder_ckpt) 
+            decoder_model_dict = torch.load(conf.path_to_decoder_ckpt, map_location=torch.device(self.device)) 
             self.decoder = DecoderModel()
             self.decoder.load_state_dict(decoder_model_dict["model_state_dict"])
         else:
             self.decoder = None
 
-        self.sim = SimMPC(downsample_time_step=self.downsample_time_step)
+        self.sim = SimMPC(downsample_time_step=self.downsample_time_step, traj_scale=self.traj_info["scale"])
 
     def train(self, model_data_dir=None, no_wandb=False):
         """ Training loop for MBIRL """
@@ -110,6 +111,7 @@ class MBIRL:
             pred_traj_per_demo = []
             pred_actions_per_demo = []
 
+
             for demo_i in range(len(train_trajs)):
                 learnable_cost_opt.zero_grad()
                 expert_demo_dict = train_trajs[demo_i]
@@ -122,19 +124,28 @@ class MBIRL:
                 self.mpc.reset_actions()
                 #self.mpc.reset_actions(init_a=expert_actions)
 
+                #action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
                 action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
                 action_optimizer.zero_grad()
+
                 with higher.innerloop_ctx(self.mpc, action_optimizer) as (fpolicy, diffopt):
-                    #################### Inner loop: policy optimization ############################
                     for inner_i in range(self.conf.n_inner_iter):
+                    #################### Inner loop: policy optimization ############################
                         pred_traj = fpolicy.roll_out(obs_dict_init.copy())
-                        irl_loss = self.irl_loss_fn(pred_traj, expert_demo_dict).mean()
+
+                        if (inner_i+1) % 10 == 0:
+                            pred_actions = fpolicy.action_seq.detach().numpy().copy()
+                            print(inner_i)
+                            print(pred_actions[-1])
+                            #pred_traj_sim = torch.Tensor(self.sim.rollout_actions(expert_demo_dict.copy(), pred_actions))
+
                         # use the learned loss to update the action sequence
                         target = self.get_target_for_cost_type(expert_demo_dict)
                         pred_traj_for_cost = d_utils.parse_pred_traj(pred_traj, self.conf.cost_state,
                                                                         mpc_use_ftpos=self.mpc_use_ftpos)
                         learned_cost_val = self.learnable_cost(pred_traj_for_cost, target)
                         diffopt.step(learned_cost_val)
+
                         # Log learned_cost_val, plots epoch_{outer_i}_inner_{inner_i}
                         # TODO for testing; need to make new plot for each traj
                         #print(inner_i)
@@ -168,9 +179,6 @@ class MBIRL:
                     # backprop gradient of learned cost parameters wrt irl loss
                     irl_loss.backward(retain_graph=True)
 
-                    pred_actions = fpolicy.action_seq.data.detach().numpy()
-
-                    #self.sim.rollout_actions(expert_demo_dict, pred_actions)
 
                 # Update cost parameters
                 learnable_cost_opt.step()
@@ -378,7 +386,7 @@ class MBIRL:
                     }
         return grad_dict
 
-def get_mpc(mpc_type, time_horizon, mpc_forward_model_ckpt=None):
+def get_mpc(mpc_type, time_horizon, device, mpc_forward_model_ckpt=None):
     """ Get MPC class """
 
     if mpc_type == "ftpos":
@@ -396,7 +404,7 @@ def get_mpc(mpc_type, time_horizon, mpc_forward_model_ckpt=None):
         return TwoPhaseMPC(time_horizon-1, mpc_forward_model_ckpt)
 
     elif mpc_type == "learned":
-        model_dict = torch.load(mpc_forward_model_ckpt) 
+        model_dict = torch.load(mpc_forward_model_ckpt, map_location=torch.device(device)) 
         return LearnedMPC(time_horizon-1, model_dict=model_dict)
 
     else:
