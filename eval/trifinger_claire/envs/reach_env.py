@@ -41,7 +41,7 @@ class ReachEnv(gym.Env):
         self,
         render_mode: str="",
         fixed_goal: bool = True,
-        action_type: ActionType = ActionType.POSITION,
+        action_type: ActionType = ActionType.TORQUE, #Claire: This was set to ActionType.POSITION, which was causing wrong clipping
         step_size: int = 1000,
         visualization: bool = False,
         no_collisions: bool = False,
@@ -105,7 +105,6 @@ class ReachEnv(gym.Env):
         # ====================
 
         self.action_type = action_type
-
 
 
         if step_size < 1:
@@ -211,7 +210,8 @@ class ReachEnv(gym.Env):
         # action = action + 1
         # action = (action * delta) + self.action_space.low
         x_des =  self.hand_kinematics.get_ft_pos(self.observation["robot_position"]) + action
-        action = self.hand_kinematics.get_torque(x_des, action, self.observation["robot_position"], self.observation["robot_velocity"])
+        dx_des = np.zeros(9) # Claire: Set desired fingertip velocities to 0, for testing actions
+        action = self.hand_kinematics.get_torque(x_des, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
         return np.clip(action,self.action_space.low,self.action_space.high)
 
 
