@@ -167,6 +167,7 @@ class ReachEnv(gym.Env):
         self.observation_space = gym.spaces.Dict(
             {
                 "t": gym.spaces.Discrete(task.EPISODE_LENGTH),
+                "step_count": gym.spaces.Discrete(task.EPISODE_LENGTH),
                 "robot_position":robot_position_space,
                 "robot_velocity": robot_velocity_space,
                 "robot_torque": robot_torque_space,
@@ -381,6 +382,7 @@ class ReachEnv(gym.Env):
 
         self.observation = {
             "t": t,
+            "step_count": self.step_count,
             "robot_position": robot_observation.position,
             "robot_velocity": robot_observation.velocity,
             "robot_torque": robot_observation.torque,
