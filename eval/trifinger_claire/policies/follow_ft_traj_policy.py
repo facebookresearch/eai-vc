@@ -65,8 +65,8 @@ class FollowFtTrajPolicy:
         if ft_pos_traj_in is not None:
             self.ft_pos_traj_in = ft_pos_traj_in
         self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(self.ft_pos_traj_in,
-                                                                         self.downsample_time_step,
-                                                                         self.time_step)
+                                                 self.downsample_time_step,
+                                                 self.time_step)
 
         self.t = 0
 
@@ -94,8 +94,8 @@ class FollowFtTrajPolicy:
         x_des, dx_des = self.get_ft_des(observation)
 
         #4. Get torques from controller
-        q_cur = observation["robot_observation"]["position"]
-        dq_cur = observation["robot_observation"]["velocity"]
+        q_cur = observation["robot_position"]
+        dq_cur = observation["robot_velocity"]
         torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
     
         self.t += 1

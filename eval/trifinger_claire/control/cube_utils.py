@@ -343,6 +343,9 @@ def lin_interp_pos(x, time_step_in, time_step_out=0.001):
     """
 
     T = x.shape[0]
+
+    if time_step_in == time_step_out: return x
+
     interp_n = int(time_step_in / time_step_out) # Number of interpolation points between two waypoints
 
     # Linearly interpolate between each position waypoint (row) and force waypoint
