@@ -37,14 +37,14 @@ jobs:
       - checkout
       - initialize
       - restore_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "environment.yml" }}
+          key: deps9-{{ arch }}-{{ .Branch }}-{{ checksum "environment.yml" }}
       - run:
           name: Create conda environment
           command: |
             . ~/miniconda3/bin/activate
             [ -d ~/miniconda3/envs/eaif ] || mamba env create -f environment.yml
       - save_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "environment.yml" }}
+          key: deps9-{{ arch }}-{{ .Branch }}-{{ checksum "environment.yml" }}
           paths:
             - "/home/circleci/miniconda3/"
   cifar-linprobe:
@@ -55,7 +55,7 @@ jobs:
       - checkout
       - initialize
       - restore_cache:
-          key: deps9-{{ .Branch }}-{{ checksum "environment.yml" }}
+          key: deps9-{{ arch }}-{{ .Branch }}-{{ checksum "environment.yml" }}
       - run:
           name: Install eaif-models
           command: |

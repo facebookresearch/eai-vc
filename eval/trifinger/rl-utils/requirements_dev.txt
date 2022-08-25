@@ -1,0 +1,8 @@
+matplotlib
+numpy>=1.16.1
+torch>=1.8.1
+subprocess32>=3.5.4
+gym>=0.17.1
+opencv-python
+omegaconf>=2.0.0
+pytest==7.1.2

@@ -52,6 +52,8 @@ Install the Trifinger environment:
 
 ```bash
 pip install -e ./third_party/trifinger_simulation
+pip install -e ./eval/trifinger/rl-utils
+pip install -e ./eval/trifinger/imitation_learning
 ```
 
 Install local packages:

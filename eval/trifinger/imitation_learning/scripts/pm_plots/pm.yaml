@@ -1,0 +1,59 @@
+# From 5/16/22 for NeurIPS.
+#
+output_dir: "data/vis/pm"
+write_to: "/Users/andrewszot/Documents/writing/metairl-neurip2022/sections/tables/pm.tex"
+eval_env: "imitation_learning/config/env/pointmass_eval.yaml"
+train_env: "imitation_learning/config/env/pointmass.yaml"
+with_arrows: True
+
+# Renders each of these rewards. 
+# These specify IDs of runs. NOT group names.
+render_names:
+  #mirl_eval: "1xv2dhyt"
+  mirl_eval: "c6r3az1u"
+  airl_eval: "2bp4t9p9"
+  gcl_eval: "3vf2m7ih"
+  maxent_eval: "2d4kx8t4"
+
+  #mirl_train: "22sr1h1w"
+  mirl_train: "2cgijlvi"
+  airl_train: "1st78jkq"
+  gcl_train: "2g7tfjqh"
+  maxent_train: "3uoxahpb"
+
+# To get the plot of the demonstrations
+expert_render_name: "3dbf9msh"
+
+# Gets the result table for each of these methods. 
+# These are group names
+methods:
+  train:
+    #mirl: "7fc51d73"
+    mirl: "40f54a08"
+
+    airl: "b20f90f6"
+
+    gcl: "7abc8d72"
+
+    # maxent cannot have train eval numbers.
+    # train run is "34a1fb4a"
+    maxent: ""
+
+  train_eval:
+    #mirl: "d179fbcc"
+    mirl: "333018c5"
+    airl: "04046ccf"
+    gcl: "b79636c8"
+    maxent: "d192ebbc"
+  eval:
+    #mirl: "98827c19"
+    # on of the two.
+    #mirl: "9d0c61b3"
+    mirl: "0e00a11c"
+
+    airl: "a59f7195"
+    gcl: "117eb9f8"
+    maxent: "83f4e49e"
+hydra:
+  run:
+    dir: ./

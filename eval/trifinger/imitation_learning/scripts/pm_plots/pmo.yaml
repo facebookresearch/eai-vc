@@ -1,0 +1,65 @@
+# From 5/16/22 for NeurIPS.
+#
+output_dir: "data/vis/pmo"
+write_to: "/Users/andrewszot/Documents/writing/metairl-neurip2022/sections/tables/pmo.tex"
+eval_env: "imitation_learning/config/env/pointmass_obstacle_eval.yaml"
+train_env: "imitation_learning/config/env/pointmass_obstacle.yaml"
+with_arrows: False
+
+# Renders each of these rewards. 
+# These specify IDs of runs. NOT group names.
+render_names:
+  mirl_eval: "10dytcaw"
+  airl_eval: "391cgipy"
+  gcl_eval: "6ziqd55v"
+  maxent_eval: "25v7u6yu"
+
+  mirl_train: "21oebfn2"
+  airl_train: "facwz07e"
+  gcl_train: "1zh59b4f"
+  maxent_train: "3gr9c97l"
+    
+# To get the plot of the demonstrations
+expert_render_name: "3mf0boao"
+expert_config: "imitation_learning/config/ppo/pointmass_obstacle.yaml"
+
+# Gets the result table for each of these methods. 
+# These are group names
+methods:
+  train:
+    # Good
+    mirl: "3ce09e15"
+
+    # Good
+    airl: "000de86a"
+
+    # Ok: reward and performance is poor.
+    gcl: "7d17e4f8"
+
+    # maxent cannot have train eval numbers.
+    # train run is "c2555c0f"
+    maxent: ""
+
+  train_eval:
+    mirl: "802dff61"
+
+    # Good (very poor performance)
+    airl: "1f8994b3"
+
+    # Okay
+    gcl: "c4b3bf04"
+
+    maxent: "3e4f36a2"
+  eval:
+    mirl: "bf69a9e1"
+
+    airl: "625f8ace"
+
+    # Okay
+    gcl: "2accc0c8"
+
+    maxent: "14cf39c6"
+
+hydra:
+  run:
+    dir: ./

@@ -1,0 +1,69 @@
+# @package _global_
+defaults:
+  - override /env: pointmass_obstacle
+  - override /evaluator: pointmass
+
+num_steps: 50
+num_envs: 128
+log_interval: 10
+save_interval: 10000000000
+eval_interval: 400
+num_env_steps: 5e6
+
+policy_updater:
+  _target_: gail.updater.GAIL
+  _recursive_: False
+
+  batch_size: 256
+  reward_update_freq: 1
+  num_discrim_batches: 2
+  num_envs: ${num_envs}
+
+  get_dataset_fn:
+    _target_: imitation_learning.common.utils.get_transition_dataset
+    dataset_path: data/traj/pm_obstacle_stable_actions_100.pth
+    env_name: ${env.env_name}
+
+  discriminator:
+    _target_: airl.discriminator.AirlDiscriminator
+    obs_shape: ${obs_shape}
+    action_dim: ${action_dim}
+    reward_hidden_dim: 128
+    n_hidden_layers: 2
+    cost_take_dim: -1
+    gamma: ${gamma}
+    airl_reward_bonus: 0.0
+    use_shaped_reward: True
+
+  policy_updater:
+    _target_: policy_opt.ppo.PPO
+    _recursive_: False
+
+    use_clipped_value_loss: True
+    max_grad_norm: -1
+    value_loss_coef: 0.5
+    clip_param: 0.2
+    entropy_coef: 0.001
+    num_epochs: 2
+    num_mini_batch: 1
+
+    # Returns calculation
+    gae_lambda: 0.95
+    use_gae: True
+    gamma: ${gamma}
+    optimizer_params:
+      _target_: torch.optim.Adam
+      lr: 1e-3
+    num_steps: ${num_steps}
+    num_envs: ${num_envs}
+
+  discrim_opt:
+    _target_: torch.optim.Adam
+    lr: 1e-2
+
+eval_args:
+  policy_updater:
+    reward_update_freq: -1
+  load_policy: False
+  num_env_steps: 5e6
+

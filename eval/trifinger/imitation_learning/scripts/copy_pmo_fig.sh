@@ -1,0 +1,16 @@
+# pmo mirl
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/mirl_eval/reward_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/mirl_reward.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/mirl_eval/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/mirl_eval_rollouts.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/mirl_train/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/mirl_train_rollouts.pdf
+# pmo airl
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/airl_eval/reward_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/airl_reward.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/airl_eval/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/airl_eval_rollouts.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/airl_train/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/airl_train_rollouts.pdf
+# pmo gcl
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/gcl_eval/reward_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/gcl_reward.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/gcl_eval/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/gcl_eval_rollouts.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/gcl_train/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/gcl_train_rollouts.pdf
+# pmo maxent
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/maxent_eval/reward_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/maxent_reward.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/maxent_eval/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/maxent_eval_rollouts.pdf
+scp sky:/coc/testnvme/aszot3/imitation-learning/data/vis/pmo/maxent_train/eval_rollouts_0.pdf /Users/andrewszot/Documents/writing/metairl-neurip2022/figures/exp/pmo/maxent_train_rollouts.pdf

@@ -1,0 +1,98 @@
+defaults:
+  - _self_
+
+num_steps: 5
+num_envs: 32
+num_env_steps: 1e6
+seed: 1
+recurrent_hidden_state_size: 0
+obs_shape: ???
+action_dim: ???
+action_is_discrete: False
+device: 'cpu'
+
+# Intervals
+log_interval: 1
+eval_interval: 20
+save_interval: 100000000000
+num_eval_episodes: 1
+
+# Saving / Loading
+load_checkpoint: null
+resume_training: False
+
+logger:
+  _target_: imitation_learning.common.wb_logger.WbLogger
+  _recursive_: False
+  wb_proj_name: ???
+  wb_entity: ???
+  run_name: "ppo"
+  seed: ${seed}
+  log_dir: "./data/vids/"
+  vid_dir: "./data/vids/"
+  save_dir: "./data/checkpoints/"
+  smooth_len: 10
+  full_cfg: None
+
+policy:
+  _target_: imitation_learning.ppo.policy.Policy
+  hidden_size: 128
+  recurrent_hidden_size: ${recurrent_hidden_state_size}
+  is_recurrent: False
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+
+env_name: "TriFingerReaching-v0"
+env_settings:
+  params:
+    _target_: imitation_learning.tasks.trifinger_task.trifinger_interface.CausalWorldReacherWrapper
+    start_state_noise: 0.05
+    skip_frame: 10
+    max_ep_horizon: 5
+  set_eval: False
+
+storage:
+  _target_: imitation_learning.ppo.storage.RolloutStorage
+  num_steps: ${num_steps}
+  num_processes: ${num_envs}
+  recurrent_hidden_state_size: ${recurrent_hidden_state_size}
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  fetch_final_obs: True
+
+evaluator:
+  _target_: imitation_learning.run_mirl_trifinger.TrifingerEvaluator # rl_helper.common.Evaluator
+  rnn_hxs_dim: ${recurrent_hidden_state_size}
+  num_render: 0
+  fps: 10
+  save_traj_name: null
+
+policy_updater:
+  _target_: imitation_learning.ppo.updater.PPO
+  _recursive_: False
+
+  use_clipped_value_loss: True
+  clip_param: 0.2
+  value_loss_coef: 0.5
+  entropy_coef: 0.0001
+  max_grad_norm: 0.5
+  num_epochs: 4
+  num_mini_batch: 4
+  num_envs: ${num_envs}
+  num_steps: ${num_steps}
+
+  # Returns calculation
+  gae_lambda: 0.95
+  use_gae: True
+  gamma: 0.99
+
+  optimizer_params:
+    _target_: torch.optim.SGD
+    lr: 0.0005
+
+
+hydra:
+  run:
+    dir: ./

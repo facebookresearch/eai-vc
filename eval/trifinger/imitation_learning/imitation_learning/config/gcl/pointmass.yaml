@@ -1,0 +1,68 @@
+# @package _global_
+defaults:
+  - override /env: pointmass
+  - override /evaluator: pointmass
+num_steps: 5
+num_envs: 256
+log_interval: 10
+save_interval: 10000000000
+num_env_steps: 3e6
+eval_interval: 400
+
+evaluator:
+  plot_expert: False
+
+policy_updater:
+  _target_: imitation_learning.gcl.updater.GCL
+  _recursive_: False
+
+  batch_size: 256
+  device: ${device}
+  num_envs: ${num_envs}
+  should_update_reward: True
+
+  get_dataset_fn:
+    _target_: imitation_learning.common.utils.get_transition_dataset
+    dataset_path: data/traj/pm_100.pth
+    env_name: ${env.env_name}
+
+  reward:
+    _target_: imitation_learning.gcl.updater.NeuralReward
+    obs_shape: ${obs_shape}
+    action_dim: ${action_dim}
+    reward_hidden_dim: 128
+    cost_take_dim: -1
+    n_hidden_layers: 2
+
+  policy_updater:
+    _target_: policy_opt.ppo.PPO
+    _recursive_: False
+
+    use_clipped_value_loss: True
+    max_grad_norm: -1
+    value_loss_coef: 0.5
+    clip_param: 0.2
+    entropy_coef: 0.001
+    num_epochs: 2
+    num_mini_batch: 4
+
+    # Returns calculation
+    gae_lambda: 0.95
+    use_gae: True
+    gamma: 0.99
+    optimizer_params:
+      _target_: torch.optim.Adam
+      lr: 3e-4
+    num_steps: ${num_steps}
+    num_envs: ${num_envs}
+
+  reward_opt:
+    _target_: torch.optim.Adam
+    lr: 3e-4
+
+eval_args:
+  policy_updater:
+    should_update_reward: False
+  load_policy: False
+  num_env_steps: 5e6
+
