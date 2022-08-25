@@ -16,5 +16,5 @@ FINGER_BASE_POSITIONS = [
 
 # These are offsets to cube half size for computing contact points
 # Tuned empirically; do not match actual fingertip dimensions
-FT_RADIUS = 0.009  # PRO 
+FT_RADIUS = 0.008  # PRO 
 #FT_RADIUS = 0.007 # EDU

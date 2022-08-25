@@ -29,9 +29,10 @@ sys.path.insert(0, os.path.join(base_path, '..'))
 
 import control.cube_utils as c_utils
 
-FIRST_DEFAULT_GOAL = np.array([0, 0, 0.10])
-SECOND_DEFAULT_GOAL = np.array([0, 0, 0.13])
-THIRD_DEFAULT_GOAL = np.array([0, 0, 0.16])
+#move to position of third finger
+FIRST_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
+SECOND_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
+THIRD_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
 
 @full_env_registry.register_env("ReachEnv-v0")
 class ReachEnv(gym.Env):
@@ -41,8 +42,8 @@ class ReachEnv(gym.Env):
         self,
         render_mode: str="",
         fixed_goal: bool = True,
-        action_type: ActionType = ActionType.TORQUE, #Claire: This was set to ActionType.POSITION, which was causing wrong clipping
-        step_size: int = 1000,
+        action_type: ActionType = ActionType.TORQUE,
+        step_size: int = 1,
         visualization: bool = False,
         no_collisions: bool = False,
         enable_cameras: bool = False,
@@ -118,8 +119,8 @@ class ReachEnv(gym.Env):
         # ========================================
 
         robot_torque_space = gym.spaces.Box(
-            low=trifingerpro_limits.robot_torque.low*10,
-            high=trifingerpro_limits.robot_torque.high*10,
+            low=trifingerpro_limits.robot_torque.low,
+            high=trifingerpro_limits.robot_torque.high,
         )
         robot_position_space = gym.spaces.Box(
             low=trifingerpro_limits.robot_position.low,
@@ -200,7 +201,7 @@ class ReachEnv(gym.Env):
                     info,
                 )
         """
-        return 100 - np.linalg.norm(desired_goal-achieved_goal)
+        return 10 *(1 - np.linalg.norm(desired_goal-achieved_goal))
 
     def _scale_action(self,action):
         #receive action between -1,1
@@ -211,7 +212,7 @@ class ReachEnv(gym.Env):
         # action = action + 1
         # action = (action * delta) + self.action_space.low
         x_des =  self.hand_kinematics.get_ft_pos(self.observation["robot_position"]) + action
-        dx_des = np.zeros(9) # Claire: Set desired fingertip velocities to 0, for testing actions
+        dx_des = np.zeros(9)
         action = self.hand_kinematics.get_torque(x_des, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
         return np.clip(action,self.action_space.low,self.action_space.high)
 
