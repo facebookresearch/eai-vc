@@ -33,19 +33,16 @@ FIRST_DEFAULT_GOAL = np.array([0, 0, 0.10])
 SECOND_DEFAULT_GOAL = np.array([0, 0, 0.13])
 THIRD_DEFAULT_GOAL = np.array([0, 0, 0.16])
 
-# FIRST_DEFAULT_GOAL = np.array([0.063217,0.8894027,-0.93611709])
-# SECOND_DEFAULT_GOAL = np.array([0.0625135,0.88934364,-0.93207197])
-# THIRD_DEFAULT_GOAL = np.array([ 0.06272959,0.89063181,-0.94276638])
-
 @full_env_registry.register_env("ReachEnv-v0")
 class ReachEnv(gym.Env):
     """Gym environment for moving cubes with TriFingerPro."""
 
     def __init__(
         self,
+        render_mode: str="",
         fixed_goal: bool = True,
-        action_type: ActionType = ActionType.POSITION,
-        step_size: int = 1,
+        action_type: ActionType = ActionType.TORQUE, #Claire: This was set to ActionType.POSITION, which was causing wrong clipping
+        step_size: int = 1000,
         visualization: bool = False,
         no_collisions: bool = False,
         enable_cameras: bool = False,
@@ -75,7 +72,8 @@ class ReachEnv(gym.Env):
             time_step (float): Simulation timestep
         """
         super().__init__()
-
+        if(render_mode=="human"):
+            visualization = True
         self.visualization = visualization
         self.no_collisions = no_collisions
         self.enable_cameras = enable_cameras
@@ -99,7 +97,7 @@ class ReachEnv(gym.Env):
 
         # visualize the cube vertices
         if self.visualization and not self.enable_cameras:
-            self.draw_verts = True
+            self.draw_verts = False
         else:
             self.draw_verts = False
         self.vert_markers = None
@@ -107,7 +105,6 @@ class ReachEnv(gym.Env):
         # ====================
 
         self.action_type = action_type
-
 
 
         if step_size < 1:
@@ -121,8 +118,8 @@ class ReachEnv(gym.Env):
         # ========================================
 
         robot_torque_space = gym.spaces.Box(
-            low=trifingerpro_limits.robot_torque.low,
-            high=trifingerpro_limits.robot_torque.high,
+            low=trifingerpro_limits.robot_torque.low*10,
+            high=trifingerpro_limits.robot_torque.high*10,
         )
         robot_position_space = gym.spaces.Box(
             low=trifingerpro_limits.robot_position.low,
@@ -174,6 +171,7 @@ class ReachEnv(gym.Env):
                 "observation": observation_state_space, # position of fingertips
                 "action": self.action_space,
                 "desired_goal": goal_state_space,
+                "achieved_goal": goal_state_space
             }
         )
 
@@ -202,18 +200,19 @@ class ReachEnv(gym.Env):
                     info,
                 )
         """
-        return 10 - np.linalg.norm(desired_goal-achieved_goal)
+        return 100 - np.linalg.norm(desired_goal-achieved_goal)
 
     def _scale_action(self,action):
         #receive action between -1,1
         #assume action is dx_des, change in the fingertip positions in space
-        
+
         #compute x_des
         # delta = (self.action_space.high - self.action_space.low) / 2
         # action = action + 1
         # action = (action * delta) + self.action_space.low
         x_des =  self.hand_kinematics.get_ft_pos(self.observation["robot_position"]) + action
-        action = self.hand_kinematics.get_torque(x_des, action, self.observation["robot_position"], self.observation["robot_velocity"])
+        dx_des = np.zeros(9) # Claire: Set desired fingertip velocities to 0, for testing actions
+        action = self.hand_kinematics.get_torque(x_des, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
         return np.clip(action,self.action_space.low,self.action_space.high)
 
 
@@ -240,7 +239,7 @@ class ReachEnv(gym.Env):
         if self.platform is None:
             raise RuntimeError("Call `reset()` before starting to step.")
         action = self._scale_action(action)
-       
+
         if not self.action_space.contains(np.array(action, dtype=np.float32)):
             raise ValueError(
                 "Given action is not contained in the action space."
@@ -390,7 +389,9 @@ class ReachEnv(gym.Env):
             # "object_vertices": v_wf_dict,
             "action": action,
             "desired_goal": self.goal,
+            "achieved_goal": self.hand_kinematics.get_ft_pos(robot_observation.position)
         }
+
         # Save camera observation images
         if self.enable_cameras:
             camera_observation_dict = {
@@ -456,12 +457,12 @@ class HandKinematics:
                 self.platform.simfinger.link_names)
 
         self.controller = ImpedanceController(self.kinematics)
-        
+
     def get_ft_pos(self, q):
         """ Get fingertip positions given current joint configuration q """
-       
+
         ft_pos = np.array(self.kinematics.forward_kinematics(q)).reshape(self.Nq)
         return ft_pos
-    
+
     def  get_torque(self, x_des, dx_des, q_cur, dq_cur):
         return self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
