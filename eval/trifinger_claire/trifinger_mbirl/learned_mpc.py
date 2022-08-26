@@ -26,7 +26,7 @@ class LearnedMPC(torch.nn.Module):
         self.f_num = f_num
         self.f_state_dim = self.f_num * 3
         self.a_dim = self.f_num * 3
-        self.policy_type = "nn"
+        self.policy_type = "actions"
 
         self.in_dim = model_dict["in_dim"]
         self.out_dim = model_dict["out_dim"]
@@ -163,9 +163,9 @@ class LearnedMPC(torch.nn.Module):
     def reset_actions(self, init_a=None):
         if self.policy_type == "actions":
             if init_a is None:
-                #self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
+                self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
                 # Random actions between [-1., 1.]
-                self.action_seq.data = torch.rand((self.time_horizon, self.a_dim)) * 2. - 1.
+                #self.action_seq.data = torch.rand((self.time_horizon, self.a_dim)) * 2. - 1.
             else:
                 rand = torch.rand((self.time_horizon, self.a_dim)) * 2.0 - 1.0
                 self.action_seq.data = torch.Tensor(init_a)# + rand

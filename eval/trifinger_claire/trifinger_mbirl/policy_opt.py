@@ -21,6 +21,7 @@ from trifinger_mbirl.two_phase_mpc import TwoPhaseMPC
 from trifinger_mbirl.learned_mpc import LearnedMPC
 from trifinger_mbirl.forward_models.models.decoder_model import DecoderModel
 from trifinger_mbirl.sim_mpc import SimMPC
+from trifinger_mbirl.mbirl import get_expert_demo 
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -58,10 +59,10 @@ class PolicyOpt:
 
         # Load and use decoder to viz pred_o_states
         if conf.path_to_decoder_ckpt is not None:
-            decoder_model_dict = torch.load(conf.path_to_decoder_ckpt, map_location=torch.device(self.device)) 
+            decoder_model_dict = torch.load(conf.path_to_decoder_ckpt)
             self.decoder = DecoderModel()
             self.decoder.load_state_dict(decoder_model_dict["model_state_dict"])
-            self.decoder.to(self.device)
+            #self.decoder.to(self.device)
         else:
             self.decoder = None
 
@@ -89,11 +90,11 @@ class PolicyOpt:
 
             # Reset mpc for action optimization
             expert_actions = expert_demo_dict["delta_ftpos"][:-1]
-            #self.mpc.reset_actions()
-            self.mpc.reset_actions(init_a=expert_actions)
+            self.mpc.reset_actions()
+            #self.mpc.reset_actions(init_a=expert_actions)
 
-            action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
-            #action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
+            #action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
+            action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
             action_optimizer.zero_grad()
 
             for inner_i in range(self.conf.n_inner_iter):
@@ -101,35 +102,27 @@ class PolicyOpt:
                 print(f"Iter {inner_i}")
                 pred_traj = self.mpc.roll_out(obs_dict_init.copy())
 
-                for n, p in self.mpc.named_parameters():
+                #for n, p in self.mpc.named_parameters():
                 #    print(n, p.grad)
-                    if p.grad is not None:
-                        grad = p.grad.detach()
+                #    if p.grad is not None:
+                #        grad = p.grad.detach()
                 #        #print(name, grad.shape)
-                        grad_min_mpc = torch.min(torch.abs(grad))
-                        grad_max_mpc = torch.max(torch.abs(grad))
-                        grad_norm_mpc = grad.norm()
-                        print(grad_norm_mpc, grad_min_mpc, grad_max_mpc)
+                #        grad_min_mpc = torch.min(torch.abs(grad))
+                #        grad_max_mpc = torch.max(torch.abs(grad))
+                #        grad_norm_mpc = grad.norm()
+                #        print(grad_norm_mpc, grad_min_mpc, grad_max_mpc)
 
-                pred_actions = self.mpc.action_seq.detach().numpy()
-                #print(pred_actions[-1])
+                #pred_actions = self.mpc.action_seq.detach().numpy()
                 #pred_traj_sim = torch.Tensor(self.sim.rollout_actions(expert_demo_dict, pred_actions))
 
-                # use the learned loss to update the action sequence
-                #target = torch.Tensor(expert_demo_dict["ft_pos_cur"][-1])
-                target = torch.Tensor(expert_demo_dict["image_60_r3m"][-1])
+                target = self.get_target_for_cost_type(expert_demo_dict)
+                print(torch.max(target))
                 cost_val = self.cost(pred_traj, target)
-
-                print("actions: ", pred_actions[0])
-                print("pred: ", pred_traj[-1])
-                print("loss: ", cost_val)
-                # TODO clip gradients?? - I think this may not work with higher??
-                #torch.nn.utils.clip_grad_norm_(self.mpc.parameters(), 0.1)
-
+                print("loss: ", str(cost_val.item()))
                 cost_val.backward()
                 action_optimizer.step()
 
-                if (inner_i+1) % 1 == 0:
+                if (inner_i+1) % self.conf.n_epoch_every_log == 0:
                     diff = self.traj_info["train_demo_stats"][demo_i]["diff"]
                     traj_i = self.traj_info["train_demo_stats"][demo_i]["id"]
                     traj_plots_dir = os.path.join(plots_dir, f"diff-{diff}_traj-{traj_i}")
@@ -146,8 +139,8 @@ class PolicyOpt:
 
     def plot(self, traj_plots_dir, outer_i, pred_traj, pred_actions, expert_demo_dict):
 
-        #if self.mpc_use_ftpos:
-        #    plot_traj(traj_plots_dir, outer_i, pred_traj, expert_demo_dict, self.conf.mpc_type, self.mpc.obj_state_type)
+        if self.mpc_use_ftpos:
+            plot_traj(traj_plots_dir, outer_i, pred_traj, expert_demo_dict, self.conf.mpc_type, self.mpc.obj_state_type)
 
         if self.conf.mpc_type=="learned" and self.decoder is not None:
             ft_states, o_states = self.mpc.get_states_from_x_next(pred_traj)
@@ -156,6 +149,19 @@ class PolicyOpt:
                 self.decoder.save_gif(pred_imgs, os.path.join(traj_plots_dir, f'r3m_epoch_{outer_i+1}.gif'))
 
         plot_actions(traj_plots_dir, outer_i, pred_actions, expert_demo_dict)
+
+    def get_target_for_cost_type(self, demo_dict):
+        """ Get target from traj_dict for learnable cost function given cost_type  and cost_state """
+
+        cost_state = self.conf.cost_state
+        obj_state_type = self.mpc.obj_state_type
+
+        expert_demo = get_expert_demo(demo_dict, cost_state, obj_state_type)
+        ft_pos_targets_per_mode = torch.Tensor(demo_dict["ft_pos_targets_per_mode"])
+
+        target = expert_demo[-1]
+
+        return target
 
 def plot_traj(plots_dir, outer_i, pred_traj, expert_demo_dict, mpc_type, obj_state_type):
     """ Plot predicted and expert trajectories, based on mpc_type """
@@ -216,8 +222,8 @@ def get_mpc(mpc_type, time_horizon, device, mpc_forward_model_ckpt=None):
         return TwoPhaseMPC(time_horizon-1, mpc_forward_model_ckpt)
 
     elif mpc_type == "learned":
-        model_dict = torch.load(mpc_forward_model_ckpt, map_location=torch.device(device)) 
-        return LearnedMPC(time_horizon-1, model_dict=model_dict, device=device).to(device)
+        model_dict = torch.load(mpc_forward_model_ckpt)
+        return LearnedMPC(time_horizon-1, model_dict=model_dict)
 
     else:
         raise ValueError(f"{mpc_type} is invalid mpc_type")
