@@ -21,6 +21,7 @@ from trifinger_mbirl.mbirl import MBIRL
 import trifinger_mbirl.bc as bc
 import trifinger_mbirl.bc_finetune as bc_finetune
 from trifinger_mbirl.policy import DeterministicPolicy
+from trifinger_mbirl.policy_opt import PolicyOpt
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ def main(conf):
     ### MBIRL training
     if conf.algo.name == "mbirl":
 
-        mbirl = MBIRL(conf.algo, traj_info)
+        mbirl = MBIRL(conf.algo, traj_info, device)
         mbirl.train(model_data_dir=exp_dir, no_wandb=conf.no_wandb)
 
     ### BC training
@@ -95,6 +96,12 @@ def main(conf):
         policy = DeterministicPolicy(in_dim=in_dim, out_dim=out_dim, device=device)
 
         bc_finetune.train(conf.algo, dataloader, policy, exp_dir)
+
+    ### Policy optimization test
+    elif conf.algo.name == "policy_opt":
+
+        policy_opt = PolicyOpt(conf.algo, traj_info, device)
+        policy_opt.train(model_data_dir=exp_dir, no_wandb=conf.no_wandb)
 
     ### Invalid algo
     else:
