@@ -6,3 +6,4 @@ mpc_type: learned
 mpc_forward_model_ckpt: null
 path_to_decoder_ckpt: null
 cost_state: obj
+train_forward_model: True

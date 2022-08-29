@@ -43,7 +43,7 @@ class SimMPC:
             camera_delay_steps=0,
         )
 
-    def rollout_actions(self, traj, actions):
+    def rollout_actions(self, traj, actions, save_path=None):
 
         obj_init_pos = traj["o_pos_cur"][0, :] / self.traj_scale
         obj_init_ori = traj["o_ori_cur"][0, :]
@@ -84,16 +84,12 @@ class SimMPC:
         traj_dict = d_utils.get_traj_dict_from_obs_list(observation_list, scale=self.traj_scale)
         traj_dict = d_utils.downsample_traj_dict(traj_dict, new_time_step=self.downsample_time_step)
 
-        return np.array(traj_dict["image_60_r3m"])
-        
-        #demo_dir = os.path.split(demo_path)[0]
-        #demo_name = os.path.splitext(os.path.split(demo_path)[1])[0]
-        #log_dir = os.path.join(demo_dir, "reruns")
-        #if not os.path.exists(log_dir): os.makedirs(log_dir)
-        #log_path = os.path.join(log_dir, f"{demo_name}.npz")
-        #np.savez_compressed(log_path, data=observation_list)
-        #print(f"Saved rerun of demo {demo_name} to {log_path}")
+        if save_path is not None:
+            np.savez_compressed(save_path, data=observation_list)
+            print(f"Saved sim rollout to {save_path}")
 
+        return traj_dict
+        
 def add_actions_to_obs(observation_list):
 
     for t in range(len(observation_list) - 1):

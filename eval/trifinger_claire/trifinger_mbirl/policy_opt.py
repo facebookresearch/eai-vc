@@ -82,6 +82,11 @@ class PolicyOpt:
         if not os.path.exists(plots_dir): os.makedirs(plots_dir)
         if not os.path.exists(test_plots_dir): os.makedirs(test_plots_dir)
 
+        # Directory to save sim rollouts
+        if self.conf.train_forward_model:
+            sim_dir = os.path.join(model_data_dir, "sim")
+            if not os.path.exists(sim_dir): os.makedirs(sim_dir)
+
         for demo_i in range(len(train_trajs)):
             expert_demo_dict = train_trajs[demo_i]
 
@@ -102,33 +107,29 @@ class PolicyOpt:
                 print(f"Iter {inner_i}")
                 pred_traj = self.mpc.roll_out(obs_dict_init.copy())
 
-                #for n, p in self.mpc.named_parameters():
-                #    print(n, p.grad)
-                #    if p.grad is not None:
-                #        grad = p.grad.detach()
-                #        #print(name, grad.shape)
-                #        grad_min_mpc = torch.min(torch.abs(grad))
-                #        grad_max_mpc = torch.max(torch.abs(grad))
-                #        grad_norm_mpc = grad.norm()
-                #        print(grad_norm_mpc, grad_min_mpc, grad_max_mpc)
-
-                #pred_actions = self.mpc.action_seq.detach().numpy()
-                #pred_traj_sim = torch.Tensor(self.sim.rollout_actions(expert_demo_dict, pred_actions))
-
                 target = self.get_target_for_cost_type(expert_demo_dict)
                 cost_val = self.cost(pred_traj, target)
                 print("loss: ", str(cost_val.item()))
                 cost_val.backward()
                 action_optimizer.step()
 
-                if (inner_i+1) % self.conf.n_epoch_every_log == 0:
+                if (inner_i) % self.conf.n_epoch_every_log == 0:
                     diff = self.traj_info["train_demo_stats"][demo_i]["diff"]
                     traj_i = self.traj_info["train_demo_stats"][demo_i]["id"]
-                    traj_plots_dir = os.path.join(plots_dir, f"diff-{diff}_traj-{traj_i}")
+                    traj_label = f"diff-{diff}_traj-{traj_i}"
+                    traj_plots_dir = os.path.join(plots_dir, traj_label)
                     if not os.path.exists(traj_plots_dir): os.makedirs(traj_plots_dir)
                     pred_actions = self.mpc.action_seq.clone().data.cpu().detach().numpy()
                     self.plot(traj_plots_dir, inner_i, pred_traj, pred_actions, expert_demo_dict)
-                    
+
+                    if self.conf.train_forward_model:
+                        rollout_save_path = os.path.join(sim_dir, f"{traj_label}_epoch_{inner_i}.npz")
+                        pred_traj_sim = self.sim.rollout_actions(expert_demo_dict, pred_actions, save_path=rollout_save_path)
+                        # Save gif of sim rollout
+                        d_utils.save_gif(pred_traj_sim["image_60"], os.path.join(sim_dir, f"viz_{traj_label}_epoch_{inner_i}.gif"))
+                
+                        # Train forward model with this data
+
                 #    torch.save({
                 #        'train_pred_traj_per_demo'   : pred_traj.detach(), 
                 #        'train_pred_actions_per_demo': pred_actions,
@@ -145,7 +146,7 @@ class PolicyOpt:
             ft_states, o_states = self.mpc.get_states_from_x_next(pred_traj)
             with torch.no_grad(): # TODO need to freeze decoder weights??
                 pred_imgs = self.decoder(torch.Tensor(o_states))
-                self.decoder.save_gif(pred_imgs, os.path.join(traj_plots_dir, f'r3m_epoch_{outer_i+1}.gif'))
+                self.decoder.save_gif(pred_imgs, os.path.join(traj_plots_dir, f'r3m_epoch_{outer_i}.gif'))
 
         plot_actions(traj_plots_dir, outer_i, pred_actions, expert_demo_dict)
 
@@ -165,7 +166,7 @@ def plot_traj(plots_dir, outer_i, pred_traj, expert_demo_dict, mpc_type, obj_sta
     """ Plot predicted and expert trajectories, based on mpc_type """
 
     title = "Predicted trajectories (outer i: {})".format(outer_i)
-    save_name = f"traj_epoch_{outer_i+1}.png"
+    save_name = f"traj_epoch_{outer_i}.png"
     save_path = os.path.join(plots_dir, save_name)
 
     if "ftpos_obj" in mpc_type and obj_state_type == "pos": # TODO hardcoded
@@ -190,7 +191,7 @@ def plot_actions(plots_dir, outer_i, pred_actions, expert_demo_dict):
 
     expert_actions = expert_demo_dict["delta_ftpos"]
     title = "Fingertip position deltas (outer i: {})".format(outer_i)
-    save_name = f"action_epoch_{outer_i+1}.png"
+    save_name = f"action_epoch_{outer_i}.png"
     save_path = os.path.join(plots_dir, save_name)
 
     d_utils.plot_traj(
