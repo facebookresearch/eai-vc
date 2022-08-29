@@ -35,9 +35,9 @@ Note: For now, you need to run the script from the trifinger_claire/ directory, 
 of the way the demo_path param in defined in config.yaml
 """
 
-def get_obs_and_state_next_from_batch(batch, use_ftpos=True):
+def get_obs_and_state_next_from_batch(batch, use_ftpos=True, device="cpu"):
 
-    obs = get_obs_vec_from_obs_dict(batch["obs"], use_ftpos=use_ftpos)
+    obs = get_obs_vec_from_obs_dict(batch["obs"], use_ftpos=use_ftpos, device=device)
 
     if use_ftpos:
         gt_state_next = torch.cat([batch["state_next"]["ft_state"], batch["state_next"]["o_state"]], dim=1)
@@ -47,7 +47,7 @@ def get_obs_and_state_next_from_batch(batch, use_ftpos=True):
     return obs, gt_state_next
 
 def train(conf, model, loss_fn, optimizer, train_dataloader, test_dataloader, traj_info,
-        model_data_dir=None):
+        model_data_dir=None, device="cpu"):
 
     ckpts_dir = os.path.join(model_data_dir, "ckpts") 
     plots_dir = os.path.join(model_data_dir, "plots") 
@@ -72,7 +72,7 @@ def train(conf, model, loss_fn, optimizer, train_dataloader, test_dataloader, tr
         total_train_loss = 0.0
         for i_batch, batch in enumerate(train_dataloader):
 
-            obs, gt_state_next = get_obs_and_state_next_from_batch(batch, use_ftpos=conf.algo.use_ftpos)
+            obs, gt_state_next = get_obs_and_state_next_from_batch(batch, use_ftpos=conf.algo.use_ftpos, device=device)
 
             optimizer.zero_grad()
             pred_state_next = model(obs)
@@ -89,7 +89,7 @@ def train(conf, model, loss_fn, optimizer, train_dataloader, test_dataloader, tr
         total_test_loss = 0.0
         with torch.no_grad():
             for i_batch, batch in enumerate(test_dataloader):
-                obs, gt_state_next = get_obs_and_state_next_from_batch(batch, use_ftpos=conf.algo.use_ftpos)
+                obs, gt_state_next = get_obs_and_state_next_from_batch(batch, use_ftpos=conf.algo.use_ftpos, device=device)
                 pred_state_next = model(obs)
                 test_loss = loss_fn(pred_state_next, gt_state_next)
                 total_test_loss += test_loss.item()
@@ -115,8 +115,8 @@ def train(conf, model, loss_fn, optimizer, train_dataloader, test_dataloader, tr
 
             # Eval model in rollout
             time_horizon = traj_info["train_demos"][0]["ft_pos_cur"].shape[0]
-            # Make MPC
-            mpc = LearnedMPC(time_horizon-1, model_dict=model_dict)
+            # Make MPC - TODO for now, always do rollouts on cpu
+            mpc = LearnedMPC(time_horizon-1, model_dict=model_dict, device=device)
 
             MAX_PLOT_PER_DIFF = 10
             for split_name in ["train", "test"]:
@@ -206,10 +206,10 @@ def main(conf):
 
     # Datasets and dataloaders
     train_dataset = ForwardModelDataset(train_trajs, obj_state_type=conf.algo.obj_state_type, device=device)
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True)
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True)
 
     test_dataset = ForwardModelDataset(test_trajs, obj_state_type=conf.algo.obj_state_type, device=device)
-    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=16, shuffle=False)
+    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=128, shuffle=False)
 
     # Model dimensions
     if conf.algo.use_ftpos:
@@ -220,13 +220,13 @@ def main(conf):
         out_dim = train_dataset.o_state_dim
     hidden_dims = list(map(int, str(conf.algo.hidden_dims).split("-"))) # d1-d2 (str) --> [d1, d2] (list of ints)
 
-    model = ForwardModel(in_dim, out_dim, hidden_dims)
+    model = ForwardModel(in_dim, out_dim, hidden_dims).to(device)
     log.info(f"Model:\n{model}")
     optimizer = torch.optim.Adam(model.parameters(), lr=conf.algo.lr)
     loss_fn = torch.nn.MSELoss()
 
     train(conf, model, loss_fn, optimizer, train_dataloader, test_dataloader, traj_info,
-        model_data_dir=exp_dir
+        model_data_dir=exp_dir, device=device
     )
 
 if __name__ == '__main__':

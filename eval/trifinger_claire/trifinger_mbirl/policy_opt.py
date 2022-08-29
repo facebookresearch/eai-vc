@@ -59,10 +59,10 @@ class PolicyOpt:
 
         # Load and use decoder to viz pred_o_states
         if conf.path_to_decoder_ckpt is not None:
-            decoder_model_dict = torch.load(conf.path_to_decoder_ckpt)
+            decoder_model_dict = torch.load(conf.path_to_decoder_ckpt, map_location=torch.device(self.device))
             self.decoder = DecoderModel()
             self.decoder.load_state_dict(decoder_model_dict["model_state_dict"])
-            #self.decoder.to(self.device)
+            self.decoder.to(self.device)
         else:
             self.decoder = None
 
@@ -89,7 +89,7 @@ class PolicyOpt:
             obs_dict_init = d_utils.get_obs_dict_from_traj(expert_demo_dict, 0, self.mpc.obj_state_type) # Initial state
 
             # Reset mpc for action optimization
-            expert_actions = expert_demo_dict["delta_ftpos"][:-1]
+            expert_actions = torch.Tensor(expert_demo_dict["delta_ftpos"][:-1]).to(self.device)
             self.mpc.reset_actions()
             #self.mpc.reset_actions(init_a=expert_actions)
 
@@ -116,7 +116,6 @@ class PolicyOpt:
                 #pred_traj_sim = torch.Tensor(self.sim.rollout_actions(expert_demo_dict, pred_actions))
 
                 target = self.get_target_for_cost_type(expert_demo_dict)
-                print(torch.max(target))
                 cost_val = self.cost(pred_traj, target)
                 print("loss: ", str(cost_val.item()))
                 cost_val.backward()
@@ -127,7 +126,7 @@ class PolicyOpt:
                     traj_i = self.traj_info["train_demo_stats"][demo_i]["id"]
                     traj_plots_dir = os.path.join(plots_dir, f"diff-{diff}_traj-{traj_i}")
                     if not os.path.exists(traj_plots_dir): os.makedirs(traj_plots_dir)
-                    pred_actions = self.mpc.action_seq.data.detach().numpy()
+                    pred_actions = self.mpc.action_seq.clone().data.cpu().detach().numpy()
                     self.plot(traj_plots_dir, inner_i, pred_traj, pred_actions, expert_demo_dict)
                     
                 #    torch.save({
@@ -157,11 +156,10 @@ class PolicyOpt:
         obj_state_type = self.mpc.obj_state_type
 
         expert_demo = get_expert_demo(demo_dict, cost_state, obj_state_type)
-        ft_pos_targets_per_mode = torch.Tensor(demo_dict["ft_pos_targets_per_mode"])
 
         target = expert_demo[-1]
 
-        return target
+        return target.to(self.device)
 
 def plot_traj(plots_dir, outer_i, pred_traj, expert_demo_dict, mpc_type, obj_state_type):
     """ Plot predicted and expert trajectories, based on mpc_type """
@@ -222,8 +220,8 @@ def get_mpc(mpc_type, time_horizon, device, mpc_forward_model_ckpt=None):
         return TwoPhaseMPC(time_horizon-1, mpc_forward_model_ckpt)
 
     elif mpc_type == "learned":
-        model_dict = torch.load(mpc_forward_model_ckpt)
-        return LearnedMPC(time_horizon-1, model_dict=model_dict)
+        model_dict = torch.load(mpc_forward_model_ckpt, map_location=torch.device(device))
+        return LearnedMPC(time_horizon-1, model_dict=model_dict, device=device).to(device)
 
     else:
         raise ValueError(f"{mpc_type} is invalid mpc_type")

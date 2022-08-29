@@ -27,6 +27,7 @@ class LearnedMPC(torch.nn.Module):
         self.f_state_dim = self.f_num * 3
         self.a_dim = self.f_num * 3
         self.policy_type = "actions"
+        self.device = device
 
         self.in_dim = model_dict["in_dim"]
         self.out_dim = model_dict["out_dim"]
@@ -69,13 +70,13 @@ class LearnedMPC(torch.nn.Module):
 
         if action is None:
             if self.use_ftpos:
-                return torch.cat([obs_dict["ft_state"], obs_dict["o_state"]], dim=1)
+                return torch.cat([obs_dict["ft_state"], obs_dict["o_state"]], dim=1).to(self.device)
             else:
-                return obs_dict["o_state"]
+                return obs_dict["o_state"].to(self.device)
         else:
-            obs_dict["action"] = torch.unsqueeze(action, 0)
+            obs_dict["action"] = torch.unsqueeze(action, 0).to(self.device)
 
-        obs = get_obs_vec_from_obs_dict(obs_dict, use_ftpos=self.use_ftpos)
+        obs = get_obs_vec_from_obs_dict(obs_dict, use_ftpos=self.use_ftpos, device=self.device)
 
         x_next = self.model(obs)
         
@@ -163,7 +164,7 @@ class LearnedMPC(torch.nn.Module):
     def reset_actions(self, init_a=None):
         if self.policy_type == "actions":
             if init_a is None:
-                self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim]))
+                self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim])).to(self.device)
                 # Random actions between [-1., 1.]
                 #self.action_seq.data = torch.rand((self.time_horizon, self.a_dim)) * 2. - 1.
             else:
@@ -179,9 +180,9 @@ class LearnedMPC(torch.nn.Module):
         x_min = [-20] * self.out_dim
         x_max = [20] * self.out_dim
 
-        x = torch.Tensor(x)
-        x_min = torch.unsqueeze(torch.Tensor(x_min), 0)
-        x_max = torch.unsqueeze(torch.Tensor(x_max), 0)
+        x = torch.Tensor(x).to(self.device)
+        x_min = torch.unsqueeze(torch.Tensor(x_min), 0).to(self.device)
+        x_max = torch.unsqueeze(torch.Tensor(x_max), 0).to(self.device)
 
         x = torch.where(x > x_max, x_max, x)
         x = torch.where(x < x_min, x_min, x)
@@ -213,7 +214,7 @@ def test_mpc(mpc, traj, epoch, save_dir=None, one_step=False):
     else:
         pred_traj = mpc.roll_out(obs_dict_init)
 
-    pred_traj = pred_traj.detach().numpy()
+    pred_traj = pred_traj.cpu().detach().numpy()
     pred_ft_states, pred_o_states = mpc.get_states_from_x_next(pred_traj)
     pred_traj_dict = {"ft_state": pred_ft_states, "o_state": pred_o_states}
 

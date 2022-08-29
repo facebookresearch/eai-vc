@@ -12,6 +12,7 @@ class ForwardModelDataset(torch.utils.data.Dataset):
         
         assert obj_state_type in ["pos", "vertices", "img_r3m"]
         self.obj_state_type = obj_state_type
+        self.device=device
     
         # Make dataset from demo list, and save
         self.dataset = self.make_dataset_from_demo_list(demo_list)
@@ -69,15 +70,15 @@ class ForwardModelDataset(torch.utils.data.Dataset):
                     raise ValueError("Invalid obj_state_type")    
             
                 # Observation dict (current state and action)
-                obs_dict = {"ft_state": torch.FloatTensor(ft_pos_cur),
-                            "o_state": o_state_cur, 
-                            "action": torch.FloatTensor(action)
+                obs_dict = {"ft_state": torch.FloatTensor(ft_pos_cur).to(self.device),
+                            "o_state": o_state_cur.to(self.device), 
+                            "action": torch.FloatTensor(action).to(self.device)
                 }
 
                 # Next state dict
                 state_next_dict = {
-                    "ft_state": torch.FloatTensor(ft_pos_next),
-                    "o_state": o_state_next
+                    "ft_state": torch.FloatTensor(ft_pos_next).to(self.device),
+                    "o_state": o_state_next.to(self.device)
                 }
 
                 data_dict = {
