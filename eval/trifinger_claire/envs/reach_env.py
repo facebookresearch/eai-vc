@@ -248,7 +248,8 @@ class ReachEnv(gym.Env):
             num_steps = max(1, num_steps - excess)
 
         reward = 0.0
-        x_des = x_curr + action 
+        x_curr = self.hand_kinematics.get_ft_pos(self.observation["robot_position"])
+        x_des = x_curr + action
         delta_t = 0.2 #TODO check where we are setting this
         v_des = x_des / delta_t
         for _ in range(num_steps):
