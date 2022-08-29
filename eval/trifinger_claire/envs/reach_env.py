@@ -34,7 +34,7 @@ FIRST_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
 SECOND_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
 THIRD_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
 
-REACH_EPISODE_LENGTH = 10
+REACH_EPISODE_LENGTH = 500
 
 @full_env_registry.register_env("ReachEnv-v0")
 class ReachEnv(gym.Env):
@@ -45,13 +45,13 @@ class ReachEnv(gym.Env):
         render_mode: str="",
         fixed_goal: bool = True,
         action_type: ActionType = ActionType.TORQUE,
-        step_size: int = 1,
+        step_size: int = 50,
         visualization: bool = False,
         no_collisions: bool = False,
         enable_cameras: bool = False,
         finger_type: str = "trifingerpro",
         camera_delay_steps: int = 90,
-        time_step: float = 0.001,
+        time_step: float = 0.004,
     ):
         """Initialize.
 
@@ -167,7 +167,7 @@ class ReachEnv(gym.Env):
             raise ValueError("Invalid action_type")
         self.observation_space = gym.spaces.Dict(
             {
-                "t": gym.spaces.Discrete(task.EPISODE_LENGTH),
+                "t": gym.spaces.Discrete(REACH_EPISODE_LENGTH),
                 "robot_position":robot_position_space,
                 "robot_velocity": robot_velocity_space,
                 "robot_torque": robot_torque_space,
@@ -208,17 +208,7 @@ class ReachEnv(gym.Env):
     def _scale_action(self,action):
         #receive action between -1,1
         #assume action is dx_des, change in the fingertip positions in space
-
-        #compute x_des
-        # delta = (self.action_space.high - self.action_space.low) / 2
-        # action = action + 1
-        # action = (action * delta) + self.action_space.low
-        action = action / 100
-        x_des =  self.hand_kinematics.get_ft_pos(self.observation["robot_position"]) + action
-        dx_des = np.zeros(9)
-        action = self.hand_kinematics.get_torque(x_des, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
-        return np.clip(action,self.action_space.low,self.action_space.high)
-
+        return action /100
 
     def step(self, action):
         """Run one timestep of the environment's dynamics.
@@ -253,15 +243,26 @@ class ReachEnv(gym.Env):
 
         # ensure episode length is not exceeded due to step_size
         step_count_after = self.step_count + num_steps
-        if step_count_after > task.EPISODE_LENGTH:
-            excess = step_count_after - task.EPISODE_LENGTH
+        if step_count_after > REACH_EPISODE_LENGTH:
+            excess = step_count_after - REACH_EPISODE_LENGTH
             num_steps = max(1, num_steps - excess)
 
         reward = 0.0
+        x_des = x_curr + action 
+        delta_t = 0.2 #TODO check where we are setting this
+        v_des = x_des / delta_t
         for _ in range(num_steps):
             self.step_count += 1
-            if self.step_count > task.EPISODE_LENGTH:
+            if self.step_count > REACH_EPISODE_LENGTH:
                 raise RuntimeError("Exceeded number of steps for one episode.")
+
+
+            x_curr = self.hand_kinematics.get_ft_pos(self.observation["robot_position"])
+            x_i =  x_curr + (action/num_steps)
+            # dx_des = np.zeros(9)
+            dx_des = x_des/delta_t
+            torque = self.hand_kinematics.get_torque(x_i, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
+            torque = np.clip(torque,self.action_space.low,self.action_space.high)
 
             # send action to robot
             robot_action = self._gym_action_to_robot_action(action)
@@ -301,7 +302,7 @@ class ReachEnv(gym.Env):
                 self.vert_markers.set_state(positions)
 
 
-        is_done = self.step_count >= task.EPISODE_LENGTH
+        is_done = self.step_count >= REACH_EPISODE_LENGTH
 
         return observation, reward, is_done, self.info
 
