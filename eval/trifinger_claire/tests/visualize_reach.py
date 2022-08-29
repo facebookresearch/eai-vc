@@ -16,7 +16,7 @@ import envs
 env = gym.make("ReachEnv-v0", render_mode='human', step_size=1)
 prev_obs = env.reset()
 delta = env.action_space.high - env.action_space.low
-for i in range(2000):
+for i in range(10):
     #action = (np.random.random(9)*2) -1
 
     # Claire: Some test actions (

@@ -43,21 +43,21 @@ def new_goals():
     #reward to be 10 when goal is met
 
 def move_to_goal():
-    DEFAULT_GOAL = np.array([ 0.102,0.141,0.095,0.102,0.141,0.095,0.102,0.141,0.095])
+    # DEFAULT_GOAL = np.array([ 0.102,0.141,0.095,0.102,0.141,0.095,0.102,0.141,0.095])
+    DEFAULT_GOAL = np.array([0.10295916,  0.14167858,  0.08190478,0.10295916,  0.14167858,  0.08190478,0.10295916,  0.14167858,  0.08190478])
+
     reach_env = gym.make("ReachEnv-v0", render_mode='human')
     obs = reach_env.reset()
     #joint pos to ftip pos
-    pos = reach_env.hand_kinematics.get_ft_pos(obs["observation"])
+    pos = obs["observation"]
     old_reward = 0
+    for i in range(10):
 
-    for i in range(1000):
-
-        delta = DEFAULT_GOAL - pos
+        delta = (DEFAULT_GOAL - pos) *100
         obs,reward,done,info = reach_env.step(delta)
-        pos = reach_env.hand_kinematics.get_ft_pos(obs["observation"])
+        pos = obs["observation"]
         print(reward)
-        print(old_reward)
-        close_to_goal= np.abs(reward-8.466) < 0.5
+        close_to_goal= np.abs(reward-8.2) < 0.5
         assert(reward>=old_reward or close_to_goal)
 
         old_reward = reward

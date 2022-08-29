@@ -250,7 +250,7 @@ class ReachEnv(gym.Env):
         reward = 0.0
         x_curr = self.hand_kinematics.get_ft_pos(self.observation["robot_position"])
         x_des = x_curr + action
-        delta_t = 0.2 #TODO check where we are setting this
+        delta_t = self.step_size * self.time_step
         v_des = x_des / delta_t
         for _ in range(num_steps):
             self.step_count += 1
@@ -260,13 +260,11 @@ class ReachEnv(gym.Env):
 
             x_curr = self.hand_kinematics.get_ft_pos(self.observation["robot_position"])
             x_i =  x_curr + (action/num_steps)
-            # dx_des = np.zeros(9)
-            dx_des = x_des/delta_t
+            dx_des = action/delta_t
             torque = self.hand_kinematics.get_torque(x_i, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
             torque = np.clip(torque,self.action_space.low,self.action_space.high)
-
             # send action to robot
-            robot_action = self._gym_action_to_robot_action(action)
+            robot_action = self._gym_action_to_robot_action(torque)
             t = self.platform.append_desired_action(robot_action)
 
 
@@ -285,7 +283,7 @@ class ReachEnv(gym.Env):
             #self.info["time_index"] = t
 
             observation = self._create_observation(
-                self.info["time_index"], action
+                self.info["time_index"], torque
             )
 
             reward = 0
