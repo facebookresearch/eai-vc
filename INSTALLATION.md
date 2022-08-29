@@ -39,7 +39,6 @@ pip install -e ./third_party/mjrl
 pip install -e ./third_party/dmc2gym
 ```
 
-
 Install Habitat-Lab v0.2.1 (patched to remove Tensorflow dependencies):
 
 ```bash
@@ -62,7 +61,7 @@ Install local packages:
 ```bash
 pip install -e ./eaif-models  # Install model-loading API
 pip install -e ./train/mae-for-eai  # Install Habitat tasks
-pip install -e ./eval/rep_eval  # Install Visual IL tasks
+pip install -e ./eval/eaif_mujoco  # Install Visual IL tasks
 ```
 
 ## Optional

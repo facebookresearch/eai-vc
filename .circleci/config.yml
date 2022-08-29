@@ -8,7 +8,7 @@ commands:
           command: |
             git submodule update --init --recursive
       - run:
-          name: Delete extraneous circleci stuff
+          name: Delete extraneous circleci environment file
           # This is extremely important for some esoteric $PATH issues involving mrp, Python subprocess, and /bin/bash
           command: rm -rf ~/.circlerc
       - run:
@@ -27,26 +27,13 @@ commands:
           command: |
             . ~/miniconda3/bin/activate
             conda install -y -c conda-forge mamba -n base
-
-jobs:
-  build:
-    machine:
-      image: ubuntu-2004-cuda-11.4:202110-01
-    resource_class: gpu.nvidia.small
-    steps:
-      - checkout
-      - initialize
-      - restore_cache:
-          key: deps9-{{ arch }}-{{ .Branch }}-{{ checksum "environment.yml" }}
       - run:
           name: Create conda environment
           command: |
             . ~/miniconda3/bin/activate
             [ -d ~/miniconda3/envs/eaif ] || mamba env create -f environment.yml
-      - save_cache:
-          key: deps9-{{ arch }}-{{ .Branch }}-{{ checksum "environment.yml" }}
-          paths:
-            - "/home/circleci/miniconda3/"
+
+jobs:
   cifar-linprobe:
     machine:
       image: ubuntu-2004-cuda-11.4:202110-01
@@ -54,8 +41,6 @@ jobs:
     steps:
       - checkout
       - initialize
-      - restore_cache:
-          key: deps9-{{ arch }}-{{ .Branch }}-{{ checksum "environment.yml" }}
       - run:
           name: Install eaif-models
           command: |
@@ -73,14 +58,6 @@ jobs:
               conda activate eaif
               python -c "import torchvision; torchvision.datasets.CIFAR10(root='./data', download=True)"
             fi
-      - run:
-          name: Download pretrained checkpoint
-          command: |
-            export FNAME="mae_pretrain_vit_large.pth"
-            if [ ! -f ./data/$FNAME ]
-            then
-              curl https://dl.fbaipublicfiles.com/mae/pretrain/$FNAME > ./data/$FNAME
-            fi
       - save_cache:
           key: cifar-linprobe-data-{{ .Branch }}
           paths:
@@ -91,13 +68,83 @@ jobs:
             . ~/miniconda3/bin/activate
             conda activate eaif
             python eval/cifar_lin_probe/run_cifar_lin_probe.py \
-              data_root=$PWD/data/ \
-              model.checkpoint_path=$PWD/data/mae_pretrain_vit_large.pth
+              data_root=$PWD/data/
+  eaif_mujoco:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.medium
+    steps:
+      - checkout
+      - initialize
+      - restore_cache:
+          key: deps9-mujoco200
+      - run:
+          name: Download and install Mujoco binaries
+          command: |
+            if [ ! -d "/home/circleci/.mujoco/" ]
+            then
+                echo "Mujoco does not exist, downloading..."
+
+                mkdir -p /home/circleci/.mujoco/
+                cd /home/circleci/.mujoco/
+
+                echo "Getting Mujoco key..."
+                curl http://www.roboti.us/file/mjkey.txt > mjkey.txt
+
+                echo "Getting Mujoco 200 binaries..."
+                curl http://www.roboti.us/download/mujoco200_linux.zip > mujoco200_linux.zip
+                unzip mujoco200_linux.zip
+                mv ./mujoco200_linux ./mujoco200
+                rm mujoco200_linux.zip
+            fi
+      - save_cache:
+          key: deps9-mujoco200
+          paths:
+            - "/home/circleci/.mujoco/"
+      - run:
+          name: Install eaif-models
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+            pip install -e ./eaif-models
+      - run:
+          name: Install Mujoco dependencies
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+
+            pip install -e ./third_party/mujoco-py
+            pip install -e ./third_party/mj_envs
+            pip install -e ./third_party/mjrl
+            pip install -e ./third_party/dmc2gym
+      - run:
+          name: Install Mujoco visual IL library
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+
+            pip install -e ./eval/eaif_mujoco
+      - run:
+          name: Install required apt packages
+          command: |
+            sudo apt update
+            sudo apt install -y xvfb libglew-dev
+      - run:
+          name: Run pytest
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+
+            Xvfb :100 -screen 0 1024x768x24 &
+            export DISPLAY=:100
+            export LD_LIBRARY_PATH=/home/circleci/.mujoco/mujoco200/bin:$LD_LIBRARY_PATH
+
+            DISPLAY=:100 pytest eval/eaif_mujoco/tests --simple
+
+            sudo pkill Xvfb
 
 workflows:
   build:
     jobs:
-      - build
-      - cifar-linprobe:
-          requires:
-            - build
+      - cifar-linprobe
+      - eaif_mujoco

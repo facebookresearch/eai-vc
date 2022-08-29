@@ -35,6 +35,7 @@ dependencies:
   - protobuf=3.20.1
   - pybullet
   - pytest
+  - pytest-xdist
   - python=3.8
   - pytorch=1.12
   - pyyaml
@@ -51,7 +52,7 @@ dependencies:
   - pip
   - pip:
     - hydra-submitit-launcher
-    - dm-control==0.0.403778684
+    - dm-control==1.0.5
     - gym==0.23.1
     - setuptools==59.5.0
     - timm==0.6.5
