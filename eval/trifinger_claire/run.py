@@ -42,7 +42,6 @@ def main(cfg) -> Dict[str, float]:
         if hasattr(env.action_space, "seed"):
             env.action_space.seed(full_seed)
         return env
-
     dummy_env = gym.make(cfg.env.env_name)
     dummy_env.seed(cfg.seed)
     reader = flatten_info_dict_reader(cfg.info_keys)
@@ -113,6 +112,9 @@ def main(cfg) -> Dict[str, float]:
         for step_idx in range(num_steps):
             with torch.no_grad():
                 policy.act(td)
+            for i in range(9):
+                logger.collect_info(f"min_action_dim_{i}", td["action"].min(0).values[i])
+                logger.collect_info(f"max_action_dim_{i}", td["action"].max(0).values[i])
             envs.step(td)
 
             storage_td[:, step_idx] = td
@@ -125,7 +127,6 @@ def main(cfg) -> Dict[str, float]:
                 logger.collect_env_step_info(td, cfg.info_keys)
 
             td = step_tensordict(td)
-
         updater.update(policy, storage_td, logger, envs=envs)
 
         if cfg.eval_interval != -1 and (
@@ -186,7 +187,7 @@ def make_single_gym_env(num_envs,
         'camera_delay_steps':0,
     }
 
-    cube_env = gym.make(cfg.env.env_name)
+    cube_env = gym.make(env_name)
     gym_env = GymWrapper(cube_env)
     tensordict = gym_env.reset()
     tensordict = gym_env.rand_step(tensordict)

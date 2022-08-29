@@ -34,6 +34,8 @@ FIRST_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
 SECOND_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
 THIRD_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
 
+REACH_EPISODE_LENGTH = 10
+
 @full_env_registry.register_env("ReachEnv-v0")
 class ReachEnv(gym.Env):
     """Gym environment for moving cubes with TriFingerPro."""
@@ -126,21 +128,23 @@ class ReachEnv(gym.Env):
             low=trifingerpro_limits.robot_position.low,
             high=trifingerpro_limits.robot_position.high,
         )
+
         robot_velocity_space = gym.spaces.Box(
             low=trifingerpro_limits.robot_velocity.low,
             high=trifingerpro_limits.robot_velocity.high,
         )
 
-        #TODO fix these
         observation_state_space = gym.spaces.Box(
-            low=trifingerpro_limits.robot_position.low *10,
-            high=trifingerpro_limits.robot_position.high*10
+            low=np.ones(9) * -0.15,
+            high=np.ones(9) * 0.10,
         )
 
+
         goal_state_space = gym.spaces.Box(
-            low=trifingerpro_limits.robot_torque.low,
-            high=trifingerpro_limits.robot_torque.high
+            low=np.ones(9) * -0.15,
+            high=np.ones(9) * 0.10,
         )
+
 
         if self.action_type == ActionType.TORQUE:
             self.action_space = robot_torque_space
@@ -161,15 +165,13 @@ class ReachEnv(gym.Env):
             }
         else:
             raise ValueError("Invalid action_type")
-
         self.observation_space = gym.spaces.Dict(
             {
                 "t": gym.spaces.Discrete(task.EPISODE_LENGTH),
-                "step_count": gym.spaces.Discrete(task.EPISODE_LENGTH),
                 "robot_position":robot_position_space,
                 "robot_velocity": robot_velocity_space,
                 "robot_torque": robot_torque_space,
-                "observation": observation_state_space, # position of fingertips
+                "observation": goal_state_space, # position of fingertips
                 "action": self.action_space,
                 "desired_goal": goal_state_space,
                 "achieved_goal": goal_state_space
@@ -201,7 +203,7 @@ class ReachEnv(gym.Env):
                     info,
                 )
         """
-        return 10 *(1 - np.linalg.norm(desired_goal-achieved_goal))
+        return 10 * (1 - np.linalg.norm(desired_goal-achieved_goal))
 
     def _scale_action(self,action):
         #receive action between -1,1
@@ -211,6 +213,7 @@ class ReachEnv(gym.Env):
         # delta = (self.action_space.high - self.action_space.low) / 2
         # action = action + 1
         # action = (action * delta) + self.action_space.low
+        action = action / 100
         x_des =  self.hand_kinematics.get_ft_pos(self.observation["robot_position"]) + action
         dx_des = np.zeros(9)
         action = self.hand_kinematics.get_torque(x_des, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
@@ -284,7 +287,7 @@ class ReachEnv(gym.Env):
             )
 
             reward = 0
-            achieved_position = self.hand_kinematics.get_ft_pos(observation["observation"])
+            achieved_position = observation["observation"] #self.hand_kinematics.get_ft_pos(observation["observation"])
             reward += self.compute_reward(
                observation["desired_goal"],
                achieved_position,
@@ -380,17 +383,17 @@ class ReachEnv(gym.Env):
         camera_observation = self.platform.get_camera_observation(t)
         object_observation = camera_observation.filtered_object_pose
 
+        ftip_pos = self.hand_kinematics.get_ft_pos(robot_observation.position)
         self.observation = {
             "t": t,
-            "step_count": self.step_count,
             "robot_position": robot_observation.position,
             "robot_velocity": robot_observation.velocity,
             "robot_torque": robot_observation.torque,
-            "observation": robot_observation.position,
+            "observation": ftip_pos,
             # "object_vertices": v_wf_dict,
             "action": action,
             "desired_goal": self.goal,
-            "achieved_goal": self.hand_kinematics.get_ft_pos(robot_observation.position)
+            "achieved_goal": ftip_pos
         }
 
         # Save camera observation images
