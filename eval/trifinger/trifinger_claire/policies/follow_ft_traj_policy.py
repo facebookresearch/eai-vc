@@ -107,7 +107,7 @@ class FollowFtTrajPolicy:
         # 3. Get current waypoints for finger tips
         x_des, dx_des = self.get_ft_des(observation)
 
-        #4. Get torques from controller
+        # 4. Get torques from controller
         q_cur = observation["robot_position"]
         dq_cur = observation["robot_velocity"]
         torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)

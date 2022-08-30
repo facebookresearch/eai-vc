@@ -25,16 +25,17 @@ except ImportError:
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
-sys.path.insert(0, os.path.join(base_path, '..'))
+sys.path.insert(0, os.path.join(base_path, ".."))
 
 import control.cube_utils as c_utils
 
-#move to position of third finger
-FIRST_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
-SECOND_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
-THIRD_DEFAULT_GOAL = np.array([0.102,0.141,0.181])
+# move to position of third finger
+FIRST_DEFAULT_GOAL = np.array([0.102, 0.141, 0.181])
+SECOND_DEFAULT_GOAL = np.array([0.102, 0.141, 0.181])
+THIRD_DEFAULT_GOAL = np.array([0.102, 0.141, 0.181])
 
 REACH_EPISODE_LENGTH = 500
+
 
 @full_env_registry.register_env("ReachEnv-v0")
 class ReachEnv(gym.Env):
@@ -42,7 +43,7 @@ class ReachEnv(gym.Env):
 
     def __init__(
         self,
-        render_mode: str="",
+        render_mode: str = "",
         fixed_goal: bool = True,
         action_type: ActionType = ActionType.TORQUE,
         step_size: int = 50,
@@ -75,7 +76,7 @@ class ReachEnv(gym.Env):
             time_step (float): Simulation timestep
         """
         super().__init__()
-        if(render_mode=="human"):
+        if render_mode == "human":
             visualization = True
         self.visualization = visualization
         self.no_collisions = no_collisions
@@ -84,7 +85,7 @@ class ReachEnv(gym.Env):
         self.time_step = time_step
 
         # initialize simulation
-        #initial_robot_position = trifingerpro_limits.robot_position.default
+        # initial_robot_position = trifingerpro_limits.robot_position.default
         initial_robot_position = [-0.08, 1.15, -1.5] * 3
 
         self.platform = trifinger_simulation.TriFingerPlatform(
@@ -108,7 +109,6 @@ class ReachEnv(gym.Env):
         # ====================
 
         self.action_type = action_type
-
 
         if step_size < 1:
             raise ValueError("step_size cannot be less than 1.")
@@ -139,12 +139,10 @@ class ReachEnv(gym.Env):
             high=np.ones(9) * 0.10,
         )
 
-
         goal_state_space = gym.spaces.Box(
             low=np.ones(9) * -0.15,
             high=np.ones(9) * 0.10,
         )
-
 
         if self.action_type == ActionType.TORQUE:
             self.action_space = robot_torque_space
@@ -168,13 +166,13 @@ class ReachEnv(gym.Env):
         self.observation_space = gym.spaces.Dict(
             {
                 "t": gym.spaces.Discrete(REACH_EPISODE_LENGTH),
-                "robot_position":robot_position_space,
+                "robot_position": robot_position_space,
                 "robot_velocity": robot_velocity_space,
                 "robot_torque": robot_torque_space,
-                "observation": goal_state_space, # position of fingertips
+                "observation": goal_state_space,  # position of fingertips
                 "action": self.action_space,
                 "desired_goal": goal_state_space,
-                "achieved_goal": goal_state_space
+                "achieved_goal": goal_state_space,
             }
         )
 
@@ -203,12 +201,12 @@ class ReachEnv(gym.Env):
                     info,
                 )
         """
-        return 10 * (1 - np.linalg.norm(desired_goal-achieved_goal))
+        return 10 * (1 - np.linalg.norm(desired_goal - achieved_goal))
 
-    def _scale_action(self,action):
-        #receive action between -1,1
-        #assume action is dx_des, change in the fingertip positions in space
-        return action /100
+    def _scale_action(self, action):
+        # receive action between -1,1
+        # assume action is dx_des, change in the fingertip positions in space
+        return action / 100
 
     def step(self, action):
         """Run one timestep of the environment's dynamics.
@@ -235,9 +233,7 @@ class ReachEnv(gym.Env):
         action = self._scale_action(action)
 
         if not self.action_space.contains(np.array(action, dtype=np.float32)):
-            raise ValueError(
-                "Given action is not contained in the action space."
-            )
+            raise ValueError("Given action is not contained in the action space.")
 
         num_steps = self.step_size
 
@@ -257,16 +253,19 @@ class ReachEnv(gym.Env):
             if self.step_count > REACH_EPISODE_LENGTH:
                 raise RuntimeError("Exceeded number of steps for one episode.")
 
-
             x_curr = self.hand_kinematics.get_ft_pos(self.observation["robot_position"])
-            x_i =  x_curr + (action/num_steps)
-            dx_des = action/delta_t
-            torque = self.hand_kinematics.get_torque(x_i, dx_des, self.observation["robot_position"], self.observation["robot_velocity"])
-            torque = np.clip(torque,self.action_space.low,self.action_space.high)
+            x_i = x_curr + (action / num_steps)
+            dx_des = action / delta_t
+            torque = self.hand_kinematics.get_torque(
+                x_i,
+                dx_des,
+                self.observation["robot_position"],
+                self.observation["robot_velocity"],
+            )
+            torque = np.clip(torque, self.action_space.low, self.action_space.high)
             # send action to robot
             robot_action = self._gym_action_to_robot_action(torque)
             t = self.platform.append_desired_action(robot_action)
-
 
             # Use observations of step t + 1 to follow what would be expected
             # in a typical gym environment.  Note that on the real robot, this
@@ -280,18 +279,18 @@ class ReachEnv(gym.Env):
             # When using this observation, the resulting cumulative reward
             # should match exactly the one computed during replay (with the
             # above it will differ slightly).
-            #self.info["time_index"] = t
+            # self.info["time_index"] = t
 
-            observation = self._create_observation(
-                self.info["time_index"], torque
-            )
+            observation = self._create_observation(self.info["time_index"], torque)
 
             reward = 0
-            achieved_position = observation["observation"] #self.hand_kinematics.get_ft_pos(observation["observation"])
+            achieved_position = observation[
+                "observation"
+            ]  # self.hand_kinematics.get_ft_pos(observation["observation"])
             reward += self.compute_reward(
-               observation["desired_goal"],
-               achieved_position,
-               self.info,
+                observation["desired_goal"],
+                achieved_position,
+                self.info,
             )
 
             # Draw cube vertices from observation
@@ -300,29 +299,34 @@ class ReachEnv(gym.Env):
                 positions = [v_wf for k, v_wf in v_wf_dict.items()]
                 self.vert_markers.set_state(positions)
 
-
         is_done = self.step_count >= REACH_EPISODE_LENGTH
 
         return observation, reward, is_done, self.info
-
 
     def reset(self):
         raise NotImplementedError()
 
     def reset(self, init_pose_dict=None, init_robot_position=None):
-        """ Reset the environment. """
+        """Reset the environment."""
 
         ##hard-reset simulation
-        #del self.platform
+        # del self.platform
 
         # initialize cube at the centre
         if init_pose_dict is None:
             initial_object_pose = task.sample_goal(difficulty=-1)
-            initial_object_pose.position = [0,0,task._CUBE_WIDTH/2] # TODO hardcoded init pose to arena center
+            initial_object_pose.position = [
+                0,
+                0,
+                task._CUBE_WIDTH / 2,
+            ]  # TODO hardcoded init pose to arena center
         else:
             initial_object_pose = task.Pose.from_dict(init_pose_dict)
 
-        self.platform.reset(initial_object_pose = initial_object_pose, initial_robot_position = init_robot_position)
+        self.platform.reset(
+            initial_object_pose=initial_object_pose,
+            initial_robot_position=init_robot_position,
+        )
 
         # Set pybullet GUI params
         self._set_sim_params()
@@ -330,7 +334,9 @@ class ReachEnv(gym.Env):
         if self.no_collisions:
             self.disable_collisions()
 
-        self.goal = np.append(np.append(FIRST_DEFAULT_GOAL,SECOND_DEFAULT_GOAL),THIRD_DEFAULT_GOAL)
+        self.goal = np.append(
+            np.append(FIRST_DEFAULT_GOAL, SECOND_DEFAULT_GOAL), THIRD_DEFAULT_GOAL
+        )
 
         # visualize the goal
         if self.visualization and not self.enable_cameras:
@@ -341,13 +347,13 @@ class ReachEnv(gym.Env):
                 pybullet_client_id=self.platform.simfinger._pybullet_client_id,
             )
 
-
         if self.draw_verts:
             v_wf_dict = c_utils.get_vertices_wf(initial_object_pose.to_dict())
             if self.vert_markers is None:
                 self.vert_markers = trifinger_simulation.visual_objects.Marker(
-                    8, goal_size = 0.005,
-                    initial_position = [v_wf for k, v_wf in v_wf_dict.items()],
+                    8,
+                    goal_size=0.005,
+                    initial_position=[v_wf for k, v_wf in v_wf_dict.items()],
                 )
             else:
                 positions = [v_wf for k, v_wf in v_wf_dict.items()]
@@ -393,19 +399,25 @@ class ReachEnv(gym.Env):
             # "object_vertices": v_wf_dict,
             "action": action,
             "desired_goal": self.goal,
-            "achieved_goal": ftip_pos
+            "achieved_goal": ftip_pos,
         }
 
         # Save camera observation images
         if self.enable_cameras:
             camera_observation_dict = {
-                                        "camera60": {"image"    : camera_observation.cameras[0].image,
-                                                     "timestamp": camera_observation.cameras[0].timestamp},
-                                        "camera180": {"image"    : camera_observation.cameras[1].image,
-                                                     "timestamp": camera_observation.cameras[1].timestamp},
-                                        "camera300": {"image"    : camera_observation.cameras[2].image,
-                                                     "timestamp": camera_observation.cameras[2].timestamp},
-                                      }
+                "camera60": {
+                    "image": camera_observation.cameras[0].image,
+                    "timestamp": camera_observation.cameras[0].timestamp,
+                },
+                "camera180": {
+                    "image": camera_observation.cameras[1].image,
+                    "timestamp": camera_observation.cameras[1].timestamp,
+                },
+                "camera300": {
+                    "image": camera_observation.cameras[2].image,
+                    "timestamp": camera_observation.cameras[2].timestamp,
+                },
+            }
 
             self.observation["camera_observation"] = camera_observation_dict
 
@@ -427,46 +439,55 @@ class ReachEnv(gym.Env):
         return robot_action
 
     def _set_sim_params(self):
-        """ Set pybullet GUI params """
+        """Set pybullet GUI params"""
 
-        pybullet.configureDebugVisualizer(pybullet.COV_ENABLE_GUI, 0) # Turn off debug camera visuals
-        pybullet.configureDebugVisualizer(pybullet.COV_ENABLE_SHADOWS, 0) # Turn off debug camera visuals
+        pybullet.configureDebugVisualizer(
+            pybullet.COV_ENABLE_GUI, 0
+        )  # Turn off debug camera visuals
+        pybullet.configureDebugVisualizer(
+            pybullet.COV_ENABLE_SHADOWS, 0
+        )  # Turn off debug camera visuals
 
     def disable_collisions(self):
-        """ Disable collisions between finger and object, for debugging finger controllers """
+        """Disable collisions between finger and object, for debugging finger controllers"""
 
         obj_id = self.platform.cube._object_id
         robot_id = self.platform.simfinger.finger_id
         obj_link_id = -1
-        finger_link_ids = self.platform.simfinger.pybullet_link_indices +\
-                            self.platform.simfinger.pybullet_tip_link_indices
+        finger_link_ids = (
+            self.platform.simfinger.pybullet_link_indices
+            + self.platform.simfinger.pybullet_tip_link_indices
+        )
 
         for link_id in finger_link_ids:
-            pybullet.setCollisionFilterPair(robot_id, obj_id, link_id, obj_link_id, enableCollision=0)
+            pybullet.setCollisionFilterPair(
+                robot_id, obj_id, link_id, obj_link_id, enableCollision=0
+            )
 
         # Make object invisible
-        #pybullet.changeVisualShape(obj_id, obj_link_id, rgbaColor=[0,0,0,0])
+        # pybullet.changeVisualShape(obj_id, obj_link_id, rgbaColor=[0,0,0,0])
 
 
-#kinematics wrapper
+# kinematics wrapper
 class HandKinematics:
-    def __init__(self,platform):
-        self.Nf = 3 # Number of fingers
-        self.Nq = self.Nf * 3 # Number of joints in hand
+    def __init__(self, platform):
+        self.Nf = 3  # Number of fingers
+        self.Nq = self.Nf * 3  # Number of joints in hand
         self.platform = platform
         # class with kinematics functions
         self.kinematics = CustomPinocchioUtils(
-                self.platform.simfinger.finger_urdf_path,
-                self.platform.simfinger.tip_link_names,
-                self.platform.simfinger.link_names)
+            self.platform.simfinger.finger_urdf_path,
+            self.platform.simfinger.tip_link_names,
+            self.platform.simfinger.link_names,
+        )
 
         self.controller = ImpedanceController(self.kinematics)
 
     def get_ft_pos(self, q):
-        """ Get fingertip positions given current joint configuration q """
+        """Get fingertip positions given current joint configuration q"""
 
         ft_pos = np.array(self.kinematics.forward_kinematics(q)).reshape(self.Nq)
         return ft_pos
 
-    def  get_torque(self, x_des, dx_des, q_cur, dq_cur):
+    def get_torque(self, x_des, dx_des, q_cur, dq_cur):
         return self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
