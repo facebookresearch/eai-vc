@@ -21,8 +21,12 @@ class PathDataset(VisionDataset):
 
         self.files = []
         for folder in self.root:
-            self.files.extend(sorted(glob.glob(os.path.join(folder, "*", "*", "*.jpg"))))
-            self.files.extend(sorted(glob.glob(os.path.join(folder, "*", "*", "*.png"))))
+            self.files.extend(
+                sorted(glob.glob(os.path.join(folder, "*", "*", "*.jpg")))
+            )
+            self.files.extend(
+                sorted(glob.glob(os.path.join(folder, "*", "*", "*.png")))
+            )
 
         self.transform = transform
         self.extra_transform = extra_transform
@@ -47,6 +51,7 @@ class PathDataset(VisionDataset):
             img = TF.normalize(img, self.mean, self.std)
             extra_img = TF.normalize(extra_img, self.mean, self.std)
         return img, extra_img, 0
+
 
 if __name__ == "__main__":
     from torch.utils.data import DataLoader

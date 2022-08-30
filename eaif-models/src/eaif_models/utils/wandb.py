@@ -4,6 +4,7 @@ import omegaconf
 
 log = logging.getLogger(__name__)
 
+
 def setup_wandb(config):
     if isinstance(config, omegaconf.DictConfig):
         config = omegaconf.OmegaConf.to_container(

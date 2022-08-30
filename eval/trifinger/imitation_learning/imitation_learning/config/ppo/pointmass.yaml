@@ -1,0 +1,34 @@
+# @package _global_
+defaults:
+  - override /env: pointmass
+  - override /evaluator: pointmass
+
+evaluator:
+  plot_il: False
+num_steps: 5
+num_envs: 256
+log_interval: 10
+eval_interval: 100
+num_env_steps: 1e6
+policy:
+  std_init: -1.0
+  squash_mean: True
+info_keys : ["dist_to_goal", "r", "max_action_magnitude", "avg_action_magnitude", "final_obs"]
+
+policy_updater:
+  entropy_coef: 0.0
+  use_clipped_value_loss: True
+  clip_param: 0.2
+  value_loss_coef: 0.5
+  max_grad_norm: -1
+  num_epochs: 2
+  num_mini_batch: 4
+  num_envs: ${num_envs}
+  num_steps: ${num_steps}
+
+  # Returns calculation
+  gae_lambda: 0.95
+  use_gae: True
+  gamma: 0.99
+  optimizer_params:
+    lr: 3e-4

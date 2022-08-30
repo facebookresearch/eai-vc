@@ -1,0 +1,55 @@
+# @package _global_
+
+num_steps: 50
+num_envs: 128
+log_interval: 50
+# Evaluate at the end.
+eval_interval: 100
+num_env_steps: 1e7
+env_name: "PointMassObstacle-v0"
+env_settings:
+  params:
+    _target_: imitation_learning.utils.envs.pointmass_obstacle.PointMassObstacleParams
+    start_state_noise: 0.05
+    dt: 0.05
+    ep_horizon: 50
+    goal_thresh: 0.1
+    custom_reward:
+      _target_: common.pointmass_utils.PMDistReward
+      succ_dist: ${env_settings.params.goal_thresh}
+      reward_thresh: 0.5
+      slack: 0.01
+    start_idx: 0
+    square_obstacles:
+      # Position, thickness, length, angle
+      - [[0.5, 0.5], 0.11, 0.5, 45.0]
+  set_eval: False
+
+policy_updater:
+  _target_: imitation_learning.policy_opt.reinforce.REINFORCE
+  _recursive_: False
+
+  max_grad_norm: 0.5
+  gamma: 0.99
+
+  optimizer_params:
+    _target_: torch.optim.SGD
+    lr: 3e-4
+
+
+
+evaluator:
+  _target_: common.pointmass_utils.PointMassVisualizer
+  rnn_hxs_dim: ${policy.recurrent_hidden_size}
+  num_render: 0
+  fps: 10
+  save_traj_name: null
+  plt_lim: 1.5
+  plt_density: 50
+  agent_point_size: 60
+  num_demo_plot: 10
+  plot_il: False
+
+hydra:
+  run:
+    dir: ./

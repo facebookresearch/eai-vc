@@ -1,0 +1,148 @@
+# @package _global_
+num_steps: 5
+num_envs: 8
+num_env_steps: 5e5
+seed: 0
+recurrent_hidden_state_size: 0
+obs_shape: ???
+action_dim: ???
+action_is_discrete: False
+device: 'cpu'
+load_policy: False
+train_or_eval: "train"
+
+# Intervals
+log_interval: 1
+eval_interval: 100
+save_interval: 1000
+num_eval_episodes: 10
+
+# Saving / Loading
+load_checkpoint: null
+resume_training: False
+
+logger:
+  _target_: rl_helper.logging.WbLogger #imitation_learning.common.wb_logger_old.WbLogger
+  _recursive_: False
+  wb_proj_name: ???
+  wb_entity: ???
+  run_name: ""
+  group_name: "meta_irl_debug"
+  seed: ${seed}
+  log_dir: "./data/vids/"
+  vid_dir: "./data/vids/"
+  save_dir: "./data/checkpoints/"
+  smooth_len: 10
+  full_cfg: None
+
+policy:
+  _target_: imitation_learning.policy_opt.policy.Policy
+  hidden_size: 128
+  recurrent_hidden_size: ${recurrent_hidden_state_size}
+  is_recurrent: False
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  std_init: -2
+  squash_mean: True
+
+env_name: "TriFingerReaching-v0"
+env_settings:
+  _target_: imitation_learning.tasks.trifinger_task.trifinger_interface.CausalWorldReacherWrapper
+  start_state_noise: 0.01
+  skip_frame: 10
+  max_ep_horizon: 5
+  set_eval: False
+
+storage:
+  _target_: imitation_learning.policy_opt.storage.RolloutStorage
+  num_steps: ${num_steps}
+  num_processes: ${num_envs}
+  recurrent_hidden_state_size: ${recurrent_hidden_state_size}
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  fetch_final_obs: True
+
+evaluator:
+  _target_: imitation_learning.run_mirl_trifinger.TrifingerEvaluator # rl_helper.common.Evaluator
+  rnn_hxs_dim: ${recurrent_hidden_state_size}
+  num_render: 0
+  fps: 10
+  save_traj_name: null
+
+policy_updater:
+  _target_: imitation_learning.meta_irl.updater_simple.MetaIRL
+  _recursive_: False
+
+  cost_take_dim: -1
+  dataset_path: "data/trifinger_new_demo_sgd_expert.pt"
+  batch_size: 128
+  use_actions: False
+  plot_interval: -1
+  norm_expert_actions: False
+  n_inner_iters: 1
+  storage_cfg: ${storage}
+  device: ${device}
+  num_steps: ${num_steps}
+  num_envs: ${num_envs}
+  total_num_updates: ${num_env_steps}
+  use_lr_decay: True
+  lr_decay_speed: 1
+  reward_update_freq: 1
+
+  policy_init_fn:
+    _target_: imitation_learning.meta_irl.rewards.reg_init
+    _recursive_: False
+    policy_cfg: ${policy}
+
+  inner_updater:
+    _target_: imitation_learning.meta_irl.differentiable_ppo.DifferentiablePPO
+    _recursive_: False
+
+    use_clipped_value_loss: True
+    clip_param: 0.2
+    value_loss_coef: 0.5
+    entropy_coef: 0.0001
+    max_grad_norm: 0.5
+    num_epochs: 2
+    num_mini_batch: 4
+
+    # Returns calculation
+    gae_lambda: 0.95
+    use_gae: True
+    gamma: 0.99
+
+  reward:
+    _target_: imitation_learning.meta_irl.rewards.NeuralReward
+    obs_shape: ${obs_shape}
+    action_dim: ${action_dim}
+    reward_hidden_dim: 128
+    reward_type: "NEXT_STATE"
+    cost_take_dim: -9
+    include_tanh: False
+    n_hidden_layers: 2
+
+  inner_opt:
+    _target_: torch.optim.SGD
+    lr: 0.0001
+
+  reward_opt:
+    _target_: torch.optim.Adam
+    lr: 0.001
+
+  irl_loss:
+    _target_: torch.nn.MSELoss
+    reduction: 'mean'
+
+eval_args:
+  policy_updater:
+    reward_update_freq: -1
+    n_inner_iters: 1
+  load_policy: False
+  num_env_steps: 2e5
+  eval_interval: 100
+
+hydra:
+  run:
+    dir: ./

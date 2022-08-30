@@ -1,0 +1,129 @@
+defaults:
+  - _self_
+
+num_steps: 10
+num_envs: 4
+num_env_steps: 1e7
+seed: 1
+recurrent_hidden_state_size: 0
+obs_shape: ???
+action_dim: ???
+action_is_discrete: False
+device: 'cpu'
+use_actions: True
+
+# Intervals
+log_interval: 1
+eval_interval: 1000
+save_interval: 100000000000
+num_eval_episodes: 1
+
+# Saving / Loading
+load_checkpoint: null
+resume_training: False
+
+logger:
+  _target_: rl_helper.logging.WbLogger
+  _recursive_: False
+  wb_proj_name: ???
+  wb_entity: ???
+  run_name: ""
+  group_name: "debug"
+  seed: ${seed}
+  log_dir: "./data/vids/"
+  vid_dir: "./data/vids/"
+  save_dir: "./data/checkpoints/"
+  smooth_len: 10
+  full_cfg: None
+
+policy:
+  _target_: imitation_learning.ppo.policy.Policy
+  hidden_size: 128
+  recurrent_hidden_size: ${recurrent_hidden_state_size}
+  is_recurrent: False
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  std_init: -2
+  squash_mean: True
+
+env_name: "TriFingerReaching-v0"
+env_settings:
+  params:
+    _target_: imitation_learning.tasks.trifinger_task.trifinger_interface.CausalWorldReacherWrapper
+    start_state_noise: 0.01
+    skip_frame: 10
+    max_ep_horizon: 5
+  set_eval: False
+
+storage:
+  _target_: imitation_learning.ppo.storage.RolloutStorage
+  num_steps: ${num_steps}
+  num_processes: ${num_envs}
+  recurrent_hidden_state_size: ${recurrent_hidden_state_size}
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  fetch_final_obs: True
+
+evaluator:
+  _target_: imitation_learning.run_mirl_trifinger.TrifingerEvaluator
+  rnn_hxs_dim: ${recurrent_hidden_state_size}
+  num_render: 0
+  fps: 10
+  save_traj_name: null
+
+policy_updater:
+  _target_: imitation_learning.gail.updater.GAIL
+  _recursive_: False
+
+  cost_take_dim: -1
+  dataset_path: "data/trifinger_reaching_demo_action_in_bounds.pt"
+  batch_size: 128
+  use_actions: ${use_actions}
+  plot_interval: ${eval_interval}
+  norm_expert_actions: False
+  storage_cfg: ${storage}
+  device: ${device}
+  num_steps: ${num_steps}
+  n_gail_epochs: 1
+  reward_type: "gail"
+
+  policy_updater:
+    _target_: imitation_learning.ppo.updater.PPO
+    _recursive_: False
+
+    use_clipped_value_loss: True
+    clip_param: 0.2
+    value_loss_coef: 0.5
+    entropy_coef: 0.0001
+    max_grad_norm: 0.5
+    num_epochs: 2
+    num_mini_batch: 4
+    num_envs: ${num_envs}
+    num_steps: ${num_steps}
+
+    # Returns calculation
+    gae_lambda: 0.95
+    use_gae: True
+    gamma: 0.99
+
+    optimizer_params:
+      _target_: torch.optim.Adam
+      lr: 0.0005
+
+  discriminator:
+    _target_: imitation_learning.gail.discriminator.NeuralDiscriminator
+    obs_shape: ${obs_shape}
+    action_dim: ${action_dim}
+    cost_hidden_dim: 128
+    cost_take_dim: -1
+    use_actions: ${use_actions}
+
+  discrim_opt:
+    _target_: torch.optim.Adam
+    lr: 0.0001
+
+hydra:
+  run:
+    dir: ./

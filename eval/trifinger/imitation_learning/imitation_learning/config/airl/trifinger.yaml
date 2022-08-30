@@ -1,0 +1,128 @@
+# @package _global_
+
+num_steps: 5
+num_envs: 8
+log_interval: 10
+save_interval: 10000000000
+eval_interval: 100
+num_env_steps: 5e5
+seed: 0
+recurrent_hidden_state_size: 0
+obs_shape: ???
+action_dim: ???
+action_is_discrete: False
+device: 'cpu'
+load_policy: False
+train_or_eval: "train"
+gamma: 0.99
+num_eval_episodes: 10
+
+# Saving / Loading
+load_checkpoint: null
+resume_training: False
+
+evaluator:
+  _target_: imitation_learning.run_mirl_trifinger.TrifingerEvaluator # rl_helper.common.Evaluator
+  rnn_hxs_dim: ${recurrent_hidden_state_size}
+  num_render: 0
+  fps: 10
+  save_traj_name: null
+
+logger:
+  _target_: rl_helper.logging.WbLogger #imitation_learning.common.wb_logger_old.WbLogger
+  _recursive_: False
+  wb_proj_name: ???
+  wb_entity: ???
+  run_name: ""
+  group_name: "airl_debug"
+  seed: ${seed}
+  log_dir: "./data/vids/"
+  vid_dir: "./data/vids/"
+  save_dir: "./data/checkpoints/"
+  smooth_len: 10
+  full_cfg: None
+
+env_name: "TriFingerReaching-v0"
+env_settings:
+  _target_: imitation_learning.tasks.trifinger_task.trifinger_interface.CausalWorldReacherWrapper
+  start_state_noise: 0.01
+  skip_frame: 10
+  max_ep_horizon: 5
+  set_eval: False
+
+policy:
+  _target_: imitation_learning.policy_opt.policy.Policy
+  hidden_size: 128
+  recurrent_hidden_size: ${recurrent_hidden_state_size}
+  is_recurrent: False
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  std_init: -2
+  squash_mean: True
+
+storage:
+  _target_: imitation_learning.policy_opt.storage.RolloutStorage
+  num_steps: ${num_steps}
+  num_processes: ${num_envs}
+  recurrent_hidden_state_size: ${recurrent_hidden_state_size}
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  fetch_final_obs: True
+
+policy_updater:
+  _target_: gail.updater.GAIL
+  _recursive_: False
+
+  batch_size: 16 # todo : in trifinger env on fair cluster I can only run 8 parallel envs , each rollout T=5
+  reward_update_freq: 1
+  num_discrim_batches: 2
+  num_envs: ${num_envs}
+  device: ${device}
+  dataset_path: "data/trifinger_new_demo_sgd_expert_with_next.pt"
+
+  discriminator:
+    _target_: airl.discriminator.AirlDiscriminator
+    obs_shape: ${obs_shape}
+    action_dim: ${action_dim}
+    reward_hidden_dim: 128
+    n_hidden_layers: 2
+    cost_take_dim: -1
+    gamma: ${gamma}
+    airl_reward_bonus: 0.0
+    use_shaped_reward: True
+
+  policy_updater:
+    _target_: policy_opt.ppo.PPO
+    _recursive_: False
+
+    use_clipped_value_loss: True
+    max_grad_norm: -1
+    value_loss_coef: 0.5
+    clip_param: 0.2
+    entropy_coef: 0.005
+    num_epochs: 2
+    num_mini_batch: 1
+
+    # Returns calculation
+    gae_lambda: 0.95
+    use_gae: True
+    gamma: ${gamma}
+    optimizer_params:
+      _target_: torch.optim.Adam
+      lr: 1e-3
+    num_steps: ${num_steps}
+    num_envs: ${num_envs}
+
+  discrim_opt:
+    _target_: torch.optim.Adam
+    lr: 1e-3
+
+eval_args:
+  policy_updater:
+    reward_update_freq: -1
+  load_policy: False
+  num_env_steps: 5e5
+  eval_interval: 100
+
