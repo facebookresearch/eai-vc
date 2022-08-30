@@ -415,9 +415,6 @@ class SimCubeEnv(BaseCubeEnv):
             self.draw_verts = False
         self.vert_markers = None
 
-    def set_info_dict_reader(self, info_dict_reader=None):
-        self.reader = info_dict_reader
-
     def step(self, action):
         """Run one timestep of the environment's dynamics.
 

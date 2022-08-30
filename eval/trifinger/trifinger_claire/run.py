@@ -68,6 +68,7 @@ def main(cfg) -> Dict[str, float]:
     ].shape  # TODO obs dict -> array
     cfg.action_dim = dummy_env.action_space.shape[0]
     cfg.action_is_discrete = isinstance(cfg.action_dim, spaces.Discrete)
+
     cfg.total_num_updates = num_updates
 
     logger: Logger = hydra_instantiate(cfg.logger, full_cfg=cfg)
@@ -113,11 +114,17 @@ def main(cfg) -> Dict[str, float]:
         for step_idx in range(num_steps):
             with torch.no_grad():
                 policy.act(td)
+            for i in range(9):
+                logger.collect_info(
+                    f"min_action_dim_{i}", td["action"].min(0).values[i]
+                )
+                logger.collect_info(
+                    f"max_action_dim_{i}", td["action"].max(0).values[i]
+                )
             envs.step(td)
 
             storage_td[:, step_idx] = td
             any_env_done = td["done"].any()
-
             if any_env_done:
                 td.set("reset_workers", td["done"])
                 envs.reset(tensordict=td)
@@ -125,7 +132,6 @@ def main(cfg) -> Dict[str, float]:
                 logger.collect_env_step_info(td, cfg.info_keys)
 
             td = step_tensordict(td)
-
         updater.update(policy, storage_td, logger, envs=envs)
 
         if cfg.eval_interval != -1 and (
@@ -141,7 +147,7 @@ def main(cfg) -> Dict[str, float]:
         if cfg.log_interval != -1 and (
             update_i % cfg.log_interval == 0 or is_last_update
         ):
-            logger.interval_log(update_i, steps_per_update * (update_i + 1))
+            logger.interval_log((update_i + 1), steps_per_update * (update_i + 1))
 
         if cfg.save_interval != -1 and (
             (update_i + 1) % cfg.save_interval == 0 or is_last_update
@@ -189,7 +195,7 @@ def make_single_gym_env(
         "camera_delay_steps": 0,
     }
 
-    cube_env = gym.make("SimCubeEnv-v0")
+    cube_env = gym.make(env_name)
     gym_env = GymWrapper(cube_env)
     tensordict = gym_env.reset()
     tensordict = gym_env.rand_step(tensordict)

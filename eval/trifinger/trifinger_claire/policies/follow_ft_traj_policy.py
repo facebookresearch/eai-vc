@@ -108,8 +108,8 @@ class FollowFtTrajPolicy:
         x_des, dx_des = self.get_ft_des(observation)
 
         # 4. Get torques from controller
-        q_cur = observation["robot_observation"]["position"]
-        dq_cur = observation["robot_observation"]["velocity"]
+        q_cur = observation["robot_position"]
+        dq_cur = observation["robot_velocity"]
         torque = self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
 
         self.t += 1
