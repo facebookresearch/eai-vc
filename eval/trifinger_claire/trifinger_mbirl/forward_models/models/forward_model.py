@@ -22,12 +22,19 @@ class ForwardModel(torch.nn.Module):
 
         self.model_list = torch.nn.ModuleList(module_list)
 
+        self.init_state = self.model_list.state_dict()
+
     def forward(self, x):
             
         for i in range(len(self.model_list)):
             x = self.model_list[i](x)
 
         return x
+
+    def reset(self):
+        for layer in self.model_list:
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
 
 def get_obs_vec_from_obs_dict(obs_dict, use_ftpos=True, device="cpu"):
     """

@@ -29,9 +29,11 @@ log = logging.getLogger(__name__)
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def main(conf):
 
-    random.seed(10)
-    np.random.seed(10)
-    torch.manual_seed(0)
+    random.seed(conf.seed)
+    np.random.seed(conf.seed)
+    torch.manual_seed(conf.seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(conf.seed)
 
     if torch.cuda.is_available():
         device = "cuda"
@@ -59,7 +61,7 @@ def main(conf):
         conf_for_wandb = OmegaConf.to_container(conf, resolve=True, throw_on_missing=True)
         conf_for_wandb["exp_id"] = exp_id # Add experiment id to conf, for wandb
         # wandb init
-        wandb.init(project='trifinger_mbirl', entity='clairec', name=exp_str,
+        wandb.init(project='policy_opt', entity='clairec', name=exp_str,
                    config = conf_for_wandb,
                    settings=wandb.Settings(start_method="thread"))
     

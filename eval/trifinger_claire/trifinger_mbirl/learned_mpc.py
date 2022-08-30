@@ -13,6 +13,7 @@ sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, '..'))
 
 from trifinger_mbirl.forward_models.models.forward_model import ForwardModel, get_obs_vec_from_obs_dict
+from trifinger_mbirl.forward_models.train_forward_model import ForwardModelTrainer
 from trifinger_mbirl.forward_models.models.decoder_model import DecoderModel
 import utils.data_utils as d_utils
 from trifinger_mbirl.policy import DeterministicPolicy
@@ -36,6 +37,8 @@ class LearnedMPC(torch.nn.Module):
         self.model.load_state_dict(model_dict["model_state_dict"])
         self.model.to(device)
 
+        self.forward_model_trainer = ForwardModelTrainer(model=self.model, device=device, conf=model_dict["conf"])
+
         if self.policy_type == "actions":
             self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
         elif self.policy_type == "nn":
@@ -47,8 +50,7 @@ class LearnedMPC(torch.nn.Module):
         self.max_a = 2.0 # cm
 
         # Freeze network params
-        for name, param in self.model.named_parameters():
-            param.requires_grad = False
+        self.freeze_forward_model()
 
         self.obj_state_type = model_dict["conf"]["algo"]["obj_state_type"]
         self.use_ftpos = model_dict["conf"]["algo"]["use_ftpos"]
@@ -66,7 +68,6 @@ class LearnedMPC(torch.nn.Module):
     
         return:
         """
-
 
         if action is None:
             if self.use_ftpos:
@@ -191,6 +192,15 @@ class LearnedMPC(torch.nn.Module):
 
     def set_action_seq_for_testing(self, action_seq):
         self.action_seq.data = torch.Tensor(action_seq)
+
+    def train_forward_model(self, new_traj_list, n_epochs, model_data_dir, no_wandb=True):
+        self.forward_model_trainer.update_data(new_traj_list)
+        self.forward_model_trainer.model.reset()
+        self.forward_model_trainer.train(n_epochs, model_data_dir, no_wandb=no_wandb)
+
+    def freeze_forward_model(self):
+        for name, param in self.model.named_parameters():
+            param.requires_grad = False
 
 
 #########################################################################################

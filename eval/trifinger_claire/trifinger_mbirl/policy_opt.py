@@ -74,19 +74,7 @@ class PolicyOpt:
         train_trajs = self.traj_info["train_demos"]
         test_trajs = self.traj_info["test_demos"]
 
-        # Make logging directories
-        ckpts_dir = os.path.join(model_data_dir, "ckpts") 
-        plots_dir = os.path.join(model_data_dir, "train")
-        test_plots_dir = os.path.join(model_data_dir, "test")
-        if not os.path.exists(ckpts_dir): os.makedirs(ckpts_dir)
-        if not os.path.exists(plots_dir): os.makedirs(plots_dir)
-        if not os.path.exists(test_plots_dir): os.makedirs(test_plots_dir)
-
-        # Directory to save sim rollouts
-        if self.conf.train_forward_model:
-            sim_dir = os.path.join(model_data_dir, "sim")
-            if not os.path.exists(sim_dir): os.makedirs(sim_dir)
-
+        # TODO for now, this works with only 1 demo - need to figure out how to extend to more
         for demo_i in range(len(train_trajs)):
             expert_demo_dict = train_trajs[demo_i]
 
@@ -95,47 +83,85 @@ class PolicyOpt:
 
             # Reset mpc for action optimization
             expert_actions = torch.Tensor(expert_demo_dict["delta_ftpos"][:-1]).to(self.device)
-            self.mpc.reset_actions()
             #self.mpc.reset_actions(init_a=expert_actions)
 
             #action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
             action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
-            action_optimizer.zero_grad()
 
-            for inner_i in range(self.conf.n_inner_iter):
+            for outer_i in range(5):
+                action_optimizer.zero_grad()
+                self.mpc.reset_actions() # TODO reset actions everytime?
 
-                print(f"Iter {inner_i}")
-                pred_traj = self.mpc.roll_out(obs_dict_init.copy())
+                # Make logging directories
+                cur_model_data_dir = os.path.join(model_data_dir, f"outer_{outer_i}")
+                ckpts_dir = os.path.join(cur_model_data_dir, "ckpts") 
+                plots_dir = os.path.join(cur_model_data_dir, "train")
+                test_plots_dir = os.path.join(cur_model_data_dir, "test")
+                if not os.path.exists(ckpts_dir): os.makedirs(ckpts_dir)
+                if not os.path.exists(plots_dir): os.makedirs(plots_dir)
+                if not os.path.exists(test_plots_dir): os.makedirs(test_plots_dir)
+                # Directory to save sim rollouts
+                if self.conf.train_forward_model:
+                    sim_dir = os.path.join(cur_model_data_dir, "sim")
+                    if not os.path.exists(sim_dir): os.makedirs(sim_dir)
 
-                target = self.get_target_for_cost_type(expert_demo_dict)
-                cost_val = self.cost(pred_traj, target)
-                print("loss: ", str(cost_val.item()))
-                cost_val.backward()
-                action_optimizer.step()
+                new_traj_list = []
 
-                if (inner_i) % self.conf.n_epoch_every_log == 0:
-                    diff = self.traj_info["train_demo_stats"][demo_i]["diff"]
-                    traj_i = self.traj_info["train_demo_stats"][demo_i]["id"]
-                    traj_label = f"diff-{diff}_traj-{traj_i}"
-                    traj_plots_dir = os.path.join(plots_dir, traj_label)
-                    if not os.path.exists(traj_plots_dir): os.makedirs(traj_plots_dir)
-                    pred_actions = self.mpc.action_seq.clone().data.cpu().detach().numpy()
-                    self.plot(traj_plots_dir, inner_i, pred_traj, pred_actions, expert_demo_dict)
+                for inner_i in range(self.conf.n_inner_iter):
 
-                    if self.conf.train_forward_model:
-                        rollout_save_path = os.path.join(sim_dir, f"{traj_label}_epoch_{inner_i}.npz")
+                    print(f"Iter {inner_i}")
+                    pred_traj = self.mpc.roll_out(obs_dict_init.copy())
+
+                    target = self.get_target_for_cost_type(expert_demo_dict)
+                    cost_val = self.cost(pred_traj, target)
+                    print("loss: ", str(cost_val.item()))
+                    cost_val.backward()
+                    action_optimizer.step()
+
+                    log_dict = {
+                        "outer_i": outer_i,
+                        "inner_i": inner_i,
+                        "policy_loss": cost_val.item(),
+                    }
+
+                    if (inner_i+1) % self.conf.n_epoch_every_log == 0:
+                        diff = self.traj_info["train_demo_stats"][demo_i]["diff"]
+                        traj_i = self.traj_info["train_demo_stats"][demo_i]["id"]
+                        traj_label = f"diff-{diff}_traj-{traj_i}"
+                        traj_plots_dir = os.path.join(plots_dir, traj_label)
+                        if not os.path.exists(traj_plots_dir): os.makedirs(traj_plots_dir)
+                        pred_actions = self.mpc.action_seq.clone().data.cpu().detach().numpy()
+                        self.plot(traj_plots_dir, inner_i+1, pred_traj, pred_actions, expert_demo_dict)
+
+                        rollout_save_path = os.path.join(sim_dir, f"{traj_label}_epoch_{inner_i+1}.npz")
                         pred_traj_sim = self.sim.rollout_actions(expert_demo_dict, pred_actions, save_path=rollout_save_path)
                         # Save gif of sim rollout
-                        d_utils.save_gif(pred_traj_sim["image_60"], os.path.join(sim_dir, f"viz_{traj_label}_epoch_{inner_i}.gif"))
-                
-                        # Train forward model with this data
+                        d_utils.save_gif(pred_traj_sim["image_60"], os.path.join(sim_dir, f"viz_{traj_label}_epoch_{inner_i+1}.gif"))
+                        new_traj_list.append(pred_traj_sim)
 
-                #    torch.save({
-                #        'train_pred_traj_per_demo'   : pred_traj.detach(), 
-                #        'train_pred_actions_per_demo': pred_actions,
-                #        'conf'                       : self.conf,
-                #    }, f=f'{ckpts_dir}/epoch_{outer_i*self.conf.n_inner_iter+inner_i+1}_ckpt.pth')
-            #################### End inner loop: policy optimization ############################
+                        # Log difference in predicted traj vs. actual rollout
+                        sim_err = np.linalg.norm(pred_traj_sim["image_60_r3m"] - pred_traj.cpu().detach().numpy())
+
+                        log_dict["sim_err"] = sim_err
+                    
+                    if not no_wandb:
+                        t_utils.plot_loss(log_dict)
+                    
+                    # TODO save policy??
+                    #torch.save({ #        'train_pred_traj_per_demo'   : pred_traj.detach(), 
+                    #    'train_pred_actions_per_demo': pred_actions,
+                    #    'conf'                       : self.conf,
+                    #}, f=f'{ckpts_dir}/epoch_{outer_i*self.conf.n_inner_iter+inner_i+1}_ckpt.pth')
+
+                #################### End inner loop: policy optimization ############################
+            
+                # Train forward model
+                # TODO figure out how to log this
+                if self.conf.train_forward_model:
+                    print(f"Adding {len(new_traj_list)} trajectories to dataset")
+                    self.mpc.train_forward_model(new_traj_list, self.conf.forward_model_n_epochs, sim_dir, no_wandb=no_wandb)
+                    self.mpc.freeze_forward_model()
+
 
     def plot(self, traj_plots_dir, outer_i, pred_traj, pred_actions, expert_demo_dict):
 
