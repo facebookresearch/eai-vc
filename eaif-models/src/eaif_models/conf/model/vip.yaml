@@ -1,0 +1,7 @@
+_target_: eaif_models.models.resnet.vip.load_model
+resnet_name: resnet50
+home_dir: /checkpoint/yixinlin/eaif/models/vip/
+metadata:
+  algo: vip
+  model: resnet50
+  data: ego4d
