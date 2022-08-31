@@ -304,7 +304,6 @@ class ReachEnv(gym.Env):
         is_done = self.step_count >= REACH_EPISODE_LENGTH
         return observation, reward, is_done, self.info
 
-
     def reset(self, init_pose_dict=None, init_robot_position=None):
         """Reset the environment."""
 
