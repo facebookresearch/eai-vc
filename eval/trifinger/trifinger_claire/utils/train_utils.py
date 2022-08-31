@@ -3,6 +3,7 @@ from omegaconf import DictConfig, OmegaConf
 from hydra.core.hydra_config import HydraConfig
 import wandb
 
+
 def get_exp_dir(params_dict):
     """
     Get experiment directory to save logs in, and experiment name
@@ -28,15 +29,15 @@ def get_exp_dir(params_dict):
     run_id = params_dict["run_id"]
     demo_path = os.path.splitext(os.path.split(params_dict["demo_path"])[1])[0]
     algo = params_dict["algo"]["name"]
- 
+
     exp_str = f"{exp_id}_r-{run_id}"
 
     return hydra_output_dir, exp_str, exp_id
 
-def plot_loss(log_dict, outer_i=None):
-    """ Log loss to wandb """
 
-    log_dict = {f'{k}': v for k, v in log_dict.items()}
-    if outer_i:
-        log_dict['outer_i'] = outer_i
+def plot_loss(loss_dict, outer_i):
+    """Log loss to wandb"""
+
+    log_dict = {f"{k}": v for k, v in loss_dict.items()}
+    log_dict["outer_i"] = outer_i
     wandb.log(log_dict)

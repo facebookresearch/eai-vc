@@ -3,7 +3,6 @@ import numpy as np
 
 # Model
 class ForwardModel(torch.nn.Module):
-
     def __init__(self, in_dim, out_dim, hidden_dims):
         super().__init__()
 
@@ -11,21 +10,21 @@ class ForwardModel(torch.nn.Module):
         self.out_dim = out_dim
         self.hidden_dims = hidden_dims
         self.activation = torch.nn.ReLU(inplace=True)
-        #self.activation = torch.nn.Tanh()
+        # self.activation = torch.nn.Tanh()
 
         dims = [in_dim] + list(hidden_dims) + [out_dim]
         module_list = []
         for i in range(len(dims) - 1):
-            module_list.append(torch.nn.Linear(dims[i], dims[i+1]))
+            module_list.append(torch.nn.Linear(dims[i], dims[i + 1]))
             if i < len(dims) - 2:
-                module_list.append(self.activation) 
+                module_list.append(self.activation)
 
         self.model_list = torch.nn.ModuleList(module_list)
 
         self.init_state = self.model_list.state_dict()
 
     def forward(self, x):
-            
+
         for i in range(len(self.model_list)):
             x = self.model_list[i](x)
 
@@ -56,7 +55,9 @@ def get_obs_vec_from_obs_dict(obs_dict, use_ftpos=True, device="cpu"):
             obs_dict[key] = torch.Tensor(obs_dict[key]).to(device)
 
     if use_ftpos:
-        obs = torch.cat([obs_dict["ft_state"], obs_dict["o_state"], obs_dict["action"]], dim=1)
+        obs = torch.cat(
+            [obs_dict["ft_state"], obs_dict["o_state"], obs_dict["action"]], dim=1
+        )
     else:
         obs = torch.cat([obs_dict["o_state"], obs_dict["action"]], dim=1)
 

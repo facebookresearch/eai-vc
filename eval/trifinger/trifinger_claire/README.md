@@ -18,6 +18,17 @@ Move cube with impedance controller, fixed contact points, pre-computed finger t
 ```
 python sim_move_cube.py -v
 ```
+## Train baseline models:
+
+To run PPO for the move cube task, run:
+```
+python run.py logger.wb_entity=<wb_user> logger.wb_proj_name=<project>
+```
+
+Option to run w/o wandb:
+```
+python run.py logger=cli
+```
 
 ## Demonstration data structure
 

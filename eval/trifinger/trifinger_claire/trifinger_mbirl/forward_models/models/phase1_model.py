@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 
+
 class Phase1Model(torch.nn.Module):
-    
     def forward(self, obs_dict):
 
         ft_pos = obs_dict["ft_state"]

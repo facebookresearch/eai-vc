@@ -16,7 +16,7 @@ from imitation_learning.utils.evaluator import Evaluator
 from torchrl.data import TensorDict
 from torchrl.envs import ParallelEnv
 from torchrl.envs.utils import step_tensordict
-from torchrl.envs import GymWrapper,default_info_dict_reader
+from torchrl.envs import GymWrapper, default_info_dict_reader
 from torchrl.envs import GymEnv
 
 from envs.cube_env import ActionType
@@ -34,7 +34,6 @@ def main(cfg) -> Dict[str, float]:
         for k, v in cfg.env.env_settings.items()
     }
 
-
     def d_create_env(rank):
         env = gym.make(cfg.env.env_name)
         full_seed = rank + cfg.seed
@@ -42,11 +41,11 @@ def main(cfg) -> Dict[str, float]:
         if hasattr(env.action_space, "seed"):
             env.action_space.seed(full_seed)
         return env
-    
+
     dummy_env = gym.make(cfg.env.env_name)
     dummy_env.seed(cfg.seed)
     reader = flatten_info_dict_reader(cfg.info_keys)
-    print('Making  '+ str(cfg.env.env_name))
+    print("Making  " + str(cfg.env.env_name))
 
     envs = ParallelEnv(
         cfg.num_envs,
@@ -64,9 +63,12 @@ def main(cfg) -> Dict[str, float]:
     steps_per_update = cfg.num_steps * cfg.num_envs
     num_updates = int(cfg.num_env_steps) // steps_per_update
 
-    cfg.obs_shape = dummy_env.observation_space['observation'].shape #TODO obs dict -> array
+    cfg.obs_shape = dummy_env.observation_space[
+        "observation"
+    ].shape  # TODO obs dict -> array
     cfg.action_dim = dummy_env.action_space.shape[0]
     cfg.action_is_discrete = isinstance(cfg.action_dim, spaces.Discrete)
+
     cfg.total_num_updates = num_updates
 
     logger: Logger = hydra_instantiate(cfg.logger, full_cfg=cfg)
@@ -112,6 +114,13 @@ def main(cfg) -> Dict[str, float]:
         for step_idx in range(num_steps):
             with torch.no_grad():
                 policy.act(td)
+            for i in range(9):
+                logger.collect_info(
+                    f"min_action_dim_{i}", td["action"].min(0).values[i]
+                )
+                logger.collect_info(
+                    f"max_action_dim_{i}", td["action"].max(0).values[i]
+                )
             envs.step(td)
 
             storage_td[:, step_idx] = td
@@ -124,7 +133,6 @@ def main(cfg) -> Dict[str, float]:
                 logger.collect_env_step_info(td, cfg.info_keys)
 
             td = step_tensordict(td)
-
         updater.update(policy, storage_td, logger, envs=envs)
 
         if cfg.eval_interval != -1 and (
@@ -160,36 +168,40 @@ def main(cfg) -> Dict[str, float]:
     logger.close()
     return eval_info
 
-def make_single_gym_env(num_envs,
-                        env_name,
-                        seed,
-                        device,
-                        set_env_settings,
-                        info_dict_reader=None,
-                        info_keys=[],
-                    ):
+
+def make_single_gym_env(
+    num_envs,
+    env_name,
+    seed,
+    device,
+    set_env_settings,
+    info_dict_reader=None,
+    info_keys=[],
+):
     temp_vis = False
     temp_collision = True
     temp_disable_cam = True
     SIM_TIME_STEP = 0.004
 
-    #TODO pass this into cube env
-    cube_kwargs = { 'env':'SimCubeEnv',
-        'goal_pose':None,  # passing None to sample a random trajectory
-        'action_type':ActionType.TORQUE,
-        'visualization':temp_vis,
-        'no_collisions':temp_collision,
-        'enable_cameras':(not temp_disable_cam),
-        'finger_type':"trifingerpro",
-        'time_step':SIM_TIME_STEP,
-        'camera_delay_steps':0,
+    # TODO pass this into cube env
+    cube_kwargs = {
+        "env": "SimCubeEnv",
+        "goal_pose": None,  # passing None to sample a random trajectory
+        "action_type": ActionType.TORQUE,
+        "visualization": temp_vis,
+        "no_collisions": temp_collision,
+        "enable_cameras": (not temp_disable_cam),
+        "finger_type": "trifingerpro",
+        "time_step": SIM_TIME_STEP,
+        "camera_delay_steps": 0,
     }
 
-    cube_env = gym.make("SimCubeEnv-v0")
+    cube_env = gym.make(env_name)
     gym_env = GymWrapper(cube_env)
     tensordict = gym_env.reset()
     tensordict = gym_env.rand_step(tensordict)
     return gym_env
-        
+
+
 if __name__ == "__main__":
     main()

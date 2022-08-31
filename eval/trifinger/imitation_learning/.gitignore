@@ -1,0 +1,10 @@
+*.pyc
+*.egg-info/
+__pycache__
+*.hydra
+*.log
+*.DS_store
+*.idea/
+data
+wandb
+sweeps

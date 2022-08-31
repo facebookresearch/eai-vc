@@ -1,0 +1,10 @@
+env_name: "PointMass-v0"
+env_settings:
+  params:
+    _target_: imitation_learning.utils.envs.pointmass.PointMassParams
+    start_state_noise: 0.05
+    dt: 0.25
+    ep_horizon: 5
+  set_eval: False
+
+

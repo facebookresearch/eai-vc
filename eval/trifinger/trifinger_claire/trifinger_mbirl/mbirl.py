@@ -11,7 +11,7 @@ import logging
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
-sys.path.insert(0, os.path.join(base_path, '..'))
+sys.path.insert(0, os.path.join(base_path, ".."))
 
 import utils.data_utils as d_utils
 import utils.train_utils as t_utils
@@ -111,7 +111,6 @@ class MBIRL:
             pred_traj_per_demo = []
             pred_actions_per_demo = []
 
-
             for demo_i in range(len(train_trajs)):
                 learnable_cost_opt.zero_grad()
                 expert_demo_dict = train_trajs[demo_i]
@@ -124,17 +123,17 @@ class MBIRL:
                 self.mpc.reset_actions()
                 #self.mpc.reset_actions(init_a=expert_actions)
 
-                #action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
-                action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
+                action_optimizer = torch.optim.SGD(self.mpc.parameters(), lr=self.conf.action_lr)
+                #action_optimizer = torch.optim.Adam(self.mpc.parameters(), lr=self.conf.action_lr)
                 action_optimizer.zero_grad()
 
                 with higher.innerloop_ctx(self.mpc, action_optimizer) as (fpolicy, diffopt):
                     for inner_i in range(self.conf.n_inner_iter):
                     #################### Inner loop: policy optimization ############################
                         pred_traj = fpolicy.roll_out(obs_dict_init.copy())
+                        pred_actions = fpolicy.action_seq.detach().numpy().copy()
 
                         if (inner_i+1) % 10 == 0:
-                            pred_actions = fpolicy.action_seq.detach().numpy().copy()
                             print(inner_i)
                             print(pred_actions[-1])
                             #pred_traj_sim = torch.Tensor(self.sim.rollout_actions(expert_demo_dict.copy(), pred_actions))

@@ -8,19 +8,27 @@ import trifinger_simulation.pinocchio_utils
 
 base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
-sys.path.insert(0, os.path.join(base_path, '..'))
+sys.path.insert(0, os.path.join(base_path, ".."))
 
 from control.impedance_controller import ImpedanceController
 from control.custom_pinocchio_utils import CustomPinocchioUtils
 import control.cube_utils as c_utils
+
 
 class ExecuteFtposDeltasPolicy:
     """
     Execute fingertip position deltas
     """
 
-    def __init__(self, ftpos_deltas, action_space, platform, time_step=0.001,
-                 downsample_time_step=0.001, episode_steps=1000):
+    def __init__(
+        self,
+        ftpos_deltas,
+        action_space,
+        platform,
+        time_step=0.001,
+        downsample_time_step=0.001,
+        episode_steps=1000,
+    ):
 
         """
         ftpos_deltas: fingertip position delta sequence [T, 9]
@@ -34,46 +42,52 @@ class ExecuteFtposDeltasPolicy:
         self.ftpos_deltas = ftpos_deltas
 
         # TODO hardcoded
-        robot_properties_path = "../trifinger_simulation/trifinger_simulation/robot_properties_fingers"
+        robot_properties_path = (
+            "../trifinger_simulation/trifinger_simulation/robot_properties_fingers"
+        )
 
-        urdf_file = trifinger_simulation.finger_types_data.get_finger_urdf("trifingerpro")
+        urdf_file = trifinger_simulation.finger_types_data.get_finger_urdf(
+            "trifingerpro"
+        )
 
         finger_urdf_path = os.path.join(robot_properties_path, "urdf", urdf_file)
 
         # initial joint positions (lifting the fingers up)
-        self.joint_positions = np.array([-0.08, 1.15, -1.5] * 3) # "down and out" position
+        self.joint_positions = np.array(
+            [-0.08, 1.15, -1.5] * 3
+        )  # "down and out" position
 
         # set platform (robot)
         self.platform = platform
 
-        self.Nf = 3 # Number of fingers
-        self.Nq = self.Nf * 3 # Number of joints in hand
+        self.Nf = 3  # Number of fingers
+        self.Nq = self.Nf * 3  # Number of joints in hand
 
         # class with kinematics functions
         self.kinematics = CustomPinocchioUtils(
-                self.platform.simfinger.finger_urdf_path,
-                self.platform.simfinger.tip_link_names,
-                self.platform.simfinger.link_names)
+            self.platform.simfinger.finger_urdf_path,
+            self.platform.simfinger.tip_link_names,
+            self.platform.simfinger.link_names,
+        )
 
-        self.controller = ImpedanceController(self.kinematics, kp = [2000] * 9)
-
+        self.controller = ImpedanceController(self.kinematics, kp=[2000] * 9)
 
     def reset(self, ftpos_deltas=None):
         # initial joint positions (lifting the fingers up)
         self.joint_positions = self.joint_positions
 
-        self.traj_counter = 0 # trajectory waypoint counter
+        self.traj_counter = 0  # trajectory waypoint counter
 
-        self.action_counter = 0 # action counter
+        self.action_counter = 0  # action counter
 
         # Set action sequence
         if ftpos_deltas is not None:
             self.ftpos_deltas = ftpos_deltas
 
         # Initial ft pos and vel trajectories
-        self.init_x = self.get_ft_pos(self.joint_positions) # initial fingertip pos
+        self.init_x = self.get_ft_pos(self.joint_positions)  # initial fingertip pos
         self.ft_pos_traj = np.expand_dims(self.init_x, 0)
-        self.ft_vel_traj = np.zeros((1,9))
+        self.ft_vel_traj = np.zeros((1, 9))
 
         self.t = 0
 
@@ -99,9 +113,9 @@ class ExecuteFtposDeltasPolicy:
         # Lin interp from current ft pos to next ft waypoint
         # Scale back to meters
         ft_traj = np.stack((ft_pos_cur, ft_pos_next))
-        self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(ft_traj,
-                                                                         self.downsample_time_step,
-                                                                         self.time_step)
+        self.ft_pos_traj, self.ft_vel_traj = c_utils.lin_interp_pos_traj(
+            ft_traj, self.downsample_time_step, self.time_step
+        )
 
         self.ft_pos_traj = self.ft_pos_traj[1:]
         self.ft_vel_traj = self.ft_vel_traj[1:]
@@ -109,9 +123,8 @@ class ExecuteFtposDeltasPolicy:
         # Reset traj counter
         self.traj_counter = 0
 
-
     def get_ft_des(self, observation):
-        """ Get fingertip desired pos based on current self.mode """
+        """Get fingertip desired pos based on current self.mode"""
 
         ft_pos_des = self.ft_pos_traj[self.traj_counter, :]
         ft_vel_des = self.ft_vel_traj[self.traj_counter, :]
@@ -127,7 +140,7 @@ class ExecuteFtposDeltasPolicy:
         """
 
         # If at end of current trajectory, get new waypoint, or terminate episode
-        if self.t == 0 or self.traj_counter >= len(self.ft_pos_traj)-1:
+        if self.t == 0 or self.traj_counter >= len(self.ft_pos_traj) - 1:
             self.set_ft_traj(observation)
             self.action_counter += 1
 
@@ -146,25 +159,24 @@ class ExecuteFtposDeltasPolicy:
 
         return self.clip_to_space(torque)
 
-
     def clip_to_space(self, action):
-        """ Clip action to action space """
+        """Clip action to action space"""
 
         return np.clip(action, self.action_space.low, self.action_space.high)
 
     def get_ft_pos(self, q):
-        """ Get fingertip positions given current joint configuration q """
+        """Get fingertip positions given current joint configuration q"""
 
         ft_pos = np.array(self.kinematics.forward_kinematics(q)).reshape(self.Nq)
         return ft_pos
 
     def get_observation(self):
 
-        obs = {"policy":
-                {
+        obs = {
+            "policy": {
                 "controller": self.controller.get_observation(),
-                "t" : self.t,
-                }
-              }
+                "t": self.t,
+            }
+        }
 
         return obs

@@ -5,11 +5,13 @@
 import warnings
 
 import torchvision
-warnings.filterwarnings('ignore', category=DeprecationWarning)
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 import os
-os.environ['MKL_SERVICE_FORCE_INTEL'] = '1'
-os.environ['MUJOCO_GL'] = 'egl'
+
+os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
+os.environ["MUJOCO_GL"] = "egl"
 
 from pathlib import Path
 
@@ -31,12 +33,14 @@ def get_ind(vid, index, ds):
     if ds == "ego4d":
         return torchvision.io.read_image(f"{vid}/{index:06}.jpg")
     else:
-        raise NameError('Invalid Dataset')
+        raise NameError("Invalid Dataset")
 
 
 ## Data Loader for Ego4D
 class R3MBuffer(IterableDataset):
-    def __init__(self, ego4dpath, num_workers, source1, source2, alpha, datasources, doaug = "none"):
+    def __init__(
+        self, ego4dpath, num_workers, source1, source2, alpha, datasources, doaug="none"
+    ):
         self._num_workers = max(1, num_workers)
         self.alpha = alpha
         self.curr_same = 0
@@ -46,10 +50,10 @@ class R3MBuffer(IterableDataset):
         # Augmentations
         if doaug in ["rc", "rctraj"]:
             self.aug = torch.nn.Sequential(
-                transforms.RandomResizedCrop(224, scale = (0.2, 1.0)),
+                transforms.RandomResizedCrop(224, scale=(0.2, 1.0)),
             )
         else:
-            self.aug = lambda a : a
+            self.aug = lambda a: a
 
         # Load Data
         if "ego4d" in self.data_sources:
@@ -58,8 +62,7 @@ class R3MBuffer(IterableDataset):
             print(self.manifest)
             self.ego4dlen = len(self.manifest)
         else:
-            raise NameError('Invalid Dataset')
-
+            raise NameError("Invalid Dataset")
 
     def _sample(self):
         t0 = time.time()
@@ -69,18 +72,18 @@ class R3MBuffer(IterableDataset):
         m = self.manifest.iloc[vidid]
         vidlen = m["len"]
         txt = m["txt"]
-        label = txt[2:] ## Cuts of the "C " part of the text
+        label = txt[2:]  ## Cuts of the "C " part of the text
         vid = m["path"]
 
         start_ind = np.random.randint(1, 2 + int(self.alpha * vidlen))
-        end_ind = np.random.randint(int((1-self.alpha) * vidlen)-1, vidlen)
+        end_ind = np.random.randint(int((1 - self.alpha) * vidlen) - 1, vidlen)
         s1_ind = np.random.randint(2, vidlen)
         s0_ind = np.random.randint(1, s1_ind)
-        s2_ind = np.random.randint(s1_ind, vidlen+1)
+        s2_ind = np.random.randint(s1_ind, vidlen + 1)
 
         if self.doaug == "rctraj":
             ### Encode each image in the video at once the same way
-            im0 = get_ind(vid, start_ind, ds) 
+            im0 = get_ind(vid, start_ind, ds)
             img = get_ind(vid, end_ind, ds)
             imts0 = get_ind(vid, s0_ind, ds)
             imts1 = get_ind(vid, s1_ind, ds)

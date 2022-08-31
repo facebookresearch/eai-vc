@@ -92,6 +92,6 @@ class ForwardModelDataset(torch.utils.data.Dataset):
         return self.dataset[idx]
 
     # TODO need to update for state_next_dict format
-    #def get_target_variance(self):
+    # def get_target_variance(self):
     #    state_next = torch.stack([self.dataset[i]["state_next"] for i in range(len(self.dataset))])
     #    return state_next.var(dim=0)

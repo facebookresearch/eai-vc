@@ -1,0 +1,833 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_EXCMD	mixed	/number, pattern, mixed, or combineV2/
+!_TAG_OUTPUT_FILESEP	slash	/slash or backslash/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PATTERN_LENGTH_LIMIT	96	/0 for no limit/
+!_TAG_PROC_CWD	/Users/andrewszot/Documents/code/imitation-learning/	//
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	5.9.0	//
+0	wandb/latest-run/files/wandb-metadata.json	/^        "+meta_irl=pointmass_obstacle"$/;"	s	array:args
+0	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^        "+ppo=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "+ppo=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^        "+ppo=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^        "+ppo=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^        "+meta_irl=pointmass",$/;"	s	array:args
+0	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "+ppo=pointmass",$/;"	s	array:args
+0	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^        "+ppo=pointmass_obstacle",$/;"	s	array:args
+0	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "+ppo=pointmass_obstacle",$/;"	s	array:args
+0	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "+ppo=pointmass_obstacle",$/;"	s	array:args
+0	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "+ppo=pointmass_obstacle",$/;"	s	array:args
+0	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "+meta_irl=pointmass_obstacle",$/;"	s	array:args
+0	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "+meta_irl=pointmass_obstacle",$/;"	s	array:args
+0	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "+meta_irl=pointmass_obstacle",$/;"	s	array:args
+0	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^        "+meta_irl=pointmass_obstacle"$/;"	s	array:args
+0	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^        "+meta_irl=pointmass_obstacle"$/;"	s	array:args
+1	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_100.pth",$/;"	s	array:args
+1	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+1	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_obstacle_100.pth",$/;"	s	array:args
+1	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_obstacle_100.pth",$/;"	s	array:args
+1	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "+policy_updater.dataset_path=data\/traj\/pm_obstacle_100.pth",$/;"	s	array:args
+2	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+2	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+2	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "eval_interval=100",$/;"	s	array:args
+2	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "eval_interval=100",$/;"	s	array:args
+2	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "eval_interval=100",$/;"	s	array:args
+3	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+3	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab",$/;"	s	array:args
+3	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+3	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+3	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+3	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab",$/;"	s	array:args
+3	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+3	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab",$/;"	s	array:args
+3	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab",$/;"	s	array:args
+3	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab",$/;"	s	array:args
+3	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+3	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+3	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "logger=wandb",$/;"	s	array:args
+4	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "evaluator.save_traj_name=data\/traj\/pm_100.pth",$/;"	s	array:args
+4	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+4	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "evaluator.save_traj_name=data\/traj\/pm_100.pth",$/;"	s	array:args
+4	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "evaluator.save_traj_name=.\/data\/checkpoints\/53-31-jAzToi-run\/ckpt.311.pth",$/;"	s	array:args
+4	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "evaluator.save_traj_name=.\/data\/checkpoints\/53-31-jAzToi-run\/ckpt.311.pth",$/;"	s	array:args
+4	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "evaluator.save_traj_name=data\/traj\/pm_obstacle_100.pth",$/;"	s	array:args
+4	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+4	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+4	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "logger.wb_proj_name=p-mbirlo",$/;"	s	array:args
+5	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "num_eval_episodes=100"$/;"	s	array:args
+5	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "num_eval_episodes=100"$/;"	s	array:args
+5	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "num_eval_episodes=100"$/;"	s	array:args
+5	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "num_eval_episodes=100"$/;"	s	array:args
+5	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "num_eval_episodes=100",$/;"	s	array:args
+5	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+5	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+5	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "logger.wb_entity=andrew-colab"$/;"	s	array:args
+6	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "eval_interval=10000000"$/;"	s	array:args
+ACTION	imitation_learning/meta_irl/rewards.py	/^    ACTION = auto()$/;"	v	class:RewardInputType
+BASE_CONFIG_DIRECTORY	test/test_ppo.py	/^BASE_CONFIG_DIRECTORY = "..\/imitation_learning\/config"$/;"	v
+CUR_NEXT_STATE	imitation_learning/meta_irl/rewards.py	/^    CUR_NEXT_STATE = auto()$/;"	v	class:RewardInputType
+Categorical	imitation_learning/ppo/policy.py	/^class Categorical(nn.Module):$/;"	c
+DiagGaussian	imitation_learning/ppo/policy.py	/^class DiagGaussian(nn.Module):$/;"	c
+DifferentiablePPO	imitation_learning/meta_irl/differentiable_ppo.py	/^class DifferentiablePPO(nn.Module):$/;"	c
+MetaIRL	imitation_learning/meta_irl/updater.py	/^class MetaIRL(nn.Module):$/;"	c
+NEXT_STATE	imitation_learning/meta_irl/rewards.py	/^    NEXT_STATE = auto()$/;"	v	class:RewardInputType
+NeuralReward	imitation_learning/meta_irl/rewards.py	/^class NeuralReward(RewardModule):$/;"	c
+PMDistReward	imitation_learning/common/pointmass_utils.py	/^class PMDistReward:$/;"	c
+PMSparseDenseReward	imitation_learning/common/pointmass_utils.py	/^class PMSparseDenseReward:$/;"	c
+PMSparseReward	imitation_learning/common/pointmass_utils.py	/^class PMSparseReward:$/;"	c
+PPO	imitation_learning/ppo/updater.py	/^class PPO(nn.Module):$/;"	c
+PointMassVisualizer	imitation_learning/common/pointmass_utils.py	/^class PointMassVisualizer(Evaluator):$/;"	c
+Policy	imitation_learning/ppo/policy.py	/^class Policy(nn.Module):$/;"	c
+RewardInputType	imitation_learning/meta_irl/rewards.py	/^class RewardInputType(Enum):$/;"	c
+RewardModule	imitation_learning/meta_irl/rewards.py	/^class RewardModule(nn.Module):$/;"	c
+RolloutStorage	imitation_learning/ppo/storage.py	/^class RolloutStorage:$/;"	c
+Run	README.md	/^# Run$/;"	c
+StructuredReward	imitation_learning/meta_irl/rewards.py	/^class StructuredReward(RewardModule):$/;"	c
+__call__	imitation_learning/common/pointmass_utils.py	/^    def __call__(self, cur_dist, prev_dist):$/;"	m	class:PMDistReward
+__call__	imitation_learning/common/pointmass_utils.py	/^    def __call__(self, cur_dist, prev_dist):$/;"	m	class:PMSparseDenseReward
+__call__	imitation_learning/common/pointmass_utils.py	/^    def __call__(self, cur_dist, prev_dist):$/;"	m	class:PMSparseReward
+__init__	imitation_learning/common/pointmass_utils.py	/^    def __init__($/;"	m	class:PointMassVisualizer
+__init__	imitation_learning/common/pointmass_utils.py	/^    def __init__(self, reward_thresh, slack, **kwargs):$/;"	m	class:PMSparseDenseReward
+__init__	imitation_learning/common/pointmass_utils.py	/^    def __init__(self, slack, **kwargs):$/;"	m	class:PMDistReward
+__init__	imitation_learning/common/pointmass_utils.py	/^    def __init__(self, succ_dist, **kwargs):$/;"	m	class:PMSparseReward
+__init__	imitation_learning/meta_irl/differentiable_ppo.py	/^    def __init__($/;"	m	class:DifferentiablePPO
+__init__	imitation_learning/meta_irl/rewards.py	/^    def __init__($/;"	m	class:NeuralReward
+__init__	imitation_learning/meta_irl/rewards.py	/^    def __init__(self, obs_shape, **kwargs):$/;"	m	class:StructuredReward
+__init__	imitation_learning/meta_irl/updater.py	/^    def __init__($/;"	m	class:MetaIRL
+__init__	imitation_learning/ppo/policy.py	/^    def __init__($/;"	m	class:Policy
+__init__	imitation_learning/ppo/policy.py	/^    def __init__(self, num_inputs, num_outputs):$/;"	m	class:Categorical
+__init__	imitation_learning/ppo/policy.py	/^    def __init__(self, num_inputs, num_outputs):$/;"	m	class:DiagGaussian
+__init__	imitation_learning/ppo/storage.py	/^    def __init__($/;"	m	class:RolloutStorage
+__init__	imitation_learning/ppo/updater.py	/^    def __init__($/;"	m	class:PPO
+__len__	imitation_learning/ppo/storage.py	/^    def __len__(self):$/;"	m	class:RolloutStorage
+_flatten_helper	imitation_learning/ppo/storage.py	/^def _flatten_helper(T, N, _tensor):$/;"	f
+_irl_loss_step	imitation_learning/meta_irl/updater.py	/^    def _irl_loss_step(self, policy, logger):$/;"	m	class:MetaIRL
+_log_ep_rewards	imitation_learning/meta_irl/updater.py	/^    def _log_ep_rewards(self, rollouts, logger):$/;"	m	class:MetaIRL
+_runtime	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+_runtime	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+_runtime	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+_runtime	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+_runtime	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+_runtime	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+_runtime	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+_runtime	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+_runtime	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+_runtime	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+_runtime	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+_runtime	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+_runtime	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+_runtime	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+_runtime	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+_runtime	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+_step	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+_step	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+_step	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+_step	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+_step	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+_step	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+_step	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+_step	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+_step	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+_step	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+_step	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+_step	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+_step	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+_step	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+_step	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+_step	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+_timestamp	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+_timestamp	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+_timestamp	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+_timestamp	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+_timestamp	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+_timestamp	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+_timestamp	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+_timestamp	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+_timestamp	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+_timestamp	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+_timestamp	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+_timestamp	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+_timestamp	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+_timestamp	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+_timestamp	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+_timestamp	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+act	imitation_learning/ppo/policy.py	/^    def act(self, obs, hxs, masks, deterministic=False):$/;"	m	class:Policy
+action_loss	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+action_loss	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+action_loss	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+action_loss	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+action_loss	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+action_loss	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+action_loss	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+action_loss	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+action_loss	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+action_loss	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+action_loss	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+action_loss	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+action_loss	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+action_loss	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+action_loss	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+action_loss	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+after_update	imitation_learning/ppo/storage.py	/^    def after_update(self):$/;"	m	class:RolloutStorage
+args	wandb/latest-run/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "args": [$/;"	a
+args	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "args": [$/;"	a
+at_goal	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+at_goal	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+at_goal	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+at_goal	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+at_goal	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+codePath	wandb/latest-run/files/wandb-metadata.json	/^    "codePath": "imitation_learning\/run_and_eval.py",$/;"	s
+codePath	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "codePath": "imitation-learning\/run.py",$/;"	s
+codePath	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "codePath": "imitation_learning\/run_and_eval.py",$/;"	s
+codePath	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "codePath": "imitation_learning\/run_and_eval.py",$/;"	s
+commit	wandb/latest-run/files/wandb-metadata.json	/^        "commit": "d750d3209669de8267b463c56bbc340513264210"$/;"	s	object:git
+commit	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^        "commit": "be84cd4c1e03cd558ebb6f00a547f1ae1d896694"$/;"	s	object:git
+commit	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^        "commit": "64a5f2efceeb92be63b3f7ab1233e7a5861672c5"$/;"	s	object:git
+commit	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^        "commit": "1ab7f0521e28e16747f9664e045257c60dc1e823"$/;"	s	object:git
+commit	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "commit": "1ab7f0521e28e16747f9664e045257c60dc1e823"$/;"	s	object:git
+commit	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^        "commit": "1ab7f0521e28e16747f9664e045257c60dc1e823"$/;"	s	object:git
+commit	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "commit": "1ab7f0521e28e16747f9664e045257c60dc1e823"$/;"	s	object:git
+commit	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "commit": "1ab7f0521e28e16747f9664e045257c60dc1e823"$/;"	s	object:git
+commit	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "commit": "1ab7f0521e28e16747f9664e045257c60dc1e823"$/;"	s	object:git
+commit	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "commit": "333679812dcde622b4fb5482d04dcfb0ae35c39f"$/;"	s	object:git
+commit	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "commit": "2719283f31a2830707b7dc498021af54a10bb28a"$/;"	s	object:git
+commit	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "commit": "2719283f31a2830707b7dc498021af54a10bb28a"$/;"	s	object:git
+commit	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^        "commit": "d750d3209669de8267b463c56bbc340513264210"$/;"	s	object:git
+commit	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^        "commit": "d750d3209669de8267b463c56bbc340513264210"$/;"	s	object:git
+compute_derived	imitation_learning/meta_irl/differentiable_ppo.py	/^    def compute_derived($/;"	m	class:DifferentiablePPO
+compute_derived	imitation_learning/ppo/updater.py	/^    def compute_derived($/;"	m	class:PPO
+compute_masks	imitation_learning/ppo/storage.py	/^    def compute_masks(self, done, infos):$/;"	m	class:RolloutStorage
+cpu_count	wandb/latest-run/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cpu_count	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "cpu_count": 10,$/;"	n
+cuda	wandb/latest-run/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+cuda	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "cuda": null,$/;"	z
+data_generator	imitation_learning/ppo/storage.py	/^    def data_generator(self, num_mini_batch, **add_data):$/;"	m	class:RolloutStorage
+dist_entropy	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+dist_entropy	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+dist_entropy	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+dist_entropy	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+dist_entropy	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+dist_entropy	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+dist_entropy	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+dist_entropy	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+dist_entropy	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+dist_entropy	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+dist_entropy	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+dist_entropy	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+dist_entropy	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+dist_entropy	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+dist_entropy	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+dist_entropy	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+dist_to_goal	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+dist_to_goal	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+dist_to_goal	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+dist_to_goal	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+dist_to_goal	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+dist_to_goal	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+dist_to_goal	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+dist_to_goal	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+dist_to_goal	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+dist_to_goal	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+dist_to_goal	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+dist_to_goal	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+dist_to_goal	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+dist_to_goal	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+dist_to_goal	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+dist_to_goal	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+docker	wandb/latest-run/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+docker	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "docker": null,$/;"	z
+email	wandb/latest-run/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+email	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "email": "me@andrewszot.com",$/;"	s
+episode.r	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+episode.r	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+episode.r	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+episode.r	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+episode.r	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+episode.r	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+episode.r	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+episode.r	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+episode.r	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+episode.r	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+episode.r	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+episode.r	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+episode.r	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+episode.r	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+episode.r	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+episode.r	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+eval.at_goal	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+eval.at_goal	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+eval.at_goal	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+eval.at_goal	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+eval.at_goal	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+eval.dist_to_goal	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+eval.dist_to_goal	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+eval.dist_to_goal	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+eval.dist_to_goal	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+eval.dist_to_goal	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+eval.dist_to_goal	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+eval.dist_to_goal	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+eval.dist_to_goal	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+eval.dist_to_goal	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+eval.episode.r	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+eval.episode.r	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+eval.episode.r	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+eval.episode.r	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+eval.episode.r	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+eval.episode.r	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+eval.episode.r	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+eval.episode.r	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+eval.episode.r	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+evaluate	imitation_learning/common/pointmass_utils.py	/^    def evaluate(self, policy, num_episodes, eval_i):$/;"	m	class:PointMassVisualizer
+evaluate_actions	imitation_learning/ppo/policy.py	/^    def evaluate_actions(self, obs, hxs, masks, action):$/;"	m	class:Policy
+executable	wandb/latest-run/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/pt_dev\/bin\/python"$/;"	s
+executable	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+executable	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "executable": "\/Users\/andrewszot\/miniconda3\/envs\/l2l\/bin\/python"$/;"	s
+forward	imitation_learning/meta_irl/rewards.py	/^    def forward(self, X):$/;"	m	class:StructuredReward
+forward	imitation_learning/meta_irl/rewards.py	/^    def forward(self, cur_obs=None, actions=None, next_obs=None):$/;"	m	class:NeuralReward
+forward	imitation_learning/ppo/policy.py	/^    def forward(self, obs, hxs, masks):$/;"	m	class:Policy
+forward	imitation_learning/ppo/policy.py	/^    def forward(self, x):$/;"	m	class:Categorical
+forward	imitation_learning/ppo/policy.py	/^    def forward(self, x):$/;"	m	class:DiagGaussian
+fps	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+fps	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+fps	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+fps	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+fps	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+fps	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+fps	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+fps	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+fps	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+fps	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+fps	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+fps	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+fps	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+fps	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+fps	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+fps	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+full_reset_init	imitation_learning/meta_irl/rewards.py	/^def full_reset_init(old_policy, policy_cfg, **kwargs):$/;"	f
+get_action_dist	imitation_learning/ppo/policy.py	/^    def get_action_dist(self, obs, hxs, masks):$/;"	m	class:Policy
+get_obs	imitation_learning/ppo/storage.py	/^    def get_obs(self, idx):$/;"	m	class:RolloutStorage
+get_reward	imitation_learning/meta_irl/updater.py	/^    def get_reward(self, rollouts):$/;"	m	class:MetaIRL
+get_value	imitation_learning/ppo/policy.py	/^    def get_value(self, obs, hxs, masks):$/;"	m	class:Policy
+git	wandb/latest-run/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "git": {$/;"	o
+git	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "git": {$/;"	o
+heartbeatAt	wandb/latest-run/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-10T01:38:38.701993",$/;"	s
+heartbeatAt	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:35:43.135660",$/;"	s
+heartbeatAt	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:46:05.111446",$/;"	s
+heartbeatAt	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:47:17.082635",$/;"	s
+heartbeatAt	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:53:37.233139",$/;"	s
+heartbeatAt	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:55:28.711364",$/;"	s
+heartbeatAt	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:56:31.005122",$/;"	s
+heartbeatAt	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:57:27.893475",$/;"	s
+heartbeatAt	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T02:58:32.928857",$/;"	s
+heartbeatAt	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T03:03:09.754688",$/;"	s
+heartbeatAt	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T03:05:55.734095",$/;"	s
+heartbeatAt	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "heartbeatAt": "2022-04-30T03:07:09.451877",$/;"	s
+heartbeatAt	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-02T03:09:00.295629",$/;"	s
+heartbeatAt	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-02T16:36:32.078858",$/;"	s
+heartbeatAt	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-03T22:33:21.151003",$/;"	s
+heartbeatAt	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-03T22:34:41.785448",$/;"	s
+heartbeatAt	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-03T22:35:43.374817",$/;"	s
+heartbeatAt	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-03T22:37:34.596367",$/;"	s
+heartbeatAt	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-03T22:46:17.107178",$/;"	s
+heartbeatAt	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-06T04:38:08.381966",$/;"	s
+heartbeatAt	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-06T04:52:29.949400",$/;"	s
+heartbeatAt	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-10T01:38:14.883802",$/;"	s
+heartbeatAt	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "heartbeatAt": "2022-05-10T01:38:38.701993",$/;"	s
+host	wandb/latest-run/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "host": "lawn-128-61-62-2.lawn.gatech.edu",$/;"	s
+host	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "host": "lawn-128-61-51-217.lawn.gatech.edu",$/;"	s
+host	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "host": "lawn-128-61-51-217.lawn.gatech.edu",$/;"	s
+host	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "host": "lawn-128-61-51-217.lawn.gatech.edu",$/;"	s
+host	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "host": "lawn-128-61-51-217.lawn.gatech.edu",$/;"	s
+host	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "host": "lawn-128-61-51-217.lawn.gatech.edu",$/;"	s
+host	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+host	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "host": "Andrews-MacBook-Pro-3.local",$/;"	s
+hydra_instantiate	imitation_learning/ppo/updater.py	/^from hydra.utils import instantiate as hydra_instantiate$/;"	x	nameref:unknown:instantiate
+hydra_instantiate	imitation_learning/run.py	/^from hydra.utils import instantiate as hydra_instantiate$/;"	x	nameref:unknown:instantiate
+init_storage	imitation_learning/ppo/storage.py	/^    def init_storage(self, obs):$/;"	m	class:RolloutStorage
+init_weights	imitation_learning/ppo/policy.py	/^def init_weights(m, gain=1):$/;"	f
+inner_lr	imitation_learning/meta_irl/updater.py	/^    def inner_lr(self):$/;"	m	class:MetaIRL
+insert	imitation_learning/ppo/storage.py	/^    def insert($/;"	m	class:RolloutStorage
+irl_loss	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+irl_loss	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+irl_loss	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+irl_loss	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+irl_loss	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+irl_loss	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+irl_loss	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+irl_loss	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+irl_loss	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+log	imitation_learning/meta_irl/rewards.py	/^    def log(self, logger):$/;"	m	class:RewardModule
+log	imitation_learning/meta_irl/rewards.py	/^    def log(self, logger):$/;"	m	class:StructuredReward
+main	imitation_learning/run.py	/^def main(cfg) -> Dict[str, float]:$/;"	f	typeref:typename:Dict[str,float]
+nn	imitation_learning/meta_irl/differentiable_ppo.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	imitation_learning/meta_irl/rewards.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	imitation_learning/meta_irl/updater.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	imitation_learning/ppo/policy.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	imitation_learning/ppo/updater.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+nn	imitation_learning/run.py	/^import torch.nn as nn$/;"	I	nameref:module:torch.nn
+np	imitation_learning/common/plotting.py	/^import numpy as np$/;"	I	nameref:module:numpy
+np	imitation_learning/ppo/policy.py	/^import numpy as np$/;"	I	nameref:module:numpy
+np	imitation_learning/run.py	/^import numpy as np$/;"	I	nameref:module:numpy
+os	wandb/latest-run/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+os	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "os": "Darwin-21.1.0-x86_64-i386-64bit",$/;"	s
+osp	imitation_learning/common/plotting.py	/^import os.path as osp$/;"	I	nameref:module:os.path
+osp	imitation_learning/common/pointmass_utils.py	/^import os.path as osp$/;"	I	nameref:module:os.path
+osp	imitation_learning/run.py	/^import os.path as osp$/;"	I	nameref:module:os.path
+plot_actions	imitation_learning/common/plotting.py	/^def plot_actions(pred_actions, gt_actions, n_updates, save_dir):$/;"	f
+plot_obstacles	imitation_learning/common/pointmass_utils.py	/^def plot_obstacles(obstacle_transform, obstacle_len, obstacle_width):$/;"	f
+plot_reward	imitation_learning/common/pointmass_utils.py	/^def plot_reward(reward_fn, plt_lim, density):$/;"	f
+plt	imitation_learning/common/plotting.py	/^import matplotlib.pyplot as plt$/;"	I	nameref:module:matplotlib.pyplot
+plt	imitation_learning/common/pointmass_utils.py	/^import matplotlib.pyplot as plt$/;"	I	nameref:module:matplotlib.pyplot
+program	wandb/latest-run/files/wandb-metadata.json	/^    "program": "imitation_learning\/run_and_eval.py",$/;"	s
+program	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "program": "imitation-learning\/run.py",$/;"	s
+program	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "program": "imitation_learning\/run_and_eval.py",$/;"	s
+program	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "program": "imitation_learning\/run_and_eval.py",$/;"	s
+pytest cache directory	.pytest_cache/README.md	/^# pytest cache directory #$/;"	c
+python	wandb/latest-run/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+python	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "python": "3.7.11",$/;"	s
+reg_init	imitation_learning/meta_irl/rewards.py	/^def reg_init(old_policy, **kwargs):$/;"	f
+remote	wandb/latest-run/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+remote	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^        "remote": "git@github.com:ASzot\/imitation-learning.git",$/;"	s	object:git
+root	wandb/latest-run/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+root	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "root": "\/Users\/andrewszot\/Documents\/code\/imitation-learning",$/;"	s
+run_and_eval	imitation_learning/run_and_eval.py	/^def run_and_eval(cfg):$/;"	f
+sns	imitation_learning/common/pointmass_utils.py	/^import seaborn as sns$/;"	I	nameref:module:seaborn
+spaces	imitation_learning/run.py	/^import gym.spaces as spaces$/;"	I	nameref:module:gym.spaces
+startedAt	wandb/latest-run/files/wandb-metadata.json	/^    "startedAt": "2022-05-10T01:38:37.933320",$/;"	s
+startedAt	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:35:41.844312",$/;"	s
+startedAt	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:46:04.138871",$/;"	s
+startedAt	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:47:16.160167",$/;"	s
+startedAt	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:53:36.258897",$/;"	s
+startedAt	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:55:27.657279",$/;"	s
+startedAt	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:56:30.081174",$/;"	s
+startedAt	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:57:22.924341",$/;"	s
+startedAt	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T02:58:32.140286",$/;"	s
+startedAt	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T03:03:08.668447",$/;"	s
+startedAt	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T03:05:54.693082",$/;"	s
+startedAt	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "startedAt": "2022-04-30T03:07:08.673066",$/;"	s
+startedAt	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "startedAt": "2022-05-02T03:08:59.280681",$/;"	s
+startedAt	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "startedAt": "2022-05-02T16:36:31.036354",$/;"	s
+startedAt	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "startedAt": "2022-05-03T22:33:20.214367",$/;"	s
+startedAt	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "startedAt": "2022-05-03T22:34:40.929455",$/;"	s
+startedAt	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "startedAt": "2022-05-03T22:35:42.419963",$/;"	s
+startedAt	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "startedAt": "2022-05-03T22:37:33.496510",$/;"	s
+startedAt	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "startedAt": "2022-05-03T22:46:16.151912",$/;"	s
+startedAt	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "startedAt": "2022-05-06T04:38:07.428154",$/;"	s
+startedAt	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "startedAt": "2022-05-06T04:52:29.022588",$/;"	s
+startedAt	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "startedAt": "2022-05-10T01:38:13.421989",$/;"	s
+startedAt	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "startedAt": "2022-05-10T01:38:37.933320",$/;"	s
+state	wandb/latest-run/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "state": "running",$/;"	s
+state_dict	imitation_learning/ppo/updater.py	/^    def state_dict(self):$/;"	m	class:PPO
+test_with_initialize	test/test_ppo.py	/^def test_with_initialize() -> None:$/;"	f	typeref:typename:None
+to	imitation_learning/ppo/storage.py	/^    def to(self, device):$/;"	m	class:RolloutStorage
+update	imitation_learning/meta_irl/differentiable_ppo.py	/^    def update($/;"	m	class:DifferentiablePPO	typeref:typename:None
+update	imitation_learning/meta_irl/updater.py	/^    def update(self, policy, rollouts, logger, envs):$/;"	m	class:MetaIRL
+update	imitation_learning/ppo/updater.py	/^    def update($/;"	m	class:PPO
+username	wandb/latest-run/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_223541-1klet2xb/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_224604-2kxfd3d5/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_224716-bc7r0hjr/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_225336-351begs0/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_225527-bls7pihb/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_225630-2jz2jlxj/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_225722-c9mrtcrc/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_225832-3hkx5geo/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_230308-3tx9wcqc/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_230554-5o2b9l8s/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220429_230708-32x3s6h4/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220501_230859-g6tszg97/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220502_123631-1m5u0lm4/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220503_183320-38fflnbw/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220503_183440-25aufv6p/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220503_183542-21m714vi/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220503_183733-3ge9iof8/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220503_184616-2fmj9l60/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220505_213807-1mmyp2k1/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220505_215229-21w6sgtq/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220509_183813-2fxrahyu/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+username	wandb/run-20220509_183837-ur4lgjwp/files/wandb-metadata.json	/^    "username": "andrewszot",$/;"	s
+value_loss	wandb/run-20220429_223541-1klet2xb/files/wandb-summary.json	/^{"dist_to_goal": 1.7271538615226745, "episode.r": -8.175562429428101, "value_loss": 0.7114054411/;"	n
+value_loss	wandb/run-20220429_224604-2kxfd3d5/files/wandb-summary.json	/^{"dist_to_goal": 0.03092570761218667, "episode.r": -0.7589195728302002, "value_loss": 0.00027745/;"	n
+value_loss	wandb/run-20220429_224716-bc7r0hjr/files/wandb-summary.json	/^{"dist_to_goal": 0.005768942623399198, "episode.r": -0.682476955652237, "value_loss": 2.80497315/;"	n
+value_loss	wandb/run-20220429_225527-bls7pihb/files/wandb-summary.json	/^{"dist_to_goal": 0.032098451838828625, "episode.r": -0.8094923019409179, "value_loss": 0.0006460/;"	n
+value_loss	wandb/run-20220429_225630-2jz2jlxj/files/wandb-summary.json	/^{"dist_to_goal": 1.2801899135112762, "episode.r": -5.709806966781616, "value_loss": 0.5802358239/;"	n
+value_loss	wandb/run-20220429_225832-3hkx5geo/files/wandb-summary.json	/^{"dist_to_goal": 1.355845183134079, "episode.r": -6.01886019706726, "value_loss": 1.564800965785/;"	n
+value_loss	wandb/run-20220429_230308-3tx9wcqc/files/wandb-summary.json	/^{"dist_to_goal": 1.011009979248047, "episode.r": -4.988534140586853, "value_loss": 5.67751870155/;"	n
+value_loss	wandb/run-20220429_230554-5o2b9l8s/files/wandb-summary.json	/^{"dist_to_goal": 1.0056677877902984, "episode.r": -4.988050699234009, "value_loss": 1.1768399715/;"	n
+value_loss	wandb/run-20220429_230708-32x3s6h4/files/wandb-summary.json	/^{"dist_to_goal": 0.9919201254844665, "episode.r": -4.9836129426956175, "value_loss": 1.410140681/;"	n
+value_loss	wandb/run-20220501_230859-g6tszg97/files/wandb-summary.json	/^{"dist_to_goal": 1.1652434408664702, "episode.r": -5.334253430366516, "value_loss": 0.4307926833/;"	n
+value_loss	wandb/run-20220502_123631-1m5u0lm4/files/wandb-summary.json	/^{"dist_to_goal": 0.008435805271437858, "episode.r": -0.6854997098445892, "value_loss": 2.3047392/;"	n
+value_loss	wandb/run-20220503_183320-38fflnbw/files/wandb-summary.json	/^{"dist_to_goal": 0.13293756982311605, "at_goal": 0.9, "episode.r": 0.36706248819828036, "value_l/;"	n
+value_loss	wandb/run-20220503_183542-21m714vi/files/wandb-summary.json	/^{"dist_to_goal": 0.13689853977411987, "at_goal": 0.2, "episode.r": 0.36310154050588606, "value_l/;"	n
+value_loss	wandb/run-20220503_183733-3ge9iof8/files/wandb-summary.json	/^{"dist_to_goal": 0.037251283321529625, "at_goal": 1.0, "episode.r": 0.4627488046884537, "value_l/;"	n
+value_loss	wandb/run-20220503_184616-2fmj9l60/files/wandb-summary.json	/^{"dist_to_goal": 0.826686155796051, "at_goal": 0.0, "episode.r": -4.174227094650268, "value_loss/;"	n
+value_loss	wandb/run-20220505_213807-1mmyp2k1/files/wandb-summary.json	/^{"dist_to_goal": 0.8410398364067078, "at_goal": 0.0, "episode.r": -4.249461841583252, "value_los/;"	n
+viz_trajs	imitation_learning/common/pointmass_utils.py	/^def viz_trajs(trajs: torch.Tensor, plt_lim, agent_point_size):$/;"	f

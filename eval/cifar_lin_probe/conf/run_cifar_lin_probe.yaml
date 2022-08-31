@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - model: mae_large
+  - model: rn50_rand
   - wandb: eaif
 
 device: cuda

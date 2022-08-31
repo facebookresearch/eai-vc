@@ -1,0 +1,12 @@
+env_name: "PointMassObstacle-v0"
+env_settings:
+  params:
+    _target_: imitation_learning.utils.envs.pointmass_obstacle.PointMassObstacleParams
+    start_state_noise: 0.1
+    dt: 0.05
+    ep_horizon: 50
+    start_idx: 0
+    square_obstacles:
+      - [[0.5, 0.5], 0.11, 0.5, 45.0]
+  set_eval: False
+

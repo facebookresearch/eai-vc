@@ -1,0 +1,16 @@
+_target_: imitation_learning.common.pointmass_utils.PointMassVisualizer
+rnn_hxs_dim: ${policy.recurrent_hidden_size}
+num_render: 0
+fps: 10
+save_traj_name: null
+plt_lim: 1.5
+plt_density: 50
+agent_point_size: 60
+num_demo_plot: 10
+plot_il: True
+with_arrows: False
+plot_expert: True
+is_final_render: False
+num_envs: ${num_envs}
+num_steps: ${num_steps}
+info_keys: ${info_keys}

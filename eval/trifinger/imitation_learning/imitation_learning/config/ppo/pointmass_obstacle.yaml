@@ -1,0 +1,47 @@
+# @package _global_
+defaults:
+  - override /env: pointmass_obstacle
+  - override /evaluator: pointmass
+
+num_steps: 50
+num_envs: 128
+log_interval: 50
+# Evaluate at the end.
+eval_interval: 100
+num_env_steps: 2e7
+policy:
+  std_init: -1.0
+  squash_mean: True
+info_keys : ["dist_to_goal", "r", "max_action_magnitude", "avg_action_magnitude", "final_obs"]
+
+policy_updater:
+  entropy_coef: 0.0
+  use_clipped_value_loss: True
+  clip_param: 0.2
+  value_loss_coef: 0.5
+  max_grad_norm: -1
+  num_epochs: 2
+  num_mini_batch: 4
+  num_envs: ${num_envs}
+  num_steps: ${num_steps}
+
+  # Returns calculation
+  gae_lambda: 0.95
+  use_gae: True
+  gamma: 0.99
+  optimizer_params:
+    lr: 3e-4
+
+env_settings:
+  params:
+    custom_reward:
+      _target_: common.pointmass_utils.PMDistActionPenReward
+      slack: 0.01
+      action_pen: 0.05
+
+evaluator:
+  plot_il: False
+
+hydra:
+  run:
+    dir: ./

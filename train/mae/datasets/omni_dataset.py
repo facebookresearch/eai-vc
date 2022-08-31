@@ -1,8 +1,10 @@
 from glob import glob
 
 from PIL import Image
+
 # There seems to be a corrupt file in the dataset.
 from PIL import ImageFile
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 from typing import List, Optional
@@ -11,17 +13,18 @@ import torchvision.transforms.functional as TF
 from torchvision import transforms
 from torch.utils.data import Dataset
 
+
 class OmniDataset(Dataset):
     def __init__(
-            self,
-            data_root,
-            transform: Optional[str] = None,
-            extra_transform: Optional[str] = None,
-            mean: Optional[List[float]] = None,
-            std: Optional[List[float]] = None,
-            mode: Optional[str] = "train",
-            datasets: Optional[str] = "all",
-            data_type: Optional[str] = "14_5m",
+        self,
+        data_root,
+        transform: Optional[str] = None,
+        extra_transform: Optional[str] = None,
+        mean: Optional[List[float]] = None,
+        std: Optional[List[float]] = None,
+        mode: Optional[str] = "train",
+        datasets: Optional[str] = "all",
+        data_type: Optional[str] = "14_5m",
     ):
         super().__init__()
         self.data_root = data_root
@@ -34,18 +37,18 @@ class OmniDataset(Dataset):
         self.mean = mean
         self.std = std
         assert (mean is None) == (std is None)
-    
+
     def _load_text_files(self, datasets):
         data = []
 
         datasets = datasets.split("-")
-        for file_path in glob(f'{self.data_root}/{self.data_type}/*.txt'):
+        for file_path in glob(f"{self.data_root}/{self.data_type}/*.txt"):
             if "all" not in datasets:
                 # datasets is of type "taskonomy-hm3d"
                 if file_path.split("/")[-1].split(".")[0] not in datasets:
                     continue
             print(file_path)
-            with open(file_path, 'rt') as file:
+            with open(file_path, "rt") as file:
                 scene_dataset = file.readlines()
 
             data += scene_dataset
@@ -56,7 +59,7 @@ class OmniDataset(Dataset):
         meta = self.meta_data[index]
 
         path = meta.strip()
-        img = Image.open(path).convert('RGB')
+        img = Image.open(path).convert("RGB")
 
         if self.transform is not None:
             img = self.transform(img)
@@ -75,7 +78,8 @@ class OmniDataset(Dataset):
     def __len__(self):
         return len(self.meta_data)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     from torch.utils.data import DataLoader
     from torchvision.transforms import (
         ColorJitter,

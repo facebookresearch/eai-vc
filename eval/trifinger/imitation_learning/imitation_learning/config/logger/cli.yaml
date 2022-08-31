@@ -1,0 +1,9 @@
+_target_: imitation_learning.utils.logging.Logger
+_recursive_: False
+run_name: ""
+seed: ${seed}
+log_dir: "./data/vids/"
+vid_dir: "./data/vids/"
+save_dir: "./data/checkpoints/"
+smooth_len: 10
+group_name: ""
