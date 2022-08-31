@@ -179,7 +179,7 @@ class ForwardModelTrainer:
                 ## Eval model in rollout
                 # time_horizon = traj_info["train_demos"][0]["ft_pos_cur"].shape[0]
                 ## Make MPC
-                # mpc = LearnedMPC(time_horizon-1, model_dict=model_dict, device=device)
+                # mpc = LearnedMPC(time_horizon-1, model_dict, device=device)
 
                 # MAX_PLOT_PER_DIFF = 10
                 # for split_name in ["train", "test"]:

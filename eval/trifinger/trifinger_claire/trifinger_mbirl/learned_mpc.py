@@ -411,7 +411,7 @@ def main(args):
 
     # Make MPC with trained forward model
     time_horizon = traj_info["train_demos"][0]["ft_pos_cur"].shape[0]
-    mpc = LearnedMPC(time_horizon - 1, model_dict=model_dict)
+    mpc = LearnedMPC(time_horizon - 1, model_dict)
 
     # Load and use decoder to viz pred_o_states
     model_dict = torch.load(args.decoder_model_path)
