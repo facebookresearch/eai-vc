@@ -32,8 +32,9 @@ class ForwardModel(torch.nn.Module):
 
     def reset(self):
         for layer in self.model_list:
-            if hasattr(layer, 'reset_parameters'):
+            if hasattr(layer, "reset_parameters"):
                 layer.reset_parameters()
+
 
 def get_obs_vec_from_obs_dict(obs_dict, use_ftpos=True, device="cpu"):
     """
