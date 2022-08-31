@@ -12,7 +12,10 @@ base_path = os.path.dirname(__file__)
 sys.path.insert(0, base_path)
 sys.path.insert(0, os.path.join(base_path, ".."))
 
-from trifinger_mbirl.forward_models.models.forward_model import ForwardModel, get_obs_vec_from_obs_dict
+from trifinger_mbirl.forward_models.models.forward_model import (
+    ForwardModel,
+    get_obs_vec_from_obs_dict,
+)
 from trifinger_mbirl.forward_models.train_forward_model import ForwardModelTrainer
 from trifinger_mbirl.forward_models.models.decoder_model import DecoderModel
 import utils.data_utils as d_utils
@@ -20,7 +23,6 @@ from trifinger_mbirl.policy import DeterministicPolicy
 
 # Compute next state given current state and action (ft position deltas)
 class LearnedMPC(torch.nn.Module):
-
     def __init__(self, time_horizon, model_dict=None, f_num=3, device="cpu"):
         super().__init__()
         self.time_horizon = time_horizon
@@ -37,17 +39,23 @@ class LearnedMPC(torch.nn.Module):
         self.model.load_state_dict(model_dict["model_state_dict"])
         self.model.to(device)
 
-        self.forward_model_trainer = ForwardModelTrainer(model=self.model, device=device, conf=model_dict["conf"])
+        self.forward_model_trainer = ForwardModelTrainer(
+            model=self.model, device=device, conf=model_dict["conf"]
+        )
 
         if self.policy_type == "actions":
-            self.action_seq = torch.nn.Parameter(torch.Tensor(np.zeros([time_horizon, self.a_dim])))
+            self.action_seq = torch.nn.Parameter(
+                torch.Tensor(np.zeros([time_horizon, self.a_dim]))
+            )
         elif self.policy_type == "nn":
-            self.policy = DeterministicPolicy(in_dim=self.out_dim, out_dim=self.a_dim, device=device)
+            self.policy = DeterministicPolicy(
+                in_dim=self.out_dim, out_dim=self.a_dim, device=device
+            )
             self.action_seq = torch.Tensor(np.zeros([time_horizon, self.a_dim]))
         else:
             raise ValueError("Invalid policy_type.")
 
-        self.max_a = 2.0 # cm
+        self.max_a = 2.0  # cm
 
         # Freeze network params
         self.freeze_forward_model()
@@ -71,13 +79,17 @@ class LearnedMPC(torch.nn.Module):
 
         if action is None:
             if self.use_ftpos:
-                return torch.cat([obs_dict["ft_state"], obs_dict["o_state"]], dim=1).to(self.device)
+                return torch.cat([obs_dict["ft_state"], obs_dict["o_state"]], dim=1).to(
+                    self.device
+                )
             else:
                 return obs_dict["o_state"].to(self.device)
         else:
             obs_dict["action"] = torch.unsqueeze(action, 0).to(self.device)
 
-        obs = get_obs_vec_from_obs_dict(obs_dict, use_ftpos=self.use_ftpos, device=self.device)
+        obs = get_obs_vec_from_obs_dict(
+            obs_dict, use_ftpos=self.use_ftpos, device=self.device
+        )
 
         x_next = self.model(obs)
 
@@ -95,9 +107,9 @@ class LearnedMPC(torch.nn.Module):
         return ft_state, o_state
 
     def roll_out(self, obs_dict_init):
-        """ Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq """
+        """Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq"""
         # Clip actions
-        #self.action_seq.data.clamp_(-self.max_a, self.max_a)
+        # self.action_seq.data.clamp_(-self.max_a, self.max_a)
 
         pred_traj = []
         x_next = self.forward(obs_dict_init)
@@ -116,19 +128,18 @@ class LearnedMPC(torch.nn.Module):
             elif self.policy_type == "nn":
                 a = self.policy(x_next.detach())[0]
                 # Clip actions
-                #print("before a ", a)
+                # print("before a ", a)
                 a = torch.where(a > self.max_a, torch.tensor([self.max_a]), a)
                 a = torch.where(a < -self.max_a, -torch.tensor([self.max_a]), a)
-                #print("after a ", a)
+                # print("after a ", a)
                 self.action_seq[t, :] = a.detach()
             else:
                 raise ValueError("Invalid policy_type.")
 
-
-            #print(obs_dict_next)
+            # print(obs_dict_next)
             x_next = self.forward(obs_dict_next, a)
             x_next = self.clip(x_next)
-            #print(x_next)
+            # print(x_next)
 
             pred_traj.append(torch.squeeze(x_next.clone()))
 
@@ -166,12 +177,14 @@ class LearnedMPC(torch.nn.Module):
     def reset_actions(self, init_a=None):
         if self.policy_type == "actions":
             if init_a is None:
-                self.action_seq.data = torch.Tensor(np.zeros([self.time_horizon, self.a_dim])).to(self.device)
+                self.action_seq.data = torch.Tensor(
+                    np.zeros([self.time_horizon, self.a_dim])
+                ).to(self.device)
                 # Random actions between [-1., 1.]
-                #self.action_seq.data = torch.rand((self.time_horizon, self.a_dim)) * 2. - 1.
+                # self.action_seq.data = torch.rand((self.time_horizon, self.a_dim)) * 2. - 1.
             else:
                 rand = torch.rand((self.time_horizon, self.a_dim)) * 2.0 - 1.0
-                self.action_seq.data = torch.Tensor(init_a)# + rand
+                self.action_seq.data = torch.Tensor(init_a)  # + rand
         elif self.policy_type == "nn":
             self.policy.reset()
         else:
@@ -194,7 +207,9 @@ class LearnedMPC(torch.nn.Module):
     def set_action_seq_for_testing(self, action_seq):
         self.action_seq.data = torch.Tensor(action_seq)
 
-    def train_forward_model(self, new_traj_list, n_epochs, model_data_dir, no_wandb=True):
+    def train_forward_model(
+        self, new_traj_list, n_epochs, model_data_dir, no_wandb=True
+    ):
         self.forward_model_trainer.update_data(new_traj_list)
         self.forward_model_trainer.model.reset()
         self.forward_model_trainer.train(n_epochs, model_data_dir, no_wandb=no_wandb)
