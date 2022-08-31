@@ -125,8 +125,8 @@ class ReachEnv(gym.Env):
             high=trifingerpro_limits.robot_torque.high,
         )
         robot_position_space = gym.spaces.Box(
-            low=trifingerpro_limits.robot_position.low,
-            high=trifingerpro_limits.robot_position.high,
+            low=trifingerpro_limits.robot_position.low * 10,
+            high=trifingerpro_limits.robot_position.high * 10,
         )
 
         robot_velocity_space = gym.spaces.Box(
@@ -135,14 +135,11 @@ class ReachEnv(gym.Env):
         )
 
         observation_state_space = gym.spaces.Box(
-            low=np.ones(9) * -0.15,
-            high=np.ones(9) * 0.10,
+            low=np.ones(9) * trifingerpro_limits.object_position.low[0],
+            high=np.ones(9) * trifingerpro_limits.object_position.high[0],
         )
 
-        goal_state_space = gym.spaces.Box(
-            low=np.ones(9) * -0.15,
-            high=np.ones(9) * 0.10,
-        )
+        goal_state_space = observation_state_space
 
         if self.action_type == ActionType.TORQUE:
             self.action_space = robot_torque_space
@@ -163,9 +160,15 @@ class ReachEnv(gym.Env):
             }
         else:
             raise ValueError("Invalid action_type")
+
+        self.action_space = observation_state_space = gym.spaces.Box(
+            low=np.ones(9) * -2,
+            high=np.ones(9) * 2,
+        )
         self.observation_space = gym.spaces.Dict(
             {
-                "t": gym.spaces.Discrete(REACH_EPISODE_LENGTH),
+                # time steps will range from [0-500]
+                "t": gym.spaces.Discrete(REACH_EPISODE_LENGTH + 1),
                 "robot_position": robot_position_space,
                 "robot_velocity": robot_velocity_space,
                 "robot_torque": robot_torque_space,
@@ -292,7 +295,6 @@ class ReachEnv(gym.Env):
                 achieved_position,
                 self.info,
             )
-
             # Draw cube vertices from observation
             if self.draw_verts:
                 v_wf_dict = observation["object_observation"]["vertices"]
@@ -300,11 +302,8 @@ class ReachEnv(gym.Env):
                 self.vert_markers.set_state(positions)
 
         is_done = self.step_count >= REACH_EPISODE_LENGTH
-
         return observation, reward, is_done, self.info
 
-    def reset(self):
-        raise NotImplementedError()
 
     def reset(self, init_pose_dict=None, init_robot_position=None):
         """Reset the environment."""

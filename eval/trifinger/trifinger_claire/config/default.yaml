@@ -20,11 +20,11 @@ num_eval_episodes: 100
 num_env_steps: 1e7
 recurrent_hidden_state_size: 128
 gamma: 0.99
-info_keys: ["dist_entropy","reward"]
+info_keys: None
 
 # Intervals
 log_interval: 1
-eval_interval: 1
+eval_interval: -1
 save_interval: 10
 
 # Saving / Loading

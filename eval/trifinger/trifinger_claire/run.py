@@ -125,7 +125,6 @@ def main(cfg) -> Dict[str, float]:
 
             storage_td[:, step_idx] = td
             any_env_done = td["done"].any()
-
             if any_env_done:
                 td.set("reset_workers", td["done"])
                 envs.reset(tensordict=td)
@@ -148,7 +147,7 @@ def main(cfg) -> Dict[str, float]:
         if cfg.log_interval != -1 and (
             update_i % cfg.log_interval == 0 or is_last_update
         ):
-            logger.interval_log(update_i, steps_per_update * (update_i + 1))
+            logger.interval_log((update_i + 1), steps_per_update * (update_i + 1))
 
         if cfg.save_interval != -1 and (
             (update_i + 1) % cfg.save_interval == 0 or is_last_update
