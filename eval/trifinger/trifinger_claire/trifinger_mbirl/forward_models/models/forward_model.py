@@ -21,6 +21,8 @@ class ForwardModel(torch.nn.Module):
 
         self.model_list = torch.nn.ModuleList(module_list)
 
+        self.init_state = self.model_list.state_dict()
+
     def forward(self, x):
 
         for i in range(len(self.model_list)):
@@ -28,8 +30,13 @@ class ForwardModel(torch.nn.Module):
 
         return x
 
+    def reset(self):
+        for layer in self.model_list:
+            if hasattr(layer, "reset_parameters"):
+                layer.reset_parameters()
 
-def get_obs_vec_from_obs_dict(obs_dict, use_ftpos=True):
+
+def get_obs_vec_from_obs_dict(obs_dict, use_ftpos=True, device="cpu"):
     """
     Concatenate states and action from obs_dict, choosing whether or not to use ftpos
     obs_dict values can be batched, with batch size B
@@ -42,6 +49,11 @@ def get_obs_vec_from_obs_dict(obs_dict, use_ftpos=True):
         }
         - use_ftpos: If True, include ft_state in obs
     """
+
+    # Convert obs_dict to device
+    for key in obs_dict:
+        if obs_dict[key] is not None:
+            obs_dict[key] = torch.Tensor(obs_dict[key]).to(device)
 
     if use_ftpos:
         obs = torch.cat(

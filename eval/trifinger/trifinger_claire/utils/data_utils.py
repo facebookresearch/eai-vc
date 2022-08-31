@@ -5,6 +5,7 @@ import os
 import torch
 import sys
 import copy
+import imageio
 
 from r3m import load_r3m
 import torchvision.transforms as T
@@ -521,3 +522,12 @@ def parse_pred_traj(pred_traj, state, fnum=3, mpc_use_ftpos=True):
             raise ValueError(
                 f"{state} is invalid state, pred_traj does not contain ftpos"
             )
+
+
+def save_gif(images, save_str):
+
+    frames = []
+    for i, img in enumerate(images):
+        # img = resize_img(img).detach().numpy().transpose(1,2,0) * 255.
+        frames.append(img.astype(np.uint8))
+    imageio.mimsave(save_str, frames)

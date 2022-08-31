@@ -11,7 +11,7 @@ action_dim: ???
 total_num_updates: ???
 action_is_discrete: ???
 
-num_steps: 9
+num_steps: 10
 num_envs: 32
 device: "cpu"
 only_eval: False

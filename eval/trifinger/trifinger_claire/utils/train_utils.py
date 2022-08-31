@@ -35,7 +35,7 @@ def get_exp_dir(params_dict):
     return hydra_output_dir, exp_str, exp_id
 
 
-def plot_loss(loss_dict, outer_i):
+def plot_loss(loss_dict, outer_i=None):
     """Log loss to wandb"""
 
     log_dict = {f"{k}": v for k, v in loss_dict.items()}
