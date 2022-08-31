@@ -350,9 +350,7 @@ def get_mpc(mpc_type, time_horizon, device, mpc_forward_model_ckpt=None):
         model_dict = torch.load(
             mpc_forward_model_ckpt, map_location=torch.device(device)
         )
-        return LearnedMPC(time_horizon - 1, model_dict, device=device).to(
-            device
-        )
+        return LearnedMPC(time_horizon - 1, model_dict, device=device).to(device)
 
     else:
         raise ValueError(f"{mpc_type} is invalid mpc_type")
