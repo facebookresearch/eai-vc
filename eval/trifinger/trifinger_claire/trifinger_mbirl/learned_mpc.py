@@ -23,7 +23,7 @@ from trifinger_mbirl.policy import DeterministicPolicy
 
 # Compute next state given current state and action (ft position deltas)
 class LearnedMPC(torch.nn.Module):
-    def __init__(self, time_horizon, model_dict=None, f_num=3, device="cpu"):
+    def __init__(self, time_horizon, model_dict, f_num=3, device="cpu"):
         super().__init__()
         self.time_horizon = time_horizon
         self.f_num = f_num
@@ -108,8 +108,6 @@ class LearnedMPC(torch.nn.Module):
 
     def roll_out(self, obs_dict_init):
         """Given intial state, compute trajectory of length self.time_horizon with actions self.action_seq"""
-        # Clip actions
-        # self.action_seq.data.clamp_(-self.max_a, self.max_a)
 
         pred_traj = []
         x_next = self.forward(obs_dict_init)
