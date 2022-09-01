@@ -7,38 +7,12 @@
 # A script to run multinode training with submitit.
 # --------------------------------------------------------
 
-import argparse
 import os
 import uuid
 from pathlib import Path
 
 import main_pretrain as trainer
 import submitit
-
-
-def parse_args():
-    trainer_parser = trainer.get_args_parser()
-    parser = argparse.ArgumentParser(
-        "Submitit for MAE pretrain", parents=[trainer_parser]
-    )
-    parser.add_argument(
-        "--ngpus", default=8, type=int, help="Number of gpus to request on each node"
-    )
-    parser.add_argument(
-        "--nodes", default=2, type=int, help="Number of nodes to request"
-    )
-    parser.add_argument("--timeout", default=4320, type=int, help="Duration of the job")
-
-    parser.add_argument(
-        "--partition", default="learnfair", type=str, help="Partition where to submit"
-    )
-    parser.add_argument(
-        "--use_volta32", action="store_true", help="Request 32G V100 GPUs"
-    )
-    parser.add_argument(
-        "--comment", default="", type=str, help="Comment to pass to scheduler"
-    )
-    return parser.parse_args()
 
 
 def get_shared_folder() -> Path:
@@ -95,12 +69,13 @@ class Trainer(object):
         print(f"Process group: {job_env.num_tasks} tasks, rank: {job_env.global_rank}")
 
 
-def main():
+@hydra.main(config_path="configs", config_name="submitit")
+def main(args: DictConfig):
     args = parse_args()
     if args.output_dir == "":
         args.output_dir = get_shared_folder() / "%j"
     else:
-        args.output_dir = os.path.join(args.output_dir, args.wandb_name)
+        args.output_dir = os.path.join(args.output_dir, args.wandb.name)
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     # Note that the folder will depend on the job_id, to easily track experiments

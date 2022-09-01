@@ -16,18 +16,20 @@ import os
 import time
 from pathlib import Path
 
+import hydra
+import omegaconf
 import torch
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 
 import timm
 
-assert timm.__version__ == "0.4.12"  # version check
+assert timm.__version__ == "0.6.5"  # version check
 import timm.optim.optim_factory as optim_factory
 
+from eaif_models.utils.wandb import setup_wandb
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
-from util.wandb import setup_wandb, setup_wandb_output_dir
 from datasets.path_dataset import PathDataset
 
 import models_mae
@@ -35,157 +37,12 @@ import models_mae
 from engine_pretrain import train_one_epoch
 
 
-def get_args_parser():
-    parser = argparse.ArgumentParser("MAE pre-training", add_help=False)
-    parser.add_argument(
-        "--batch_size",
-        default=64,
-        type=int,
-        help="Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus",
-    )
-    parser.add_argument("--epochs", default=400, type=int)
-    parser.add_argument(
-        "--accum_iter",
-        default=1,
-        type=int,
-        help="Accumulate gradient iterations (for increasing the effective batch size under memory constraints)",
-    )
+@hydra.main(config_path="configs/pretrain", config_name="config")
+def main(args: omegaconf.DictConfig):
+    misc.setup_wandb_output_dir(args)
+    if args.output_dir:
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
-    # Model parameters
-    parser.add_argument(
-        "--model",
-        default="mae_vit_large_patch16",
-        type=str,
-        metavar="MODEL",
-        help="Name of model to train",
-    )
-
-    parser.add_argument("--input_size", default=224, type=int, help="images input size")
-
-    parser.add_argument(
-        "--max_offset", default=16, type=int, help="Maximum offset between samples"
-    )
-    parser.add_argument(
-        "--mask_ratio1",
-        default=0.75,
-        type=float,
-        help="Masking ratio 1 (percentage of removed patches).",
-    )
-    parser.add_argument(
-        "--mask_ratio2",
-        default=0.95,
-        type=float,
-        help="Masking ratio 2 (percentage of removed patches).",
-    )
-    parser.add_argument("--loss_weight", default=0.5, type=float, help="loss balancing")
-
-    parser.add_argument(
-        "--norm_pix_loss",
-        action="store_true",
-        help="Use (per-patch) normalized pixels as targets for computing loss",
-    )
-    parser.set_defaults(norm_pix_loss=False)
-
-    # Optimizer parameters
-    parser.add_argument(
-        "--weight_decay", type=float, default=0.05, help="weight decay (default: 0.05)"
-    )
-
-    parser.add_argument(
-        "--lr",
-        type=float,
-        default=None,
-        metavar="LR",
-        help="learning rate (absolute lr)",
-    )
-    parser.add_argument(
-        "--blr",
-        type=float,
-        default=1e-3,
-        metavar="LR",
-        help="base learning rate: absolute_lr = base_lr * total_batch_size / 256",
-    )
-    parser.add_argument(
-        "--min_lr",
-        type=float,
-        default=0.0,
-        metavar="LR",
-        help="lower lr bound for cyclic schedulers that hit 0",
-    )
-
-    parser.add_argument(
-        "--warmup_epochs", type=int, default=40, metavar="N", help="epochs to warmup LR"
-    )
-
-    # Dataset parameters
-    parser.add_argument(
-        "--data_path",
-        nargs="+",
-        default=["/datasets01/imagenet_full_size/061417/"],
-        type=str,
-        help="dataset path",
-    )
-    parser.add_argument(
-        "--output_dir",
-        default="./output_dir",
-        help="path where to save, empty for no saving",
-    )
-    parser.add_argument(
-        "--device", default="cuda", help="device to use for training / testing"
-    )
-    parser.add_argument("--seed", default=0, type=int)
-    parser.add_argument("--resume", default="", help="resume from checkpoint")
-
-    parser.add_argument(
-        "--start_epoch", default=0, type=int, metavar="N", help="start epoch"
-    )
-    parser.add_argument("--num_workers", default=10, type=int)
-    parser.add_argument(
-        "--pin_mem",
-        action="store_true",
-        help="Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.",
-    )
-    parser.add_argument("--no_pin_mem", action="store_false", dest="pin_mem")
-    parser.set_defaults(pin_mem=True)
-
-    # distributed training parameters
-    parser.add_argument(
-        "--world_size", default=1, type=int, help="number of distributed processes"
-    )
-    parser.add_argument("--local_rank", default=-1, type=int)
-    parser.add_argument("--dist_on_itp", action="store_true")
-    parser.add_argument(
-        "--dist_url", default="env://", help="url used to set up distributed training"
-    )
-
-    # wandb arguments ** NEW **
-    parser.add_argument(
-        "--wandb_name", default="", type=str, help="name to be used for wandb logging"
-    )
-    parser.add_argument(
-        "--wandb_mode",
-        default="online",
-        type=str,
-        help="wandb mode to use for storing data, choose" "online, offline or disabled",
-    )
-
-    # additional parameters ** NEW **
-    parser.add_argument(
-        "--color_jitter", action="store_true", help="apply color jitter"
-    )
-    parser.add_argument(
-        "--independent_decoder",
-        action="store_true",
-        help="decode each view independently",
-    )
-    parser.add_argument(
-        "--randomize_views", action="store_true", help="randomly swap t and t+k"
-    )
-
-    return parser
-
-
-def main(args):
     misc.init_distributed_mode(args)
 
     print("job dir: {}".format(os.path.dirname(os.path.realpath(__file__))))
@@ -219,6 +76,10 @@ def main(args):
             ],
             p=0.8,
         )
+
+    assert (
+        type(args.data_path) == omegaconf.listconfig.ListConfig
+    ), "The data_path argument should be of omegaconf.listconfig.ListConfig type"
     dataset_train = PathDataset(
         args.data_path,
         transform=transform_train,
@@ -241,8 +102,9 @@ def main(args):
     else:
         sampler_train = torch.utils.data.RandomSampler(dataset_train)
 
+    wandb = None
     if global_rank == 0:
-        setup_wandb(args)
+        wandb = setup_wandb(args)
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train,
@@ -254,7 +116,7 @@ def main(args):
     )
 
     # define the model
-    model = models_mae.__dict__[args.model](
+    model = models_mae.__dict__[args.mae_model](
         decoder_max_offset=args.max_offset,
         norm_pix_loss=args.norm_pix_loss,
         independent_decoder=args.independent_decoder,
@@ -283,7 +145,9 @@ def main(args):
         model_without_ddp = model.module
 
     # following timm: set wd as 0 for bias and norm layers
-    param_groups = optim_factory.add_weight_decay(model_without_ddp, args.weight_decay)
+    param_groups = optim_factory.param_groups_weight_decay(
+        model_without_ddp, args.weight_decay
+    )
     optimizer = torch.optim.AdamW(param_groups, lr=args.lr, betas=(0.9, 0.95))
     print(optimizer)
     loss_scaler = NativeScaler()
@@ -301,7 +165,14 @@ def main(args):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
         train_stats = train_one_epoch(
-            model, data_loader_train, optimizer, device, epoch, loss_scaler, args=args
+            model,
+            data_loader_train,
+            optimizer,
+            device,
+            epoch,
+            loss_scaler,
+            args=args,
+            wandb=wandb,
         )
         if args.output_dir:
             misc.save_model(
@@ -341,9 +212,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = get_args_parser()
-    args = args.parse_args()
-    setup_wandb_output_dir(args)
-    if args.output_dir:
-        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    main(args)
+    main()

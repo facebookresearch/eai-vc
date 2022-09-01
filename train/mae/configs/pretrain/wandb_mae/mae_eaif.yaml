@@ -1,0 +1,6 @@
+wandb:
+  project : mae_for_eai
+  entity  : eai-foundations
+  mode    : online
+  name    : imagenav_run
+  dir     :

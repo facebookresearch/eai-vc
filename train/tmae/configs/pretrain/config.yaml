@@ -1,0 +1,46 @@
+defaults:
+  - _self_
+  - wandb_mae@: mae_eaif 
+
+batch_size: 64                  # Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus)
+epochs: 400
+accum_iter: 1                   # Accumulate gradient iterations (for increasing the effective batch size under memory constraints)
+
+# Model parameters
+mae_model: mae_vit_large_patch16    # Name of model to train
+input_size: 224                 # images input size
+max_offset: 16
+mask_ratio1: 0.75               # Masking ratio 1 (percentage of removed patches for Tth image)
+mask_ratio2: 0.95               # Masking ratio 2 (percentage of removed patches for T+kth image)
+loss_weight: 0.5
+norm_pix_loss: False            # Use (per-patch) normalized pixels as targets for computing loss
+
+# Optimizer parameters
+weight_decay: 0.05
+lr:                             # absolute lr
+blr: 1e-3                       # base learning rate: absolute_lr = base_lr * total_batch_size / 256 (use either lr or blr)
+min_lr: 0.0                     # lower lr bound for cyclic schedulers that hit 0
+warmup_epochs: 40               # epochs to warmup LR
+
+# Dataset parameters
+data_path: ["/datasets01/imagenet_full_size/061417/"]                 # The data_path can point to multiple datasets
+output_dir: "./output_dir"      # path where to save, empty for no saving
+device: cuda                    # device to use for training / testing
+seed: 0
+resume: ""                      # resume from checkpoint
+start_epoch: 0
+num_workers: 10
+pin_mem: True                   # Pin CPU memory in DataLoader for more efficient (sometimes) transfer to GPU.
+
+# distributed training parameters
+world_size: 1
+local_rank: -1
+dist_on_itp: False
+dist_url: "env://"               # url used to set up distributed training"
+distributed: True
+
+# dataset arguments ** NEW **
+independent_decoder: False
+randomize_views: False 
+color_jitter: False              # apply color jitter as a part of transforms
+

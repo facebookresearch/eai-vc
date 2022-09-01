@@ -39,10 +39,14 @@ class OmniDataset(Dataset):
         assert (mean is None) == (std is None)
 
     def _load_text_files(self, datasets):
+        assert (
+            len(self.data_root) == 1
+        ), "Only one data root is supported by omni_dataset loader"
+
         data = []
 
         datasets = datasets.split("-")
-        for file_path in glob(f"{self.data_root}/{self.data_type}/*.txt"):
+        for file_path in glob(f"{self.data_root[0]}/{self.data_type}/*.txt"):
             if "all" not in datasets:
                 # datasets is of type "taskonomy-hm3d"
                 if file_path.split("/")[-1].split(".")[0] not in datasets:
@@ -90,7 +94,7 @@ if __name__ == "__main__":
     )
 
     dataset = OmniDataset(
-        data_root="/checkpoint/karmeshyadav/omnidataset",
+        data_root=["/checkpoint/karmeshyadav/omnidataset"],
         transform=Compose(
             [
                 RandomResizedCrop(224, (0.2, 1.0), interpolation=3),

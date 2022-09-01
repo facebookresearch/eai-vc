@@ -28,6 +28,7 @@ def train_one_epoch(
     epoch: int,
     loss_scaler,
     args=None,
+    wandb=wandb,
 ):
     model.train(True)
     metric_logger = misc.MetricLogger(delimiter="  ")
@@ -84,7 +85,8 @@ def train_one_epoch(
             This calibrates different curves when batch size changes.
             """
             epoch_1000x = int((data_iter_step / len(data_loader) + epoch) * 1000)
-            wandb.log({"train_loss": loss_value_reduce, "lr": lr}, epoch_1000x)
+            if wandb is not None:
+                wandb.log({"train_loss": loss_value_reduce, "lr": lr}, epoch_1000x)
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
