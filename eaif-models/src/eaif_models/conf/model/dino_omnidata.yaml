@@ -1,6 +1,12 @@
 _target_: eaif_models.models.resnet.resnet_gn.load_model
-resnet_name: resnet50
-home_dir: /checkpoint/yixinlin/eaif/models/dino_habitat/
+checkpoint_path: /checkpoint/yixinlin/eaif/models/dino_habitat/DINO_omnidata_14_5m.pth
+model_name: resnet50
+model_config:
+  in_channels: 3
+  base_planes: 32
+  ngroups: 16
+  dropout_prob: 0.0
+  use_avgpool_and_flatten: True
 metadata:
   algo: dino
   model: resnet50

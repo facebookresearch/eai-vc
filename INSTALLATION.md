@@ -60,8 +60,8 @@ Install local packages:
 
 ```bash
 pip install -e ./eaif-models  # Install model-loading API
-pip install -e ./train/mae-for-eai  # Install Habitat tasks
 pip install -e ./eval/eaif_mujoco  # Install Visual IL tasks
+pip install -e ./eval/habitat_eaif  # Install Habitat tasks
 ```
 
 ## Optional

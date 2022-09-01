@@ -1,0 +1,17 @@
+_target_: eaif_models.models.vit.beit.load_model
+checkpoint_path: /checkpoint/yixinlin/eaif/models/d2v_habitat/data2vec_hm3d_gibson_top3_e400_small_dp0_399.pth
+model_name: beit_small_patch16
+model_config:
+  img_size: 224
+  global_pool: False
+  use_cls: True
+  mask_ratio: 0.0
+  drop_path_rate: 0.0
+  use_rel_pos_bias: False
+  use_shared_rel_pos_bias: True
+  use_abs_pos_emb: False
+  init_values: 0.1
+metadata:
+  algo: data2vec
+  model: vits
+  data: HGSP

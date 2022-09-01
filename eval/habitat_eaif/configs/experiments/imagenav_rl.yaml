@@ -1,0 +1,73 @@
+VERBOSE: True
+
+TRAINER_NAME: "mddppo"
+ENV_NAME: "SimpleRLEnv"
+SENSORS: ["RGB_SENSOR"]
+
+VIDEO_OPTION: []
+VIDEO_DIR: "data/video"
+TENSORBOARD_DIR: "data/tensorboard"
+EVAL_CKPT_PATH_DIR: "data/checkpoints"
+CHECKPOINT_FOLDER: "data/checkpoints"
+LOG_FILE: "data/train.log"
+
+NUM_ENVIRONMENTS: 10
+LOG_INTERVAL: 10
+NUM_CHECKPOINTS: 100
+NUM_UPDATES: -1
+TOTAL_NUM_STEPS: 500e6
+
+FORCE_TORCH_SINGLE_THREADED: True
+
+RUN_TYPE: None
+
+EVAL:
+  SPLIT: "val"
+  USE_CKPT_CONFIG: True
+  EVAL_FREQ: 5
+
+RL:
+  REWARD_MEASURE: "simple_reward"
+  SUCCESS_MEASURE: "success"
+
+  POLICY:
+    name: "EAIPolicy"
+    hidden_size: 512
+    rnn_type: "GRU"
+    num_recurrent_layers: 2
+    use_augmentations: True
+    use_augmentations_test_time: True
+    randomize_augmentations_over_envs: False
+    freeze_backbone: False
+    avgpooled_image: False
+    augmentations_name: "jitter+shift"
+
+  PPO:
+    clip_param: 0.2
+    ppo_epoch: 2
+    num_mini_batch: 2
+    value_loss_coef: 0.5
+    entropy_coef: 0.01
+    lr: 6.25e-5
+    wd: 1e-6
+    eps: 1e-5
+    max_grad_norm: 0.2
+    num_steps: 64
+    use_gae: True
+    use_linear_lr_decay: False
+    use_linear_clip_decay: False
+    gamma: 0.99
+    tau: 0.95
+    reward_window_size: 50
+    use_normalized_advantage: False
+    hidden_size: 512
+    use_double_buffered_sampler: False
+
+  DDPPO:
+    sync_frac: 0.6
+    distrib_backend: "NCCL"
+
+    # Model parameters
+    backbone: resnet50
+    rnn_type: LSTM
+    num_recurrent_layers: 2

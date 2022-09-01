@@ -1,0 +1,6 @@
+WANDB:
+  project : habitat_eaif
+  entity  : eai-foundations
+  resume  : allow
+  mode    : online
+  name    : imagenav_run

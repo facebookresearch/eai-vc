@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+  - tasks@: imagenav
+  - experiments@: imagenav_rl
+  - model: dino_omnidata
+  - wandb_habitat@: habitat_eaif
+
+RUN_TYPE: train

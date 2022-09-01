@@ -1,5 +1,7 @@
 import math
+import os
 
+import torch
 import torch.nn as nn
 import torchvision.transforms as T
 
@@ -248,15 +250,20 @@ _resnet_transforms = T.Compose([
                     ])
 
 def load_encoder(model, path):
-    assert os.path.exists(path)
+    # Load model without weights
+    if path == "None":
+        return
+
+    assert os.path.exists(path), "Model path: ({}) doesnt exist".format(path)
+
     state_dict = torch.load(path, map_location="cpu")["teacher"]
-    state_dict = {k.replace("module.", ""): v for k, v in state_dict.items()}
-    return model.load_state_dict(state_dict=state_dict, strict=False)
+    state_dict = {k.replace("backbone.", ""): v for k, v in state_dict.items()}
+    msg = model.load_state_dict(state_dict=state_dict, strict=False)
+    print("Loading ResNet model! Got the following msg from the loading function: {}".format(msg))
 
-def load_model(home_dir, resnet_name="resnet50", metadata=None):
-    model = globals()[resnet_name](3, 32, 16, use_avgpool_and_flatten=True)
-    model = model.eval()
-    embedding_dim = 1024
-    transforms = _resnet_transforms
 
-    return model, embedding_dim, transforms, metadata
+def load_model(checkpoint_path, model_name, model_config, metadata=None):
+    model = globals()[model_name](**model_config)
+    load_encoder(model, checkpoint_path)
+
+    return model, model.final_channels, _resnet_transforms, metadata
