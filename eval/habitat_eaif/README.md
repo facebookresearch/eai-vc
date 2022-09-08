@@ -3,7 +3,10 @@
 The repository can be used to train ImageNav and ObjectNav agents in the Habitat simulator
 
 ### ImageNav
-**Note:** If you are on the FAIR cluster, the symlinks should already point to Karmesh's dataset folder `/private/home/karmeshyadav/mae/mae-for-eai/data/`. Otherwise, follow the instructions at each step to get the necessary datasets. [TODO: put them in a more permanent directory]
+**Note:** If you are on the FAIR cluster, run the following command to symlink the habitat related dataset folder into your local directory:
+`./eval/habitat_eaif/data/symlink.sh`
+
+Otherwise, follow the instructions on [habitat-lab](https://github.com/facebookresearch/habitat-lab/blob/main/DATASETS.md) to get the Gibson scene and Gibson ImageNav episode datasets.
 
 1. To run experiments in Habitat, first we need to get access to the necessary scene dataset. We are using Gibson scene datasets for our ImageNav experiment. You can find instructions for downloading the dataset [here](https://github.com/facebookresearch/habitat-lab#gibson).
 

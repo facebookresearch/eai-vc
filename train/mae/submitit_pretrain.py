@@ -13,9 +13,9 @@ from pathlib import Path
 
 import hydra
 from omegaconf import DictConfig
+import submitit
 
 import main_pretrain as trainer
-import submitit
 
 
 def get_shared_folder() -> Path:
@@ -37,10 +37,14 @@ def get_init_file():
 
 
 class Trainer(object):
-    def __init__(self, args):
+    def __init__(self, args, original_working_dir):
         self.args = args
+        self.original_working_dir = original_working_dir
 
     def __call__(self):
+        import sys
+
+        sys.path.append(self.original_working_dir)
         import main_pretrain as trainer
 
         self._setup_gpu_args()
@@ -74,6 +78,8 @@ class Trainer(object):
 
 @hydra.main(config_path="configs", config_name="submitit")
 def main(args: DictConfig):
+    original_working_dir = hydra.utils.get_original_cwd()
+
     if args.output_dir == "":
         args.output_dir = get_shared_folder() / "%j"
     else:
@@ -111,7 +117,7 @@ def main(args: DictConfig):
 
     args.dist_url = get_init_file().as_uri()
 
-    trainer = Trainer(args)
+    trainer = Trainer(args, original_working_dir)
     job = executor.submit(trainer)
 
     print(f"Submitted job_id: {job.job_id}")
