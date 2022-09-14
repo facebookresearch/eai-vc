@@ -399,7 +399,10 @@ def all_reduce_mean(x):
 def setup_wandb_output_dir(args):
     if args.wandb.mode == "disabled":
         return
+
     # if wandb is enabled setup output directory
     assert args.output_dir is not None
-    args.output_dir = os.path.join(args.output_dir, args.wandb.name)
-    args.wandb.dir = args.output_dir
+
+    if args.wandb.name not in str(args.output_dir):
+        args.output_dir = os.path.join(args.output_dir, args.wandb.name)
+    args.wandb.dir = str(args.output_dir)

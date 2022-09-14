@@ -4,7 +4,6 @@ To pre-train ViT-Base (recommended default) with **multi-node distributed traini
 ```
 python submitit_pretrain.py \
     wandb.name=mae_vit_base_HGSP \
-    nodes=2 \
     batch_size=256 \
     mae_model=mae_vit_base_patch16 \
     norm_pix_loss=True \
@@ -15,6 +14,7 @@ python submitit_pretrain.py \
     weight_decay=0.05 \
     data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train] \
     output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    nodes=2 \
     partition=learnlab \
     use_volta32=True
 ```
