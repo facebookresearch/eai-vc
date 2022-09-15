@@ -1,6 +1,0 @@
-_target_: eaif_models.models.resnet.moco_v2.load_model
-checkpoint_path: /checkpoint/yixinlin/eaif/models/mocov2/moco_v2_800ep_pretrain.pth
-metadata:
-  algo: moco
-  model: resnet50
-  data: imagenet

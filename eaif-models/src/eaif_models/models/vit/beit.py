@@ -7,8 +7,6 @@ from scipy import interpolate
 import timm.models.beit
 import torch
 import torch.nn as nn
-import torchvision.transforms as T
-from torchvision.transforms import InterpolationMode
 
 
 # fmt: off
@@ -93,16 +91,10 @@ def beit_huge_patch14(**kwargs):
     return model
 
 
-def load_encoder(model, path):
-    # Load model without weights
-    if path == "None":
-        return
-
-    assert os.path.exists(path), "Model path: ({}) doesnt exist".format(path)
-
+def load_encoder(model, checkpoint_path):
     # Code taken from here: 
     # https://github.com/microsoft/unilm/blob/806a6fd574d0998bcdafacc7191881b162c3b827/beit/run_class_finetuning.py#L331
-    checkpoint_model = torch.load(path, map_location="cpu")["model"]
+    checkpoint_model = torch.load(checkpoint_path, map_location="cpu")["model"]
 
     state_dict = model.state_dict()
     for k in ['head.weight', 'head.bias']:
@@ -209,19 +201,4 @@ def load_encoder(model, path):
             new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
             checkpoint_model['pos_embed'] = new_pos_embed
 
-    msg = model.load_state_dict(checkpoint_model, strict=False)
-    print("Loading BeiT model! Got the following msg from the loading function: {}".format(msg))
-
-
-beit_transforms = T.Compose([
-                        T.Resize(256, interpolation=InterpolationMode.BICUBIC),
-                        T.CenterCrop(224),
-                        T.ToTensor(),
-                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-                    ])
-
-def load_model(checkpoint_path, model_name, model_config, metadata=None):
-    model = globals()[model_name](**model_config)
-    load_encoder(model, checkpoint_path)
-
-    return model, model.embed_dim, beit_transforms, metadata
+    return model

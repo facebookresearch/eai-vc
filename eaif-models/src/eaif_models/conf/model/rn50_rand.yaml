@@ -1,7 +1,0 @@
-_target_: eaif_models.models.resnet.resnet_base.load_model
-version: resnet50
-imagenet_pretrained: False
-metadata:
-  algo: rand
-  model: resnet50
-  data: none

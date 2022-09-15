@@ -1,0 +1,18 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.resnet.resnet_gn.resnet50
+  in_channels: 3
+  base_planes: 32
+  ngroups: 16
+  dropout_prob: 0.0
+  use_avgpool_and_flatten: True
+checkpoint_dict:
+  _target_: eaif_models.models.resnet.resnet_gn.load_dino_checkpoint
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/dino_habitat/DINO_omnidata_14_5m.pth
+transform:
+  _target_: hydra.utils._locate
+  path: eaif_models.transforms.resnet_transforms
+metadata:
+  algo: dino
+  model: resnet50
+  data: omnidata

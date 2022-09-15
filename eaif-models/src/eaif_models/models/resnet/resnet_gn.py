@@ -1,12 +1,7 @@
 import math
-import os
-
 import torch
 import torch.nn as nn
-import torchvision.transforms as T
 
-
-__all__ = ["ResNet", "resnet18", "resnet50", "resnet101", "load_model"]
 
 # fmt: off
 def conv3x3(in_planes, out_planes, stride=1):
@@ -242,28 +237,7 @@ def resnet101(in_channels, base_planes, ngroups, dropout_prob=0.0, use_avgpool_a
     )
     return model
 
-_resnet_transforms = T.Compose([
-                        T.Resize(256, interpolation=3),
-                        T.CenterCrop(224),
-                        T.ToTensor(),
-                        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-                    ])
-
-def load_encoder(model, path):
-    # Load model without weights
-    if path == "None":
-        return
-
-    assert os.path.exists(path), "Model path: ({}) doesnt exist".format(path)
-
-    state_dict = torch.load(path, map_location="cpu")["teacher"]
+def load_dino_checkpoint(checkpoint_path):
+    state_dict = torch.load(checkpoint_path, map_location="cpu")["teacher"]
     state_dict = {k.replace("backbone.", ""): v for k, v in state_dict.items()}
-    msg = model.load_state_dict(state_dict=state_dict, strict=False)
-    print("Loading ResNet model! Got the following msg from the loading function: {}".format(msg))
-
-
-def load_model(checkpoint_path, model_name, model_config, metadata=None):
-    model = globals()[model_name](**model_config)
-    load_encoder(model, checkpoint_path)
-
-    return model, model.final_channels, _resnet_transforms, metadata
+    return state_dict

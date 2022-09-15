@@ -8,13 +8,10 @@
 # timm: https://github.com/rwightman/pytorch-image-models/tree/master/timm
 # DeiT: https://github.com/facebookresearch/deit
 # --------------------------------------------------------
-import os
 from functools import partial
 
 import torch
 import torch.nn as nn
-import torchvision.transforms as T
-from torchvision.transforms import InterpolationMode
 
 import timm.models.vision_transformer
 from timm.models.vision_transformer import resize_pos_embed
@@ -161,24 +158,8 @@ def vit_huge_patch14(**kwargs):
     return model
 
 
-vit_transforms = T.Compose(
-    [
-        T.Resize(256, interpolation=InterpolationMode.BICUBIC),
-        T.CenterCrop(224),
-        T.ToTensor(),
-        T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-    ]
-)
-
-
-def load_encoder(model, path):
-    # Load model without weights
-    if path == "None":
-        return
-
-    assert os.path.exists(path), "Model path: ({}) doesnt exist".format(path)
-
-    state_dict = torch.load(path, map_location="cpu")["model"]
+def load_encoder(model, checkpoint_path):
+    state_dict = torch.load(checkpoint_path, map_location="cpu")["model"]
     if state_dict["pos_embed"].shape != model.pos_embed.shape:
         state_dict["pos_embed"] = resize_pos_embed(
             state_dict["pos_embed"],
@@ -186,16 +167,4 @@ def load_encoder(model, path):
             getattr(model, "num_tokens", 1),
             model.patch_embed.grid_size,
         )
-    msg = model.load_state_dict(state_dict=state_dict, strict=False)
-    print(
-        "Loading ViT model! Got the following msg from the loading function: {}".format(
-            msg
-        )
-    )
-
-
-def load_model(checkpoint_path, model_name, model_config, metadata=None):
-    model = globals()[model_name](**model_config)
-    load_encoder(model, checkpoint_path)
-
-    return model, model.embed_dim, vit_transforms, metadata
+    return model

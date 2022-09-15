@@ -34,6 +34,25 @@ commands:
             [ -d ~/miniconda3/envs/eaif ] || mamba env create -f environment.yml
 
 jobs:
+  load-models:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.small
+    steps:
+      - checkout
+      - initialize
+      - run:
+          name: Install eaif-models
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+            pip install -e ./eaif-models
+      - run:
+          name: Run CIFAR linear probe
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+            pytest eaif-models/tests/test_model_loading.py --nocluster
   cifar-linprobe:
     machine:
       image: ubuntu-2004-cuda-11.4:202110-01
@@ -139,12 +158,13 @@ jobs:
             export DISPLAY=:100
             export LD_LIBRARY_PATH=/home/circleci/.mujoco/mujoco200/bin:$LD_LIBRARY_PATH
 
-            DISPLAY=:100 pytest eval/eaif_mujoco/tests --simple
+            DISPLAY=:100 pytest eval/eaif_mujoco/tests --nocluster
 
             sudo pkill Xvfb
 
 workflows:
   build:
     jobs:
+      - load-models
       - cifar-linprobe
       - eaif_mujoco

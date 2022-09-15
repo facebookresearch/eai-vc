@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - model: rn50_rand
+  - model: rand_resnet50_none
   - wandb: eaif
 
 device: cuda

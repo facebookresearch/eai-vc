@@ -9,12 +9,12 @@ seed = 123
 
 
 @pytest.fixture(params=eaif_model_zoo)
-def embedding_name(request, simple):
+def embedding_name(request, nocluster):
     model_name = request.param
 
     # Skip everything except randomly-initialized ResNet50 if
-    # option "--simple" is applied
-    if simple and model_name != "rn50_rand":
+    # option "--nocluster" is applied
+    if nocluster and model_name != "rn50_rand":
         pytest.skip()
     return request.param
 

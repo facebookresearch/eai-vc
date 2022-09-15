@@ -1,0 +1,13 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.resnet.resnet.resnet50
+checkpoint_dict:
+  _target_: eaif_models.models.resnet.resnet.load_moco_checkpoint
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/moco_ego4d/moco_ego4d_5m.pth
+transform:
+  _target_: hydra.utils._locate
+  path: eaif_models.transforms.resnet_transforms
+metadata:
+  algo: moco
+  model: resnet50
+  data: ego4d
