@@ -14,11 +14,12 @@ def load_model(
     checkpoint_dict=None,
 ):
     if checkpoint_dict is not None:
-        msg = model.load_state_dict(checkpoint_dict, strict=False)
-        log.info(msg)
+        msg = model.load_state_dict(checkpoint_dict)
+        log.warning(msg)
 
     with torch.no_grad():
         transformed_img = transform(zero_img).unsqueeze(0)
-        embedding_dim = model(transformed_img).shape[-1]
+        embedding_dim = model.eval()(transformed_img).shape[-1]
+        model.train()
 
     return model, embedding_dim, transform, metadata

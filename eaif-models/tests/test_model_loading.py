@@ -2,6 +2,7 @@ import pytest
 import os
 import hydra
 import omegaconf
+import numpy as np
 import torch
 import torchvision
 import PIL
@@ -63,8 +64,9 @@ def test_model_loading_with_checkpoint(model_name, nocluster):
 
     with torch.no_grad():
         # Test transform
-        zero_img = PIL.Image.new("RGB", (100, 100))
-        transformed_img = transform(zero_img).unsqueeze(0)
+        imarray = np.random.rand(100, 100, 3) * 255
+        img = PIL.Image.fromarray(imarray.astype("uint8")).convert("RGB")
+        transformed_img = transform(img).unsqueeze(0)
 
         # Test embedding dim is correct
         assert torch.Size([1, embedding_dim]) == model(transformed_img).shape

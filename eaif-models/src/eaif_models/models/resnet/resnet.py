@@ -28,12 +28,17 @@ def load_moco_checkpoint(checkpoint_path):
 
 
 def load_r3m_checkpoint(checkpoint_path):
-    state_dict = torch.load(checkpoint_path, map_location=torch.device("cpu"))
+    state_dict = torch.load(checkpoint_path, map_location=torch.device("cpu"))["r3m"]
+
+    result = {}
 
     ## Hardcodes to remove the language head
     ## Assumes downstream use is as visual representation
-    for key in list(state_dict.keys()):
-        if ("lang_enc" in key) or ("lang_rew" in key):
-            del state_dict[key]
+    for key, value in state_dict.items():
+        if key.startswith("module.convnet."):
+            no_prefix_key = key.replace("module.convnet.", "")
+            if no_prefix_key.startswith("fc."):
+                continue
+            result[no_prefix_key] = value
 
-    return state_dict
+    return result

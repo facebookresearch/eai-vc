@@ -240,4 +240,9 @@ def resnet101(in_channels, base_planes, ngroups, dropout_prob=0.0, use_avgpool_a
 def load_dino_checkpoint(checkpoint_path):
     state_dict = torch.load(checkpoint_path, map_location="cpu")["teacher"]
     state_dict = {k.replace("backbone.", ""): v for k, v in state_dict.items()}
+
+    head_keys = [k for k in state_dict if k.startswith("head.")]
+    for k in head_keys:
+        state_dict.pop(k)
+
     return state_dict
