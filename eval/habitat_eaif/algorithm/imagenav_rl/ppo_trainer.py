@@ -70,6 +70,7 @@ class ModifiedPPOTrainer(PPOTrainer):
             value_loss_coef=ppo_cfg.value_loss_coef,
             entropy_coef=ppo_cfg.entropy_coef,
             lr=ppo_cfg.lr,
+            encoder_lr=ppo_cfg.encoder_lr,
             wd=ppo_cfg.wd,
             eps=ppo_cfg.eps,
             max_grad_norm=ppo_cfg.max_grad_norm,
@@ -89,7 +90,8 @@ class ModifiedPPOTrainer(PPOTrainer):
         deltas["count"] = max(deltas["count"], 1.0)
 
         wandb.log(
-            {"reward": deltas["reward"] / deltas["count"]}, step=self.num_steps_done
+            {"train/reward": deltas["reward"] / deltas["count"]},
+            step=self.num_steps_done,
         )
 
         # Check to see if there are any metrics
@@ -100,11 +102,12 @@ class ModifiedPPOTrainer(PPOTrainer):
             if k not in {"reward", "count"}
         }
         # To solve a wandb related error
-        metrics = {k: v for k, v in metrics.items() if v >= 0 and v < 100}
+        metrics = {f"train/{k}": v for k, v in metrics.items() if v >= 0 and v < 100}
         if len(metrics) > 0:
             wandb.log(metrics, step=self.num_steps_done)
 
-        wandb.log(losses, step=self.num_steps_done)
+        wandb_losses = {f"train/{k}": v for k, v in losses.items()}
+        wandb.log(wandb_losses, step=self.num_steps_done)
 
         # log stats
         if self.num_updates_done % self.config.LOG_INTERVAL == 0:
@@ -441,9 +444,7 @@ class ModifiedPPOTrainer(PPOTrainer):
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = ckpt_dict["extra_state"]["step"]
 
-        wandb.log({"eval_reward": aggregated_stats["reward"]}, step=step_id)
-
-        metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
+        metrics = {f"eval/{k}": v for k, v in aggregated_stats.items()}
         if len(metrics) > 0:
             wandb.log(metrics, step=step_id)
 

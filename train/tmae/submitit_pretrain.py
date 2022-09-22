@@ -59,7 +59,7 @@ class Trainer(object):
         if os.path.exists(checkpoint_file):
             self.args.resume = checkpoint_file
         print("Requeuing ", self.args)
-        empty_trainer = type(self)(self.args)
+        empty_trainer = type(self)(self.args, self.original_working_dir)
         return submitit.helpers.DelayedSubmission(empty_trainer)
 
     def _setup_gpu_args(self):

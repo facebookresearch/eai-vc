@@ -2,7 +2,9 @@ defaults:
   - _self_
   - tasks@: imagenav
   - experiments@: imagenav_rl
-  - model: dino_omnidata
+  - model: dino_resnet50_omnidata
   - wandb_habitat@: habitat_eaif
+  - override hydra/output: path
+  - override hydra/launcher: slurm_train
 
 RUN_TYPE: train

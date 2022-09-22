@@ -18,6 +18,7 @@ class MPPO(PPO):
         value_loss_coef: float,
         entropy_coef: float,
         lr: Optional[float] = None,
+        encoder_lr: Optional[float] = None,
         wd: Optional[float] = None,
         eps: Optional[float] = None,
         max_grad_norm: Optional[float] = None,
@@ -38,8 +39,24 @@ class MPPO(PPO):
             use_clipped_value_loss=use_clipped_value_loss,
             use_normalized_advantage=use_normalized_advantage,
         )
+
+        # use different lr for visual encoder and other networks
+        visual_encoder_params, other_params = [], []
+        for name, param in actor_critic.named_parameters():
+            if param.requires_grad:
+                if (
+                    "net.visual_encoder.backbone" in name
+                    or "net.goal_visual_encoder.backbone" in name
+                ):
+                    visual_encoder_params.append(param)
+                else:
+                    other_params.append(param)
+
         self.optimizer = optim.AdamW(
-            list(filter(lambda p: p.requires_grad, actor_critic.parameters())),
+            [
+                {"params": visual_encoder_params, "lr": encoder_lr},
+                {"params": other_params, "lr": lr},
+            ],
             lr=lr,
             weight_decay=wd,
             eps=eps,

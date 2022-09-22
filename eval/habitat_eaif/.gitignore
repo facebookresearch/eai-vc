@@ -9,19 +9,15 @@ __pycache__/
 *.vscode
 
 # data directory
-tmae/data
-mae/data
-tmae/examples/output
-mae/examples/output
 goal_images/
-
+data/
+results
 # misc
 .DS_Store
 
 # wandb
 wandb/
 wandb_habitat/
-mae/wandb
 
 # tensorboard
 tb/

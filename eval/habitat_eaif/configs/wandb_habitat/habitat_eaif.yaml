@@ -3,4 +3,5 @@ WANDB:
   entity  : eai-foundations
   resume  : allow
   mode    : online
-  name    : imagenav_run
+  run_name: imagenav_run
+  name    : ${hydra:runtime.choices.model}_${run_name}

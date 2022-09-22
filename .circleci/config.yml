@@ -108,10 +108,10 @@ jobs:
                 cd /home/circleci/.mujoco/
 
                 echo "Getting Mujoco key..."
-                curl http://www.roboti.us/file/mjkey.txt > mjkey.txt
+                curl https://www.roboti.us/file/mjkey.txt > mjkey.txt
 
                 echo "Getting Mujoco 200 binaries..."
-                curl http://www.roboti.us/download/mujoco200_linux.zip > mujoco200_linux.zip
+                curl https://www.roboti.us/download/mujoco200_linux.zip > mujoco200_linux.zip
                 unzip mujoco200_linux.zip
                 mv ./mujoco200_linux ./mujoco200
                 rm mujoco200_linux.zip

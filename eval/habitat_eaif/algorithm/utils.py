@@ -32,7 +32,7 @@ def setup_wandb(config, train):
                 "_" + config.EVAL_CKPT_PATH_DIR.split("/")[-1].split(".")[1] + "_"
             )
         run_name = (
-            config.WANDB_NAME
+            config.WANDB.name
             + "_"
             + str(config.EVAL.SPLIT)
             + ckpt_str

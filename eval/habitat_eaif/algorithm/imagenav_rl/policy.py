@@ -2,7 +2,6 @@ from typing import Dict, Optional, Tuple
 
 import torch
 from gym import spaces
-from habitat import logger
 from habitat.config import Config
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
@@ -30,6 +29,8 @@ class EAINet(Net):
         run_type: str,
         avgpooled_image: bool,
         freeze_backbone: bool,
+        global_pool: bool,
+        use_cls: bool,
     ):
         super().__init__()
 
@@ -52,6 +53,8 @@ class EAINet(Net):
             backbone_config=backbone_config,
             avgpooled_image=avgpooled_image,
             image_size=observation_space.spaces["rgb"].shape[0],
+            global_pool=global_pool,
+            use_cls=use_cls,
         )
 
         self.visual_fc = nn.Sequential(
@@ -80,6 +83,8 @@ class EAINet(Net):
                 backbone_config=backbone_config,
                 avgpooled_image=avgpooled_image,
                 image_size=observation_space.spaces["imagegoalrotation"].shape[0],
+                global_pool=global_pool,
+                use_cls=use_cls,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -186,6 +191,8 @@ class EAIPolicy(Policy):
         run_type: str = "train",
         avgpooled_image: bool = False,
         freeze_backbone: bool = False,
+        global_pool: bool = False,
+        use_cls: bool = False,
         **kwargs
     ):
         super().__init__(
@@ -203,6 +210,8 @@ class EAIPolicy(Policy):
                 run_type=run_type,
                 avgpooled_image=avgpooled_image,
                 freeze_backbone=freeze_backbone,
+                global_pool=global_pool,
+                use_cls=use_cls,
             ),
             dim_actions=action_space.n,  # for action distribution
         )
@@ -223,4 +232,6 @@ class EAIPolicy(Policy):
             run_type=config.RUN_TYPE,
             avgpooled_image=config.RL.POLICY.avgpooled_image,
             freeze_backbone=config.RL.POLICY.freeze_backbone,
+            global_pool=config.RL.POLICY.global_pool,
+            use_cls=config.RL.POLICY.use_cls,
         )

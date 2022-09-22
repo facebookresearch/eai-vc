@@ -5,21 +5,20 @@ ENV_NAME: "SimpleRLEnv"
 SENSORS: ["RGB_SENSOR"]
 
 VIDEO_OPTION: []
-VIDEO_DIR: "data/video"
-TENSORBOARD_DIR: "data/tensorboard"
-EVAL_CKPT_PATH_DIR: "data/checkpoints"
-CHECKPOINT_FOLDER: "data/checkpoints"
-LOG_FILE: "data/train.log"
+VIDEO_DIR: ${hydra:sweep.dir}/video
+TENSORBOARD_DIR: ${hydra:sweep.dir}/logs
+EVAL_CKPT_PATH_DIR: ${hydra:sweep.dir}/checkpoints
+CHECKPOINT_FOLDER: ${hydra:sweep.dir}/checkpoints
+LOG_DIR: ${hydra:sweep.dir}/logs
+LOG_FILE: ${hydra:sweep.dir}/train.log
 
 NUM_ENVIRONMENTS: 10
-LOG_INTERVAL: 10
+LOG_INTERVAL: 100
 NUM_CHECKPOINTS: 100
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 500e6
 
 FORCE_TORCH_SINGLE_THREADED: True
-
-RUN_TYPE: None
 
 EVAL:
   SPLIT: "val"
@@ -33,7 +32,7 @@ RL:
   POLICY:
     name: "EAIPolicy"
     hidden_size: 512
-    rnn_type: "GRU"
+    rnn_type: "LSTM"
     num_recurrent_layers: 2
     use_augmentations: True
     use_augmentations_test_time: True
@@ -41,6 +40,8 @@ RL:
     freeze_backbone: False
     avgpooled_image: False
     augmentations_name: "jitter+shift"
+    global_pool: False
+    use_cls: False
 
   PPO:
     clip_param: 0.2
@@ -48,7 +49,8 @@ RL:
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01
-    lr: 6.25e-5
+    lr: 2.5e-4
+    encoder_lr: 1.5e-6
     wd: 1e-6
     eps: 1e-5
     max_grad_norm: 0.2

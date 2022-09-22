@@ -19,7 +19,7 @@ def load_model(
 
     with torch.no_grad():
         transformed_img = transform(zero_img).unsqueeze(0)
-        embedding_dim = model.eval()(transformed_img).shape[-1]
+        embedding_dim = model.eval()(transformed_img).shape[1]
         model.train()
 
     return model, embedding_dim, transform, metadata

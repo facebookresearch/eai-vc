@@ -10,15 +10,14 @@ from omegaconf import DictConfig, OmegaConf
 import torch
 
 import habitat
-from habitat import logger
 from habitat.config import Config
 from habitat.config.default import Config as CN
 from habitat_baselines.common.baseline_registry import baseline_registry
-
+from habitat_baselines.rl.ddppo.ddp_utils import rank0_only
 from algorithm.config import get_config
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="config")
+@hydra.main(config_path="configs", config_name="config")
 def main(cfg: DictConfig) -> None:
     r"""Main function for habitat_eaif
     Args:
@@ -38,7 +37,7 @@ def execute_exp(config: Config) -> None:
         + int(datetime.now().strftime("%S%f"))
         + int.from_bytes(os.urandom(2), "big")
     )
-    logger.info("Using a generated random seed {}".format(seed))
+    print("Using a generated random seed {}".format(seed))
     config.defrost()
     if config.RUN_TYPE == "eval":
         config.TASK_CONFIG.TASK.ANGLE_SUCCESS.USE_TRAIN_SUCCESS = False
@@ -50,6 +49,8 @@ def execute_exp(config: Config) -> None:
     torch.manual_seed(config.TASK_CONFIG.SEED)
     if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
         torch.set_num_threads(1)
+
+    setup_experiment(config)
 
     trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
     assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
@@ -70,12 +71,34 @@ def run_exp(cfg: DictConfig) -> None:
     Returns:
         None.
     """
-    cfg = OmegaConf.to_container(cfg)
+    cfg = OmegaConf.to_container(cfg, resolve=True)
     cfg = CN(cfg)
 
     config = get_config()
     config.merge_from_other_cfg(cfg)
     execute_exp(config)
+
+
+def setup_experiment(config: Config) -> None:
+    if rank0_only():
+        os.makedirs(config.CHECKPOINT_FOLDER, exist_ok=True)
+        os.makedirs(config.VIDEO_DIR, exist_ok=True)
+        os.makedirs(config.LOG_DIR, exist_ok=True)
+
+    config.defrost()
+    config.TASK_CONFIG.DATASET.SCENES_DIR = hydra.utils.to_absolute_path(
+        config.TASK_CONFIG.DATASET.SCENES_DIR
+    )
+    config.TASK_CONFIG.DATASET.DATA_PATH = hydra.utils.to_absolute_path(
+        config.TASK_CONFIG.DATASET.DATA_PATH
+    )
+    config.freeze()
+
+    os.environ["LD_LIBRARY_PATH"] = (
+        "/usr/lib/x86_64-linux-gnu/nvidia-opengl:" + os.environ["LD_LIBRARY_PATH"]
+    )
+    os.environ["GLOG_minloglevel"] = "3"
+    os.environ["MAGNUM_LOG"] = "quiet"
 
 
 if __name__ == "__main__":
