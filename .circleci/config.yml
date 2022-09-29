@@ -48,7 +48,7 @@ jobs:
             conda activate eaif
             pip install -e ./eaif-models
       - run:
-          name: Run CIFAR linear probe
+          name: Run pytest
           command: |
             . ~/miniconda3/bin/activate
             conda activate eaif
