@@ -162,9 +162,51 @@ jobs:
 
             sudo pkill Xvfb
 
+  habitat_eaif:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.medium
+    steps:
+      - checkout
+      - initialize
+      - run:
+          name: Install required apt packages
+          command: |
+            sudo apt update
+            sudo apt install freeglut3-dev
+      - run:
+          name: Install eaif-models
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+            pip install -e ./eaif-models
+      - run:
+          name: Install Habitat-lab
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+            cd ./third_party/habitat-lab
+            pip install -r requirements.txt
+            python setup.py develop --all
+      - run:
+          name: Install Habitat EAIF library
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+
+            pip install -e ./eval/habitat_eaif
+      - run:
+          name: Run pytest
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eaif
+
+            pytest eval/habitat_eaif/tests --nocluster
+
 workflows:
   build:
     jobs:
       - load-models
       - cifar-linprobe
       - eaif_mujoco
+      - habitat_eaif

@@ -14,8 +14,7 @@ model:
     use_abs_pos_emb: False
     init_values: 0.1
 transform:
-  _target_: hydra.utils._locate
-  path: eaif_models.transforms.vit_transforms
+  _target_: eaif_models.transforms.vit_transforms
 metadata:
   algo: data2vec
   model: beit_small_patch16

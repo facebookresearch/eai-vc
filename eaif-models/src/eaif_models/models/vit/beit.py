@@ -54,12 +54,20 @@ class Beit(timm.models.beit.Beit):
             outcome = x[:, 0]  # use cls token
         else:
             x = self.norm(x)
-            outcome = x[:, 1:]  # remove cls token     
+            outcome = reshape_embedding(x[:, 1:])  # remove cls token and reshape embedding 
 
         return outcome
 
     def forward(self, x):
         return self.forward_features(x)
+
+
+def reshape_embedding(x):
+    N, L, D = x.shape
+    H = W = int(L**0.5)
+    x = x.reshape(N, H, W, D)
+    x = torch.einsum("nhwd->ndhw", x)
+    return x
 
 
 def beit_small_patch16(**kwargs):

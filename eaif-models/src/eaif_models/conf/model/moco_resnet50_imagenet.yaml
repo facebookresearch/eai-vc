@@ -5,8 +5,7 @@ checkpoint_dict:
   _target_: eaif_models.models.resnet.resnet.load_moco_checkpoint
   checkpoint_path: /checkpoint/yixinlin/eaif/models/mocov2/moco_v2_800ep_pretrain.pth
 transform:
-  _target_: hydra.utils._locate
-  path: eaif_models.transforms.resnet_transforms
+  _target_: eaif_models.transforms.resnet_transforms
 metadata:
   algo: moco
   model: resnet50

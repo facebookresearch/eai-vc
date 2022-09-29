@@ -41,9 +41,9 @@ from habitat_baselines.utils.common import (
 )
 from habitat_baselines.utils.env_utils import construct_envs
 
-from algorithm.objectnav_il.algos.agent import ILAgent
-from algorithm.objectnav_il.rollout_storage import RolloutStorage
-import algorithm.utils as utils
+from habitat_eaif.objectnav_il.algos.agent import ILAgent
+from habitat_eaif.objectnav_il.rollout_storage import RolloutStorage
+import habitat_eaif.utils as utils
 
 
 @baseline_registry.register_trainer(name="il-trainer")

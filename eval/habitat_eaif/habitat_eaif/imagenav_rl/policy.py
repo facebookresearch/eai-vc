@@ -8,9 +8,8 @@ from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encode
 from habitat_baselines.rl.ppo import Net, Policy
 from torch import nn as nn
 
-from algorithm.imagenav_rl.sensors import ImageGoalRotationSensor
-from algorithm.transforms import get_transform
-from algorithm.visual_encoder import VisualEncoder
+from habitat_eaif.imagenav_rl.sensors import ImageGoalRotationSensor
+from habitat_eaif.visual_encoder import VisualEncoder
 
 
 class EAINet(Net):
@@ -24,10 +23,7 @@ class EAINet(Net):
         num_recurrent_layers: int,
         use_augmentations: bool,
         use_augmentations_test_time: bool,
-        randomize_augmentations_over_envs: bool,
-        augmentations_name: str,
         run_type: str,
-        avgpooled_image: bool,
         freeze_backbone: bool,
         global_pool: bool,
         use_cls: bool,
@@ -39,22 +35,17 @@ class EAINet(Net):
         # visual encoder
         assert "rgb" in observation_space.spaces
 
-        name = "resize"
-        if use_augmentations and run_type == "train":
-            name = augmentations_name
-        if use_augmentations_test_time and run_type == "eval":
-            name = augmentations_name
-        self.visual_transform = get_transform(
-            name, size=observation_space.spaces["rgb"].shape[0]
-        )
-        self.visual_transform.randomize_environments = randomize_augmentations_over_envs
+        if (use_augmentations and run_type == "train") or (
+            use_augmentations_test_time and run_type == "eval"
+        ):
+            use_augmentations = True
 
         self.visual_encoder = VisualEncoder(
             backbone_config=backbone_config,
-            avgpooled_image=avgpooled_image,
             image_size=observation_space.spaces["rgb"].shape[0],
             global_pool=global_pool,
             use_cls=use_cls,
+            use_augmentations=use_augmentations,
         )
 
         self.visual_fc = nn.Sequential(
@@ -67,24 +58,12 @@ class EAINet(Net):
 
         # goal embedding
         if ImageGoalRotationSensor.cls_uuid in observation_space.spaces:
-            name = "resize"
-            if use_augmentations and run_type == "train":
-                name = augmentations_name
-            if use_augmentations_test_time and run_type == "eval":
-                name = augmentations_name
-            self.goal_transform = get_transform(
-                name, size=observation_space.spaces["imagegoalrotation"].shape[0]
-            )
-            self.goal_transform.randomize_environments = (
-                randomize_augmentations_over_envs
-            )
-
             self.goal_visual_encoder = VisualEncoder(
                 backbone_config=backbone_config,
-                avgpooled_image=avgpooled_image,
                 image_size=observation_space.spaces["imagegoalrotation"].shape[0],
                 global_pool=global_pool,
                 use_cls=use_cls,
+                use_augmentations=use_augmentations,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -146,16 +125,14 @@ class EAINet(Net):
 
         # visual encoder
         rgb = observations["rgb"]
-        rgb = self.visual_transform(rgb, N)
-        rgb = self.visual_encoder(rgb)
+        rgb = self.visual_encoder(rgb, N)
         rgb = self.visual_fc(rgb)
         x.append(rgb)
 
         # goal embedding
         if ImageGoalRotationSensor.cls_uuid in observations:
             goal = observations[ImageGoalRotationSensor.cls_uuid]
-            goal = self.goal_transform(goal, N)
-            goal = self.goal_visual_encoder(goal)
+            goal = self.goal_visual_encoder(goal, N)
             goal = self.goal_visual_fc(goal)
             x.append(goal)
 
@@ -186,10 +163,7 @@ class EAIPolicy(Policy):
         num_recurrent_layers: int = 1,
         use_augmentations: bool = False,
         use_augmentations_test_time: bool = False,
-        randomize_augmentations_over_envs: bool = False,
-        augmentations_name: str = "",
         run_type: str = "train",
-        avgpooled_image: bool = False,
         freeze_backbone: bool = False,
         global_pool: bool = False,
         use_cls: bool = False,
@@ -205,10 +179,7 @@ class EAIPolicy(Policy):
                 num_recurrent_layers=num_recurrent_layers,
                 use_augmentations=use_augmentations,
                 use_augmentations_test_time=use_augmentations_test_time,
-                randomize_augmentations_over_envs=randomize_augmentations_over_envs,
-                augmentations_name=augmentations_name,
                 run_type=run_type,
-                avgpooled_image=avgpooled_image,
                 freeze_backbone=freeze_backbone,
                 global_pool=global_pool,
                 use_cls=use_cls,
@@ -227,10 +198,7 @@ class EAIPolicy(Policy):
             num_recurrent_layers=config.RL.POLICY.num_recurrent_layers,
             use_augmentations=config.RL.POLICY.use_augmentations,
             use_augmentations_test_time=config.RL.POLICY.use_augmentations_test_time,
-            randomize_augmentations_over_envs=config.RL.POLICY.randomize_augmentations_over_envs,
-            augmentations_name=config.RL.POLICY.augmentations_name,
             run_type=config.RUN_TYPE,
-            avgpooled_image=config.RL.POLICY.avgpooled_image,
             freeze_backbone=config.RL.POLICY.freeze_backbone,
             global_pool=config.RL.POLICY.global_pool,
             use_cls=config.RL.POLICY.use_cls,

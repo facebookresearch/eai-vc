@@ -23,8 +23,8 @@ from habitat_baselines.utils.common import (
 
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
-from algorithm.imagenav_rl.ppo import MDDPPO, MPPO
-import algorithm.utils as utils
+from habitat_eaif.imagenav_rl.ppo import MDDPPO, MPPO
+import habitat_eaif.utils as utils
 
 
 @baseline_registry.register_trainer(name="mddppo")

@@ -10,8 +10,7 @@ checkpoint_dict:
   _target_: eaif_models.models.resnet.resnet_gn.load_dino_checkpoint
   checkpoint_path: /checkpoint/yixinlin/eaif/models/dino_habitat/DINO_omnidata_14_5m.pth
 transform:
-  _target_: hydra.utils._locate
-  path: eaif_models.transforms.resnet_transforms
+  _target_: eaif_models.transforms.resnet_transforms
 metadata:
   algo: dino
   model: resnet50

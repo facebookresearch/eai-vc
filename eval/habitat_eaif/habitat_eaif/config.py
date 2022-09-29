@@ -138,10 +138,7 @@ _CONFIG.RL.POLICY.rnn_type = "GRU"
 _CONFIG.RL.POLICY.num_recurrent_layers = 2
 _CONFIG.RL.POLICY.use_augmentations = True
 _CONFIG.RL.POLICY.use_augmentations_test_time = True
-_CONFIG.RL.POLICY.randomize_augmentations_over_envs = False
 _CONFIG.RL.POLICY.freeze_backbone = False
-_CONFIG.RL.POLICY.avgpooled_image = False
-_CONFIG.RL.POLICY.augmentations_name = "jitter+shift"
 _CONFIG.RL.POLICY.global_pool = False
 _CONFIG.RL.POLICY.use_cls = False
 
@@ -181,11 +178,8 @@ _CONFIG.MODEL.RGB_ENCODER.vit_mask_ratio = None
 _CONFIG.MODEL.RGB_ENCODER.hidden_size = 512
 _CONFIG.MODEL.RGB_ENCODER.use_augmentations = True
 _CONFIG.MODEL.RGB_ENCODER.use_augmentations_test_time = True
-_CONFIG.MODEL.RGB_ENCODER.randomize_augmentations_over_envs = False
 _CONFIG.MODEL.RGB_ENCODER.pretrained_encoder = None
 _CONFIG.MODEL.RGB_ENCODER.freeze_backbone = False
-_CONFIG.MODEL.RGB_ENCODER.avgpooled_image = False
-_CONFIG.MODEL.RGB_ENCODER.augmentations_name = "jitter+shift"
 _CONFIG.MODEL.RGB_ENCODER.drop_path_rate = 0.0
 
 def get_config(

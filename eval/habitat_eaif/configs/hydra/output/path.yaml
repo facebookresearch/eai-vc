@@ -1,6 +1,6 @@
 # @package hydra
 run:
-  dir: ./outputs/${hydra.job.name}/${WANDB.name}
+  dir: /checkpoint/yixinlin/eaif/results/${hydra.job.name}/${oc.env:USER}/${WANDB.name}
   subdir: ${hydra.job.num}_${hydra.job.override_dirname}
 sweep:
   dir: /checkpoint/yixinlin/eaif/results/${hydra.job.name}/${oc.env:USER}/${WANDB.name}

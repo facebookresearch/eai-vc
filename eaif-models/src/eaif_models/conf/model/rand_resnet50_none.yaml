@@ -3,8 +3,7 @@ model:
   _target_: eaif_models.models.resnet.resnet.resnet50
   pretrained: False
 transform:
-  _target_: hydra.utils._locate
-  path: eaif_models.transforms.resnet_transforms
+  _target_: eaif_models.transforms.resnet_transforms
 metadata:
   algo: rand
   model: resnet50

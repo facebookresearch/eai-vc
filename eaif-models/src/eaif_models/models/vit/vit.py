@@ -93,12 +93,22 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
             outcome = x[:, 0]  # use cls token
         else:
             x = self.norm(x)
-            outcome = x[:, 1:]  # remove cls token
+            outcome = reshape_embedding(
+                x[:, 1:]
+            )  # remove cls token and reshape embedding
 
         return outcome
 
     def forward(self, x):
         return self.forward_features(x)
+
+
+def reshape_embedding(x):
+    N, L, D = x.shape
+    H = W = int(L**0.5)
+    x = x.reshape(N, H, W, D)
+    x = torch.einsum("nhwd->ndhw", x)
+    return x
 
 
 def vit_small_patch16(**kwargs):
@@ -158,7 +168,10 @@ def vit_huge_patch14(**kwargs):
     return model
 
 
-def load_encoder(model, checkpoint_path):
+def load_encoder(model, checkpoint_path=None):
+    if checkpoint_path is None:
+        return model
+
     state_dict = torch.load(checkpoint_path, map_location="cpu")["model"]
     if state_dict["pos_embed"].shape != model.pos_embed.shape:
         state_dict["pos_embed"] = resize_pos_embed(

@@ -21,7 +21,7 @@ from habitat.tasks.nav.object_nav_task import (
     ObjectGoal,
     ObjectViewLocation,
 )
-from algorithm.objectnav_il.object_nav_task import (
+from habitat_eaif.objectnav_il.object_nav_task import (
     ObjectGoalNavEpisode,
     ReplayActionSpec,
 )

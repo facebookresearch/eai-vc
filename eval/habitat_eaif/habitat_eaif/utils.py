@@ -87,6 +87,7 @@ def poll_checkpoint_folder(
     assert os.path.isdir(checkpoint_folder), (
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
+    checkpoint_folder = glob.escape(checkpoint_folder)
     models_paths = list(filter(os.path.isfile, glob.glob(checkpoint_folder + "/*")))
 
     models_paths.sort(key=os.path.getmtime)

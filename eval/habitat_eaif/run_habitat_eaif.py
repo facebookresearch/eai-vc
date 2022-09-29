@@ -14,7 +14,7 @@ from habitat.config import Config
 from habitat.config.default import Config as CN
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.ddp_utils import rank0_only
-from algorithm.config import get_config
+from habitat_eaif.config import get_config
 
 
 @hydra.main(config_path="configs", config_name="config")

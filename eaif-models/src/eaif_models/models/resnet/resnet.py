@@ -1,17 +1,32 @@
+import types
+
 import torch
 import torchvision  # noqa
 
 
+def forward_without_avgpool_flatten(self, x: torch.Tensor) -> torch.Tensor:
+    x = self.conv1(x)
+    x = self.bn1(x)
+    x = self.relu(x)
+    x = self.maxpool(x)
+
+    x = self.layer1(x)
+    x = self.layer2(x)
+    x = self.layer3(x)
+    x = self.layer4(x)
+
+    return x
+
+
 # Remove fully-connected layer from each torchvision.models.resnet model
-for i in [18, 34, 50]:
-    exec(
-        f"""
-def resnet{i}(*args, **kwargs):
-    model = torchvision.models.resnet{i}(*args, **kwargs)
+# Also remove AvgPool and flatten if asked to do so
+def resnet50(use_avgpool_and_flatten=True, *args, **kwargs):
+    model = torchvision.models.resnet50(*args, **kwargs)
     model.fc = torch.nn.modules.linear.Identity()
+    if not use_avgpool_and_flatten:
+        funcType = types.MethodType
+        model.forward = funcType(forward_without_avgpool_flatten, model)
     return model
-    """
-    )
 
 
 def load_moco_checkpoint(checkpoint_path):

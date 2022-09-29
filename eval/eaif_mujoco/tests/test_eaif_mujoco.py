@@ -14,7 +14,8 @@ def embedding_name(request, nocluster):
 
     # Skip everything except randomly-initialized ResNet50 if
     # option "--nocluster" is applied
-    if nocluster and model_name != "rn50_rand":
+    nocluster_models = ["rand_resnet50_none", "rand_vit_base_none"]
+    if nocluster and model_name not in nocluster_models:
         pytest.skip()
     return request.param
 

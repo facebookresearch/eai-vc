@@ -17,14 +17,13 @@ from habitat.tasks.nav.object_nav_task import (
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
 
-from algorithm.transforms import get_transform
-from algorithm.visual_encoder import VisualEncoder
+from habitat_eaif.visual_encoder import VisualEncoder
 
-from algorithm.models.resnet_encoders import (
+from habitat_eaif.models.resnet_encoders import (
     VlnResnetDepthEncoder,
 )
-from algorithm.objectnav_il.rnn_state_encoder import RNNStateEncoder
-from algorithm.objectnav_il.policy import Net, ILPolicy
+from habitat_eaif.objectnav_il.rnn_state_encoder import RNNStateEncoder
+from habitat_eaif.objectnav_il.policy import Net, ILPolicy
 
 
 class ObjectNavILNet(Net):

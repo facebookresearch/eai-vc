@@ -36,10 +36,7 @@ RL:
     num_recurrent_layers: 2
     use_augmentations: True
     use_augmentations_test_time: True
-    randomize_augmentations_over_envs: False
     freeze_backbone: False
-    avgpooled_image: False
-    augmentations_name: "jitter+shift"
     global_pool: False
     use_cls: False
 

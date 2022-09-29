@@ -5,8 +5,7 @@ checkpoint_dict:
   _target_: eaif_models.models.resnet.resnet.load_r3m_checkpoint
   checkpoint_path: /checkpoint/yixinlin/eaif/models/r3m/r3m_50/model.pt
 transform:
-  _target_: hydra.utils._locate
-  path: eaif_models.transforms.r3m_transforms
+  _target_: eaif_models.transforms.r3m_transforms
 metadata:
   algo: r3m
   model: resnet50

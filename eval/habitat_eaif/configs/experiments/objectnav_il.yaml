@@ -65,10 +65,7 @@ MODEL:
     hidden_size: 512
     use_augmentations: True
     use_augmentations_test_time: True
-    randomize_augmentations_over_envs: False
     freeze_backbone: False
-    avgpooled_image: False
-    augmentations_name: "jitter+shift"
   DEPTH_ENCODER:
     cnn_type: "None" #"VlnResnetDepthEncoder"
     output_size: 128

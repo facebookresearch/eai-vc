@@ -10,7 +10,7 @@ from habitat.utils.visualizations.utils import (
 )
 
 # from scripts.parsing.parse_objectnav_dataset import write_json
-from algorithm.objectnav_il.dataset import ObjectNavDatasetV2
+from habitat_eaif.objectnav_il.dataset import ObjectNavDatasetV2
 
 config = habitat.get_config("configs/tasks/objectnav_hm3d_il.yaml")
 

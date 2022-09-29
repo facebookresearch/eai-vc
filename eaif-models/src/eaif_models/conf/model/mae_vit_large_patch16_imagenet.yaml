@@ -6,9 +6,8 @@ model:
     global_pool: true
   checkpoint_path: /checkpoint/yixinlin/eaif/models/mae/mae_pretrain_vit_large.pth
 transform:
-  _target_: hydra.utils._locate
-  path: eaif_models.transforms.vit_transforms
+  _target_: eaif_models.transforms.vit_transforms
 metadata:
   algo: mae
-  model: vit_large
+  model: vit_large_patch16
   data: imagenet

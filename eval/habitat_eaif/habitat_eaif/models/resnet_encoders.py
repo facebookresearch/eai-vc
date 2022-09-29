@@ -14,7 +14,7 @@ from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
 )
 
-from algorithm.models import resnet
+from habitat_eaif.models import resnet
 
 
 class Flatten(nn.Module):
