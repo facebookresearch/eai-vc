@@ -103,7 +103,9 @@ class VisualEncoder(nn.Module):
         self.output_size = np.prod(output_shape)
 
     def forward(self, x: torch.Tensor, number_of_envs: int) -> torch.Tensor:  # type: ignore
-        x = x.permute(0, 3, 1, 2)  # convert channels-last to channels-first
+        x = (
+            x.permute(0, 3, 1, 2).float() / 255
+        )  # convert channels-last to channels-first
         x = self.visual_transform(x, number_of_envs)
         x = self.running_mean_and_var(x)
         x = self.backbone(x)

@@ -19,13 +19,16 @@ def backbone_config(request, nocluster):
     if nocluster and model_name not in nocluster_models:
         pytest.skip()
 
+    with initialize(version_base=None, config_path="../configs/model/transform"):
+        transform_cfg = compose(config_name="jitter_and_shift")
+
     with initialize(
         version_base=None, config_path="../../../eaif-models/src/eaif_models/conf/model"
     ):
         cfg = compose(
             config_name=model_name,
-            overrides=["transform._target_=eaif_models.transforms.transform_augment"],
         )
+        cfg.transform = transform_cfg
         cfg = OmegaConf.to_container(cfg, resolve=True)
         cfg = CN(cfg)
         return cfg
@@ -37,3 +40,4 @@ def test_env_embedding(backbone_config):
     embedding = encoder(image, 1)
 
     assert 4 == len(embedding.shape)
+    assert embedding.shape[0] == image.shape[0]
