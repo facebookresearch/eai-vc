@@ -1,0 +1,4 @@
++experiments=imisra/0117_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_fixtemp_detachrgb_nocenter_ep32_lr1e-3
+constants.inv_depth_temp=0.1
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=1.6e-3
+trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1.6e-4

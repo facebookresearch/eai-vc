@@ -1,0 +1,4 @@
++experiments=imisra/091_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_diffcrops_imval_srgbdval_linheads_eqbatch_dispmaxnorm_detachrgb_ep32
+trainer.data.train.repeat_factors=[1,100],[1,200],[1,500]
+#constants.sun_rgb_prefix=/checkpoint/kalyanv/data/sunrgbd/images/
+#constants.sun_depth_prefix=/checkpoint/kalyanv/data/sunrgbd/images/

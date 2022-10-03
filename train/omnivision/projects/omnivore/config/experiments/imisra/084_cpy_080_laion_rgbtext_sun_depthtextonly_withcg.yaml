@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/080_simpletx_nomask_vitb32_laion21M_sun_lcrop_realtext_dispmaxnorm_b4K_lr1e-3_ep32
+
+trainer:
+  optim:
+    gradient_clip:
+      _partial_: True
+      _target_: torch.nn.utils.clip_grad_norm_
+      max_norm: ???
+      norm_type: 2

@@ -1,0 +1,34 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/051_simpletx_eos_nomask_vitb16_srgbd100x_imval_srgbdval_fewaug_b4K_lr1e-3_ep32_w5
+
+trainer:
+  data:
+    train:
+      repeat_factors: [1.0, 10.0]
+  optim:
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+launcher:
+  num_nodes: 2
+
+constants:
+  warmup_epochs: 1
+  kernel_size: 32
+  batch_size: 256
+  sun_rgb_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images/
+  sun_depth_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images_disparity/

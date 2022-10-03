@@ -1,0 +1,3 @@
++experiments=rgirdhar/0041_fullaudioset_sepEncoder
+
++trainer.model.multimodal_model.postprocessors.1.postprocessor._args_.1.logit_scale_init=14.3,10,8,5

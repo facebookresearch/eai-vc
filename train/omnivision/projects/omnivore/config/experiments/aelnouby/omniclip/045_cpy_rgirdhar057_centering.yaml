@@ -1,0 +1,41 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0041_fullaudioset_jointEncoder_gradClip
+
+trainer:
+  model:
+    multimodal_model:
+      postprocessors:
+        - name: "normalize"
+          postprocessor:
+            _target_: omnivore.models.helpers.NormalizeAndCenter
+            dim: -1
+            out_features: ${embed_dim}
+        - name: "normalize_and_scale_text"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.NormalizeAndCenter
+                dim: -1
+                out_features: ${embed_dim}
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+        - name: "normalize_and_scale_audio"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.NormalizeAndCenter
+                dim: -1
+                out_features: ${embed_dim}
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+      head_to_postprocessor:
+        - input_key: "vision_embed"
+          postprocessor_name: "normalize"
+        - input_key: "text_embed"
+          postprocessor_name: "normalize_and_scale_text"
+        - input_key: "audio_embed"
+          postprocessor_name: "normalize_and_scale_audio"
+
+
+submitit:
+  exclude: []

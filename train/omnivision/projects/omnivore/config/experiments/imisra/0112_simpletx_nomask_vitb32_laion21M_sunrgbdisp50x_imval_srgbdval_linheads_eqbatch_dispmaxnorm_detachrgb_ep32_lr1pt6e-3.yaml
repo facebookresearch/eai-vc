@@ -1,0 +1,36 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/085_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_detachrgb_ep32
+
+trainer:
+  model:
+    multimodal_model:
+      postprocessors:
+          - name: "normalize"
+            postprocessor:
+              _target_: omnivore.models.helpers.NormalizeAndCenter
+              dim: -1
+              out_features: ${constants.final_embed_dim}
+          - name: "normalize_and_scale_text"
+            postprocessor:
+              _target_: torch.nn.Sequential
+              _args_:
+                - _target_: omnivore.models.helpers.NormalizeAndCenter
+                  dim: -1
+                  out_features: ${constants.final_embed_dim}
+                - _target_: omnivore.models.helpers.LearnableLogitScaling
+          - name: "normalize_and_scale_depth"
+            postprocessor:
+              _target_: torch.nn.Sequential
+              _args_:
+                - _target_: omnivore.models.helpers.NormalizeAndCenter
+                  dim: -1
+                  out_features: ${constants.final_embed_dim}
+                - _target_: omnivore.models.helpers.LearnableLogitScaling
+  optim:
+    amp:
+      enabled: True
+      amp_dtype: bfloat16 # bfloat16 or float16
+constants:
+  final_embed_dim: 512

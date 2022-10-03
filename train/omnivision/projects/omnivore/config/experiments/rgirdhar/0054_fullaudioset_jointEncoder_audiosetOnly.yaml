@@ -1,0 +1,160 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0041_fullaudioset_jointEncoder_gradClip.yaml
+
+trainer:
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      datasets:
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels
+            tokenizer:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+                - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+            label_names_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/label_names.npy
+            templates:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: False
+              path_list:
+                - /checkpoint/imisra/datasets/in1k_disk/templates_openai.npy
+                - manifold://omnivore/tree/datasets/imagenet_1k_meta/templates_openai.npy
+            base_dataset:
+              _target_: omnivore.data.path_dataset.VideoPathDataset
+              decode_audio: False
+              remove_prefix: unbalanced_train_segments/video/
+              new_prefix: /fsx-omnivore/rgirdhar/data/audioset/unbalanced_train_segments/video_mp4-288p/
+              path_file_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_filelist.npy
+              label_file_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_labels.npy
+              label_type: csv
+              clip_sampler:
+                _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+                clip_duration: ${video_clip_duration}
+                clips_per_video: 1
+              frame_sampler:
+                _target_: pytorchvideo.transforms.UniformTemporalSubsample
+                num_samples: ${video_num_frames}
+              decoder: decord  # since this allows for audio decoding
+              normalize_to_0_1: True
+              transforms:
+                - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+                  base_transform:
+                    _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                    base_transform:
+                      _target_: torchvision.transforms.Compose
+                      transforms:
+                      - _target_: pytorchvideo.transforms.ShortSideScale
+                        size: 224  # 256
+                      - _target_: torchvision.transforms.RandomResizedCrop
+                        size: 224
+                      - _target_: torchvision.transforms.RandomHorizontalFlip
+                        p: 0.5
+                      - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                        mean: [0.485, 0.456, 0.406]
+                        std: [0.229, 0.224, 0.225]
+          shuffle: False
+          batch_size: 120  # 128 was on cusp of OOM sometimes
+          num_workers: 10
+          pin_memory: True
+          drop_last: True
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: audioset_video_synth_captions
+            convert_label_to_one_hot_num_classes: 527
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: True
+          worker_init_fn: NULL
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.VideoPathDataset
+            decode_audio: True
+            label_type: csv
+            audio_num_mel_bins: ${audio_num_mel_bins}
+            audio_target_len: ${audio_target_len}
+            decoder_kwargs:
+              sample_rate: 16000
+            copy_on_read: True
+            remove_prefix: unbalanced_train_segments/video/
+            new_prefix: /fsx-omnivore/rgirdhar/data/audioset/unbalanced_train_segments/video_mp4-288p/
+            path_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_filelist.npy
+            label_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_labels.npy
+            clip_sampler:
+              _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
+              clip_duration: ${video_clip_duration}
+            frame_sampler:
+              _target_: pytorchvideo.transforms.UniformTemporalSubsample
+              num_samples: ${video_num_frames}
+            decoder: decord  # since this allows for audio decoding
+            normalize_to_0_1: True
+            transforms:
+              - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+                base_transform:
+                  _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                  base_transform:
+                    _target_: torchvision.transforms.Compose
+                    transforms:
+                    - _target_: pytorchvideo.transforms.ShortSideScale
+                      size: 224  # 256
+                    - _target_: torchvision.transforms.CenterCrop
+                      size: 224
+                    - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                      mean: [0.485, 0.456, 0.406]
+                      std: [0.229, 0.224, 0.225]
+              - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+                field: audio
+                base_transform:
+                  _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                  base_transform:
+                    _target_: torchvision.transforms.Compose
+                    transforms:
+                      # - _target_: torchaudio.transforms.FrequencyMasking
+                      #   freq_mask_param: 48
+                      # - _target_: torchaudio.transforms.TimeMasking
+                      #   time_mask_param: 192
+                      - _target_: torchvision.transforms.Normalize
+                        # From table 3 https://arxiv.org/pdf/2207.06405.pdf or https://github.com/YuanGongND/ast/blob/d7d8b4b8e06cdaeb6c843cdb38794c1c7692234c/src/run.py#L62
+                        mean: -4.268
+                        std: 9.138  # 4.569 * 2 (2x the stddev, AST uses that)
+          shuffle: True
+          batch_size: 120  # 128 was on cusp of OOM sometimes
+          num_workers: 10
+          pin_memory: True
+          drop_last: True
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: audioset
+            convert_label_to_one_hot_num_classes: 527
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: True
+          worker_init_fn: NULL
+
+  model:
+    zero_shot_with_text_targets:
+      audioset:
+        label_strings:
+          templates:
+            _target_: omnivore.utils.data.FileLoader.load
+            return_idx: False
+            path_list:
+              - /checkpoint/imisra/datasets/in1k_disk/templates_openai.npy
+              - manifold://omnivore/tree/datasets/imagenet_1k_meta/templates_openai.npy
+
+  loss:
+    audioset_video_synth_captions:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: vision_embed
+      feat2_name: text_embed
+      logit_scale_name: NULL
+      normalize: False # OpenClip normalizes outputs in the model

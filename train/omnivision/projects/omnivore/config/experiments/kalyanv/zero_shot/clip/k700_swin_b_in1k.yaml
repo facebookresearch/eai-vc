@@ -1,0 +1,40 @@
+# @package _global_
+
+defaults:
+  - /experiments/kalyanv/zero_shot/clip/base_config/k700.yaml
+  - _self_
+
+lightning_module:
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: True
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_lightning_checkpoint
+      path_list:
+        - /checkpoint/kalyanv/omnivision/configs/experiments/kalyanv/sup_in1k_clip_swin/checkpoints/last.ckpt
+    model:
+      _target_: slip.models.CLIP
+      embed_dim: 512
+      vision_width: 1024
+      context_length: 77
+      vocab_size: 49408
+      transformer_width: 512
+      transformer_heads: 8
+      transformer_layers: 12
+      freeze_vision: True
+      vision_model:
+        _target_: omnivore.models.swin_transformer.SwinTransformer3D
+        pretrained: NULL
+        pretrained2d: False
+        patch_size: [1, 4, 4]
+        embed_dim: 128
+        depths: [2, 2, 18, 2]
+        num_heads: [4, 8, 16, 32]
+        window_size: [1, 7, 7]
+        mlp_ratio: 4.
+        qkv_bias: True
+        qk_scale: NULL
+        drop_rate: 0.
+        attn_drop_rate: 0.
+        drop_path_rate: 0.5
+        patch_norm: True

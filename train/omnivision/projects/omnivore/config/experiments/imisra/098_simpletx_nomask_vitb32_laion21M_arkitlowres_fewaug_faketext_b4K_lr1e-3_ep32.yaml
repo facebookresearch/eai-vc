@@ -1,0 +1,153 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/097_simpletx_nomask_vitb32_laion21M_arkitlowres_fewaug_faketext_b4K_lr1e-3_ep32
+
+trainer:
+  model:
+    multimodal_model:
+      heads:
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm # called self.ln_post in VisualTransformer OpenCLIP
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0 # select CLS token
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${constants.head_final_embed_dim}
+                bias: False # OpenCLIP
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "vision_tokens"
+          output_key: "vision_embed"
+          name: "image_embed_head"
+        - head:
+            _target_: omnivore.models.heads.copy_heads.copy_head_share_params
+            _partial_: True
+          fork_module: ""
+          preprocessed_input_key: "vision_tokens"
+          output_key: "vision_embed_depth_targets"
+          head_to_clone: "image_embed_head"
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm # called self.ln_post in VisualTransformer OpenCLIP
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0 # select CLS token
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${constants.head_final_embed_dim}
+                bias: False # OpenCLIP
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "depth_tokens_vision_targets"
+          output_key: "depth_embed_vision_targets"
+        - head:
+            _target_: omnivore.models.pooling_helpers.SelectEOSAndProject
+            proj:
+              _target_: torch.nn.Sequential
+              _args_:
+              - _target_: torch.nn.LayerNorm # called self.ln_final in CLIP OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+              - _target_: omnivision.model.model_init_utils.init_parameters
+                model:
+                  _target_: torch.nn.Linear
+                  in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                  out_features: ${constants.head_final_embed_dim}
+                  bias: False # OpenCLIP
+                init_fns:
+                  weight:
+                    _target_: torch.nn.init.normal_
+                    _partial_: True
+                    mean: 0
+                    std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "text_tokens_vision_targets"
+          output_key: "text_embed_vision_targets"
+      postprocessors:
+        - name: "normalize"
+          postprocessor:
+            _target_: omnivore.models.helpers.Normalize
+            dim: -1
+        - name: "normalize_and_scale_text"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+        - name: "normalize_and_scale_vision_depth"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+      head_to_postprocessor:
+        - input_key: "vision_embed"
+          postprocessor_name: "normalize"
+        - input_key: "vision_embed_depth_targets"
+          postprocessor_name: "normalize_and_scale_vision_depth"
+        - input_key: "text_embed_vision_targets"
+          postprocessor_name: "normalize_and_scale_text"
+        - input_key: "depth_embed_vision_targets"
+          postprocessor_name: "normalize" # only apply logit scaling to 1 dim
+  loss:
+    laion:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: vision_embed
+      feat2_name: text_embed_vision_targets
+      logit_scale_name: NULL
+      normalize: False # SimpleTx normalizes outputs in the model
+    arkit:
+      _target_: omnivore.losses.concat_loss.ConcatLoss
+      loss_fns:
+        - _target_: omnivore.losses.scaled_loss.ScaledLoss
+          scale: 0.333
+          loss_fn:
+            _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+            feat1_name: vision_embed
+            feat2_name: text_embed_vision_targets
+            feat1_no_grad: 0.0
+            feat2_no_grad: 0.0
+            logit_scale_name: NULL
+            normalize: False # SimpleTx normalizes outputs in the model
+        - _target_: omnivore.losses.scaled_loss.ScaledLoss
+          scale: 0.333
+          loss_fn:
+            _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+            feat1_name: depth_embed_vision_targets
+            feat2_name: text_embed_vision_targets
+            feat1_no_grad: 0.0
+            feat2_no_grad: ${constants.detach_depth_targets}
+            logit_scale_name: NULL
+            normalize: False # SimpleTx normalizes outputs in the model
+        - _target_: omnivore.losses.scaled_loss.ScaledLoss
+          scale: 0.333
+          loss_fn:
+            _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+            feat1_name: depth_embed_vision_targets
+            feat2_name: vision_embed_depth_targets
+            feat1_no_grad: 0.0
+            feat2_no_grad: ${constants.detach_depth_targets}
+            logit_scale_name: NULL
+            normalize: False # SimpleTx normalizes outputs in the model
+constants:
+  detach_depth_targets: False

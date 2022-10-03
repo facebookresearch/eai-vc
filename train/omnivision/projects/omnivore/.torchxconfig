@@ -1,0 +1,21 @@
+[local_cwd]
+log_dir = None
+prepend_cwd = False
+
+[flow]
+secure_group = classy_vision_team
+oncall = None
+entitlement = default
+proxy_workflow_image = None
+is_fast_run = False
+
+[mast]
+hpcClusterUuid = MastProdCluster
+runningTimeoutSec = None
+hpcIdentity = #FIXME:(str) same as flow secure group or data project
+hpcJobOncall = pyper_training
+useStrictName = False
+mounts = None
+localityConstraints = None
+enableGracefulPreemption = False
+rmAttribution = None

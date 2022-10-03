@@ -1,0 +1,238 @@
+# @package _global_
+# observed accuracy: 85.30% (EMA)
+# expected accuracy: 85.3%
+
+scratch:
+  num_classes: 1000
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  # Uru 10x10 trained for more steps on IN1k for ViTs, not for any other datasets
+  max_epochs: 28
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+  mode: train
+
+  ema:
+    enabled: True
+    decay: 1e-4
+    warmup: 0.05
+
+  data:
+    _target_: omnivision.data_module.base_data_module.BaseDataModule
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        new_prefix: /datasets01/imagenet_full_size/061417/
+        path_file_list:
+          - /checkpoint/mannatsingh/datasets/omniscale/in1k/train_images.npy
+        label_file_list:
+          - /checkpoint/mannatsingh/datasets/omniscale/in1k/train_labels.npy
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 384
+                  interpolation: 3
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: True
+      batch_size: 16
+      num_workers: 8
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: image
+        batch_transforms:
+        - _target_: omnivore.data.transforms.cutmixup.CutMixUp
+          mixup_alpha: 0.1 # mixup alpha value, mixup is active if > 0.
+          cutmix_alpha: 0.0 # cutmix alpha value, cutmix is active if > 0.
+          prob: 1.0 # probability of applying mixup or cutmix per batch or element
+          switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+          mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+          correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+          label_smoothing: 0.0 # apply label smoothing to the mixed target tensor
+          num_classes: ${scratch.num_classes} # number of classes for target
+      worker_init_fn: NULL
+    val:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        new_prefix: /datasets01/imagenet_full_size/061417/
+        path_file_list:
+          - /checkpoint/mannatsingh/datasets/omniscale/in1k/val_images.npy
+        label_file_list:
+          - /checkpoint/mannatsingh/datasets/omniscale/in1k/val_labels.npy
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.Resize
+                  size: 384
+                  interpolation: 3
+                - _target_: torchvision.transforms.CenterCrop
+                  size: 384
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: False
+      batch_size: 25
+      num_workers: 8
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: image
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    trunk:
+      _target_: omnivore.models.vision_transformer.VisionTransformer
+      embed_dim: 768
+      depth: 12
+      drop_path_rate: 0.0
+      attn_target:
+        _target_: omnivore.models.vision_transformer.Attention
+        _partial_: True
+        num_heads: 12
+        proj_drop: 0
+        qk_scale: NULL
+        qkv_bias: True
+        attn_drop: 0
+    heads:
+      - head:
+          _target_: omnivision.model.model_init_utils.init_parameters
+          model:
+            _target_: torch.nn.Linear
+            in_features: 768
+            out_features: ${scratch.num_classes}
+          init_fns:
+            weight:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+            bias:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+        fork_module: ""
+        input_key: NULL
+        output_key: NULL
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+  optim:
+    optimizer:
+      _target_: torch.optim.SGD
+      lr: 0  # SGD expects an lr arg during initialization
+      weight_decay: 0
+      nesterov: True
+      momentum: 0.9
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CosineParamScheduler
+            start_value: 0.006
+            end_value: 0
+  meters:
+    train:
+      image:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+    val:
+      image:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    image:
+      _target_: torch.nn.CrossEntropyLoss
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      strict: False # heads aren't loaded
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+        checkpoint_path: /checkpoint/mannatsingh/omniscale/uru10x10/checkpoints/vit_b16_30b_studio.torch
+        ckpt_state_dict_keys: ["classy_state_dict", "base_model", "model", "trunk"]
+        checkpoint_kernels:
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "encoder.layers.layer_"
+          target_pattern: "blocks."
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "self_attention.in_proj_weight"
+          target_pattern: "attn.qkv.weight"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "self_attention.in_proj_bias"
+          target_pattern: "attn.qkv.bias"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "ln_"
+          target_pattern: "norm"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "conv_proj"
+          target_pattern: "patch_embed.proj"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "self_attention.out_proj"
+          target_pattern: "attn.proj"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "mlp.linear_"
+          target_pattern: "mlp.fc"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "class_token"
+          target_pattern: "cls_token"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "encoder.pos_embedding"
+          target_pattern: "pos_embed"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "encoder.ln"
+          target_pattern: "norm"
+        - _target_: omnivision.model.checkpoint_utils.CkptPrependKernel
+          prepend_pattern: "trunk."
+        - _target_: omnivision.model.checkpoint_utils.CkptProcessKernel
+          key_pattern: ["trunk.pos_embed"]
+          processor:
+            _target_: torch.transpose
+            dim0: 0
+            dim1: 1
+            _partial_: True
+
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8
+  experiment_log_dir: ???
+
+submitit:
+  partition: learnlab
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]

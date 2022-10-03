@@ -1,0 +1,2 @@
++experiments=imisra/095_simpletx_nomask_vitb32_laion21M_arkitlowres_fewaug_b4K_lr1e-3_ep32
+trainer.loss.arkit.loss_fn.feat1_no_grad=1.0,0.0

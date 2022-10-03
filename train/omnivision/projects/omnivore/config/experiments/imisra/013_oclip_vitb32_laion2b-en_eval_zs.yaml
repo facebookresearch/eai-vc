@@ -1,0 +1,222 @@
+# @package _global_
+
+# Follow Table 18 of CLIP https://arxiv.org/pdf/2103.00020.pdf
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  train:
+    _target_: omnivore.data.torch_dataset.TorchDataset
+    dataset:
+      _target_: omnivore.data.vision_text_dataset.VisionTextDataset
+      base_dataset:
+        _target_: omnivore.data.webdataset_helpers.WebVisionTextSimple
+        base_dataset:
+          _target_: webdataset.WebDataset
+          resampled: True # needed for multi-node training
+          urls:
+            _target_: omnivore.utils.data.FileLoader.load
+            return_idx: False
+            path_list:
+              - /checkpoint/imisra/datasets/laion/laion2b-en_tarlist.pkl
+        to_tuple: ["jpg", "json"]
+        decode_str: "pilrgb"
+        text_key: "caption"
+        shuffle: 1000 # buffer size to shuffle. Ideally > batch size per gpu
+        base_dataset_length: 10 # this is actually 400e6 but we set it to 10e6 so we can checkpoint/eval frequently
+      transforms:
+        - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+          base_transform:
+            _target_: torchvision.transforms.Compose
+            transforms:
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: 224
+                interpolation: 3
+              - _target_: torchvision.transforms.RandomHorizontalFlip
+              - _target_: omnivore.data.transforms.rand_auto_aug.RandAugment  # Essentially autoagument rand-m9-mstd0.5-inc1
+                magnitude: 9
+                magnitude_std: 0.5
+                increasing_severity: True
+              - _target_: torchvision.transforms.ColorJitter
+                brightness: 0.4
+                contrast: 0.4
+                saturation: 0.4
+                hue: 0.4
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.RandomErasing
+                p: .25
+              - _target_: torchvision.transforms.Normalize
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+        - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+          base_transform:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+              - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+    shuffle: True
+    batch_size: 10
+    num_workers: 12
+    pin_memory: True
+    drop_last: True
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+      output_key: in1k
+    worker_init_fn: NULL
+  val:
+    _target_: omnivore.data.torch_dataset.TorchDataset
+    dataset:
+      _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels
+      tokenizer:
+        _target_: slip.tokenizer.SimpleTokenizer
+        bpe_path_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+          - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+      label_names_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/classnames_zs.npy
+      templates:
+        _target_: omnivore.utils.data.FileLoader.load
+        return_idx: False
+        path_list:
+          - /checkpoint/imisra/datasets/in1k_disk/templates_openai.npy
+      base_dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        path_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+        label_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+        transforms:
+        - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+          base_transform:
+            _target_: torchvision.transforms.Compose
+            transforms:
+              - _target_: torchvision.transforms.Resize
+                size: 224
+                interpolation: 3
+              - _target_: torchvision.transforms.CenterCrop
+                size: 224
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.Normalize
+                #### NOTE: #######
+                mean: [0.485, 0.457, 0.408]
+                std: [0.268, 0.261, 0.275]
+    shuffle: False
+    batch_size: 64
+    num_workers: 12
+    pin_memory: True
+    drop_last: False
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+      output_key: in1k
+    worker_init_fn: NULL
+
+lightning_module:
+  _target_: omnivore.lightning_module.omnivore_lightning_module.OmnivoreLightningModule
+  model:
+    _target_: omnivore.models.openclip_model.MultiModalZeroShotEvalWrapperCLIP
+    image_output_key: image_embed
+    text_output_key: text_embed
+    clip_model_init_weights: "/checkpoint/imisra/pretrained/vit_b_32-laion2b_e16-af8dbd0c.pth"
+    clip_model:
+      _target_: omnivore.models.openclip_model.CLIP
+      embed_dim: 512
+      vision_cfg:
+        timm_model_name: NULL
+        timm_model_pretrained: False
+        timm_pool: NULL
+        timm_proj: NULL
+        image_size: 224
+        patch_size: 32
+        width: 768
+        layers: 12
+      text_cfg:
+        context_length: 77
+        vocab_size: 49408
+        width: 512
+        heads: 8
+        layers: 12
+    label_strings:
+      in1k:
+        _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+        tokenizer: ${data_module.val.dataset.tokenizer}
+        label_names_file_list: ${data_module.val.dataset.label_names_file_list}
+        templates: ${data_module.val.dataset.templates}
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.98
+      eps: 1e-6
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 5e-4  # from https://github.com/facebookresearch/SLIP#clip-vit-base-with-8-nodes-batch-size-4096
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-6
+            lengths: [0.00625, 0.99375]  # warm for 2440 iters; 1 epoch = 305 iter
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.2
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+             - '*.positional_embedding'
+             - '*.class_embedding'
+             - "*.logit_scale"
+          module_cls_names: ['omnivore.models.openclip_model.LayerNorm']
+  meters:
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    in1k:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: ${lightning_module.model.image_output_key}
+      feat2_name: ${lightning_module.model.text_output_key}
+
+lightning_trainer:
+  _target_: pytorch_lightning.Trainer
+  num_nodes: ${launcher.num_nodes}
+  gpus: ${launcher.gpus_per_node}
+  sync_batchnorm: False
+  replace_sampler_ddp: False
+  max_epochs: 1280 # 32 epochs on 400e6 = 1280 epochs on 10e6
+  accelerator: ${launcher.accelerator}
+  strategy: ${launcher.strategy}
+
+launcher:
+  num_nodes: 16
+  gpus_per_node: 8
+  mode: val
+  accelerator: gpu
+  strategy: ddp
+
+hydra:
+  output_subdir: NULL
+  run:
+    dir: .
+
+submitit:
+  name: clip_base
+  partition: omnivore
+  time: "72:00:00"
+  # mem: "470GB"
+  #constraints: "volta32gb" # model fits on a 16GB V100
+  use_cluster: True
+  cpus_per_task: 12

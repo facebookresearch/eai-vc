@@ -1,0 +1,37 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/034_simpletx_vitb32_laion21M_sunrgbd50x_imval_srgbdval_msclip_params_depthmlpheads_ep32
+
+trainer:
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.98
+      eps: 1e-6
+    gradient_clip: NULL
+    amp:
+      enabled: True
+      amp_dtype: float16 # bfloat16 or float16
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+
+constants:
+  warmup_epochs: 1
+  sun_rgb_prefix: /checkpoint/kalyanv/data/sunrgbd/images/
+  sun_depth_prefix: /checkpoint/kalyanv/data/sunrgbd/images/

@@ -1,0 +1,37 @@
+# @package _global_
+defaults:
+  - /experiments/imisra/002_vitb_mae_ft_in1k_repro
+
+lightning_module:
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+    param_group_modifiers:
+      - _target_: omnivore.optim.layer_decay_param_modifier.layer_decay_param_modifier
+        _partial_: True
+        layer_decay_value: 0.65
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 2e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-6
+            lengths: [0.05, 0.95]  # warm for 5 epochs
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 1e-4
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+             - '*.pos_embed'
+             - '*.cls_token'
+          module_cls_names: ['torch.nn.LayerNorm']

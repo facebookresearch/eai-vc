@@ -1,0 +1,30 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/040_simpletx_nomask_clstok_vitb32_laion21M_srgbd50xfixtemp_imval_srgbdval_b4K_lr5e-4_ep32_w5
+
+
+trainer:
+  model:
+    multimodal_model:
+      postprocessors:
+        - name: "normalize"
+          postprocessor:
+            _target_: omnivore.models.helpers.Normalize
+            dim: -1
+        - name: "normalize_and_scale_text"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+        - name: "normalize_and_scale_depth"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+                logit_scale_init: ${divide:1,0.07}
+                learnable: True

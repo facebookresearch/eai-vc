@@ -1,0 +1,7 @@
++experiments=imisra/084_cpy_080_laion_rgbtext_sun_depthtextonly_withcg
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3
+constants.warmup_epochs=1
+trainer.optim.gradient_clip.max_norm=0.3,1,10
+trainer.loss.sunrgbd.loss_fns.0.scale=0
+#constants.sun_rgb_prefix=/checkpoint/kalyanv/data/sunrgbd/images/
+#constants.sun_depth_prefix=/checkpoint/kalyanv/data/sunrgbd/images/

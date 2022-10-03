@@ -1,0 +1,10 @@
+# @package _group_
+log_save_dir: null
+name: "#omniscale job"
+timeout_hour: 72
+cpus_per_task: 32
+partition: "learn"
+mem: "1900GB"
+constraint: ""
+mode: "prod"
+use_cluster: true

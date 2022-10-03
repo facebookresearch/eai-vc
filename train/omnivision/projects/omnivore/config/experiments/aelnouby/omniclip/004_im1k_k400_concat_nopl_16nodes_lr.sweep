@@ -1,0 +1,2 @@
++experiments=aelnouby/omniclip/004_im1k_k400_concat_nopl_16nodes.yaml
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3,2.4e-3,4e-3

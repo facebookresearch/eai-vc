@@ -1,0 +1,4 @@
++experiments=imisra/085_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_detachrgb_ep32
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1.6e-3
+#constants.sun_rgb_prefix=/checkpoint/kalyanv/data/sunrgbd/images/
+#constants.sun_depth_prefix=/checkpoint/kalyanv/data/sunrgbd/images/

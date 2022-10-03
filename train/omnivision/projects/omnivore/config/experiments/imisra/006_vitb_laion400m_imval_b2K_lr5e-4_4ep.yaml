@@ -1,0 +1,121 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/005_vits_laion400m_imval_b1K_lr2pt5e-4
+
+lightning_module:
+  _target_: omnivore.lightning_module.omnivore_lightning_module.OmnivoreLightningModule
+  model:
+    _target_: omnivision.model.model_wrappers.MultiModalZeroShotEvalWrapper
+    vision_trunk:
+      _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+      trunk:
+        _target_: omnivore.models.vision_transformer.VisionTransformer
+        embed_dim: 768
+        depth: 12
+        drop_path_rate: 0.1
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+          _partial_: True
+          num_heads: 16
+          proj_drop: 0
+          qk_scale: NULL
+          qkv_bias: True
+          attn_drop: 0
+      heads:
+        - fork_module: ""
+          head:
+            _target_: torch.nn.Linear
+            in_features: ${....trunk.embed_dim}
+            out_features: 512
+          input_key: in1k
+          output_key: image_embed
+      trunk_fields:
+        - input_key: NULL
+          args: ["vision"]
+    text_trunk:
+      _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+      trunk:
+        _target_: omnivore.models.slip_text_transformer.SLIPTextTransformer
+        context_length: 77
+        vocab_size: 49408
+        transformer_width: 512
+        transformer_heads: 8
+        transformer_layers: 12
+      heads:
+      heads:
+        - fork_module: ""
+          head:
+            _target_: torch.nn.Linear
+            in_features: ${....trunk.transformer_width}
+            out_features: 512
+          input_key: in1k
+          output_key: text_embed
+      trunk_fields:
+        - input_key: NULL
+          args: ["text"]
+    label_strings:
+      in1k:
+        _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+        tokenizer: ${data_module.val.dataset.tokenizer}
+        label_names_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/ImageNet/label_names.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/label_names.npy
+        templates: 
+          - "{}"
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 5e-4  # from https://github.com/facebookresearch/SLIP#clip-vit-base-with-8-nodes-batch-size-4096
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-6
+            lengths: [0.003, 0.997]  # warm for 2441 iters
+            interval_scaling: ['rescaled', 'rescaled']
+  meters:
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    in1k:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: ${lightning_module.model.vision_trunk.heads.in1k.0.output_key}
+      feat2_name: ${lightning_module.model.text_trunk.heads.in1k.0.output_key}
+
+lightning_trainer:
+  _target_: pytorch_lightning.Trainer
+  num_nodes: ${launcher.num_nodes}
+  gpus: ${launcher.gpus_per_node}
+  sync_batchnorm: False
+  replace_sampler_ddp: False
+  max_epochs: 4
+  accelerator: ${launcher.accelerator}
+  strategy: ${launcher.strategy}
+
+launcher:
+  num_nodes: 8
+  gpus_per_node: 8
+  mode: train
+  accelerator: gpu
+  strategy: ddp
+
+submitit:
+  name: clip_base
+  partition: learnlab
+  time: "72:00:00"
+  mem: "470GB"
+  constraints: "volta32gb"
+  use_cluster: True
+  cpus_per_task: 10

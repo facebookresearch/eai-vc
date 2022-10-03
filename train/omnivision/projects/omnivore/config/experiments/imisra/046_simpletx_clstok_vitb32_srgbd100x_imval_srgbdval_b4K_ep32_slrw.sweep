@@ -1,0 +1,6 @@
++experiments=imisra/042_simpletx_clstok_vitb16_srgbd100x_imval_srgbdval_b4K_lr1.6e-3_ep32_w5
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3
+constants.warmup_epochs=1,2,5
+constants.batch_size=256
+constants.kernel_size=32
+launcher.num_nodes=2

@@ -1,0 +1,219 @@
+# @package _global_
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  train:
+    _target_: omnivore.data.torch_dataset.TorchDataset
+    dataset:
+      _target_: omnivore.data.path_dataset.ImagePathDataset
+      path_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/train_images_global.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/train_images_manifold_v2.npy
+      label_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/train_labels.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/train_labels.npy
+      #name: imagenet1k_train
+      transforms:
+        - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+          base_transform:
+            _target_: torchvision.transforms.Compose
+            transforms:
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: 224
+                interpolation: 3
+              - _target_: torchvision.transforms.RandomHorizontalFlip
+              - _target_: omnivore.data.transforms.rand_auto_aug.RandAugment  # Essentially autoagument rand-m9-mstd0.5-inc1
+                magnitude: 9
+                magnitude_std: 0.5
+                increasing_severity: True
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.RandomErasing
+                p: .25
+              - _target_: torchvision.transforms.Normalize
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+    shuffle: True
+    batch_size: 32
+    num_workers: 10
+    pin_memory: True
+    drop_last: True
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+      output_key: in1k
+      batch_transforms:
+      - _target_: omnivore.data.transforms.cutmixup.CutMixUp
+        mixup_alpha: 0.8 # mixup alpha value, mixup is active if > 0.
+        cutmix_alpha: 1.0 # cutmix alpha value, cutmix is active if > 0.
+        prob: 1.0 # probability of applying mixup or cutmix per batch or element
+        switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+        mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+        correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+        label_smoothing: 0.1 # apply label smoothing to the mixed target tensor
+        num_classes: 1000 # number of classes for target
+    worker_init_fn: NULL
+  val:
+    _target_: omnivore.data.torch_dataset.TorchDataset
+    dataset:
+      _target_: omnivore.data.path_dataset.ImagePathDataset
+      path_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+      label_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+      #name: imagenet1k_val
+      transforms:
+        - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+          base_transform:
+            _target_: torchvision.transforms.Compose
+            transforms:
+              - _target_: torchvision.transforms.Resize
+                size: 224
+                interpolation: 3
+              - _target_: torchvision.transforms.CenterCrop
+                size: 224
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.Normalize
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+    shuffle: False
+    batch_size: 32
+    num_workers: 8
+    pin_memory: True
+    drop_last: True
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+      output_key: in1k
+    worker_init_fn: NULL
+    
+lightning_module:
+  _target_: omnivore.lightning_module.omnivore_lightning_module.OmnivoreLightningModule
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: False # heads aren't loaded
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+      checkpoint_path: /checkpoint/aelnouby/omnivision/config/experiments/aelnouby/mae_repro/001_mae_vitbase_decoder8L512_400ep.yaml/0/checkpoints/last.ckpt 
+      # ckpt_state_dict_keys: ["model"]
+      checkpoint_kernels:
+      - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+        source_pattern: "model."
+        target_pattern: ""
+        key_pattern: NULL
+        # - "model.trunk.*"
+      - _target_: omnivision.model.checkpoint_utils.CkptExcludeKernel
+        key_pattern:
+        - "trunk.decoder.*"
+        - "trunk.norm.*"
+        - "trunk.mask_token"
+        - "head.*"
+    model:
+      _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+      handle_list_inputs: True
+      trunk:
+        _target_: omnivore.models.vision_transformer.VisionTransformer
+        embed_dim: 768
+        depth: 12
+        drop_path_rate: 0.1
+        classifier_feature: global_pool
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+          _partial_: True
+          num_heads: 12
+          proj_drop: 0
+          qk_scale: NULL
+          qkv_bias: True
+          attn_drop: 0
+      heads:
+        - head:
+            _target_: omnivision.model.model_init_utils.init_parameters
+            model:
+              _target_: torch.nn.Linear
+              in_features: 768
+              out_features: 1000
+            init_fns:
+              weight:
+                _target_: timm.models.layers.trunc_normal_
+                _partial_: True
+                mean: 0
+                std: 2e-5
+              bias:
+                _target_: torch.nn.init.zeros_
+                _partial_: True
+          fork_module: ""
+          input_key: in1k
+          output_key: in1k
+      trunk_fields:
+        - input_key: NULL
+          args: ["vision"]
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+    param_group_modifiers:
+      - _target_: omnivore.optim.layer_decay_param_modifier.layer_decay_param_modifier
+        _partial_: True
+        layer_decay_value: 0.65
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 2e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-6
+            lengths: [0.05, 0.95]  # warm for 5 epochs
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+             - '*.pos_embed'
+             - '*.cls_token'
+          module_cls_names: ['torch.nn.LayerNorm']
+  meters:
+    train:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    in1k:
+      _target_: torch.nn.CrossEntropyLoss
+
+lightning_trainer:
+  _target_: pytorch_lightning.Trainer
+  num_nodes: ${launcher.num_nodes}
+  gpus: ${launcher.gpus_per_node}
+  sync_batchnorm: False
+  replace_sampler_ddp: False
+  max_epochs: 100
+  accelerator: ${launcher.accelerator}
+  strategy: ${launcher.strategy}
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8
+  mode: train
+  accelerator: gpu
+  strategy: ddp
+  experiment_log_dir: ???
+

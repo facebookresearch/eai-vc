@@ -1,0 +1,14 @@
+# @package _global_
+
+# Note the original run didn't use FP16 comms
+defaults:
+  - /experiments/imisra/065_simpletx_clstokall_nomask_singlehead_vitb32_laion21M_imval_b4K_ep32
+
+
+trainer:
+  optim:
+    gradient_clip:
+      _partial_: True
+      _target_: torch.nn.utils.clip_grad_norm_
+      max_norm: ???
+      norm_type: 2

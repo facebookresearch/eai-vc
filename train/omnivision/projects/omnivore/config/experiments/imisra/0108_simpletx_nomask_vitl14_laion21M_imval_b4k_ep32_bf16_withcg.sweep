@@ -1,0 +1,2 @@
++experiments=imisra/0106_simpletx_nomask_vitl14_laion21M_imval_b4k_ep32_bf16_withcg
+trainer.optim.gradient_clip.max_norm=1

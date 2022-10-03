@@ -1,0 +1,31 @@
+# @package _global_
+
+defaults:
+  #- /experiments/kalyanv/zero_shot/clip/base_config/k700.yaml
+  # /experiments/kalyanv/zero_shot/clip/base_config/k400_1frame_from_video_new.yaml
+  #- /experiments/kalyanv/zero_shot/clip/base_config/places205.yaml
+  #- /experiments/kalyanv/zero_shot/clip/base_config/ucf101_1frame_from_video.yaml
+  - /experiments/kalyanv/zero_shot/clip/base_config/hmdb51_1frame_from_video.yaml
+  - _self_
+
+lightning_module:
+  # model:
+  #   _target_: slip.models.VisionTextModel
+  #   convert_vid_to_image: False
+  #   vision:
+  #     _target_: slip.models.load_vision_model_from_lv_checkpoint
+  #     ckpt_path: /checkpoint/kalyanv/experiments/slip_dino/checkpoint_best.pt
+  #   text:
+  #     _target_: slip.models.load_text_model_from_lv_checkpoint
+  #     ckpt_path: /checkpoint/kalyanv/experiments/slip_dino/checkpoint_best.pt
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: True
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_lightning_checkpoint
+      path_list:
+        #- /checkpoint/kalyanv/omnivision/configs/experiments/kalyanv/important/dino_clip_pretrain_vit_b_auto_opt/checkpoints/last.ckpt
+        - /checkpoint/kalyanv/omnivision/configs/experiments/kalyanv/cmd_dino_clip_vitb/checkpoints/last.ckpt
+    model:
+      _target_: slip.models.CLIP_DINO_B16_Frozen
+

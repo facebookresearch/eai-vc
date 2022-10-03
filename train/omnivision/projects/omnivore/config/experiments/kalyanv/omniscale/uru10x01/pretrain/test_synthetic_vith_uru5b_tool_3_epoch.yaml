@@ -1,0 +1,333 @@
+# @package _global_
+
+scratch:
+  # number of classes in the `tool` version of Uru 5B
+  num_classes: 27999 #28050
+  batch_size: 128
+  phases_per_epoch: 2
+  num_samples: 1000
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 1
+  accelerator: cuda
+  seed_value: 123
+  mode: train
+
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.synthetic_dataset.SyntheticDataset
+        label: "123,234,536"
+        tensor_shape: [3,224,224]
+        length: 200000
+        transforms:
+            # - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            #   base_transform:
+            #     _target_: torchvision.transforms.Compose
+            #     transforms:
+            #       - _target_: torchvision.transforms.RandomResizedCrop
+            #         size: 224
+            #         interpolation: 3
+            #       - _target_: torchvision.transforms.RandomHorizontalFlip
+            #       - _target_: torchvision.transforms.ToTensor
+            #       - _target_: torchvision.transforms.Normalize
+            #         mean: [0.485, 0.456, 0.406]
+            #         std: [0.229, 0.224, 0.225]
+            - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+              field: label
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  # "c1,c2,...,cN" --> torch.Tensor([c1, c2, ..., cN], dtype=int)
+                  - _target_: omnivision.utils.generic.csv_str_to_int_tensor
+                    _partial_: True
+                  # (N,) --> (1, N)
+                  - _target_: torch.unsqueeze
+                    dim: 0
+                    _partial_: True
+                  # (1, N) --> (N, C) 1-hot vector
+                  - _target_: omnivision.utils.generic.convert_to_one_hot
+                    classes:  ${scratch.num_classes}
+                    _partial_: True
+                  # (N, C) to (C,)
+                  - _target_: torch.sum
+                    dim: 0
+                    _partial_: True
+                  # Need a float output to work with BCELoss
+                  - _target_: omnivision.utils.generic.change_dtype
+                    dtype: "float"
+                    _partial_: True
+      shuffle: True
+      batch_size: ${scratch.batch_size}
+      num_workers: 2
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: image
+      worker_init_fn: NULL
+
+  # model:
+  #   _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+  #   trunk:
+  #     _target_: torchvision.models.AlexNet
+  #   heads:
+  #     - head:
+  #         _target_: omnivision.model.model_init_utils.init_parameters
+  #         model:
+  #           _target_: torch.nn.Linear
+  #           in_features: 1000
+  #           out_features: ${scratch.num_classes}
+  #         init_fns:
+  #           weight:
+  #             _target_: torch.nn.init.normal_
+  #             _partial_: True
+  #             mean: 0
+  #             std: 0.01
+  #           bias:
+  #             _target_: torch.nn.init.zeros_
+  #             _partial_: True
+  #       fork_module: ""
+  #       input_key: NULL
+  #       output_key: NULL
+  #   trunk_fields:
+  #     - input_key: NULL
+  #       args: ["vision"]
+
+  # optim:
+  #   amp:
+  #     enabled: True
+  #     # Technically FSDP's mixed precision is much more aggressive than this version
+  #     # which is PyTorch AMP. I used bfloat16 with FSDP's mixed precision.
+  #     # PyTorch AMP + bfloat16 hasn't been tested, but this is the setup we
+  #     # should go with for now
+  #     amp_dtype: bfloat16
+  #   optimizer:
+  #     _target_: torch.optim.AdamW
+  #   options:
+  #     lr:
+  #       - scheduler:
+  #           _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+  #           schedulers:
+  #             - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+  #               start_value: 10e-7
+  #               end_value: 10e-4
+  #             - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+  #               start_value: 10e-4
+  #               end_value: 10e-6
+  #           lengths: [0.07, 0.93]
+  #           interval_scaling: ['rescaled', 'rescaled']
+  #     weight_decay:
+  #       - scheduler:
+  #           _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+  #           value: 0.05
+
+
+
+  # model:
+  #   _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+  #   trunk:
+  #     _target_: omnivore.models.swin_transformer.SwinTransformer3D
+  #     pretrained: NULL
+  #     pretrained2d: False
+  #     patch_size: [1, 4, 4]
+  #     embed_dim: 96
+  #     depths: [2, 2, 6, 2]
+  #     num_heads: [3, 6, 12, 24]
+  #     window_size: [1, 7, 7]
+  #     mlp_ratio: 4.
+  #     qkv_bias: True
+  #     qk_scale: NULL
+  #     drop_rate: 0.
+  #     attn_drop_rate: 0.
+  #     drop_path_rate: 0.2
+  #     patch_norm: True
+  #   heads:
+  #     - head:
+  #         _target_: omnivision.model.model_init_utils.init_parameters
+  #         model:
+  #           _target_: torch.nn.Linear
+  #           in_features: 768  # 8 * 96
+  #           out_features: ${scratch.num_classes}
+  #         init_fns:
+  #           weight:
+  #             _target_: torch.nn.init.normal_
+  #             _partial_: True
+  #             mean: 0
+  #             std: 0.01
+  #           bias:
+  #             _target_: torch.nn.init.zeros_
+  #             _partial_: True
+  #       fork_module: ""
+  #       input_key: NULL
+  #       output_key: NULL
+  #   trunk_fields:
+  #     - input_key: NULL
+  #       args: ["vision"]
+
+  # optim:
+  #   amp:
+  #     enabled: True
+  #     # Technically FSDP's mixed precision is much more aggressive than this version
+  #     # which is PyTorch AMP. I used bfloat16 with FSDP's mixed precision.
+  #     # PyTorch AMP + bfloat16 hasn't been tested, but this is the setup we
+  #     # should go with for now
+  #     amp_dtype: bfloat16
+  #   optimizer:
+  #     _target_: torch.optim.AdamW
+  #   options:
+  #     lr:
+  #       - scheduler:
+  #           _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+  #           schedulers:
+  #             - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+  #               start_value: 10e-7
+  #               end_value: 10e-4
+  #             - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+  #               start_value: 10e-4
+  #               end_value: 10e-6
+  #           lengths: [0.07, 0.93]
+  #           interval_scaling: ['rescaled', 'rescaled']
+  #     weight_decay:
+  #       - scheduler:
+  #           _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+  #           value: 0.05
+  #       - scheduler:
+  #           _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+  #           value: 0.0
+  #         param_names:
+  #            - '*.bias'
+  #            #- '*.pos_embed'
+  #            #- '*.cls_token'
+  #            #- '*.absolute_pos_embed'
+  #            - '*.relative_position_bias_table'
+  #            #- '*.norm'
+  #         module_cls_names: ['torch.nn.LayerNorm']
+
+
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    trunk:
+      _target_: omnivore.models.vision_transformer.VisionTransformer
+      patch_size: 14
+      embed_dim: 1280
+      depth: 32
+      drop_path_rate: 0.0
+      attn_target:
+        _target_: omnivore.models.vision_transformer.Attention
+        _partial_: True
+        num_heads: 16
+        proj_drop: 0
+        qk_scale: NULL
+        qkv_bias: True
+        attn_drop: 0
+    heads:
+      - head:
+          # should verify that this is indeed correct based on
+          # classy_vision/heads/vision_transformer_head.py
+          _target_: omnivision.model.model_init_utils.init_parameters
+          model:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: torch.nn.Linear
+                in_features: 1280
+                out_features: 1280
+              - _target_: torch.nn.Tanh
+              - _target_: torch.nn.Linear
+                in_features: 1280
+                out_features: ${scratch.num_classes}
+          init_fns:
+            # 0.weight:
+            #   _target_: classy_vision.models.lecun_normal_init.lecun_normal_init
+            #   std: # see classy_vision/heads/vision_transformer_head.py and use the init for self.layers.pre_logits.weight
+            #   _partial_: True
+            0.weight:
+              _target_: omnivore.models.helpers.lecun_normal_init
+              _partial_: True
+              fan_in: 1280
+            0.bias:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+            2.weight:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+            2.bias:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+        fork_module: ""
+        input_key: NULL
+        output_key: NULL
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+  optim:
+    amp:
+      enabled: True
+      # Technically FSDP's mixed precision is much more aggressive than this version
+      # which is PyTorch AMP. I used bfloat16 with FSDP's mixed precision.
+      # PyTorch AMP + bfloat16 hasn't been tested, but this is the setup we
+      # should go with for now
+      amp_dtype: bfloat16
+    optimizer:
+      _target_: torch.optim._multi_tensor.AdamW
+      # the weight decay wasn't experimented with much in Uru 10x10, but this
+      # is a very reasonable value
+      weight_decay: 0.1
+      # Uru 10x10 used a beta2 of 0.95 which is more stable. beta2 of 0.999
+      # results in slightly better results.
+      # This setting works till at least 2B parameters.
+      betas: [0.9, 0.999]
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              # we use a linear LR decay schedule with linear warmup
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 4e-5
+                end_value: 4e-4
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 4e-4
+                end_value: 0
+            # warm up for 5% of training
+            lengths: [0.05, 0.95]
+            interval_scaling: ['rescaled', 'rescaled']
+  meters:
+    train:
+      image:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    image:
+      # can just copy paste this implementation to our code
+      _target_: omnivore.losses.soft_target_cross_entropy_loss.SoftTargetCrossEntropyLoss
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8
+  experiment_log_dir: ???
+
+submitit:
+  partition: learn
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]

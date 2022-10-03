@@ -1,0 +1,54 @@
+# @package _global_
+
+defaults:
+ - /experiments/imisra/012_oclip_vitb32_laion400m_imval_b32K_lr5e-4_adampt98_ep32_wdpt2_nocoloraug
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  train:
+    _target_: omnivore.data.torch_dataset.TorchDataset
+    dataset:
+      _target_: omnivore.data.vision_text_dataset.VisionTextDataset
+      base_dataset:
+        _target_: omnivore.data.webdataset_helpers.WebVisionTextPipeline
+        base_dataset_length: 400e6
+        base_dataset_fn:
+          _target_: omnivore.data.webdataset_helpers.get_wds_dataset
+          _partial_: True
+          resampled: True # needed for multi-node training
+          urls:
+            _target_: omnivore.utils.data.FileLoader.load
+            return_idx: False
+            path_list:
+              - /checkpoint/imisra/datasets/laion/laion2b-en_subset400m_tarlist.pkl
+      transforms:
+        - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+          base_transform:
+            _target_: torchvision.transforms.Compose
+            transforms:
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: 224
+                interpolation: 3
+                scale: [0.9, 1.0]
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.Normalize
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+        - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+          base_transform:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+              - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+    shuffle: True
+    batch_size: 256
+    num_workers: 12
+    pin_memory: True
+    drop_last: True
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+      output_key: in1k
+    worker_init_fn: NULL
+
+lightning_trainer:
+  max_epochs: 32

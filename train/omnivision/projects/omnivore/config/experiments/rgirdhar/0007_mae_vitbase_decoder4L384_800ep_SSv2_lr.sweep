@@ -1,0 +1,2 @@
++experiments=rgirdhar/0007_mae_vitbase_decoder4L384_800ep_SSv2
+lightning_module.optim.options.lr.0.scheduler.schedulers.0.end_value=1.2e-3,8e-4

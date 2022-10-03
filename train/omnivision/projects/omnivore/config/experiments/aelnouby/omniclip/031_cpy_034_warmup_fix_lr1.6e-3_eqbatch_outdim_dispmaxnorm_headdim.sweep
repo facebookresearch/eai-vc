@@ -1,0 +1,2 @@
++experiments=imisra/074_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_ep32
+constants.head_final_embed_dim=128,256,768,1024

@@ -1,0 +1,23 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/074_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_ep32
+
+trainer:
+  loss:
+    laion:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: vision_embed
+      feat2_name: text_embed_vision_targets
+      logit_scale_name: NULL
+      normalize: False # SimpleTx normalizes outputs in the model
+    sunrgbd:
+      _target_: omnivore.losses.scaled_loss.ScaledLoss
+      scale: 1.0
+      loss_fn:
+        _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+        feat1_name: vision_embed
+        feat2_name: depth_embed_vision_targets
+        feat1_no_grad: 1.0
+        logit_scale_name: NULL
+        normalize: False # SimpleTx normalizes outputs in the model

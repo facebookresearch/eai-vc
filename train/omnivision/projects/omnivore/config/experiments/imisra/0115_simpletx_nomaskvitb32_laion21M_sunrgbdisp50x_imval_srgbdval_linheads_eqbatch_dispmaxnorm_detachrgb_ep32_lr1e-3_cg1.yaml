@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0104_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_detachrgb_ep32_lr1e-3
+
+trainer:
+  optim:
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: 1
+      norm_type: 2

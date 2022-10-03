@@ -1,0 +1,3 @@
++experiments=rgirdhar/0009_maeFt_vitbase_SSv2_vidMAEAtt
+lightning_module.model.model.trunk.drop_path_rate=0.1
+lightning_module.model.model.trunk.attn_target.num_heads=6,8

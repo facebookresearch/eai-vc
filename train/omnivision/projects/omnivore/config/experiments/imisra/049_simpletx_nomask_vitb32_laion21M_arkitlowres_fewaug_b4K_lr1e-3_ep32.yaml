@@ -1,0 +1,120 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/048_simpletx_nomask_vitb32_laion21M_arkitlowres_b4K_1.6e-3_ep32
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 32
+  mode: train
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      repeat_factors: [1.0, 10.0]
+      datasets:
+      - _target_: omnivore.data.webdataset_helpers.WebVisionDatasetBatchedWithLoader
+        base_dataset_fn:
+          _target_: omnivore.data.webdataset_helpers.get_wds_dataset_batched
+          _partial_: True
+          urls:
+            _target_: omnivore.utils.data.FileLoader.load
+            return_idx: False
+            path_list:
+              - /checkpoint/imisra/datasets/laion/laion400m_subset21M_tarlist.pkl
+          dataset_size_file: /checkpoint/imisra/datasets/laion/laion400m_subset21M_tarlist_numfiles.npy
+          batch_size: ${constants.batch_size}
+          num_workers: 12
+          preprocess_txt:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+              - /checkpoint/imisra/datasets/SLIP/bpe_simple_vocab_16e6.txt.gz
+              - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+          preprocess_img:
+            _target_: torchvision.transforms.Compose
+            transforms:
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: 224
+                interpolation: 3
+                scale: [0.9, 1.0]
+              - _target_: omnivore.data.transforms.basic.PILToRGB
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.Normalize
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+        base_loader_fn:
+          _target_: omnivore.data.webdataset_helpers.get_wds_loader
+          num_workers: ${..base_dataset_fn.num_workers}
+          collate_fn:
+            _target_: omnivore.data.webdataset_helpers.BatchToSampleText
+            collate_fn:
+              _target_: omnivore.data.api.DefaultOmnivoreCollator
+              output_key: laion
+              input_batch_is_collated: True
+          _partial_: True
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+          concatenate_depth_and_rgb_channels: False
+          copy_on_read: True
+          copy_on_read_dst_basename: ${..collate_fn.output_key}
+          path_file_list:
+            - /fsx-omnivore/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_images.npy
+          label_file_list:
+            - /fsx-omnivore/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_fake_labels.npy
+          depth_path_file_list:
+            - /fsx-omnivore/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_lowres_depth_pngs.npy
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Resize
+                size: 
+                  _target_: omnivore.utils.data.to_list
+                  elem: [192, 256] # resize RGB image to match low res depth
+                interpolation: 2
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: omnivore.data.transforms.image_rgbd.DepthToInverseDepth
+                    scale_depth_before_inv: ${divide:1,1000}
+                  - _target_: torchvision.transforms.RandomResizedCrop
+                    size: 224
+                    interpolation: 2
+                    scale: [0.75, 1.0]
+                  - _target_: torchvision.transforms.RandomHorizontalFlip
+                  - _target_: torchvision.transforms.Normalize
+                    mean: [0.485, 0.456, 0.406, 0.9538]
+                    std: [0.229, 0.224, 0.225, 0.2384]
+        shuffle: True
+        batch_size: ${constants.batch_size}
+        num_workers: 12
+        pin_memory: False
+        drop_last: True
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: arkit
+          batch_transforms:
+          - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelToVisionDepthBatch
+        worker_init_fn: NULL
+  optim:
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']

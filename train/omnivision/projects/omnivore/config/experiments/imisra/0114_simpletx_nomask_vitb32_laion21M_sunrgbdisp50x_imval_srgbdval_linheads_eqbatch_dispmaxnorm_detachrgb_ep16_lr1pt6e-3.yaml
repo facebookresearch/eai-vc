@@ -1,0 +1,7 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0112_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_detachrgb_ep32_lr1pt6e-3
+
+trainer:
+  max_epochs: 16

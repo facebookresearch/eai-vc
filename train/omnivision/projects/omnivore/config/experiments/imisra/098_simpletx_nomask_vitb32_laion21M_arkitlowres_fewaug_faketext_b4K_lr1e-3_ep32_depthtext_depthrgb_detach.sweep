@@ -1,0 +1,7 @@
++experiments=imisra/098_simpletx_nomask_vitb32_laion21M_arkitlowres_fewaug_faketext_b4K_lr1e-3_ep32
+trainer.loss.arkit.loss_fns.0.scale=0 # disable rgb loss
+trainer.loss.arkit.loss_fns.1.scale=0.5
+trainer.loss.arkit.loss_fns.2.scale=0.5
+constants.detach_depth_targets=True,False
+#constants.sun_rgb_prefix=/checkpoint/kalyanv/data/sunrgbd/images/
+#constants.sun_depth_prefix=/checkpoint/kalyanv/data/sunrgbd/images/

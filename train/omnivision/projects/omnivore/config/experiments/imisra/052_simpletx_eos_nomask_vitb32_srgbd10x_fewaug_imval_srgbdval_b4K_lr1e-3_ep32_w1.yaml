@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/051_simpletx_eos_nomask_vitb16_srgbd100x_imval_srgbdval_fewaug_b4K_lr1e-3_ep32_w5
+
+trainer:
+  data:
+    train:
+      repeat_factors: [1.0, 10.0]
+launcher:
+  num_nodes: 2
+
+constants:
+  warmup_epochs: 1
+  kernel_size: 32
+  batch_size: 256

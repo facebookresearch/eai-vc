@@ -1,0 +1,178 @@
+# @package _global_
+# Reproducing MAE w/ ViT-Base trunk
+# configs/experiments/pretrain/dino/rgirdhar/094_videomae_vitb_ssv2_sinPos_fixLR_fixBS.sweep/0 -- 67.7
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  train:
+    _target_: omnivore.data.torch_dataset.TorchDataset
+    dataset:
+      _target_: omnivore.data.path_dataset.VideoPathDataset
+      path_file_list:
+        - manifold://omnivore/tree/datasets/SSv2/lists/vidpaths_train.npy
+      label_file_list:
+        - manifold://omnivore/tree/datasets/SSv2/lists/labels_train.npy
+      clip_sampler:
+        _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
+        clip_duration: 2.7
+      frame_sampler:
+        _target_: pytorchvideo.transforms.UniformTemporalSubsample
+        num_samples: 16
+      decoder: pyav
+      normalize_to_0_1: False
+      transforms:
+        - _target_: torchvision.transforms.Compose
+          transforms:
+            - _target_: pytorchvideo.transforms.ShortSideScale
+              size: 256
+            - _target_: torchvision.transforms.RandomResizedCrop
+              size: 224
+            # No FLIP augmentation for SSv2
+            # - _target_: torchvision.transforms.RandomHorizontalFlip
+            #   p: 0.5
+            - _target_:  torchvision.transforms._transforms_video.NormalizeVideo
+              mean: [123.675, 116.28, 103.53]
+              std: [58.395, 57.12, 57.375]
+        - _target_: omnivore.data.transforms.transform_wrappers.MaskingTransform
+          masking_object:
+            _target_: omnivore.data.transforms.mask_image_modeling.MaskImageModeling
+            pred_ratio: 0.9
+            pred_ratio_var: 0.0
+            pred_shape:
+              _target_: omnivore.data.transforms.mask_image_modeling.TubeMasking
+              frame_masking:
+                _target_: omnivore.data.transforms.mask_image_modeling.RandMasking
+            patch_size: ${lightning_module.model.trunk.patch_size}
+    shuffle: True
+    batch_size: 32
+    num_workers: 10
+    pin_memory: True
+    drop_last: True
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+      output_key: ssv2
+      batch_kwargs:
+        model_fwd_kwargs:
+          use_checkpoint: True
+    worker_init_fn: NULL
+  val: NULL
+lightning_module:
+  _target_: omnivore.lightning_module.omnivore_lightning_module.OmnivoreLightningModule
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    trunk:
+      _target_: omnivore.models.vision_transformer.VisionTransformer
+      img_size:
+        - 3
+        - ${data_module.train.dataset.frame_sampler.num_samples}
+        - 224
+        - 224
+      embed_dim: 768
+      depth: 12
+      patch_size: [2, 16, 16]
+      classifier_feature: global_pool
+      drop_path_rate: 0.0
+      use_cls_token: False
+      patch_embed_type: generic
+      patch_embed_params_list:
+        - _target_: torch.nn.Conv3d
+          in_channels: 3
+          out_channels: ${...embed_dim}
+          kernel_size: ${...patch_size}
+          stride: ${.kernel_size}
+      attn_target:
+        _target_: omnivore.models.vision_transformer.Attention
+        _partial_: True
+        num_heads: 12
+        proj_drop: 0
+        qk_scale: NULL
+        qkv_bias: True
+        attn_drop: 0
+      learnable_pos_embed: False  # Use sinusoidal positional encoding
+      masked_image_modeling: True
+      patch_dropping: True
+      decoder:
+        _target_: omnivore.models.vision_transformer.Decoder
+        _partial_: True
+        embed_dim: ${lightning_module.model.trunk.embed_dim}
+        decoder_depth: 4
+        decoder_embed_dim: 384
+        learnable_pos_embed: False  # Use sinusoidal positional encoding
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+          _partial_: True
+          num_heads: 16
+          proj_drop: 0
+          qk_scale: NULL
+          qkv_bias: True
+          attn_drop: 0
+    heads:
+      - head:
+          _target_: omnivore.models.heads.mae_head.MAEHead
+          in_features: ${lightning_module.model.trunk.decoder.decoder_embed_dim}
+          # 3 x 2 x 16 x 16
+          out_features: ${times:${times:${times:${lightning_module.model.trunk.img_size.0},${lightning_module.model.trunk.patch_size.0}},${lightning_module.model.trunk.patch_size.1}},${lightning_module.model.trunk.patch_size.2}}
+          # The MAE head already has the 0.02 init in it
+        input_key: NULL
+        output_key: NULL
+        fork_module: ""
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+        kwargs: {"mask": "mask"}
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas: [0.9, 0.95]
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3  # 8e-4 in orig config
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 0.0
+            lengths: [0.05, 0.95]  # warm for 40 epochs
+            interval_scaling: ['rescaled', 'fixed']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+          module_cls_names: ['torch.nn.LayerNorm']
+  meters: NULL
+  loss:
+    ssv2:
+      _target_: omnivore.losses.mae_loss.MAELoss
+      norm_pix_loss: True
+      norm_pix_per_channel: True
+      patch_size: ${lightning_module.model.trunk.patch_size}
+      unnormalize_img:
+        - ${data_module.train.dataset.transform.transforms.2.mean}
+        - ${data_module.train.dataset.transform.transforms.2.std}
+lightning_trainer:
+  _target_: pytorch_lightning.Trainer
+  num_nodes: ${launcher.num_nodes}
+  gpus: ${launcher.gpus_per_node}
+  sync_batchnorm: False
+  replace_sampler_ddp: False
+  max_epochs: 800
+  accelerator: ${launcher.accelerator}
+  strategy: ${launcher.strategy}
+  num_sanity_val_steps: 0
+  limit_val_batches: 0
+launcher:
+  num_nodes: 8
+  gpus_per_node: 8
+  mode: train
+  accelerator: gpu
+  strategy: ddp
+  experiment_log_dir: ???
+

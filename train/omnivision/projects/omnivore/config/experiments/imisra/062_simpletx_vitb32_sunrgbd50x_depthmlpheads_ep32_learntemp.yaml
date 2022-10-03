@@ -1,0 +1,31 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/061_simpletx_vitb32_sunrgbd50x_depthmlpheads_ep32
+
+trainer:
+  model:
+    _target_: omnivore.models.multimodal_wrapper.MultiModalZeroShotWithTextTargetsWrapper
+    multimodal_model:
+      _target_: omnivore.models.multimodal_wrapper.MultimodalWrapper
+      postprocessors:
+        - name: "normalize"
+          postprocessor:
+            _target_: omnivore.models.helpers.Normalize
+            dim: -1
+        - name: "normalize_and_scale_text"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+        - name: "normalize_and_scale_depth"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+                logit_scale_init: 14.28571 # 1/0.07
+                learnable: True

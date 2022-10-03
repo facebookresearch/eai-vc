@@ -1,0 +1,4 @@
++experiments=imisra/083_cpy_075_withcg
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3
+constants.warmup_epochs=1
+trainer.optim.gradient_clip.max_norm=0.3,1,10

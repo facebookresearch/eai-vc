@@ -1,0 +1,2 @@
++experiments=imisra/080_simpletx_nomask_vitb32_laion21M_sun_lcrop_realtext_dispmaxnorm_b4K_lr1e-3_ep32
+trainer.loss.sunrgbd.loss_fns.1.scale=0.1,0.25,1

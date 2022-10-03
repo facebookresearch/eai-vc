@@ -1,0 +1,2 @@
++experiments=imisra/060_cpy_034_warmup_fix_lr1.6e-3_eqbatch
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4

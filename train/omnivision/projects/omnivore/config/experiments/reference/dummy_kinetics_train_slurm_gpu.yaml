@@ -1,0 +1,239 @@
+# @package _global_
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 2
+  limit_train_batches: 2
+  limit_val_batches: 2
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+  mode: train
+
+  distributed:
+    timeout_mins: 1
+
+  data:
+    _target_: omnivision.data_module.base_data_module.BaseDataModule
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.VideoPathDataset
+        path_file_list:
+          - /checkpoint/aelnouby/datasets/k400/vidpaths_train.npy
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/vidpaths_train.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/vidpaths_train.npy
+        label_file_list:
+          - /checkpoint/aelnouby/datasets/k400/labels_train.npy
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/labels_train.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/labels_train.npy
+        clip_sampler:
+          _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
+          clip_duration: 8
+        frame_sampler:
+          _target_: pytorchvideo.transforms.UniformTemporalSubsample
+          num_samples: 8
+        decoder: pyav
+        normalize_to_0_1: True
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                - _target_: pytorchvideo.transforms.ShortSideScale
+                  size: 256
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 224
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: True
+      batch_size: 2
+      num_workers: 2
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: k400
+        batch_transforms:
+        - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldListToSampleList
+          field: vision
+        - _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+          base_transform:
+            _target_: omnivore.data.transforms.cutmixup.CutMixUp
+            mixup_alpha: 0.8 # mixup alpha value, mixup is active if > 0.
+            cutmix_alpha: 1.0 # cutmix alpha value, cutmix is active if > 0.
+            prob: 1.0 # probability of applying mixup or cutmix per batch or element
+            switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+            mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+            correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+            label_smoothing: 0.1 # apply label smoothing to the mixed target tensor
+            num_classes: 400 # number of classes for target
+        - _target_: omnivore.data.transforms.transform_wrappers.SampleListToSingleFieldList
+          field: vision
+      worker_init_fn: NULL
+    val:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.VideoPathDataset
+        path_file_list:
+          - /checkpoint/aelnouby/datasets/k400/vidpaths_val.npy
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/vidpaths_val.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/vidpaths_val.npy
+        label_file_list:
+          - /checkpoint/aelnouby/datasets/k400/labels_val.npy
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/labels_val.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/labels_val.npy
+        clip_sampler:
+          _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+          clip_duration: 2
+          clips_per_video: 5
+        frame_sampler:
+          _target_: pytorchvideo.transforms.UniformTemporalSubsample
+          num_samples: 160
+        decoder: pyav
+        normalize_to_0_1: True
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                - _target_: pytorchvideo.transforms.ShortSideScale
+                  size: 224
+                - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+          # Have to do this transform separately since SpatialCrop was written to
+          # expect a list as input (hence can't wrap with a ListTransform)
+          # TODO: Write a simpler version of spatial transform without expecting
+          # lists and then just flatten the list of lists.
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: omnivore.data.transforms.pytorchvideo.SpatialCrop
+              crop_size: 224
+              num_crops: 3
+      shuffle: False
+      batch_size: 2
+      num_workers: 2
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: k400
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    handle_list_inputs: True
+    trunk:
+      _target_: omnivore.models.swin_transformer.SwinTransformer3D
+      pretrained: NULL
+      pretrained2d: False
+      patch_size: [2, 4, 4]
+      embed_dim: 192
+      depths: [2, 2, 18, 2]
+      num_heads: [6, 12, 24, 48]
+      window_size: [8, 7, 7]
+      mlp_ratio: 4.
+      qkv_bias: True
+      qk_scale: NULL
+      drop_rate: 0.
+      attn_drop_rate: 0.
+      drop_path_rate: 0.4
+      patch_norm: True
+    heads:
+      - head:
+          _target_: torch.nn.Sequential
+          _args_:
+            - _target_: torch.nn.Dropout
+              p: 0.5
+            - _target_: torch.nn.Linear
+              in_features: 1536
+              out_features: 400
+        fork_module: ""
+        input_key: NULL
+        output_key: NULL
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+
+  optim:
+    optimizer:
+      _target_: torch.optim.SGD
+      lr: 0.1
+      weight_decay: 1e-4
+      momentum: 0.9
+      nesterov: True
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 0.02
+                end_value: 0.2
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: 0.2
+                end_value: 0.0
+            lengths: [0.3, 0.7]
+            interval_scaling: ['fixed', 'fixed']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.4
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names: ['*.bias']
+
+  meters:
+    train:
+      k400:
+        accuracy_top1:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 5
+    val:
+      k400:
+        accuracy_top1:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 5
+  loss:
+    k400:
+      _target_: torch.nn.CrossEntropyLoss
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 1
+  experiment_log_dir: ???
+
+submitit:
+  partition: learnlab
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]

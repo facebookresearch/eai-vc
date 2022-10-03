@@ -1,0 +1,46 @@
++experiments=rgirdhar/0041_fullaudioset_jointEncoder_gradClip
+
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=21e6
+
+# trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=2e-3
+# trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1e-8
+
+# trainer.optim.options.lr.0.scheduler.lengths=[0.01, 0.99]
+
+trainer.optim.options.weight_decay.0.scheduler.value=0.05
+
+trainer.optim.gradient_clip.max_norm=1
+
++trainer.loss.audioset.loss_fn.feat1_no_grad=1.0
+
+learnable_pos_rgbdt=False
+learnable_pos_audio=True
+
+video_clip_duration=2
+
+# trainer.data.train.datasets.1.dataset.transforms.1.base_transform.transforms.0.freq_mask_param=48
+# trainer.data.train.datasets.1.dataset.transforms.1.base_transform.transforms.1.time_mask_param=192
+
+rgb_kernel_size=[2,32,32]
+
+warmup_epochs=1
+
+trainer.data.train.datasets.1.collate_fn.batch_kwargs.model_fwd_kwargs.use_checkpoint=False
+
+trainer.optim.optimizer.betas.1=0.98
+
+# TODO: Remove the MLP from vision.. the following doesn't work
+# ~trainer.model.multimodal_model.heads.0.head._args_.3._target_
+# ~trainer.model.multimodal_model.heads.0.head._args_.4._target_
+# ~trainer.model.multimodal_model.heads.0.head._args_.4.model
+# ~trainer.model.multimodal_model.heads.0.head._args_.4.init_fns
+# trainer.model.multimodal_model.heads.0.head._args_.2.model.out_features=${embed_dim}
+
+# remove causal masking
+trainer.model.multimodal_model.modality_preprocessors.1.preprocessor.causal_masking=False
+
+
+# The /dataset01 version of Audioset data (doing this expt just to double check the data is good)
+
+trainer.data.train.datasets.1.dataset.new_prefix=/datasets01/audioset/042319/data/unbalanced_train_segments/video_mp4-288p/
+trainer.data.val.datasets.2.dataset.new_prefix=/datasets01/audioset/042319/data/eval_segments/video_mp4-288p/

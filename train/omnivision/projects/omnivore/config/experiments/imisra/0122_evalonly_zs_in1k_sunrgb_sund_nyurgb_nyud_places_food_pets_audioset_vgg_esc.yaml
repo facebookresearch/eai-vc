@@ -1,0 +1,22 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0122_eval_zs_in1k_sunrgb_sund_nyurgb_nyud_places_food_pets_audioset_vgg_esc
+
+constants:
+  eval_ckpt_path_list: ???
+
+trainer:
+  mode: val
+  checkpoint:
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint
+        pick_recursive_keys:
+          - "model"
+        path_list: ${constants.eval_ckpt_path_list}
+launcher:
+  num_nodes: 1
+  gpus_per_node: 8

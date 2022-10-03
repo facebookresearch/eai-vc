@@ -1,0 +1,97 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/061_simpletx_vitb32_sunrgbd50x_depthmlpheads_ep32
+
+trainer:
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      repeat_factors: [50.0]
+      datasets:
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+          concatenate_depth_and_rgb_channels: False
+          path_file_list:
+            - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_image_names.npy # AWS
+            - /checkpoint/kalyanv/data/sunrgbd/train_image_names.npy
+            - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_image_names.npy
+          label_file_list:
+            - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_labels.npy # AWS
+            - /checkpoint/kalyanv/data/sunrgbd/train_labels.npy
+            - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_labels.npy
+          depth_path_file_list:
+            - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_disparity_names.npy # AWS
+            - /checkpoint/kalyanv/data/sunrgbd/train_disparity_names.npy
+            - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_disparity_names.npy
+          new_prefix: ${constants.sun_rgb_prefix}
+          new_depth_prefix: ${constants.sun_depth_prefix}
+          transforms:
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                    max_depth: 75
+                    clamp_max_before_scale: True
+                  - _target_: torchvision.transforms.RandomResizedCrop
+                    size: 224
+                    interpolation: 2
+                  - _target_: torchvision.transforms.RandomHorizontalFlip
+                  - _target_: omnivore.data.transforms.image_rgbd.RandAugment3d  # Essentially autoagument rand-m9-mstd0.5-inc1
+                    num_ops: 2
+                    magnitude: 9
+                    interpolation: 2
+                  - _target_: omnivore.data.transforms.image_rgbd.ColorJitter3d
+                    brightness: 0.4
+                    contrast: 0.4
+                    saturation: 0.4
+                    hue: 0.4
+                  - _target_: torchvision.transforms.RandomErasing
+                    p: .25
+                  - _target_: torchvision.transforms.Normalize
+                    mean: [0.485, 0.456, 0.406, 0.0422]
+                    std: [0.229, 0.224, 0.225, 0.01744]
+        shuffle: True
+        batch_size: 256
+        num_workers: 12
+        pin_memory: False
+        drop_last: True
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: sunrgbd
+          batch_transforms:
+          - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelToVisionDepthBatch
+        worker_init_fn: NULL
+  model:
+    _target_: omnivore.models.multimodal_wrapper.MultiModalZeroShotWithTextTargetsWrapper
+    multimodal_model:
+      _target_: omnivore.models.multimodal_wrapper.MultimodalWrapper
+      postprocessors:
+        - name: "normalize"
+          postprocessor:
+            _target_: omnivore.models.helpers.Normalize
+            dim: -1
+        - name: "normalize_and_scale_text"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+        - name: "normalize_and_scale_depth"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+                logit_scale_init: 14.28571 # 1/0.07
+                learnable: True
+
+constants:
+  ## Dataset specific paths
+  sun_rgb_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images/
+  sun_depth_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images_disparity/

@@ -1,0 +1,9 @@
++experiments=imisra/087_sun_depthtextonly_interpbilin_withcg
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=2e-4,5e-4
+constants.warmup_epochs=1
+trainer.optim.gradient_clip.max_norm=1
+trainer.data.train.repeat_factors=[100],[200],[300],[500]
+constants.kernel_size=16
+constants.use_grad_checkpoint=True
+#constants.sun_rgb_prefix=/checkpoint/kalyanv/data/sunrgbd/images/
+#constants.sun_depth_prefix=/checkpoint/kalyanv/data/sunrgbd/images/

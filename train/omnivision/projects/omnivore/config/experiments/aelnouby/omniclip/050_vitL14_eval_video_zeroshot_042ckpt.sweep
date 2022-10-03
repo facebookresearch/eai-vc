@@ -1,0 +1,2 @@
++experiments=aelnouby/omniclip/050_vitL14_eval_video_zeroshot_039ckpt
+trainer.model.state_dict.checkpoint_path=/fsx-omnivore/aelnouby/omnivision_omnivore/config/experiments/aelnouby/omniclip/042_simpletx_vittL14_b65K_ep6_sunrgbd_layerscale_webdataset_2B_bfloat16.yaml/0/checkpoints/checkpoint.pt 

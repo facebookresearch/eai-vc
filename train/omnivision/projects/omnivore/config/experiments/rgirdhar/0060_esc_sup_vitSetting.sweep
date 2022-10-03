@@ -1,0 +1,5 @@
++experiments=rgirdhar/0060_esc_sup_vitSetting
+
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=1e-3,5e-4,2e-4
+
+trainer.max_epochs=50,100

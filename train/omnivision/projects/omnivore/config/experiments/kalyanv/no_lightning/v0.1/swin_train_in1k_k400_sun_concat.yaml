@@ -1,0 +1,518 @@
+# @package _global_
+# based on configs/experiments/pretrain/supervised/swin_joint_ft_mannatsingh/1_swinB_k400_rf_1_im1k_rf_1_sunrgbd_rf_50_sumtok_droppath_0.3_lr_4e-4_wd_4e-3_nep100_start_lr_20e-7.yaml
+# expected (fbcode): IN1k: 84.5%, K400: 82.3%, Sun-RGBD: 66.4%
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  train:
+    _target_: omnivore.data.concat_dataset.ConcatDataset
+    max_steps: sum
+    repeat_factors: [1.0, 50.0, 1.0]
+    datasets:
+    - _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        path_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/train_images_global.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/train_images_manifold_v2.npy
+        label_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/train_labels.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/train_labels.npy
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                - _target_: omnivore.data.transforms.rand_auto_aug.RandAugment  # Essentially autoagument rand-m9-mstd0.5-inc1
+                  magnitude: 9
+                  magnitude_std: 0.5
+                  increasing_severity: True
+                - _target_: torchvision.transforms.ColorJitter
+                  brightness: 0.4
+                  contrast: 0.4
+                  saturation: 0.4
+                  hue: 0.4
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.RandomErasing
+                  p: .25
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: True
+      batch_size: 32
+      num_workers: 5
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: in1k
+        batch_transforms:
+        - _target_: omnivore.data.transforms.cutmixup.CutMixUp
+          mixup_alpha: 0.8 # mixup alpha value, mixup is active if > 0.
+          cutmix_alpha: 1.0 # cutmix alpha value, cutmix is active if > 0.
+          prob: 1.0 # probability of applying mixup or cutmix per batch or element
+          switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+          mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+          correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+          label_smoothing: 0.1 # apply label smoothing to the mixed target tensor
+          num_classes: 1000 # number of classes for target
+      worker_init_fn: NULL
+    - _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+        path_file_list:
+          - /checkpoint/kalyanv/data/sunrgbd/train_image_names.npy
+          - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_image_names.npy
+        label_file_list:
+          - /checkpoint/kalyanv/data/sunrgbd/train_labels.npy
+          - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_labels.npy
+        depth_path_file_list:
+          - /checkpoint/kalyanv/data/sunrgbd/train_depth_names.npy
+          - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_depth_names.npy
+        # new_prefix: memcache_manifold://omnivore/tree/datasets/sunrgbd/cls_data/images/
+        # new_depth_prefix: memcache_manifold://omnivore/tree/datasets/sunrgbd/cls_data/images/
+        new_prefix: /checkpoint/kalyanv/data/sunrgbd/images/
+        new_depth_prefix: /checkpoint/kalyanv/data/sunrgbd/images/
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                  max_depth: 75
+                  clamp_max_before_scale: True
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 224
+                  interpolation: 2
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                - _target_: omnivore.data.transforms.image_rgbd.RandAugment3d  # Essentially autoagument rand-m9-mstd0.5-inc1
+                  num_ops: 2
+                  magnitude: 9
+                  interpolation: 2
+                - _target_: omnivore.data.transforms.image_rgbd.ColorJitter3d
+                  brightness: 0.4
+                  contrast: 0.4
+                  saturation: 0.4
+                  hue: 0.4
+                - _target_: torchvision.transforms.RandomErasing
+                  p: .25
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406, 0.0]
+                  std: [0.229, 0.224, 0.225, 1.0]
+                - _target_: omnivore.data.transforms.image_rgbd.DropChannels
+                  channel_probs: [0.5, 0.5, 0.5, 0]
+                  tie_channels: [0, 1, 2]
+                  fill_values: [0, 0, 0, 0]
+      shuffle: True
+      batch_size: 32
+      num_workers: 5
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: sunrgbd
+        batch_transforms:
+        - _target_: omnivore.data.transforms.cutmixup.CutMixUp
+          mixup_alpha: 0.8 # mixup alpha value, mixup is active if > 0.
+          cutmix_alpha: 1.0 # cutmix alpha value, cutmix is active if > 0.
+          prob: 1.0 # probability of applying mixup or cutmix per batch or element
+          switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+          mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+          correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+          label_smoothing: 0.1 # apply label smoothing to the mixed target tensor
+          num_classes: 19 # number of classes for target
+      worker_init_fn: NULL
+    - _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.VideoPathDataset
+        path_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/vidpaths_train.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/vidpaths_train.npy
+        label_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/labels_train.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/labels_train.npy
+        clip_sampler:
+          _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
+          clip_duration: 2
+        frame_sampler:
+          _target_: pytorchvideo.transforms.UniformTemporalSubsample
+          num_samples: 32
+        decoder: pyav
+        normalize_to_0_1: True
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+              - _target_: pytorchvideo.transforms.ShortSideScale
+                size: 256
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: 224
+              - _target_: torchvision.transforms.RandomHorizontalFlip
+                p: 0.5
+              - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+      shuffle: True
+      batch_size: 32
+      num_workers: 3
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: k400
+        batch_kwargs:
+          model_fwd_kwargs:
+            use_checkpoint: True
+          accum_steps: 4
+        batch_transforms:
+        - _target_: omnivore.data.transforms.cutmixup.CutMixUp
+          mixup_alpha: 0.8 # mixup alpha value, mixup is active if > 0.
+          cutmix_alpha: 1.0 # cutmix alpha value, cutmix is active if > 0.
+          prob: 1.0 # probability of applying mixup or cutmix per batch or element
+          switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+          mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+          correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+          label_smoothing: 0.1 # apply label smoothing to the mixed target tensor
+          num_classes: 400 # number of classes for target
+      worker_init_fn: NULL
+  val:
+    _target_: omnivore.data.concat_dataset.ConcatDataset
+    max_steps: sum
+    datasets:
+    - _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        path_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+        label_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.Resize
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.CenterCrop
+                  size: 224
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: False
+      batch_size: 64
+      num_workers: 4
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: in1k
+      worker_init_fn: NULL
+    - _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+        path_file_list:
+          - /checkpoint/kalyanv/data/sunrgbd/test_image_names.npy
+          - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/test_image_names.npy
+        label_file_list:
+          - /checkpoint/kalyanv/data/sunrgbd/test_labels.npy
+          - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/test_labels.npy
+        depth_path_file_list:
+          - /checkpoint/kalyanv/data/sunrgbd/test_depth_names.npy
+          - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/test_depth_names.npy
+        # new_prefix: memcache_manifold://omnivore/tree/datasets/sunrgbd/cls_data/images/
+        # new_depth_prefix: memcache_manifold://omnivore/tree/datasets/sunrgbd/cls_data/images/
+        new_prefix: /checkpoint/kalyanv/data/sunrgbd/images/
+        new_depth_prefix: /checkpoint/kalyanv/data/sunrgbd/images/
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                  max_depth: 75
+                  clamp_max_before_scale: True
+                - _target_: torchvision.transforms.Resize
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.CenterCrop
+                  size: 224
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406, 0.0]
+                  std: [0.229, 0.224, 0.225, 1.0]
+      shuffle: True
+      batch_size: 64
+      num_workers: 4
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: sunrgbd
+      worker_init_fn: NULL
+    - _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.VideoPathDataset
+        path_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/vidpaths_val.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/vidpaths_val.npy
+        label_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Kinetics_lowres/400/labels_val.npy
+          - manifold://omnivore/tree/datasets/kinetics_400_meta/labels_val.npy
+        #name: k400_val
+        clip_sampler:
+          _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+          clip_duration: 10
+          clips_per_video: 1
+        frame_sampler:
+          _target_: pytorchvideo.transforms.UniformTemporalSubsample
+          num_samples: 160
+        decoder: pyav
+        normalize_to_0_1: True
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+              - _target_: pytorchvideo.transforms.ShortSideScale
+                size: 224
+              - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+              - _target_: omnivore.data.transforms.pytorchvideo.TemporalCrop
+                frames_per_clip: 32
+                stride: 40
+              - _target_: omnivore.data.transforms.pytorchvideo.SpatialCrop
+                crop_size: 224
+                num_crops: 3
+      shuffle: False
+      batch_size: 1
+      num_workers: 4
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: k400
+      worker_init_fn: NULL
+
+module:
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    handle_list_inputs: True
+    trunk:
+      _target_: omnivore.models.swin_transformer.SwinTransformer3D
+      pretrained:
+        - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/SwinTransformer/swin_base_patch4_window7_224_22k.pth
+        - manifold://omnivore/tree/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/SwinTransformer/swin_base_patch4_window7_224_22k.pth
+      pretrained2d: True
+      patch_size: [2, 4, 4]
+      embed_dim: 128
+      depths: [2, 2, 18, 2]
+      num_heads: [4, 8, 16, 32]
+      window_size: [16, 7, 7]
+      mlp_ratio: 4.
+      qkv_bias: True
+      qk_scale: NULL
+      drop_rate: 0.
+      attn_drop_rate: 0.
+      drop_path_rate: 0.3
+      patch_norm: True
+      depth_mode: summed_rgb_d_tokens
+    heads:
+      - head:
+          _target_: omnivision.model.model_init_utils.init_parameters
+          model:
+            _target_: torch.nn.Linear
+            in_features: 1024
+            out_features: 1000
+          init_fns:
+            weight:
+              _target_: torch.nn.init.normal_
+              _partial_: True
+              mean: 0
+              std: 0.01
+            bias:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+        fork_module: ""
+        input_key: in1k
+        output_key: in1k
+      - head:
+          _target_: omnivision.model.model_init_utils.init_parameters
+          model:
+            _target_: torch.nn.Linear
+            in_features: 1024
+            out_features: 19
+          init_fns:
+            weight:
+              _target_: torch.nn.init.normal_
+              _partial_: True
+              mean: 0
+              std: 0.01
+            bias:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+        fork_module: ""
+        input_key: sunrgbd
+        output_key: sunrgbd
+      - head:
+          _target_: torch.nn.Sequential
+          _args_:
+            - _target_: torch.nn.Dropout
+              p: 0.5
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: 1024
+                out_features: 400
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.01
+                bias:
+                  _target_: torch.nn.init.zeros_
+                  _partial_: True
+        fork_module: ""
+        input_key: k400
+        output_key: k400
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 20e-7
+                end_value: 4e-4
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: 4e-4
+                end_value: 4e-5
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 4e-5
+                end_value: 1e-6
+            lengths: [0.1, 0.8, 0.1]
+            interval_scaling: ['rescaled', 'rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.004
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+             #- '*.pos_embed'
+             #- '*.cls_token'
+             #- '*.absolute_pos_embed'
+             - '*.relative_position_bias_table'
+             # - '*.norm'
+          module_cls_names: ['torch.nn.LayerNorm']
+  meters:
+    train:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+      sunrgbd:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+      k400:
+        accuracy_top1:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 5
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+      sunrgbd:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+      k400:
+        accuracy_top1:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivore.meters.avg_pooled_accuracy_list_meter.AvgPooledAccuracyListMeter
+          top_k: 5
+  loss:
+    in1k:
+      _target_: torch.nn.CrossEntropyLoss
+    sunrgbd:
+      _target_: torch.nn.CrossEntropyLoss
+    k400:
+      _target_: torch.nn.CrossEntropyLoss
+
+launcher:
+  num_nodes: 8
+  gpus_per_node: 8
+  experiment_log_dir: ???
+  mode: train
+  accelerator: cuda
+  strategy: ddp
+  seed_value: 24
+  checkpoint_save_freq: -1
+  log_freq: 10
+  use_amp: False
+  clip_gradient_norm: 0.0
+  max_epochs: 100
+  val_epoch_freq: 1
+  port_range: [10000, 65000]
+
+  # TODO: support the following params.
+  limit_train_batches: -1
+  limit_test_batches: -1
+  sync_batchnorm: False
+  INIT_METHOD: tcp
+  ALLOW_TF32_OPS: False
+  cudnn_deterministic: False # TODO: Not yet supported
+  MULTI_PROCESSING_METHOD: forkserver
+  TIMEOUT: 86400   # 1 day = 60 * 60 * 24
+  BACKEND: nccl
+  NCCL_DEBUG: False
+  NCCL_SOCKET_NTHREADS: ''
+
+hydra:
+  output_subdir: NULL
+  run:
+    dir: .
+
+submitit:
+  name: "omnivision_omnivore"
+  timeout_hour: 72
+  cpus_per_task: 10
+  partition: "learnlab"
+  mem: "470GB"
+  constraint: "" #"volta32gb"
+  use_cluster: True

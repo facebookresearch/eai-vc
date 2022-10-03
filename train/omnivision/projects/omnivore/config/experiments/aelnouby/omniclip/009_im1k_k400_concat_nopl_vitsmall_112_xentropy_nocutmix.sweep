@@ -1,0 +1,3 @@
++experiments=aelnouby/omniclip/009_im1k_k400_concat_nopl_vitsmall_112_xentropy.yaml
+trainer.data.train.datasets.0.collate_fn.batch_transforms=NULL
+trainer.data.train.datasets.1.collate_fn.batch_transforms=NULL

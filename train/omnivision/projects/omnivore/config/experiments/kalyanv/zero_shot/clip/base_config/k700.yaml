@@ -1,0 +1,92 @@
+# @package _global_
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  val:
+    dataset:
+      _target_: omnivore.data.path_dataset.ImagePathDataset
+      path_file_list:
+        - /checkpoint/qduval/datasets/k700/val_images.npy
+        - manifold://omnivore/tree/datasets/k700/k700_val_images.npy
+      label_file_list:
+        - /checkpoint/kalyanv/data/k700/val_labels.npy
+        - manifold://omnivore/tree/datasets/k700/k700_val_labels.npy
+      # name: imagenet1k_val
+      transform:
+        _target_: torchvision.transforms.Compose
+        transforms:
+          - _target_: torchvision.transforms.Resize
+            size: 224
+            interpolation: 3
+          - _target_: torchvision.transforms.CenterCrop
+            size: 224
+          - _target_: torchvision.transforms.ToTensor
+          - _target_: torchvision.transforms.Normalize
+            mean: [0.485, 0.456, 0.406]
+            std: [0.229, 0.224, 0.225]
+    shuffle: False
+    batch_size: 25
+    num_workers: 8
+    pin_memory: True
+    drop_last: False
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+    worker_init_fn: NULL
+
+lightning_module:
+  _target_: omnivore.lightning_module.language_vision_lightning_module.LanguageVisionModule
+  tokenizer:
+    _target_: slip.tokenizer.SimpleTokenizer
+    bpe_path_list:
+    - /checkpoint/kalyanv/data/slip/bpe_simple_vocab_16e6.txt.gz
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+  labels:
+    _target_: omnivore.utils.data.load_file_from_list
+    file_list:
+    - /checkpoint/kalyanv/data/slip/labels.json
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/labels.json
+  templates:
+    _target_: omnivore.utils.data.load_file_from_list
+    file_list:
+    - /checkpoint/kalyanv/data/slip/templates.json
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/templates.json
+  dataset_name: kinetics700_frames
+  meters:
+    val:
+      accuracy_top1:
+        _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+        top_k: 1
+      accuracy_top5:
+        _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+        top_k: 5
+  loss: NULL
+
+lightning_trainer:
+  _target_: pytorch_lightning.Trainer
+  num_nodes: ${launcher.num_nodes}
+  gpus: ${launcher.gpus_per_node}
+  log_gpu_memory: null
+  sync_batchnorm: False
+  replace_sampler_ddp: False
+  limit_train_batches: 2
+  # limit_val_batches: 10
+  limit_test_batches: 0
+  max_epochs: 1
+  accelerator: ${launcher.accelerator}
+  strategy: ${launcher.strategy}
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 2
+  mode: val
+  accelerator: gpu
+  strategy: ddp
+
+submitit:
+  name: k700_zero_shot
+  partition: learnlab
+  time: "72:00:00"
+  mem: "470GB"
+  constraints: "volta32gb"
+  use_cluster: True
+  cpus_per_task: 10

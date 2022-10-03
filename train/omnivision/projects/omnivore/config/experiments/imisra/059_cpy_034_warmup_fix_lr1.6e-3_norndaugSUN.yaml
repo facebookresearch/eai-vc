@@ -1,0 +1,129 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/034_simpletx_vitb32_laion21M_sunrgbd50x_imval_srgbdval_msclip_params_depthmlpheads_ep32
+
+trainer:
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      repeat_factors: [1.0, 50.0]
+      datasets:
+      - _target_: omnivore.data.webdataset_helpers.WebVisionDatasetBatchedWithLoader
+        base_dataset_fn:
+          _target_: omnivore.data.webdataset_helpers.get_wds_dataset_batched
+          _partial_: True
+          urls:
+            _target_: omnivore.utils.data.FileLoader.load
+            return_idx: False
+            path_list:
+              - /checkpoint/imisra/datasets/laion/laion400m_subset21M_tarlist.pkl
+          dataset_size_file: /checkpoint/imisra/datasets/laion/laion400m_subset21M_tarlist_numfiles.npy
+          batch_size: 256
+          num_workers: 12
+          preprocess_txt:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list: ${constants.bpe_path_list}
+          preprocess_img:
+            _target_: torchvision.transforms.Compose
+            transforms:
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: 224
+                interpolation: 3
+                scale: [0.9, 1.0]
+              - _target_: omnivore.data.transforms.basic.PILToRGB
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.Normalize
+                mean: [0.485, 0.456, 0.406]
+                std: [0.229, 0.224, 0.225]
+        base_loader_fn:
+          _target_: omnivore.data.webdataset_helpers.get_wds_loader
+          num_workers: ${..base_dataset_fn.num_workers}
+          collate_fn:
+            _target_: omnivore.data.webdataset_helpers.BatchToSampleText
+            collate_fn:
+              _target_: omnivore.data.api.DefaultOmnivoreCollator
+              output_key: laion
+              input_batch_is_collated: True
+          _partial_: True
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+          concatenate_depth_and_rgb_channels: False
+          path_file_list:
+            - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_image_names.npy # AWS
+            - /checkpoint/kalyanv/data/sunrgbd/train_image_names.npy
+            - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_image_names.npy
+          label_file_list:
+            - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_labels.npy # AWS
+            - /checkpoint/kalyanv/data/sunrgbd/train_labels.npy
+            - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_labels.npy
+          depth_path_file_list:
+            - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_depth_names.npy # AWS
+            - /checkpoint/kalyanv/data/sunrgbd/train_depth_names.npy
+            - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_depth_names.npy
+          new_prefix: ${constants.sun_rgb_prefix}
+          new_depth_prefix: ${constants.sun_depth_prefix}
+          transforms:
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                    max_depth: 75
+                    clamp_max_before_scale: True
+                  - _target_: torchvision.transforms.RandomResizedCrop
+                    size: 224
+                    interpolation: 2
+                  - _target_: torchvision.transforms.RandomHorizontalFlip
+                  - _target_: omnivore.data.transforms.image_rgbd.ColorJitter3d
+                    brightness: 0.4
+                    contrast: 0.4
+                    saturation: 0.4
+                    hue: 0.4
+                  - _target_: torchvision.transforms.Normalize
+                    mean: [0.485, 0.456, 0.406, 0.0]
+                    std: [0.229, 0.224, 0.225, 1.0]
+        shuffle: True
+        batch_size: 32
+        num_workers: 12
+        pin_memory: False
+        drop_last: True
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: sunrgbd
+          batch_transforms:
+          - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelToVisionDepthBatch
+        worker_init_fn: NULL
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.98
+      eps: 1e-6
+    gradient_clip: NULL
+    amp:
+      enabled: True
+      amp_dtype: float16 # bfloat16 or float16
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+
+constants:
+  warmup_epochs: 1
+  sun_rgb_prefix: /checkpoint/kalyanv/data/sunrgbd/images/
+  sun_depth_prefix: /checkpoint/kalyanv/data/sunrgbd/images/

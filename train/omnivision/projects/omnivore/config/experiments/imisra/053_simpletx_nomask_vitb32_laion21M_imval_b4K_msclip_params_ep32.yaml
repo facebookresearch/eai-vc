@@ -1,0 +1,88 @@
+# @package _global_
+
+# Follow 027
+# No masking in the text encoder
+
+defaults:
+  - /experiments/imisra/027_simpletx_vitb32_laion21M_imval_b32K_msclip_params_ep32
+
+
+trainer:
+  model:
+    multimodal_model:
+      _target_: omnivore.models.multimodal_wrapper.MultimodalWrapper
+      modality_preprocessors:
+        - name: "rgbdt_preprocessor"
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.RGBDTPreprocessor
+            img_size:
+            - 3
+            - 224
+            - 224
+            num_cls_tokens: 1
+            pos_embed_fn:
+              _target_: omnivore.models.multimodal_preprocessors.SpatioTemporalPosEmbeddingHelper
+              _partial_: true
+              learnable: true
+            depth_stem: NULL
+            rgbt_stem:
+              _target_: omnivore.models.multimodal_preprocessors.PatchEmbedGeneric
+              proj_stem:
+              - _target_: torch.nn.Conv2d
+                kernel_size: 32
+                in_channels: 3
+                out_channels: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                stride: ${.kernel_size}
+                bias: False
+              norm_layer:
+                _target_: torch.nn.LayerNorm # called self.ln_pre in VisualTransformer OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+        - name: "text_preprocessor"
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.TextPreprocessor
+            context_length: 77
+            vocab_size: 49408
+            embed_dim: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            causal_masking: False
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.98
+      eps: 1e-6
+    gradient_clip: NULL
+    amp:
+      enabled: True
+      amp_dtype: float16 # bfloat16 or float16
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+            - '*.bias'
+            - '*pos_embed'
+            - '*cls_token'
+            - "*log_logit_scale"
+          module_cls_names: ["torch.nn.LayerNorm"]
+
+constants:
+  warmup_epochs: 1

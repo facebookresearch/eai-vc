@@ -1,0 +1,204 @@
+# @package _global_
+
+scratch:
+  num_classes: 8142
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 1
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+  mode: train
+  strategy: fsdp
+
+  ema:
+    # Uru 10x10 only used EMA for IN1k, not for any other datasets
+    enabled: False
+    decay: 1e-4
+    warmup: 0.05
+
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.synthetic_dataset.SyntheticVisionSampleDataset
+        visual_tensor_shape: [3, 224, 224]
+        length: 1000000
+        num_classes: 10
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: True
+      batch_size: 128
+      num_workers: 8
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: image
+        batch_kwargs:
+          model_fwd_kwargs:
+            use_checkpoint: True
+        batch_transforms:
+        - _target_: omnivore.data.transforms.cutmixup.CutMixUp
+          mixup_alpha: 0.1 # mixup alpha value, mixup is active if > 0.
+          cutmix_alpha: 0.0 # cutmix alpha value, cutmix is active if > 0.
+          prob: 1.0 # probability of applying mixup or cutmix per batch or element
+          switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+          mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+          correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+          label_smoothing: 0.0 # apply label smoothing to the mixed target tensor
+          num_classes: ${scratch.num_classes} # number of classes for target
+      worker_init_fn: NULL
+    val:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.synthetic_dataset.SyntheticVisionSampleDataset
+        visual_tensor_shape: [3, 224, 224]
+        length: 1000000
+        num_classes: 10
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.Resize
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.CenterCrop
+                  size: 224
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: False
+      batch_size: 100
+      num_workers: 8
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: image
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    trunk:
+      _target_: omnivore.models.vision_transformer.VisionTransformer
+      fsdp_settings: ${trainer.fsdp_settings}
+      patch_size: 14
+      embed_dim: 2560
+      depth: 24
+      drop_path_rate: 0.0
+      attn_target:
+        _target_: omnivore.models.vision_transformer.Attention
+        _partial_: True
+        num_heads: 32
+        proj_drop: 0
+        qk_scale: NULL
+        qkv_bias: True
+        attn_drop: 0
+    heads:
+      - head:
+          _target_: omnivision.model.model_init_utils.init_parameters
+          model:
+            _target_: torch.nn.Linear
+            in_features: 2560
+            out_features: ${scratch.num_classes}
+          init_fns:
+            weight:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+            bias:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+        fork_module: ""
+        input_key: NULL
+        output_key: NULL
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+  optim:
+    amp:
+      enabled: True
+      amp_dtype: bfloat16
+    optimizer:
+      _target_: torch.optim.SGD
+      lr: 0  # SGD expects an lr arg during initialization
+      weight_decay: 0
+      nesterov: True
+      momentum: 0.9
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CosineParamScheduler
+            start_value: 0.012
+            end_value: 0
+  meters:
+    train:
+      image:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+    val:
+      image:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    image:
+      _target_: torch.nn.CrossEntropyLoss
+
+  fsdp_settings:
+    _target_: omnivore.models.fsdp_model_utils.FSDPSettings
+    flatten_parameters: False  # Set to false to match parameters by name
+    move_params_to_cpu: False
+    bucket_cap_mb: 0
+    compute_dtype: bfloat16
+    mixed_precision: True
+    fp32_reduce_scatter: False
+    reshard_after_forward: False
+    full_precision_layers: []
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+
+launcher:
+  num_nodes: 8
+  gpus_per_node: 8
+  experiment_log_dir: ???
+
+
+submitit:
+  partition: learn
+  constraints: NULL
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 32
+  port_range: [10000, 65000]

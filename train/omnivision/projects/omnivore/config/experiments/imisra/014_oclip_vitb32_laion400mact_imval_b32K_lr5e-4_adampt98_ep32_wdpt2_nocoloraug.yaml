@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+ - /experiments/imisra/012_oclip_vitb32_laion400m_imval_b32K_lr5e-4_adampt98_ep32_wdpt2_nocoloraug
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  train:
+    _target_: omnivore.data.torch_dataset.TorchDataset
+    dataset:
+      _target_: omnivore.data.vision_text_dataset.VisionTextDataset
+      base_dataset:
+        base_dataset_length: 400e6
+
+lightning_trainer:
+  max_epochs: 32

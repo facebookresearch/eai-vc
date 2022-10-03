@@ -1,0 +1,74 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/085_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_detachrgb_ep32
+
+
+constants:
+  depth_pos_embed_learnable: False
+  vision_pos_embed_learnable: False
+
+trainer:
+  model:
+    multimodal_model:
+      _target_: omnivore.models.multimodal_wrapper.MultimodalWrapper
+      modality_preprocessors:
+        - name: "rgbt_preprocessor"
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.RGBDTPreprocessor
+            img_size:
+            - 3
+            - 224
+            - 224
+            num_cls_tokens: 1
+            use_type_embed: True
+            pos_embed_fn:
+              _target_: omnivore.models.multimodal_preprocessors.SpatioTemporalPosEmbeddingHelper
+              _partial_: true
+              learnable: ${constants.vision_pos_embed_learnable}
+            depth_stem: NULL
+            rgbt_stem:
+              _target_: omnivore.models.multimodal_preprocessors.PatchEmbedGeneric
+              proj_stem:
+              - _target_: torch.nn.Conv2d
+                kernel_size: ${constants.kernel_size}
+                in_channels: 3
+                out_channels: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                stride: ${.kernel_size}
+                bias: False
+              norm_layer:
+                _target_: torch.nn.LayerNorm # called self.ln_pre in VisualTransformer OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+        - name: "d_preprocessor"
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.RGBDTPreprocessor
+            img_size:
+            - 1
+            - 224
+            - 224
+            num_cls_tokens: 1
+            use_type_embed: True
+            pos_embed_fn:
+              _target_: omnivore.models.multimodal_preprocessors.SpatioTemporalPosEmbeddingHelper
+              _partial_: true
+              learnable: ${constants.depth_pos_embed_learnable}
+            rgbt_stem: NULL
+            depth_stem:
+              _target_: omnivore.models.multimodal_preprocessors.PatchEmbedGeneric
+              proj_stem:
+              - _target_: torch.nn.Conv2d
+                kernel_size: ${constants.kernel_size}
+                in_channels: 1
+                out_channels: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                stride: ${.kernel_size}
+                bias: False
+              norm_layer:
+                _target_: torch.nn.LayerNorm # called self.ln_pre in VisualTransformer OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+        - name: "text_preprocessor"
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.TextPreprocessor
+            context_length: 77
+            vocab_size: 49408
+            embed_dim: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            causal_masking: False

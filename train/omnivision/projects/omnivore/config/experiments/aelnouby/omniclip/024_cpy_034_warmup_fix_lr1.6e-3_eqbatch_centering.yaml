@@ -1,0 +1,33 @@
+# @package _global_
+
+defaults:
+  - /experiments/aelnouby/omniclip/023_cpy_034_warmup_fix_lr1.6e-3_eqbatch_outdim
+
+out_dim: 64
+trainer:
+  model:
+    multimodal_model:
+      postprocessors:
+          - name: "normalize"
+            postprocessor:
+              _target_: omnivore.models.helpers.NormalizeAndCenter
+              dim: -1
+              out_features: ${out_dim}
+          - name: "normalize_and_scale_text"
+            postprocessor:
+              _target_: torch.nn.Sequential
+              _args_:
+                - _target_: omnivore.models.helpers.NormalizeAndCenter
+                  dim: -1
+                  out_features: ${out_dim}
+                - _target_: omnivore.models.helpers.LearnableLogitScaling
+          - name: "normalize_and_scale_depth"
+            postprocessor:
+              _target_: torch.nn.Sequential
+              _args_:
+                - _target_: omnivore.models.helpers.NormalizeAndCenter
+                  dim: -1
+                  out_features: ${out_dim}
+                - _target_: omnivore.models.helpers.LearnableLogitScaling
+                  logit_scale_init: 10 # 1/0.1 as in SimCLR
+                  learnable: False

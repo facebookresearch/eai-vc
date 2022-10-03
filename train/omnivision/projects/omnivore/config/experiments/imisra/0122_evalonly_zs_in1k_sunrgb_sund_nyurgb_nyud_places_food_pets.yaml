@@ -1,0 +1,358 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/base_dataset_paths
+
+constants:
+  rgb_crop_size: 224
+  sunrgbd_interp_int: 2
+  eval_ckpt_path_list: ???
+
+trainer:
+  mode: val
+  data:
+    val:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      datasets:
+      # ImageNet-1K
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImagePathDataset
+          copy_on_read: True
+          copy_on_read_dst_basename: ${..collate_fn.output_key}
+          path_file_list: ${constants.in1k_val_path_file_list}
+          label_file_list: ${constants.in1k_val_label_file_list}
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: 224
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+        shuffle: False
+        batch_size: 64
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: in1k
+        worker_init_fn: NULL
+      # SUN RGB-D Image
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImagePathDataset
+          copy_on_read: True
+          copy_on_read_dst_basename: ${..collate_fn.output_key}
+          path_file_list: ${constants.sun_test_path_file_list}
+          label_file_list: ${constants.sun_test_label_file_list}
+          new_prefix: ${constants.sun_rgb_prefix}
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: 224
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+        shuffle: False
+        batch_size: 8 # keep this small so we don't drop the batch when evaluating with a large overall batch size
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: sunrgbd_image_only
+        worker_init_fn: NULL
+      # SUN RGB-D depth only
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+          concatenate_depth_and_rgb_channels: False
+          path_file_list: ${constants.sun_test_path_file_list}
+          label_file_list: ${constants.sun_test_label_file_list}
+          depth_path_file_list: ${constants.sun_test_depth_path_file_list}
+          new_prefix: ${constants.sun_rgb_prefix}
+          new_depth_prefix: ${constants.sun_depth_prefix}
+          transforms:
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                    max_depth: NULL
+                    compute_max_per_sample: True
+                  - _target_: torchvision.transforms.Resize
+                    size: ${constants.rgb_crop_size}
+                    interpolation: ${constants.sunrgbd_interp_int}
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.sun_rgbdispmax_mean}
+                    std: ${constants.sun_rgbdispmax_std}
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelToVisionDepth
+        shuffle: False
+        batch_size: 8 # keep this small so we don't drop the batch when evaluating with a large overall batch size
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: sunrgbd_depth_only
+          batch_transforms:
+          - _target_: omnivore.data.transforms.image_rgbd_sample.DropVision
+            vision_drop_prob: 1.0
+      # NYUv2 RGB-D Image
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImagePathDataset
+          copy_on_read: True
+          copy_on_read_dst_basename: ${..collate_fn.output_key}
+          path_file_list: ${constants.nyuv2scene_test_path_file_list}
+          label_file_list: ${constants.nyuv2scene_test_label_file_list}
+          new_prefix: ${constants.nyuv2scene_rgb_prefix}
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: 224
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+        shuffle: False
+        batch_size: 8 # keep this small so we don't drop the batch when evaluating with a large overall batch size
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: nyuv2scene_image_only
+        worker_init_fn: NULL
+      # NYUv2 RGB-D depth only
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+          concatenate_depth_and_rgb_channels: False
+          path_file_list: ${constants.nyuv2scene_test_path_file_list}
+          label_file_list: ${constants.nyuv2scene_test_label_file_list}
+          depth_path_file_list: ${constants.nyuv2scene_test_depth_path_file_list}
+          new_prefix: ${constants.nyuv2scene_rgb_prefix}
+          new_depth_prefix: ${constants.nyuv2scene_depth_prefix}
+          transforms:
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                    max_depth: NULL
+                    compute_max_per_sample: True
+                  - _target_: torchvision.transforms.Resize
+                    size: ${constants.rgb_crop_size}
+                    interpolation: ${constants.sunrgbd_interp_int}
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.nyuv2scene_rgbdispmax_mean}
+                    std: ${constants.nyuv2scene_rgbdispmax_std}
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelToVisionDepth
+        shuffle: False
+        batch_size: 8 # keep this small so we don't drop the batch when evaluating with a large overall batch size
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: nyuv2scene_depth_only
+          batch_transforms:
+          - _target_: omnivore.data.transforms.image_rgbd_sample.DropVision
+            vision_drop_prob: 1.0
+      # Places365
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImagePathDataset
+          copy_on_read: True
+          copy_on_read_dst_basename: ${..collate_fn.output_key}
+          path_file_list: ${constants.places365_val_path_file_list}
+          label_file_list: ${constants.places365_val_label_file_list}
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: 224
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+        shuffle: False
+        batch_size: 64
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: places365
+        worker_init_fn: NULL
+      # # Food101
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImagePathDataset
+          copy_on_read: True
+          copy_on_read_dst_basename: ${..collate_fn.output_key}
+          path_file_list: ${constants.food101_test_path_file_list}
+          label_file_list: ${constants.food101_test_label_file_list}
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: 224
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+        shuffle: False
+        batch_size: 32
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: food101
+        worker_init_fn: NULL
+      # # Pets
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.ImagePathDataset
+          copy_on_read: True
+          copy_on_read_dst_basename: ${..collate_fn.output_key}
+          path_file_list: ${constants.pets_test_path_file_list}
+          label_file_list: ${constants.pets_test_label_file_list}
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: 224
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+        shuffle: False
+        batch_size: 8 # keep this small so we don't drop the batch when evaluating with a large overall batch size
+        num_workers: 12
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: pets
+        worker_init_fn: NULL
+  model:
+    zero_shot_with_text_targets:
+      in1k:
+        label_strings:
+          _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+          tokenizer:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list: ${constants.bpe_path_list}
+          label_names_file_list: ${constants.in1k_zs_classnames_list}
+          templates:
+            _target_: omnivore.utils.data.FileLoader.load
+            return_idx: False
+            path_list: ${constants.in1k_zs_templates_list}
+      sunrgbd_image_only:
+        label_strings:
+          _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+          tokenizer: ${...in1k.label_strings.tokenizer}
+          label_names_file_list: ${constants.sun_zs_classnames_list}
+          templates: ${...in1k.label_strings.templates}
+      sunrgbd_depth_only: ${.sunrgbd_image_only}
+      nyuv2scene_image_only:
+        label_strings:
+          _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+          tokenizer: ${trainer.model.zero_shot_with_text_targets.in1k.label_strings.tokenizer}
+          label_names_file_list: ${constants.nyuv2scene_zs_classnames_list}
+          templates: ${trainer.model.zero_shot_with_text_targets.in1k.label_strings.templates}
+      nyuv2scene_depth_only: ${.nyuv2scene_image_only}
+      places365:
+        label_strings:
+          _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+          tokenizer: ${...in1k.label_strings.tokenizer}
+          label_names_file_list: ${constants.places365_zs_classnames_list}
+          templates: ${...in1k.label_strings.templates}
+      food101:
+        label_strings:
+          _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+          tokenizer: ${...in1k.label_strings.tokenizer}
+          label_names_file_list: ${constants.food101_zs_classnames_list}
+          templates: ${...in1k.label_strings.templates}
+      pets:
+        label_strings:
+          _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+          tokenizer: ${...in1k.label_strings.tokenizer}
+          label_names_file_list: ${constants.pets_zs_classnames_list}
+          templates: ${...in1k.label_strings.templates}
+  meters:
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+            top_k: 1
+        accuracy_top5:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+            top_k: 5
+      sunrgbd_image_only: ${.in1k}
+      sunrgbd_depth_only: ${.in1k}
+      nyuv2scene_image_only: ${.in1k}
+      nyuv2scene_depth_only: ${.in1k}
+      places365: ${.in1k}
+      food101: ${.in1k}
+      pets: ${.in1k}
+  checkpoint:
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint
+        pick_recursive_keys:
+          - "model"
+        path_list: ${constants.eval_ckpt_path_list}
+launcher:
+  num_nodes: 1
+  gpus_per_node: 1

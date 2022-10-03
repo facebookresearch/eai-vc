@@ -1,0 +1,35 @@
+# @package _global_
+
+
+defaults:
+  - /experiments/rgirdhar/0026_av_imTx
+
+trainer:
+  model:
+    multimodal_model:
+      postprocessors:
+        - name: "normalize"
+          postprocessor:
+            _target_: omnivore.models.helpers.Normalize
+            dim: -1
+        - name: "normalize_and_scale"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+        - name: "normalize_and_scale_audio"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+      head_to_postprocessor:
+        - input_key: "vision_embed"
+          postprocessor_name: "normalize_and_scale"
+        - input_key: "text_embed"
+          postprocessor_name: "normalize" # only apply logit scaling to 1 dim
+        - input_key: "audio_embed"
+          postprocessor_name: "normalize_and_scale_audio"

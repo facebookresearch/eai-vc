@@ -1,0 +1,9 @@
++experiments=rgirdhar/0058_esc_sup
+
+trainer.model.state_dict.checkpoint_path=/checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/timm/jx_vit_base_p16_224-80ecf9dd.pth,/checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/timm/jx_vit_base_patch16_224_in21k-e5005f0a.pth,/checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/timm/jx_vit_base_p16_384-83fb41ba.pth
+trainer.model.state_dict.ckpt_state_dict_keys=[]
+trainer.model.state_dict.checkpoint_kernels.2.key_pattern=["trunk.head.*", "trunk.pos_embed"]
+
+trainer.optim.options.lr.0.scheduler.schedulers.0.start_value=1e-4
+
+trainer.max_epochs=100

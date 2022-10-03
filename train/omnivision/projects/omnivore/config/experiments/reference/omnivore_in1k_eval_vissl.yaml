@@ -1,0 +1,128 @@
+# @package _global_
+# eval experiments/pretrain/supervised/swin_scratch_mannatsingh/8_swinT_k400_rf_1_im1k_rf_1_sunrgbd_rf_10_sumtok_droppath_0.1_lr_20e-4_wd_5e-2_nep500_start_lr_20e-7.yaml
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 1
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+  mode: val
+
+  data:
+    _target_: omnivision.data_module.base_data_module.BaseDataModule
+    val:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        path_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+        label_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+        # name: imagenet1k_val
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.Resize
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.CenterCrop
+                  size: 224
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: False
+      batch_size: 25
+      num_workers: 8
+      pin_memory: True
+      drop_last: False
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: in1k
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_vissl_checkpoint
+      path_list:
+        - /checkpoint/mannatsingh/omnivore/configs/experiments/pretrain/supervised/swin_scratch_mannatsingh/8_swinT_k400_rf_1_im1k_rf_1_sunrgbd_rf_10_sumtok_droppath_0.1_lr_20e-4_wd_5e-2_nep500_start_lr_20e-7.yaml/0/checkpoint.torch
+        - manifold://omnivore/tree/mannatsingh/configs/experiments/pretrain/supervised/swin_scratch_mannatsingh/8_swinT_k400_rf_1_im1k_rf_1_sunrgbd_rf_10_sumtok_droppath_0.1_lr_20e-4_wd_5e-2_nep500_start_lr_20e-7.yaml/0/checkpoint.torch
+      head_id_to_key_mapping: {0: 0}
+      use_ema: True
+      strict_heads: False
+    model:
+      _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+      handle_list_inputs: True
+      trunk:
+        _target_: omnivore.models.swin_transformer.SwinTransformer3D
+        pretrained: NULL
+        pretrained2d: False
+        patch_size: [2, 4, 4]
+        embed_dim: 96
+        depths: [2, 2, 6, 2]
+        num_heads: [3, 6, 12, 24]
+        window_size: [8, 7, 7]
+        mlp_ratio: 4.
+        qkv_bias: True
+        qk_scale: NULL
+        drop_rate: 0.
+        attn_drop_rate: 0.
+        drop_path_rate: 0.1
+        patch_norm: True
+        depth_mode: summed_rgb_d_tokens
+      heads:
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: torch.nn.Linear
+                in_features: 768  # 8 * 96
+                out_features: 1000
+          fork_module: ""
+          input_key: NULL
+          output_key: NULL
+      trunk_fields:
+        - input_key: NULL
+          args: ["vision"]
+  meters:
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    val:
+      _target_: torch.nn.CrossEntropyLoss
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 2
+  experiment_log_dir: ???
+
+submitit:
+  partition: learnlab
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]

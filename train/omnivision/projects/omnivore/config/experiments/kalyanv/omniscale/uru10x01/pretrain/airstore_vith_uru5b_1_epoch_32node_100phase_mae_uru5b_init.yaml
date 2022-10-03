@@ -1,0 +1,36 @@
+# @package _global_
+
+defaults:
+  - /experiments/kalyanv/omniscale/uru10x01/pretrain/airstore_vith_uru5b_tool_1_epoch.yaml
+  - _self_
+
+scratch:
+  # number of classes in the `tool` version of Uru 5B
+  num_classes: 28051
+  batch_size: 32
+  phases_per_epoch: 100
+
+launcher:
+  num_nodes: 32
+  gpus_per_node: 8
+  experiment_log_dir: ???
+
+trainer:
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      strict: False # heads aren't loaded
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+        checkpoint_path: /checkpoint/omniscale_ugc/mannatsingh/omnivision_omnivore/config/experiments/mannatsingh/mae/pretrain/vit_h_uru5b_1_epoch_bs_4k_gpus_128.yaml/0/checkpoints/checkpoint.pt
+        ckpt_state_dict_keys: ["model"]
+        checkpoint_kernels:
+        - _target_: omnivision.model.checkpoint_utils.CkptExcludeKernel
+          key_pattern:
+          - "trunk.decoder.*"
+          - "trunk.norm.*"
+          - "trunk.mask_token"
+          - "heads.*"

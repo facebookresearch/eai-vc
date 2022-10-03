@@ -1,0 +1,96 @@
+# @package _global_
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  val:
+    dataset:
+      _target_: omnivore.data.path_dataset.VideoPathDataset
+      path_file_list:
+        - /checkpoint/kalyanv/data/hmdb51/paths_split_01.npy
+      label_file_list:
+        - /checkpoint/kalyanv/data/hmdb51/labels_split_01.npy
+      clip_sampler:
+        _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
+        clip_duration: 10
+      frame_sampler:
+        _target_: pytorchvideo.transforms.UniformTemporalSubsample
+        num_samples: 1
+      decoder: pyav
+      normalize_to_0_1: False
+      transform:
+        _target_: torchvision.transforms.Compose
+        transforms:
+        - _target_: pytorchvideo.transforms.ShortSideScale
+          size: 256
+        - _target_: torchvision.transforms.RandomResizedCrop
+          size: 224
+        - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+          mean: [123.675, 116.28, 103.53]
+          std: [58.395, 57.12, 57.375]
+        - _target_: vissl.models.model_helpers.SqueezeNoBatch
+    shuffle: False
+    batch_size: 8
+    num_workers: 8
+    pin_memory: True
+    drop_last: False
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+    worker_init_fn: NULL
+
+lightning_module:
+  _target_: omnivore.lightning_module.language_vision_lightning_module.LanguageVisionModule
+  tokenizer:
+    _target_: slip.tokenizer.SimpleTokenizer
+    bpe_path_list:
+    - /checkpoint/kalyanv/data/slip/bpe_simple_vocab_16e6.txt.gz
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+  labels:
+    _target_: omnivore.utils.data.load_file_from_list
+    file_list:
+    - /checkpoint/kalyanv/data/slip/labels.json
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/labels.json
+  templates:
+    _target_: omnivore.utils.data.load_file_from_list
+    file_list:
+    - /checkpoint/kalyanv/data/slip/templates.json
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/templates.json
+  dataset_name: hmdb51
+  meters:
+    val:
+      accuracy_top1:
+        _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+        top_k: 1
+      accuracy_top5:
+        _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+        top_k: 5
+  loss: NULL
+
+lightning_trainer:
+  _target_: pytorch_lightning.Trainer
+  num_nodes: ${launcher.num_nodes}
+  gpus: ${launcher.gpus_per_node}
+  log_gpu_memory: null
+  sync_batchnorm: False
+  replace_sampler_ddp: False
+  limit_train_batches: 2
+  # limit_val_batches: 10
+  limit_test_batches: 0
+  max_epochs: 1
+  accelerator: ${launcher.accelerator}
+  strategy: ${launcher.strategy}
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 2
+  mode: val
+  accelerator: gpu
+  strategy: ddp
+
+submitit:
+  name: hmdb51_zero_shot
+  partition: learnlab
+  time: "72:00:00"
+  mem: "470GB"
+  constraints: "volta32gb"
+  use_cluster: True
+  cpus_per_task: 10

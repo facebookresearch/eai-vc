@@ -1,0 +1,12 @@
+# @package _global_
+
+# Follow Table 18 of CLIP https://arxiv.org/pdf/2103.00020.pdf
+
+defaults:
+  - /experiments/rgirdhar/0021_clip_lrFix.yaml
+
+lightning_module:
+  model:
+    clip_model:
+      _target_: omnivore.models.openclip_model.CLIPSMSepLN
+

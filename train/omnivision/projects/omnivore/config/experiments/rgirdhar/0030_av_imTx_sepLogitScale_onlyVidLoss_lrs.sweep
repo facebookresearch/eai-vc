@@ -1,0 +1,4 @@
++experiments=rgirdhar/0026_av_imTx,rgirdhar/0029_av_imTx_sepAudioEnc
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=0
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=1e-4,1e-5
+trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1e-8

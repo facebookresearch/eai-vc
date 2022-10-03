@@ -1,0 +1,13 @@
++experiments=rgirdhar/0054_fullaudioset_jointEncoder_audiosetOnly
+
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=2e-3,2e-4
+trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1e-8
+
+trainer.optim.options.lr.0.scheduler.lengths=[0.01, 0.99]
+
+trainer.optim.options.weight_decay.0.scheduler.value=0.0001
+
+# trainer.model.zero_shot_with_text_targets.audioset.label_strings.templates=["{}"]
+# trainer.data.train.datasets.0.dataset.templates=["{}"]
+
+trainer.optim.gradient_clip.max_norm=5.0,10.0

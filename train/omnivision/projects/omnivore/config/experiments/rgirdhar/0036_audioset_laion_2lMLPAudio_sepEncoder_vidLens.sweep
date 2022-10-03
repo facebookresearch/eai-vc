@@ -1,0 +1,3 @@
++experiments=rgirdhar/0035_audioset_laion_2lMLPAudio_sepEncoder
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=0,21e6
+video_clip_duration=2,4,10

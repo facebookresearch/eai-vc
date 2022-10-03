@@ -1,0 +1,3 @@
++experiments=reference/dummy_kinetics_train_slurm_fb_gpu_multi
+lightning_trainer.limit_train_batches=16,32,40
+lightning_trainer.limit_val_batches=16,32

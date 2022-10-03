@@ -1,0 +1,174 @@
+# @package _global_
+
+launcher:
+  gpus_per_node: 8
+  num_nodes: 8
+  experiment_log_dir: ???
+
+scratch:
+  batch_size: 64
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 800
+  accelerator: cuda
+  seed_value: 123
+  mode: train
+
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        path_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/in1k/train_images.npy
+        label_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/in1k/train_labels.npy
+        new_prefix: /checkpoint/omniscale_oss/datasets/imagenet_1k/
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 224
+                  scale: [0.2, 1.0]
+                  interpolation: 3
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                  p: 0.5
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+          - _target_: omnivore.data.transforms.transform_wrappers.MaskingTransform
+            masking_object:
+              _target_: omnivore.data.transforms.mask_image_modeling.MaskImageModeling
+              pred_ratio: 0.75
+              pred_ratio_var: 0.0
+              pred_shape:
+                _target_: omnivore.data.transforms.mask_image_modeling.RandMasking
+              patch_size:
+                - 1
+                - ${trainer.model.trunk.patch_size}
+                - ${trainer.model.trunk.patch_size}
+      shuffle: True
+      batch_size: ${scratch.batch_size}
+      num_workers: 10
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: in1k
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    trunk:
+      _target_: omnivore.models.vision_transformer.VisionTransformer
+      embed_dim: 1280
+      depth: 32
+      patch_size: 14
+      attn_target:
+        _target_: omnivore.models.vision_transformer.Attention
+        _partial_: True
+        num_heads: 16
+        proj_drop: 0
+        qk_scale: NULL
+        qkv_bias: True
+        attn_drop: 0
+      learnable_pos_embed: False  # Use sinusoidal positional encoding
+      masked_image_modeling: True
+      patch_dropping: True
+      decoder:
+        _target_: omnivore.models.vision_transformer.Decoder
+        _partial_: True
+        embed_dim: ${trainer.model.trunk.embed_dim}
+        decoder_depth: 8
+        decoder_embed_dim: 512
+        learnable_pos_embed: False  # Use sinusoidal positional encoding
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+          _partial_: True
+          num_heads: 16
+          proj_drop: 0
+          qk_scale: NULL
+          qkv_bias: True
+          attn_drop: 0
+    heads:
+    - head:
+        _target_: omnivore.models.heads.mae_head.MAEHead
+        in_features: ${trainer.model.trunk.decoder.decoder_embed_dim}
+        out_features: 588 # patch_size**2 * in_chans
+      input_key: NULL
+      output_key: NULL
+      fork_module: ""
+      # TODO: Add init
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+        kwargs: {"mask": "mask"}
+
+  optim:
+    gradient_clip: NULL
+    amp:
+      enabled: True
+      amp_dtype: bfloat16 # bfloat16 or float16
+
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas: [0.9, 0.95]
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 2.4e-3 # From MAE paper
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 0.0
+            lengths: [0.05, 0.95]  # warm for 40 epochs
+            interval_scaling: ['rescaled', 'fixed']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+              - '*.bias'
+              - '*.cls_token'
+          module_cls_names: ['torch.nn.LayerNorm']
+
+  meters: NULL
+
+  loss:
+    in1k:
+      _target_: omnivore.losses.mae_loss.MAELoss
+      norm_pix_loss: True
+      norm_pix_per_channel: False
+      patch_size: ${trainer.model.trunk.patch_size}
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+
+submitit:
+  name: "omnivision_omnivore"
+  timeout_hour: 72
+  cpus_per_task: 32 # RSC support 32, default 10
+  partition: "learn"
+  mem: "1000GB" # RS support 2TB?
+  constraints: "" #"volta32gb"
+  use_cluster: True
+  port_range: [10000, 65000]

@@ -1,0 +1,2 @@
++experiments=aelnouby/omniclip/008_im1k_k400_concat_nopl_vitsmall_112.yaml
+trainer.loss.k400.temperature=1.0,0.2,0.07

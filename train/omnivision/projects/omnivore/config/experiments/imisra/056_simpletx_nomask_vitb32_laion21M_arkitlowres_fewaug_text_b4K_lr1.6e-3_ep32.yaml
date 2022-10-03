@@ -1,0 +1,26 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/050_simpletx_nomask_vitb32_laion21M_arkitlowres_fewaug_text_b4K_lr1e-3_ep32
+
+trainer:
+  optim:
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+
+constants:
+  sun_rgb_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images/
+  sun_depth_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images_disparity/

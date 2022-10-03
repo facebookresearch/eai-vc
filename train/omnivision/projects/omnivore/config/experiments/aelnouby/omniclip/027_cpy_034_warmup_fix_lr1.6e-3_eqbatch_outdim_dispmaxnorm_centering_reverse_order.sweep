@@ -1,0 +1,4 @@
++experiments=aelnouby/omniclip/027_cpy_034_warmup_fix_lr1.6e-3_eqbatch_outdim_dispmaxnorm_centering
+trainer.model.multimodal_model.postprocessors.0.postprocessor.reverse_order=True
+trainer.model.multimodal_model.postprocessors.1.postprocessor._args_.0.reverse_order=True
+trainer.model.multimodal_model.postprocessors.2.postprocessor._args_.0.reverse_order=True

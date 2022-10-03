@@ -1,0 +1,10 @@
+# @package _group_
+log_save_dir: null
+name: "ptv_trainer_job"
+timeout_hour: 72
+cpus_per_task: 10
+partition: "learnlab"
+mem: "470GB"
+constraint: "volta32gb"
+mode: "prod"
+use_cluster: False

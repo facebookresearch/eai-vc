@@ -1,0 +1,33 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0011_maeFt_vitbase_SSv2_vidMAEAtt_12h_dropPath_otherfix.yaml
+
+lightning_module:
+  _target_: omnivore.lightning_module.omnivore_lightning_module.OmnivoreLightningModule
+  # use_auto_opt: True
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: False # heads aren't loaded
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+      checkpoint_path: manifold://omnivore/tree/rgirdhar/omnivision_omnivore/config/experiments/rgirdhar/0013_mae_vitbase_decoder4L384_800ep_SSv2_tube_16e3.yaml/0/checkpoints/last.ckpt
+      ckpt_state_dict_keys: ["state_dict"]
+      checkpoint_kernels:
+        - _target_: omnivision.model.checkpoint_utils.CkptExcludeKernel
+          key_pattern:
+            # - "encoder_to_decoder.*"
+            - "model.trunk.mask_token"
+            - "model.trunk.decoder.*"
+            - "model.trunk.norm.*"
+            - "model.head.*"
+        - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+          source_pattern: "model."
+          target_pattern: ""
+    model:
+      trunk:
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+
+# lightning_trainer:
+#   precision: bf16

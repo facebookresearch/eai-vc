@@ -1,0 +1,2 @@
++experiments=aelnouby/omniclip/023_cpy_034_warmup_fix_lr1.6e-3_eqbatch_outdim
+out_dim=16,32,64,128,256

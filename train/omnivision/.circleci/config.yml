@@ -1,0 +1,110 @@
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+
+# -------------------------------------------------------------------------------------
+# Environments to run the jobs in
+# -------------------------------------------------------------------------------------
+cpu: &cpu
+  environment:
+    TERM: xterm
+  machine:
+    image: ubuntu-2004:202111-02
+  resource_class: medium
+
+# -------------------------------------------------------------------------------------
+# Re-usable commands
+# -------------------------------------------------------------------------------------
+setup_venv: &setup_venv
+  - run:
+      name: Activate Venv
+      command: |
+        python -m venv ~/venv
+        echo ". ~/venv/bin/activate" >> $BASH_ENV
+        . ~/venv/bin/activate
+        python --version
+        which python
+        which pip
+install_python: &install_python
+  - run:
+      name: Install Python
+      working_directory: ~/
+      command: |
+        cd /opt/circleci/.pyenv/plugins/python-build/../.. && git pull && cd -
+        pyenv install 3.9.7 --skip-existing
+        pyenv global  3.9.7
+        which python
+        which pip
+upgrade_pip_setuptools: &upgrade_pip_setuptools
+  - run:
+      name: Upgrade pip and setuptools
+      working_directory: ~/
+      command: |
+        pip install --upgrade pip
+        pip install --upgrade --progress-bar off setuptools
+install_dev_dep: &install_dev_dep
+  - run:
+      name: Install Dev Dependencies
+      command: |
+        pip install -e .[dev,omnivore,omniscale]
+install_projects: &install_projects
+  - run:
+      name: Install Projects
+      command: |
+        pip install -e projects
+pip_list: &pip_list
+  - run:
+      name: Pip list
+      command: |
+        pip list
+check_formatting: &check_formatting
+  - run:
+        name: Check formatting
+        working_directory: ~/omnivision/
+        command: |
+          ufmt check omnivision projects tests
+
+run_unittests: &run_unittests
+  - run:
+      name: Run Unit Tests
+      working_directory: ~/omnivision/
+      command: |
+        python -m unittest discover -v -s tests -t .
+# -------------------------------------------------------------------------------------
+# Jobs to run
+# -------------------------------------------------------------------------------------
+jobs:
+  cpu_tests:
+    <<: *cpu
+
+    working_directory: ~/omnivision
+
+    steps:
+      - checkout
+
+      - <<: *install_python
+
+      - <<: *setup_venv
+
+      - <<: *upgrade_pip_setuptools
+
+      - <<: *install_dev_dep
+
+      - <<: *install_projects
+
+      - <<: *pip_list
+
+      - <<: *run_unittests
+
+      - <<: *check_formatting
+
+# -------------------------------------------------------------------------------------
+# Workflows
+# -------------------------------------------------------------------------------------
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - cpu_tests

@@ -1,0 +1,7 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/054_simpletx_eos_nomask_vitb32_srgbd10x_fewaug_imval_srgbdval_b4K_lr1.6e-3_ep32_w1
+
+trainer:
+  max_epochs: 50

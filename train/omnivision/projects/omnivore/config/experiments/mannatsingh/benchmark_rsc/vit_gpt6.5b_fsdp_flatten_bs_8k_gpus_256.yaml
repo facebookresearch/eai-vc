@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - /experiments/mannatsingh/benchmark_rsc/vit_gpt6.5b_fsdp_bs_8k_gpus_256.yaml
+
+
+trainer:
+  fsdp_settings:
+    _target_: omnivore.models.fsdp_model_utils.FSDPSettings
+    flatten_parameters: True

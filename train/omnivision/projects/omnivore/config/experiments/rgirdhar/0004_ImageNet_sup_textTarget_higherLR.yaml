@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0004_ImageNet_sup_textTarget_higherLR.yaml
+
+lightning_module:
+  optim:
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-6
+            lengths: [0.0166, 0.9834]  # warm for 5 epochs
+            interval_scaling: ['rescaled', 'rescaled']

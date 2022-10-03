@@ -1,0 +1,28 @@
+# @package _global_
+defaults:
+  - mannatsingh/uru10x10/fine_tune/inat18_ft_vith_mae_init_518
+
+trainer:
+  data:
+    train:
+      dataset:
+        new_prefix: /checkpoint/omniscale_oss/datasets/inat_dataset/train_val2018/
+        path_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/inat18/train_images.npy
+        label_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/inat18/train_labels.npy
+    val:
+      dataset:
+        new_prefix: /checkpoint/omniscale_oss/datasets/inat_dataset/train_val2018/
+        path_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/inat18/val_images.npy
+        label_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/inat18/val_labels.npy
+
+  checkpoint:
+    model_weight_initializer:
+      state_dict:
+        checkpoint_path: /checkpoint/omniscale_oss/uru10x10/checkpoints/vit_h14_10b_studio.torch
+
+submitit:
+  constraints: NULL

@@ -1,0 +1,6 @@
++experiments=rgirdhar/0023_audioset
+trainer.data.train.dataset.path_file_list.0=/checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/unbalanced_train_segments_filelist.npy
+trainer.data.train.dataset.label_file_list.0=/checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/unbalanced_train_segments_labels.npy
+
+launcher.num_nodes=4
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=4e-3

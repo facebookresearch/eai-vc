@@ -1,0 +1,4 @@
++experiments=imisra/0106_simpletx_nomask_vitl14_laion21M_imval_b4k_ep32_bf16_withcg
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1.6e-3
+trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1e-5
+trainer.optim.gradient_clip.max_norm=NULL

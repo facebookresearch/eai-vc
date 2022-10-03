@@ -1,0 +1,29 @@
++experiments=rgirdhar/0041_fullaudioset_jointEncoder_gradClip
+
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=21e6
+
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=1.6e-3
+trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1.6e-8
+
+# trainer.optim.options.lr.0.scheduler.lengths=[0.01, 0.99]
+
+trainer.optim.options.weight_decay.0.scheduler.value=0.0001
+
+trainer.optim.gradient_clip.max_norm=10
+
++trainer.loss.audioset.loss_fn.feat1_no_grad=1.0
+
+learnable_pos_rgbdt=True
+learnable_pos_audio=True
+
+video_num_frames=8
+video_clip_duration=4,8
+# same as old expt 0057 but with bfloat16 which is now the default
+# 8s because otherwise OOM with bfloat16s
+
+# trainer.data.train.datasets.1.dataset.transforms.1.base_transform.transforms.0.freq_mask_param=48
+# trainer.data.train.datasets.1.dataset.transforms.1.base_transform.transforms.1.time_mask_param=192
+
+rgb_kernel_size=[2,32,32]
+
+warmup_epochs=1

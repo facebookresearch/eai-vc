@@ -1,0 +1,78 @@
+# @package _global_
+
+defaults:
+  - /experiments/aelnouby/omniclip/042_simpletx_vittL14_b65K_ep6_sunrgbd_layerscale_webdataset_2B_bfloat16
+
+trainer:
+  data:
+  train:
+    repeat_factors: [1.0, 20.0]
+  model:
+    multimodal_model:
+      trunks:
+        - name: vision
+          trunk:
+            _target_: omnivore.models.simple_transformer.SimpleTransformer
+            embed_dim: 1024
+            num_blocks: 24
+            ffn_dropout_rate: 0.0
+            drop_path_rate: 0.0 # OpenCLIP
+            # layer_scale_type: per_channel
+            # layer_scale_init_value: 1e-6
+            attn_target:
+              _target_: omnivore.models.simple_transformer.MultiheadAttention
+              embed_dim: ${..embed_dim}
+              num_heads: 16
+              dropout: 0.0
+              bias: True
+              add_bias_kv: True
+              # _target_: omnivore.models.simple_transformer.EfficientAttention
+              # dim: ${..embed_dim}
+              # num_heads: 16
+              # attn_drop: 0.0
+              # qkv_bias: True
+              _partial_: True
+            pre_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "b l d -> l b d"
+            post_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "l b d -> b l d"
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.98
+      eps: 1e-6
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-5
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+            - '*.bias'
+            - '*pos_embed'
+            - '*cls_token'
+            - "*log_logit_scale"
+          module_cls_names: ["torch.nn.LayerNorm"]
+
+constants:
+  warmup_epochs: 100

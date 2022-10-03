@@ -1,0 +1,2 @@
++experiments=imisra/075_cpy_059_norndaugSUN_laion_sunrgbtext_sunrgbd_disppersampnorm_nomsk
+trainer.loss.sunrgbd.scale=0.1,0.25

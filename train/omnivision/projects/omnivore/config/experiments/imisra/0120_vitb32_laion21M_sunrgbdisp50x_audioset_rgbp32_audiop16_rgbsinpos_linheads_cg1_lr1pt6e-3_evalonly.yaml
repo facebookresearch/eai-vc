@@ -1,0 +1,9 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0120_vitb32_laion21M_sunrgbdisp50x_audioset_rgbp32_audiop16_rgbsinpos_linheads_cg1_lr1pt6e-3
+  - /experiments/imisra/0122_evalonly_zs_in1k_sunrgb_sund_nyurgb_nyud_places_food_pets_audioset_vgg_esc
+constants:
+  eval_ckpt_path_list:
+    - /fsx-omnivore/imisra/omnivision_omnivore/config/experiments/imisra/0120_vitb32_laion21M_sunrgbdisp50x_audioset_rgbp32_audiop16_rgbsinpos_linheads_cg1_lr1pt6e-3.yaml/0/checkpoints/checkpoint.pt
+

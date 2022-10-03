@@ -1,0 +1,6 @@
++experiments=imisra/093_vitb_in1kinit_ft_srgbd_rgbonly
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3,2e-3,1e-2,2e-2
+trainer.max_epochs=200,300
+trainer.optim.options.weight_decay.0.scheduler.value=0,1e-6
+#constants.sun_rgb_prefix=/checkpoint/kalyanv/data/sunrgbd/images/
+#constants.sun_depth_prefix=/checkpoint/kalyanv/data/sunrgbd/images/

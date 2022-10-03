@@ -1,0 +1,40 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0026_av_imTx
+
+trainer:
+  model:
+    multimodal_model:
+      trunks:
+        - name: vision
+          trunk:
+            _target_: omnivore.models.simple_transformer.SimpleTransformer
+            embed_dim: 768
+            num_blocks: 12
+            ffn_dropout_rate: 0.0
+            drop_path_rate: 0.0 # OpenCLIP
+            attn_target:
+              _target_: omnivore.models.simple_transformer.MultiheadAttention
+              embed_dim: ${..embed_dim}
+              num_heads: 12
+              dropout: 0.0
+              bias: True
+              add_bias_kv: True
+              _partial_: True
+            pre_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "b l d -> l b d"
+            post_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "l b d -> b l d"
+        - name: audio
+          trunk: ${..0.trunk}  # hopefully this makes a diff copy of the model
+      tokens_to_trunks:
+        - trunk_name: vision
+          input_keys:
+            - vision_tokens
+            - text_tokens
+        - trunk_name: audio
+          input_keys:
+            - audio_tokens

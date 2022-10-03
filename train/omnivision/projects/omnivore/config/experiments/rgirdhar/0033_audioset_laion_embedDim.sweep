@@ -1,0 +1,3 @@
++experiments=rgirdhar/0033_audioset_laion
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=21e6
+embed_dim=64,128,256

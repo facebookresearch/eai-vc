@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0117_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_fixtemp_detachrgb_nocenter_ep32_lr1e-3
+  - /experiments/imisra/0122_evalonly_zs_in1k_sunrgb_sund_nyurgb_nyud_places_food_pets
+constants:
+  eval_ckpt_path_list:
+    - /fsx-omnivore/imisra/omnivision_omnivore/config/experiments/imisra/0117_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_fixtemp_detachrgb_nocenter_ep32_lr1e-3_temp.sweep/3/checkpoints/checkpoint.pt

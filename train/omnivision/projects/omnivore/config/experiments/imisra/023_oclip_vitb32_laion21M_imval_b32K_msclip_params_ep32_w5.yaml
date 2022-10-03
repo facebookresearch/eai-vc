@@ -1,0 +1,27 @@
+# @package _global_
+
+# Using MS-CLIP hyperparams to train a CLIP model on a 21M subset of LAION 400M
+
+defaults:
+  - /experiments/imisra/023_oclip_vitb32_laion21M_imval_b32K_msclip_params_ep32
+
+constants:
+  warmup_epochs: 5
+
+trainer:
+  optim:
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']

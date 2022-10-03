@@ -1,0 +1,4 @@
++experiments=imisra/0117_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_fixtemp_detachrgb_nocenter_ep32_lr1e-3
+constants.inv_depth_temp=0.2
+trainer.model.multimodal_model.trunks.0.trunk.drop_path_rate=0.1
+trainer.optim.gradient_clip.max_norm=1.0

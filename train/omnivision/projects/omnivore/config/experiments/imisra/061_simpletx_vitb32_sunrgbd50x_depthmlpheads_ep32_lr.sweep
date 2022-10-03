@@ -1,0 +1,2 @@
++experiments=imisra/061_simpletx_vitb32_sunrgbd50x_depthmlpheads_ep32
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3,1.6e-3,2e-3,3e-3

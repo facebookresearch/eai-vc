@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0014_maeFt_vitbase_SSv2_vidMAEAtt_12h_dropPath_otherfix_evalAftNep.yaml
+
+data_module:
+  train:
+    drop_last: False
+  val:
+    drop_last: False

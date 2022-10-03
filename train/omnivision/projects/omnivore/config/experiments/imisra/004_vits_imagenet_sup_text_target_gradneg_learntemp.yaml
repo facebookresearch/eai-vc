@@ -1,0 +1,11 @@
+# @package _global_
+defaults:
+  - /experiments/rgirdhar/0003_ImageNet_sup_textTarget
+
+lightning_module:
+  loss:
+    in1k:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: ${lightning_module.model.vision_trunk.heads.in1k.0.output_key}
+      feat2_name: ${lightning_module.model.text_trunk.heads.in1k.0.output_key}
+      learnable_temperature: True

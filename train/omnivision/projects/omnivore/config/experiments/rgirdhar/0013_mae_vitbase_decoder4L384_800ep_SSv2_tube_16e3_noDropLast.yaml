@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0013_mae_vitbase_decoder4L384_800ep_SSv2_tube_16e3.yaml
+
+data_module:
+  train:
+    drop_last: False

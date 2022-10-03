@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/072_simpletx_vitb32_sunrgbd50x_depthmlpheads_ep32_dispfixnorm_learntemp
+
+trainer:
+  optim:
+    gradient_clip:
+      _partial_: True
+      _target_: torch.nn.utils.clip_grad_norm_
+      max_norm: ???
+      norm_type: 2

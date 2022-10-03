@@ -1,0 +1,3 @@
++experiments=imisra/041_simpletx_clstok_vitb32_srgbd50x_imval_srgbdval_b4K_lr5e-4_ep32_w5
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3
+trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1.6e-4,1e-5

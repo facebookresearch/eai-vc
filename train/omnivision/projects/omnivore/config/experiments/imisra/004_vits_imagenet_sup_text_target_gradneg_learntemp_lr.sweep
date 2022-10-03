@@ -1,0 +1,2 @@
++experiments=/imisra/004_vitb_imagenet_sup_text_target_gradneg_learntemp.yaml
+lightning_module.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3,1.5e-3

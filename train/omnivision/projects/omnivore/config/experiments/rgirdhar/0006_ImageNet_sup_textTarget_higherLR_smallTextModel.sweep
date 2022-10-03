@@ -1,0 +1,3 @@
++experiments=rgirdhar/0003_ImageNet_sup_textTarget_gatherFromAll
+lightning_module.model.text_trunk.trunk.transformer_width=512
+lightning_module.model.text_trunk.trunk.transformer_layers=1,3,5

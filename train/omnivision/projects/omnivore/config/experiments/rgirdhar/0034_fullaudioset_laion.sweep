@@ -1,0 +1,8 @@
++experiments=rgirdhar/0033_audioset_laion
+
+trainer.data.train.datasets.1.dataset.remove_prefix=unbalanced_train_segments/audio/
+trainer.data.train.datasets.1.dataset.new_prefix=/datasets01/audioset/042319/data/unbalanced_train_segments/video/
+trainer.data.train.datasets.1.dataset.path_file_list=[/checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/unbalanced_train_segments_filelist.npy]
+trainer.data.train.datasets.1.dataset.label_file_list=[/checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/unbalanced_train_segments_labels.npy]
+
+launcher.num_nodes=8

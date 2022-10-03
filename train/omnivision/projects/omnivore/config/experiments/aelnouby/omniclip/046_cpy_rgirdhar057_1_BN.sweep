@@ -1,0 +1,8 @@
++experiments=aelnouby/omniclip/046_cpy_rgirdhar057_BN
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=21e6
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=2e-3
+trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1e-8
+trainer.optim.options.lr.0.scheduler.lengths=[0.01, 0.99]
+trainer.optim.options.weight_decay.0.scheduler.value=0.0001
+trainer.optim.gradient_clip.max_norm=10
++trainer.loss.audioset.loss_fn.feat1_no_grad=True

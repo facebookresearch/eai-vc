@@ -1,0 +1,36 @@
+# @package _global_
+
+defaults:
+  #- /experiments/kalyanv/zero_shot/clip/base_config/k700.yaml
+  - /experiments/kalyanv/zero_shot/clip/base_config/k400_1frame_from_video_new.yaml
+  #- /experiments/kalyanv/zero_shot/clip/base_config/places205.yaml
+  #- /experiments/kalyanv/zero_shot/clip/base_config/ucf101_1frame_from_video.yaml
+  #- /experiments/kalyanv/zero_shot/clip/base_config/hmdb51_1frame_from_video.yaml
+  - _self_
+
+lightning_module:
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: True
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_lightning_checkpoint
+      path_list:
+        - /checkpoint/kalyanv/omnivision/config/experiments/kalyanv/pretraining/clip/vitb_ibot_from_vissl_cfg_cmd_use_cls_token_dp_0_with_norm_weights.yaml/0/checkpoints/last.ckpt
+    model:
+      _target_: slip.models.CLIP
+      embed_dim: 512
+      vision_width: 768
+      context_length: 77
+      vocab_size: 49408
+      transformer_width: 512
+      transformer_heads: 8
+      transformer_layers: 12
+      freeze_vision: True
+      vision_model:
+        _target_: omnivision.model.checkpoint_utils.build_vit_trunk_from_vissl_config
+        config_file_path: pretrain/dino/ft_evals/ibot_vitb_in1k_fcinit_globpool_nocj_ft_evalfreq.yaml
+        in_project_dir: True
+        classifier: cls_token
+        drop_path: 0.0
+        ignore_no_layers: True
+        vit_ckpt_path: /checkpoint/kalyanv/omnivision/pretrained_ckpts/vit_ckpts/ibot_vitb_16_rand_mask_teacher.pth

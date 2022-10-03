@@ -1,0 +1,5 @@
+# @package _global_
+
+# Crating a copy to not disturb existing benchmarks
+defaults:
+  - /experiments/kalyanv/no_lightning/v0/swin_train_in1k_no_lightning.yaml

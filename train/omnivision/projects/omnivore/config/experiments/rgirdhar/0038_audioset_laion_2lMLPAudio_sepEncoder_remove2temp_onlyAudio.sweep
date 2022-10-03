@@ -1,0 +1,2 @@
++experiments=rgirdhar/0038_audioset_laion_2lMLPAudio_sepEncoder_remove2temp
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=0

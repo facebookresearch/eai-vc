@@ -1,0 +1,334 @@
+# @package _global_
+
+# Follow config/experiments/imisra/014_oclip_vitb32_laion400mact_imval_b32K_lr5e-4_adampt98_ep32_wdpt2_nocoloraug.yaml
+# Use AMP for optimization
+# Use FP16 gradient comm
+# Use Omnivision Trainer
+
+
+audio_num_mel_bins: 128
+audio_target_len: 1024
+video_clip_duration: 10
+video_num_frames: ${video_clip_duration}
+embed_dim: 512
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 32
+  mode: train
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+
+  data:
+    train: NULL
+    val:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      datasets:
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.ImagePathDataset
+            path_file_list:
+              - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+              - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+            label_file_list:
+              - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+              - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+            transforms:
+              - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                    - _target_: torchvision.transforms.Resize
+                      size: 224
+                      interpolation: 3
+                    - _target_: torchvision.transforms.CenterCrop
+                      size: 224
+                    - _target_: torchvision.transforms.ToTensor
+                    - _target_: torchvision.transforms.Normalize
+                      mean: [0.485, 0.456, 0.406]
+                      std: [0.229, 0.224, 0.225]
+          shuffle: False
+          batch_size: 64
+          num_workers: 10
+          pin_memory: True
+          drop_last: False
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: in1k
+          worker_init_fn: NULL
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.VideoPathDataset
+            decode_audio: False
+            label_type: csv
+            remove_prefix: eval_segments/video/
+            new_prefix: /fsx-omnivore/rgirdhar/data/audioset/eval_segments/video_mp4-288p/
+            path_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/eval_segments_filelist.npy
+            label_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/eval_segments_labels.npy
+            clip_sampler:
+              _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+              clip_duration: ${video_clip_duration}
+              clips_per_video: 1
+            frame_sampler:
+              _target_: pytorchvideo.transforms.UniformTemporalSubsample
+              num_samples: ${video_num_frames}
+            decoder: decord  # since this allows for audio decoding
+            normalize_to_0_1: True
+            transforms:
+              - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                  - _target_: pytorchvideo.transforms.ShortSideScale
+                    size: 224  # 256
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                    mean: [0.485, 0.456, 0.406]
+                    std: [0.229, 0.224, 0.225]
+          shuffle: False
+          batch_size: 120  # 128 was on cusp of OOM sometimes
+          num_workers: 10
+          pin_memory: True
+          drop_last: True
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: audioset_video
+            convert_label_to_one_hot_num_classes: 527
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: True
+          worker_init_fn: NULL
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: False # heads aren't loaded
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+      checkpoint_path: /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/OpenCLIP/pytorch_model.bin
+      map_location: cpu
+      ckpt_state_dict_keys: []
+      checkpoint_kernels:
+      - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+        source_pattern: text_model.encoder.
+        target_pattern: clip_model.transformer.
+        key_pattern: NULL
+      - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+        source_pattern: vision_model.encoder.
+        target_pattern: clip_model.visual.transformer.
+        key_pattern: NULL
+      # - _target_: omnivision.model.checkpoint_utils.CkptExcludeKernel
+      #   key_pattern:
+      #   - multimodal_model.trunks.audio*
+    model:
+      _target_: omnivore.models.openclip_model.MultiModalZeroShotEvalWrapperCLIP
+      image_output_key: image_embed
+      text_output_key: text_embed
+      logit_scale_output_key: logit_scale
+      clip_model:
+        _target_: omnivore.models.openclip_model.CLIP
+        embed_dim: 1024
+        vision_cfg:
+          timm_model_name: NULL
+          timm_model_pretrained: False
+          timm_pool: NULL
+          timm_proj: NULL
+          image_size: 224
+          patch_size: 14
+          width: 5120
+          layers: 32
+          heads: 16
+        text_cfg:
+          context_length: 77
+          vocab_size: 49408
+          width: 4096
+          heads: 16
+          layers: 24
+      label_strings:
+        in1k:
+          label_strings:
+            _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+            tokenizer:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+                - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+            label_names_file_list:
+              - /checkpoint/imisra/datasets/in1k_disk/classnames_zs.npy
+              - manifold://omnivore/tree/datasets/imagenet_1k_meta/classnames_zs.npy
+            templates:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: False
+              path_list:
+                - /checkpoint/imisra/datasets/in1k_disk/templates_openai.npy
+                - manifold://omnivore/tree/datasets/imagenet_1k_meta/templates_openai.npy
+        audioset:
+          label_strings:
+            _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+            tokenizer:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+                - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+            label_names_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/label_names.npy
+            templates:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: False
+              path_list:
+                - /checkpoint/imisra/datasets/in1k_disk/templates_openai.npy
+                - manifold://omnivore/tree/datasets/imagenet_1k_meta/templates_openai.npy
+        audioset_video: ${.audioset}
+        esc_fold1: ${.audioset}
+
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.95
+      eps: 1e-6
+    gradient_clip: NULL
+    amp:
+      enabled: True
+      amp_dtype: float16 # bfloat16 or float16
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths: [0.00625, 0.99375]  # warm for 2440 iters; 1 epoch = 305 iter
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.2
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+            - '*.bias'
+            - '*pos_embed'
+            - '*cls_token'
+          module_cls_names: ["torch.nn.LayerNorm"]
+
+  meters:
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+            top_k: 1
+        accuracy_top5:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+            top_k: 5
+      audioset:
+        mAP:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivore.meters.mean_avg_precision.MeanAvgPrecision
+        knn:
+          _target_: omnivore.meters.knn_accuracy.KnnAccuracy
+          feat_name: audio_embed
+          topks: [10, 20]
+          multilabel_mode: recall
+        accuracy_top5:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+            top_k: 5
+            multilabel_mode: recall
+      audioset_video:
+        mAP: ${..audioset.mAP}
+        knn:
+          _target_: omnivore.meters.knn_accuracy.KnnAccuracy
+          feat_name: vision_embed
+          topks: [10, 20]
+          multilabel_mode: recall
+        accuracy_top5: ${..audioset.accuracy_top5}
+      esc_fold1:
+        accuracy_top1:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+            top_k: 1
+        accuracy_top5:
+          _target_: omnivore.meters.DictApplyMeterWrapper
+          base_meter:
+            _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+            top_k: 5
+
+  loss:
+    laion:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: vision_embed
+      feat2_name: text_embed
+      logit_scale_name: NULL
+      normalize: False # OpenClip normalizes outputs in the model
+    audioset:
+      _target_: omnivore.losses.scaled_loss.ScaledLoss
+      scale: 1.0
+      loss_fn:
+        _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+        feat1_name: vision_embed
+        feat2_name: audio_embed
+        logit_scale_name: NULL
+        normalize: False # OpenClip normalizes outputs in the model
+
+  distributed:
+    backend: nccl
+    comms_dtype: float16
+    find_unused_parameters: True
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir: ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+    # tensorboard_embedding_writer:
+    #   _target_: omnivore.logger.TensorBoardEmbeddingLogger
+    #   path: ${..tensorboard_writer.log_dir}
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+    model_weight_initializer: NULL
+
+  cuda:
+    # https://pytorch.org/docs/stable/backends.html
+    allow_tf32: True
+    cudnn_deterministic: False
+    cudnn_benchmark: True
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8
+
+hydra:
+  output_subdir: NULL
+  run:
+    dir: .
+
+
+submitit:
+  name: clip_base
+  partition: learnlab
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]
+

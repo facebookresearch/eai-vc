@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0003_ImageNet_sup_textTarget.yaml
+
+data_module:
+  train:
+    dataset:
+      templates:
+        - "itap of a {}."
+        - "a bad photo of the {}."
+        - "a origami {}."
+        - "a photo of the large {}."
+        - "a {} in a video game."
+        - "art of the {}."
+        - "a photo of the small {}."

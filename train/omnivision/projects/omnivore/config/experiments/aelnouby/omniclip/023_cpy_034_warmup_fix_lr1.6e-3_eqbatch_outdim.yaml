@@ -1,0 +1,76 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/069_cpy_060_fixdisparity_laion_sunrgbd
+
+out_dim: 64
+trainer:
+  model:
+    multimodal_model:
+      heads:
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm # called self.ln_post in VisualTransformer OpenCLIP
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0 # select CLS token
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${out_dim}
+                bias: False # OpenCLIP
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "vision_tokens"
+          output_key: "vision_embed"
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm # called self.ln_post in VisualTransformer OpenCLIP
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0 # select CLS token
+            - _target_: torch.nn.Linear
+              in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+              out_features: 1024
+            - _target_: torch.nn.Linear
+              in_features: 1024
+              out_features: ${out_dim}
+          fork_module: ""
+          preprocessed_input_key: "depth_tokens_vision_targets"
+          output_key: "depth_embed_vision_targets"
+        - head:
+            _target_: omnivore.models.pooling_helpers.SelectEOSAndProject
+            proj:
+              _target_: torch.nn.Sequential
+              _args_:
+              - _target_: torch.nn.LayerNorm # called self.ln_final in CLIP OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+              - _target_: omnivision.model.model_init_utils.init_parameters
+                model:
+                  _target_: torch.nn.Linear
+                  in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                  out_features: ${out_dim}
+                  bias: False # OpenCLIP
+                init_fns:
+                  weight:
+                    _target_: torch.nn.init.normal_
+                    _partial_: True
+                    mean: 0
+                    std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "text_tokens_vision_targets"
+          output_key: "text_embed_vision_targets"
+
+constants:
+  sun_rgb_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images/
+  sun_depth_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images_disparity/
+  # sun_rgb_prefix: /checkpoint/kalyanv/data/sunrgbd/images/
+  # sun_depth_prefix: /checkpoint/kalyanv/data/sunrgbd/images/

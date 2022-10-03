@@ -1,0 +1,4 @@
++experiments=rgirdhar/0035_audioset_laion_2lMLPAudio_sepEncoder
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=0
++trainer.model.multimodal_model.trunks.0.trunk.layer_scale_type="per_channel"
++trainer.model.multimodal_model.trunks.0.trunk.layer_scale_init_value=1e-4,1e-6

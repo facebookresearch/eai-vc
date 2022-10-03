@@ -1,0 +1,2 @@
++experiments=aelnouby/omniclip/003_im1k_k400_concat_txt_vitbase.yaml
+lightning_module.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1e-3,1.5e-3

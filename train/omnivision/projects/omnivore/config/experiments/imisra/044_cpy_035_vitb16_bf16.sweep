@@ -1,0 +1,4 @@
++experiments=imisra/035_simpletx_nomask_vitb32_laion21M_imval_b32K_msclip_params_ep32_bf16
+constants.kernel_size=16
+constants.batch_size=128
+launcher.num_nodes=4

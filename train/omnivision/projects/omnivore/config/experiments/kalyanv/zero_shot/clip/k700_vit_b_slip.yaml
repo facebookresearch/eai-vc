@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - /experiments/kalyanv/zero_shot/clip/base_config/k700.yaml
+  - _self_
+
+lightning_module:
+  model:
+    _target_: slip.models.VisionTextModel
+    convert_vid_to_image: False
+    vision:
+      _target_: slip.models.load_vision_model_from_lv_checkpoint
+      ckpt_path: /checkpoint/kalyanv/experiments/slip/53894928/checkpoint_best.pt
+    text:
+      _target_: slip.models.load_text_model_from_lv_checkpoint
+      ckpt_path: /checkpoint/kalyanv/experiments/slip/53894928/checkpoint_best.pt

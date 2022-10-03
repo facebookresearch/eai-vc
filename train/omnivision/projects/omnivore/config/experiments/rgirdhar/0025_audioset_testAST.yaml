@@ -1,0 +1,191 @@
+# @package _global_
+
+num_audioset_classes: 527
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 60
+  mode: val
+  accelerator: cuda
+  seed_value: 42
+  val_epoch_freq: 1
+
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.AudioPathDataset
+        num_mel_bins: 128
+        target_length: 1024
+        label_type: csv
+        new_prefix: /datasets01/audioset/042319/data/
+        path_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/balanced_train_segments_filelist.npy
+        label_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/balanced_train_segments_labels.npy
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+            field: audio
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchaudio.transforms.FrequencyMasking
+                  freq_mask_param: 48
+                - _target_: torchaudio.transforms.TimeMasking
+                  time_mask_param: 192
+                - _target_: torchvision.transforms.Normalize
+                  # From table 3 https://arxiv.org/pdf/2207.06405.pdf or https://github.com/YuanGongND/ast/blob/d7d8b4b8e06cdaeb6c843cdb38794c1c7692234c/src/run.py#L62
+                  mean: -4.268
+                  std: 9.138  # 4.569 * 2 (2x the stddev, AST uses that)
+      shuffle: True
+      batch_size: 32
+      num_workers: 10
+      pin_memory: True
+      drop_last: True
+      # TODO AST does mixup before kaldi and other transforms.. need to figure what is the right way
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        convert_label_to_one_hot_num_classes: 527
+        # batch_kwargs:
+        #     model_fwd_kwargs:
+        #       use_checkpoint: True
+        output_key: audioset
+      worker_init_fn: NULL
+    val:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.AudioPathDataset
+        num_mel_bins: ${trainer.data.train.dataset.num_mel_bins}
+        target_length: ${trainer.data.train.dataset.target_length}
+        new_prefix: /datasets01/audioset/042319/data/
+        path_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/eval_segments_filelist.npy
+        label_file_list:
+          - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSet/eval_segments_labels.npy
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+            field: audio
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.Normalize
+                  # From table 3 https://arxiv.org/pdf/2207.06405.pdf or https://github.com/YuanGongND/ast/blob/d7d8b4b8e06cdaeb6c843cdb38794c1c7692234c/src/run.py#L62
+                  mean: -4.268
+                  std: 9.138  # 4.569 * 2 (2x the stddev, AST uses that)
+          - ${trainer.data.train.dataset.transforms.1}
+      shuffle: False
+      batch_size: 32
+      num_workers: 8
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: audioset
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: False # heads aren't loaded
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+      checkpoint_path: /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/2021_InterSpeech_AST/audioset_10_10_0.4495.pth
+      ckpt_state_dict_keys: []
+      checkpoint_kernels:
+      - _target_: omnivision.model.checkpoint_utils.CkptRenameKeysKernel
+        source_pattern: "module."
+        target_pattern: ""
+        key_pattern: NULL
+    model:
+      _target_: omnivore.models.ast_models_DEBUG.ASTModel
+      fstride: 10
+      tstride: 10
+
+  optim:
+    amp:
+      enabled: True
+      amp_dtype: float16  # bfloat16 or float16
+    gradient_clip: NULL
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.95
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-6
+            lengths: [0.07, 0.93]  # warm for 4 epochs
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 1e-4
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+            #  - '*.pos_embed'
+            #  - '*.cls_token'
+          module_cls_names: ['torch.nn.LayerNorm']
+  meters:
+    val:
+      audioset:
+        mAP:
+          _target_: omnivore.meters.mean_avg_precision.MeanAvgPrecision
+          prec_recall_fn:
+            _target_: omnivore.meters.avg_precision_utils_sklearn.get_precision_recall
+            apply_sigmoid: True
+            _partial_: True
+
+  loss:
+    audioset:
+      _target_: torch.nn.BCEWithLogitsLoss
+
+  distributed:
+    backend: nccl
+    comms_dtype: float16
+    find_unused_parameters: false
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+    model_weight_initializer: NULL
+
+  cuda:
+    # https://pytorch.org/docs/stable/backends.html
+    allow_tf32: True
+    cudnn_deterministic: False
+    cudnn_benchmark: True
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 8
+
+hydra:
+  output_subdir: NULL
+  run:
+    dir: .
+
+submitit:
+  name: audioset
+  partition: learnlab
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]

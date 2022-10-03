@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0041_fullaudioset_jointEncoder.yaml
+
+trainer:
+  optim:
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: 1.0
+      norm_type: 2

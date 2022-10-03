@@ -1,0 +1,8 @@
+# @package _global_
+
+# Using MS-CLIP hyperparams to train a CLIP model on a 21M subset of LAION 400M
+defaults:
+  - /experiments/imisra/023_oclip_vitb32_laion21M_imval_b32K_msclip_params_ep32
+
+trainer:
+  max_epochs: 50

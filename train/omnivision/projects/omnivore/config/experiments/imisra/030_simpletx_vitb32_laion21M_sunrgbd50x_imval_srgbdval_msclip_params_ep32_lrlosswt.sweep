@@ -1,0 +1,3 @@
++experiments=imisra/030_simpletx_vitb32_laion21M_sunrgbd50x_imval_srgbdval_msclip_params_ep32
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4,1.6e-3
+trainer.loss.sunrgbd.scale=1.0,0.25

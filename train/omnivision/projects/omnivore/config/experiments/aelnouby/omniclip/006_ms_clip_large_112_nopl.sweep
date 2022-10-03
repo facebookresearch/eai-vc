@@ -1,0 +1,5 @@
++experiments=aelnouby/omniclip/005_ms_clip_vitlarge_nopl.yaml
+trainer.data.train.dataset.transforms.0.base_transform.transforms.0.size=112
+trainer.data.val.dataset.base_dataset.transforms.0.base_transform.transforms.0.size=112
+trainer.data.val.dataset.base_dataset.transforms.0.base_transform.transforms.1.size=112
+trainer.model.clip_model.vision_cfg.image_size=112

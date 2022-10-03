@@ -1,0 +1,9 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0018_clip_sm.yaml
+
+lightning_module:
+  model:
+    clip_model:
+      _target_: omnivore.models.openclip_model.CLIPSMSepLN

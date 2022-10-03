@@ -1,0 +1,549 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/base_v0_ampbf16
+  - /experiments/imisra/base_dataset_paths
+  - /experiments/imisra/0122_eval_zs_in1k_sunrgb_sund_nyurgb_nyud_places_food_pets_audioset_vgg_esc
+
+constants:
+  rgb_crop_size: 224
+  audio_num_mel_bins: 128
+  video_clip_duration: 2
+  audio_target_len: ${int:${times:${.video_clip_duration},102.4}}
+  video_num_frames: ${.video_clip_duration}
+  head_final_embed_dim: 512
+  learnable_pos_rgbt: false
+  learnable_pos_audio: true
+  learnable_pos_depth: True
+  rgb_kernel_size: [2, 32, 32]
+  depth_kernel_size: 32
+  audio_kernel_size: 16
+  warmup_epochs: 1
+  sunrgbd_interp_int: 2
+  use_grad_checkpoint_laion: False
+  use_grad_checkpoint_sun: False
+  use_grad_checkpoint_audioset: False
+  depth_temp_learnable: False
+  audio_temp_learnable: False
+  text_temp_learnable: True
+  inv_depth_temp: 0.1
+  inv_audio_temp: 0.1
+  inv_text_temp: 0.07
+  rgb_batch_size: 128
+  video_batch_size: 120
+
+trainer:
+  max_epochs: 32
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      repeat_factors: [1.0, 1.0, 50.0]
+      datasets:
+        - _target_: omnivore.data.webdataset_helpers.WebVisionDatasetBatchedWithLoader
+          base_dataset_fn:
+            _target_: omnivore.data.webdataset_helpers.get_wds_dataset_batched
+            _partial_: true
+            urls:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: false
+              path_list: ${constants.laion21m_path_list}
+            dataset_size_file: ${constants.laion21m_dataset_size_file}
+            batch_size: ${constants.rgb_batch_size}
+            num_workers: 12
+            preprocess_txt:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list: ${constants.bpe_path_list}
+            preprocess_img:
+              _target_: torchvision.transforms.Compose
+              transforms:
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: ${constants.rgb_crop_size}
+                interpolation: 3
+                scale: [0.9, 1.0]
+              - _target_: omnivore.data.transforms.basic.PILToRGB
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.Normalize
+                mean: ${constants.in1k_rgb_mean}
+                std: ${constants.in1k_rgb_std}
+          base_loader_fn:
+            _target_: omnivore.data.webdataset_helpers.get_wds_loader
+            num_workers: ${..base_dataset_fn.num_workers}
+            collate_fn:
+              _target_: omnivore.data.webdataset_helpers.BatchToSampleText
+              collate_fn:
+                _target_: omnivore.data.api.DefaultOmnivoreCollator
+                output_key: laion
+                input_batch_is_collated: true
+                batch_kwargs:
+                  model_fwd_kwargs:
+                    use_checkpoint: ${constants.use_grad_checkpoint_laion}
+                    checkpoint_every_n: 2
+            _partial_: true
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.VideoPathDataset
+            decode_audio: true
+            audio_num_mel_bins: ${constants.audio_num_mel_bins}
+            audio_target_len: ${constants.audio_target_len}
+            label_type: csv
+            decoder_kwargs:
+              sample_rate: 16000
+            copy_on_read: True
+            copy_on_read_dst_basename: ${..collate_fn.output_key}
+            remove_prefix: unbalanced_train_segments/video/
+            new_prefix: /fsx-omnivore/rgirdhar/data/audioset/unbalanced_train_segments/video_mp4-288p/
+            path_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_filelist.npy
+            label_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_labels.npy
+            clip_sampler:
+              _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
+              clip_duration: ${constants.video_clip_duration}
+            frame_sampler:
+              _target_: pytorchvideo.transforms.UniformTemporalSubsample
+              num_samples: ${constants.video_num_frames}
+            decoder: decord
+            normalize_to_0_1: true
+            transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                  - _target_: pytorchvideo.transforms.ShortSideScale
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.RandomResizedCrop
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.RandomHorizontalFlip
+                    p: 0.5
+                  - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+            - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+              field: audio
+              base_transform:
+                _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                  - _target_: torchaudio.transforms.FrequencyMasking
+                    freq_mask_param: 0
+                  - _target_: torchaudio.transforms.TimeMasking
+                    time_mask_param: 0
+                  - _target_: torchvision.transforms.Normalize
+                    mean: -4.268
+                    std: ${times:4.569,2}
+          shuffle: true
+          batch_size: ${constants.video_batch_size}
+          num_workers: 12
+          pin_memory: true
+          drop_last: true
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: audioset
+            convert_label_to_one_hot_num_classes: 527
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: ${constants.use_grad_checkpoint_audioset}
+          worker_init_fn: null
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+            concatenate_depth_and_rgb_channels: False
+            copy_on_read: True
+            copy_on_read_dst_basename: ${..collate_fn.output_key}
+            path_file_list: ${constants.sun_train_path_file_list}
+            label_file_list: ${constants.sun_train_label_file_list}
+            depth_path_file_list: ${constants.sun_train_depth_path_file_list}
+            new_prefix: ${constants.sun_rgb_prefix}
+            new_depth_prefix: ${constants.sun_depth_prefix}
+            transforms:
+              - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                    - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                      max_depth: NULL
+                      compute_max_per_sample: True
+                    - _target_: torchvision.transforms.RandomResizedCrop
+                      size: ${constants.rgb_crop_size}
+                      interpolation: ${constants.sunrgbd_interp_int}
+                    - _target_: torchvision.transforms.RandomHorizontalFlip
+                    - _target_: omnivore.data.transforms.image_rgbd.RandAugment3d  # Essentially autoagument rand-m9-mstd0.5-inc1
+                      num_ops: 2
+                      magnitude: 9
+                      interpolation: ${constants.sunrgbd_interp_int}
+                    - _target_: omnivore.data.transforms.image_rgbd.ColorJitter3d
+                      brightness: 0.4
+                      contrast: 0.4
+                      saturation: 0.4
+                      hue: 0.4
+                    - _target_: torchvision.transforms.RandomErasing
+                      p: .25
+                    - _target_: torchvision.transforms.Normalize
+                      mean: ${constants.sun_rgbdispmax_mean}
+                      std: ${constants.sun_rgbdispmax_std}
+          shuffle: True
+          batch_size: ${constants.rgb_batch_size}
+          num_workers: 12
+          pin_memory: False
+          drop_last: True
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: sunrgbd
+            batch_transforms:
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelToVisionDepthBatch
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: ${constants.use_grad_checkpoint_sun}
+                checkpoint_every_n: 2
+          worker_init_fn: NULL
+  model:
+    _target_: omnivore.models.multimodal_wrapper.MultiModalZeroShotWithTextTargetsWrapper
+    multimodal_model:
+      _target_: omnivore.models.multimodal_wrapper.MultimodalWrapper
+      list_input_reduction: mean
+      modality_preprocessors:
+        - name: rgbt_preprocessor
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.RGBDTPreprocessor
+            img_size:
+              - 3
+              - ${constants.video_num_frames}
+              - ${constants.rgb_crop_size}
+              - ${constants.rgb_crop_size}
+            num_cls_tokens: 1
+            pos_embed_fn:
+              _target_: omnivore.models.multimodal_preprocessors.SpatioTemporalPosEmbeddingHelper
+              _partial_: true
+              learnable: ${constants.learnable_pos_rgbt}
+            depth_stem: null
+            rgbt_stem:
+              _target_: omnivore.models.multimodal_preprocessors.PatchEmbedGeneric
+              proj_stem:
+              - _target_: omnivore.models.PadIm2Video
+                pad_type: repeat
+                ntimes: 2
+              - _target_: torch.nn.Conv3d
+                in_channels: 3
+                kernel_size: ${constants.rgb_kernel_size}
+                out_channels: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                stride: ${.kernel_size}
+                bias: false
+              norm_layer:
+                _target_: torch.nn.LayerNorm
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+        - name: "d_preprocessor"
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.RGBDTPreprocessor
+            img_size:
+              - 1
+              - ${constants.rgb_crop_size}
+              - ${constants.rgb_crop_size}
+            num_cls_tokens: 1
+            pos_embed_fn:
+              _target_: omnivore.models.multimodal_preprocessors.SpatioTemporalPosEmbeddingHelper
+              _partial_: true
+              learnable: ${constants.learnable_pos_depth}
+            rgbt_stem: NULL
+            depth_stem:
+              _target_: omnivore.models.multimodal_preprocessors.PatchEmbedGeneric
+              proj_stem:
+              - _target_: torch.nn.Conv2d
+                kernel_size: ${constants.depth_kernel_size}
+                in_channels: 1
+                out_channels: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                stride: ${.kernel_size}
+                bias: False
+              norm_layer:
+                _target_: torch.nn.LayerNorm # called self.ln_pre in VisualTransformer OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+        - name: text_preprocessor
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.TextPreprocessor
+            context_length: 77
+            vocab_size: 49408
+            embed_dim: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            causal_masking: False
+        - name: audio_preprocessor
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.AudioPreprocessor
+            img_size:
+            - 1
+            - ${constants.audio_num_mel_bins}
+            - ${constants.audio_target_len}
+            num_cls_tokens: 1
+            pos_embed_fn:
+              _target_: omnivore.models.multimodal_preprocessors.SpatioTemporalPosEmbeddingHelper
+              _partial_: true
+              learnable: ${constants.learnable_pos_audio}
+            audio_stem:
+              _target_: omnivore.models.multimodal_preprocessors.PatchEmbedGeneric
+              proj_stem:
+              - _target_: torch.nn.Conv2d
+                in_channels: 1
+                kernel_size: ${constants.audio_kernel_size}
+                out_channels: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                stride: ${.kernel_size}
+                bias: false
+              norm_layer:
+                _target_: torch.nn.LayerNorm
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+      sample_to_modality_preprocessor:
+        - sample_type: ${get_class:omnivore.data.api.BatchVisionTextSample}
+          sample_field_to_modality:
+          - input_fields: ["vision"]
+            preprocessor_name: rgbt_preprocessor
+            output_key: vision_tokens
+            output_key_for_dict: false
+          - input_fields: ["text"]
+            preprocessor_name: text_preprocessor
+            output_key: text_tokens
+            output_key_for_dict: false
+        - sample_type: ${get_class:omnivore.data.api.BatchTextSample}
+          sample_field_to_modality:
+          - input_fields: ["text"]
+            preprocessor_name: text_preprocessor
+            output_key: text_tokens
+            output_key_for_dict: false
+        - sample_type: ${get_class:omnivore.data.api.BatchVisionSample}
+          sample_field_to_modality:
+          - input_fields: ["vision"]
+            preprocessor_name: rgbt_preprocessor
+            output_key: vision_tokens
+            output_key_for_dict: false
+        - sample_type: ${get_class:omnivore.data.api.BatchVisionAudioSample}
+          sample_field_to_modality:
+          - input_fields: ["vision"]
+            preprocessor_name: rgbt_preprocessor
+            output_key: vision_tokens
+            output_key_for_dict: false
+          - input_fields: ["audio"]
+            preprocessor_name: audio_preprocessor
+            output_key: audio_tokens
+            output_key_for_dict: false
+        - sample_type: ${get_class:omnivore.data.api.BatchAudioSample}
+          sample_field_to_modality:
+          - input_fields: ["audio"]
+            preprocessor_name: audio_preprocessor
+            output_key: audio_tokens
+            output_key_for_dict: false
+        - sample_type: ${get_class:omnivore.data.api.BatchVisionDepthSample}
+          sample_field_to_modality:
+            - input_fields: ["vision"]
+              preprocessor_name: rgbt_preprocessor
+              output_key: "vision_tokens"
+              output_key_for_dict: False
+            - input_fields: ["depth"]
+              preprocessor_name: d_preprocessor
+              output_key: "depth_tokens_vision_targets"
+              output_key_for_dict: False
+        - sample_type: ${get_class:omnivore.data.api.BatchDepthSample}
+          sample_field_to_modality:
+          - input_fields: ["depth"]
+            preprocessor_name: d_preprocessor
+            output_key: "depth_tokens_vision_targets"
+            output_key_for_dict: False
+      trunks:
+        - name: all
+          trunk:
+            _target_: omnivore.models.simple_transformer.SimpleTransformer
+            embed_dim: 768
+            num_blocks: 12
+            ffn_dropout_rate: 0.0
+            drop_path_rate: 0.0
+            attn_target:
+              _target_: omnivore.models.simple_transformer.MultiheadAttention
+              embed_dim: ${..embed_dim}
+              num_heads: 12
+              dropout: 0.0
+              bias: true
+              add_bias_kv: true
+              _partial_: true
+            pre_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: b l d -> l b d
+            post_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: l b d -> b l d
+      tokens_to_trunks:
+        - trunk_name: all
+          input_keys:
+          - vision_tokens
+          - text_tokens
+          - audio_tokens
+          - depth_tokens_vision_targets
+      heads:
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${constants.head_final_embed_dim}
+                bias: false
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: true
+                  mean: 0
+                  std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: vision_tokens
+          output_key: vision_embed
+        - head:
+            _target_: omnivore.models.pooling_helpers.SelectEOSAndProject
+            proj:
+              _target_: torch.nn.Sequential
+              _args_:
+              - _target_: torch.nn.LayerNorm
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+              - _target_: omnivision.model.model_init_utils.init_parameters
+                model:
+                  _target_: torch.nn.Linear
+                  in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                  out_features: ${constants.head_final_embed_dim}
+                  bias: false
+                init_fns:
+                  weight:
+                    _target_: torch.nn.init.normal_
+                    _partial_: true
+                    mean: 0
+                    std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: text_tokens
+          output_key: text_embed
+        - head:
+            _target_: torch.nn.Sequential
+            _args_: ${trainer.model.multimodal_model.heads.0.head._args_}
+          fork_module: ''
+          preprocessed_input_key: audio_tokens
+          output_key: audio_embed
+        - head:
+            _target_: torch.nn.Sequential
+            _args_: ${trainer.model.multimodal_model.heads.0.head._args_}
+          fork_module: ''
+          preprocessed_input_key: depth_tokens_vision_targets
+          output_key: depth_embed_vision_targets
+      postprocessors:
+      - name: normalize
+        postprocessor:
+          _target_: omnivore.models.helpers.Normalize
+          dim: -1
+      - name: normalize_and_scale_audio
+        postprocessor:
+          _target_: torch.nn.Sequential
+          _args_:
+          - _target_: omnivore.models.helpers.Normalize
+            dim: -1
+          - _target_: omnivore.models.helpers.LearnableLogitScaling
+            logit_scale_init: ${divide:1,${constants.inv_audio_temp}}
+            learnable: ${constants.audio_temp_learnable}
+      - name: "normalize_and_scale_text"
+        postprocessor:
+          _target_: torch.nn.Sequential
+          _args_:
+            - _target_: omnivore.models.helpers.Normalize
+              dim: -1
+            - _target_: omnivore.models.helpers.LearnableLogitScaling
+              logit_scale_init: ${divide:1,${constants.inv_text_temp}}
+              learnable: ${constants.text_temp_learnable}
+      - name: "normalize_and_scale_depth"
+        postprocessor:
+          _target_: torch.nn.Sequential
+          _args_:
+            - _target_: omnivore.models.helpers.Normalize
+              dim: -1
+            - _target_: omnivore.models.helpers.LearnableLogitScaling
+              logit_scale_init: ${divide:1,${constants.inv_depth_temp}}
+              learnable: ${constants.depth_temp_learnable}
+      head_to_postprocessor:
+      - input_key: vision_embed
+        postprocessor_name: normalize
+      - input_key: text_embed
+        postprocessor_name: normalize_and_scale_text
+      - input_key: audio_embed
+        postprocessor_name: normalize_and_scale_audio
+      - input_key: "depth_embed_vision_targets"
+        postprocessor_name: "normalize_and_scale_depth"
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+      - 0.9
+      - 0.98
+      eps: 1.0e-06
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: 1
+      norm_type: 2
+    options:
+      lr:
+      - scheduler:
+          _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+          schedulers:
+          - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+            start_value: 1e-06
+            end_value: 1e-3
+          - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+            start_value: ${..0.end_value}
+            end_value: 1e-5
+          lengths:
+          - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+          - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+          interval_scaling:
+          - rescaled
+          - rescaled
+      weight_decay:
+      - scheduler:
+          _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+          value: 0.05
+      - scheduler:
+          _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+          value: 0.0
+        param_names:
+        - '*.bias'
+        - '*pos_embed'
+        - '*cls_token'
+        module_cls_names: ["torch.nn.LayerNorm"]
+  loss:
+    laion:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: vision_embed
+      feat2_name: text_embed
+      logit_scale_name: null
+      normalize: false
+    audioset:
+      _target_: omnivore.losses.scaled_loss.ScaledLoss
+      scale: 1.0
+      loss_fn:
+        _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+        feat1_name: vision_embed
+        feat2_name: audio_embed
+        logit_scale_name: null
+        normalize: false
+        feat1_no_grad: true
+    sunrgbd:
+      _target_: omnivore.losses.scaled_loss.ScaledLoss
+      scale: 1.0
+      loss_fn:
+        _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+        feat1_name: vision_embed
+        feat2_name: depth_embed_vision_targets
+        feat1_no_grad: 1.0
+        logit_scale_name: NULL
+        normalize: False # SimpleTx normalizes outputs in the model
+  distributed:
+    comms_dtype: bfloat16
+    find_unused_parameters: true
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8

@@ -1,0 +1,20 @@
+# @package _global_
+defaults:
+  - reference/dummy_kinetics_train_slurm_gpu
+
+trainer:
+  data:
+    train:
+      dataset:
+        path_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/k400/train_videos.npy
+        label_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/k400/train_labels.npy
+        new_prefix: /checkpoint/omniscale_oss/datasets/kinetics400_high_qual_320_trimmed/
+    val:
+      dataset:
+        path_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/k400/val_videos.npy
+        label_file_list:
+          - /checkpoint/omniscale_oss/datasets_meta/k400/val_labels.npy
+        new_prefix: /checkpoint/omniscale_oss/datasets/kinetics400_high_qual_320_trimmed/

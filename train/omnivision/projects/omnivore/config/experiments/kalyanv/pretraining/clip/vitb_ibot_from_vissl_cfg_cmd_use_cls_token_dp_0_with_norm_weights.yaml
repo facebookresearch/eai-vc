@@ -1,0 +1,67 @@
+# @package _global_
+
+defaults:
+  - /experiments/kalyanv/pretraining/clip/base_configs/base_clip.yaml
+  - /experiments/kalyanv/pretraining/clip/base_configs/data/cmd_55m_fair.yaml
+  - _self_
+
+data_module:
+  train:
+    batch_size: 256
+    num_workers: 10
+
+lightning_module:
+  model:
+    _target_: slip.models.CLIP
+    embed_dim: 512
+    vision_width: 768
+    context_length: 77
+    vocab_size: 49408
+    transformer_width: 512
+    transformer_heads: 8
+    transformer_layers: 12
+    freeze_vision: True
+    vision_model:
+      _target_: omnivision.model.checkpoint_utils.build_vit_trunk_from_vissl_config
+      config_file_path: pretrain/dino/ft_evals/ibot_vitb_in1k_fcinit_globpool_nocj_ft_evalfreq.yaml
+      in_project_dir: True
+      classifier: cls_token
+      drop_path: 0.0
+      ignore_no_layers: True
+      vit_ckpt_path: /checkpoint/kalyanv/omnivision/pretrained_ckpts/vit_ckpts/ibot_vitb_16_rand_mask_teacher.pth
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas: [0.9,0.98]
+      eps: 1e-8
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 2e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: 2e-3
+                end_value: 1e-5
+            lengths: [0.04, 0.96]
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.1
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+            - 'logit_scale'
+            - 'visual.blocks.[0,1,2,3,4,5,6,7,8,9,10,11].norm1.weight'
+            - 'visual.blocks.[0,1,2,3,4,5,6,7,8,9,10,11].norm2.weight'
+            - 'visual.norm.weight'
+            - '*bias*'
+            - '*ln*'
+          module_cls_names: ['torch.nn.LayerNorm']
+
+lightning_trainer:
+  max_epochs: 10

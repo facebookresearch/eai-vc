@@ -1,0 +1,91 @@
+# @package _global_
+
+data_module:
+  _target_: omnivision.data_module.base_data_module.BaseDataModule
+  val:
+    dataset:
+      _target_: omnivore.data.path_dataset.ImagePathDataset
+      path_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+      label_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+      # name: imagenet1k_val
+      transform:
+        _target_: torchvision.transforms.Compose
+        transforms:
+          - _target_: torchvision.transforms.Resize
+            size: 224
+          - _target_: torchvision.transforms.CenterCrop
+            size: 224
+          - _target_: torchvision.transforms.ToTensor
+          - _target_: torchvision.transforms.Normalize
+            mean: [0.485, 0.456, 0.406]
+            std: [0.229, 0.224, 0.225]
+    shuffle: False
+    batch_size: 256
+    num_workers: 6
+    pin_memory: True
+    drop_last: False
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+    worker_init_fn: NULL
+
+  test:
+    dataset:
+      _target_: omnivore.data.path_dataset.ImagePathDataset
+      path_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+      label_file_list:
+        - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+        - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+      # name: imagenet1k_val
+      transform:
+        _target_: torchvision.transforms.Compose
+        transforms:
+          - _target_: torchvision.transforms.Resize
+            size: 224
+          - _target_: torchvision.transforms.CenterCrop
+            size: 224
+          - _target_: torchvision.transforms.ToTensor
+          - _target_: torchvision.transforms.Normalize
+            mean: [0.485, 0.456, 0.406]
+            std: [0.229, 0.224, 0.225]
+    shuffle: False
+    batch_size: 256
+    num_workers: 6
+    pin_memory: True
+    drop_last: False
+    collate_fn:
+      _target_: omnivore.data.api.DefaultOmnivoreCollator
+    worker_init_fn: NULL
+
+  train:
+    dataset:
+      _target_: slip.datasets.YFCCDatasetCLIPChunked
+      root: manifold://omnivore/tree/datasets/yfcc100m/15mil_chunk_64
+      tokenizer:
+        _target_: slip.tokenizer.SimpleTokenizer
+        bpe_path_list: 
+        - /checkpoint/kalyanv/data/slip/bpe_simple_vocab_16e6.txt.gz
+        - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+      transform:
+        _target_: torchvision.transforms.Compose
+        transforms:
+          - _target_: torchvision.transforms.RandomResizedCrop
+            size: 224
+            scale: [0.5, 1.0]
+          - _target_: torchvision.transforms.ToTensor
+          - _target_: torchvision.transforms.Normalize
+            mean: [0.485, 0.456, 0.406]
+            std: [0.229, 0.224, 0.225]
+    shuffle: False
+    batch_size: 4
+    num_workers: 4
+    pin_memory: False
+    drop_last: False
+    collate_fn:
+      _target_: slip.datasets.ChunkedCLIPCollator
+    worker_init_fn: NULL

@@ -1,0 +1,3 @@
++experiments=imisra/051_simpletx_eos_nomask_vitb16_srgbd100x_imval_srgbdval_fewaug_b4K_lr1e-3_ep32_w5
+constants.kernel_size=16,32
+trainer.max_epochs=32,50

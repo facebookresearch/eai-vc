@@ -1,0 +1,144 @@
+# @package _global_
+
+## Dataset specific paths
+constants:
+  bpe_path_list:
+    - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+    - /checkpoint/imisra/datasets/SLIP/bpe_simple_vocab_16e6.txt.gz
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+  # LAION 21M
+  laion21m_path_list:
+    - /checkpoint/imisra/datasets/laion/laion400m_subset21M_tarlist.pkl
+  laion21m_dataset_size_file: /checkpoint/imisra/datasets/laion/laion400m_subset21M_tarlist_numfiles.npy
+  # ARKit
+  arkit_train_path_file_list:
+    - /fsx-omnivore/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_images.npy
+    - /private/home/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_images.npy
+  arkit_train_label_file_list:
+    - /fsx-omnivore/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_fake_labels.npy
+    - /private/home/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_fake_labels.npy
+  arkit_train_depth_path_file_list:
+    - /fsx-omnivore/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_lowres_depth_pngs.npy
+    - /private/home/imisra/datasets/ARKitScenes/depth_upsampling/upsampling/train_lowres_depth_pngs.npy
+  # SUN RGB-D
+  sun_num_classes: 19
+  sun_rgb_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images/
+  sun_depth_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images_disparity/
+  sun_zs_classnames_list:
+    - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/classnames_zs.npy
+    - /checkpoint/imisra/datasets/sunrgbd/label_files/classnames_zs.npy
+  sun_test_path_file_list:
+    - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/test_image_names.npy # AWS
+    - /checkpoint/kalyanv/data/sunrgbd/test_image_names.npy
+    - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/test_image_names.npy
+  sun_test_label_file_list:
+    - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/test_labels.npy # AWS
+    - /checkpoint/kalyanv/data/sunrgbd/test_labels.npy
+    - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/test_labels.npy
+  sun_test_depth_path_file_list:
+    - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/test_disparity_names.npy # AWS
+    - /checkpoint/imisra/datasets/sunrgbd/label_files/test_disparity_names.npy
+    - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/test_disparity_names.npy
+  sun_train_path_file_list:
+    - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_image_names.npy # AWS
+    - /checkpoint/kalyanv/data/sunrgbd/train_image_names.npy
+    - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_image_names.npy
+  sun_train_label_file_list:
+    - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_labels.npy # AWS
+    - /checkpoint/kalyanv/data/sunrgbd/train_labels.npy
+    - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_labels.npy
+  sun_train_depth_path_file_list:
+    - /fsx-omnivore/imisra/datasets/sunrgbd/label_files/train_disparity_names.npy # AWS
+    - /checkpoint/imisra/datasets/sunrgbd/label_files/train_disparity_names.npy
+    - manifold://omnivore/tree/datasets/sunrgbd/scene_challenge/train_disparity_names.npy
+  # ImageNet
+  in1k_zs_templates_list:
+    - /checkpoint/imisra/datasets/in1k_disk/templates_openai.npy
+    - manifold://omnivore/tree/datasets/imagenet_1k_meta/templates_openai.npy
+  in1k_zs_classnames_list:
+    - /checkpoint/imisra/datasets/in1k_disk/classnames_zs.npy
+    - manifold://omnivore/tree/datasets/imagenet_1k_meta/classnames_zs.npy
+  in1k_val_path_file_list:
+    - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+    - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+  in1k_val_label_file_list:
+    - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+    - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+  in1k_train_path_file_list:
+    - /checkpoint/imisra/datasets/in1k_disk/train_images_global.npy
+    - manifold://omnivore/tree/datasets/imagenet_1k_meta/train_images_manifold_v2.npy
+  in1k_train_label_file_list:
+    - /checkpoint/imisra/datasets/in1k_disk/train_labels.npy
+    - manifold://omnivore/tree/datasets/imagenet_1k_meta/train_labels.npy
+  in1k_num_classes: 1000
+  # Places365
+  places365_train_path_file_list:
+    - /checkpoint/imisra/datasets/places365/train_standard_image_names.npy
+  places365_train_label_file_list:
+    - /checkpoint/imisra/datasets/places365/train_standard_labels.npy
+  places365_val_path_file_list:
+    - /checkpoint/imisra/datasets/places365/val_image_names.npy
+  places365_val_label_file_list:
+    - /checkpoint/imisra/datasets/places365/val_labels.npy
+  places365_zs_classnames_list:
+    - /checkpoint/imisra/datasets/places365/classnames_zs.npy
+  places365_num_classes: 365
+  # Food-101
+  food101_train_path_file_list:
+    - /checkpoint/imisra/datasets/food101/train_image_names.npy
+  food101_train_label_file_list:
+    - /checkpoint/imisra/datasets/food101/train_labels.npy
+  food101_test_path_file_list:
+    - /checkpoint/imisra/datasets/food101/test_image_names.npy
+  food101_test_label_file_list:
+    - /checkpoint/imisra/datasets/food101/test_labels.npy
+  food101_zs_classnames_list:
+    - /checkpoint/imisra/datasets/food101/classnames_zs.npy
+  food101_openaifood_zs_templates_list:
+    - /checkpoint/imisra/datasets/food101/templates_openai_for_food.npy
+  food101_num_classes: 101
+  # Pets
+  pets_train_path_file_list:
+    - /checkpoint/imisra/datasets/pets/trainval_image_names.npy
+  pets_train_label_file_list:
+    - /checkpoint/imisra/datasets/pets/trainval_labels.npy
+  pets_test_path_file_list:
+    - /checkpoint/imisra/datasets/pets/test_image_names.npy
+  pets_test_label_file_list:
+    - /checkpoint/imisra/datasets/pets/test_labels.npy
+  pets_zs_classnames_list:
+    - /checkpoint/imisra/datasets/pets/classnames_zs.npy
+  pets_openaipets_zs_templates_list:
+    - /checkpoint/imisra/datasets/pets/templates_openai_for_pets.npy
+  pets_num_classes: 37
+  # NYUv2 scene classification
+  nyuv2scene_train_path_file_list:
+    - /fsx-omnivore/imisra/datasets/nyuv2_cls/train_image_names.npy
+  nyuv2scene_train_depth_path_file_list:
+    - /fsx-omnivore/imisra/datasets/nyuv2_cls/train_disparity_names.npy
+  nyuv2scene_train_label_file_list:
+    - /fsx-omnivore/imisra/datasets/nyuv2_cls/train_10class_scene_labels.npy
+  nyuv2scene_test_path_file_list:
+    - /fsx-omnivore/imisra/datasets/nyuv2_cls/test_image_names.npy
+  nyuv2scene_test_depth_path_file_list:
+    - /fsx-omnivore/imisra/datasets/nyuv2_cls/test_disparity_names.npy
+  nyuv2scene_test_label_file_list:
+    - /fsx-omnivore/imisra/datasets/nyuv2_cls/test_10class_scene_labels.npy
+  nyuv2scene_num_classes: 10
+  nyuv2scene_zs_classnames_list:
+    - /fsx-omnivore/imisra/datasets/nyuv2_cls/classnames_10cls.pkl
+  nyuv2scene_rgb_prefix: /fsx-omnivore/imisra/datasets/nyuv2_cls/images/
+  nyuv2scene_depth_prefix: /fsx-omnivore/imisra/datasets/nyuv2_cls/images/
+  # SLIP templates
+  all_slip_templates_list:
+    - /checkpoint/imisra/datasets/SLIP/templates.json
+
+  ### Means and stds
+  in1k_rgb_mean: [0.485, 0.456, 0.406]
+  in1k_rgb_std: [0.229, 0.224, 0.225]
+
+  sun_rgbdispmax_mean: [0.485, 0.456, 0.406, 0.480]
+  sun_rgbdispmax_std: [0.229, 0.224, 0.225, 0.165]
+
+  nyuv2scene_rgbdispmax_mean: [0.485, 0.456, 0.406, 0.489]
+  nyuv2scene_rgbdispmax_std: [0.229, 0.224, 0.225, 0.176]

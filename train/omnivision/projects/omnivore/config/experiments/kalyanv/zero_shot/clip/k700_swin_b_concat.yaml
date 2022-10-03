@@ -1,0 +1,28 @@
+# @package _global_
+
+defaults:
+  - /experiments/kalyanv/zero_shot/clip/base_config/k700.yaml
+  - _self_
+
+lightning_module:
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: True
+    state_dict:
+      _target_: omnivision.model.checkpoint_utils.load_lightning_checkpoint
+      path_list:
+        - /checkpoint/kalyanv/omnivision/configs/experiments/kalyanv/ibot_concat_clip_swin_from_vissl_Cfg/checkpoints/last.ckpt
+    model:
+      _target_: slip.models.CLIP
+      embed_dim: 512
+      vision_width: 1024
+      context_length: 77
+      vocab_size: 49408
+      transformer_width: 512
+      transformer_heads: 8
+      transformer_layers: 12
+      freeze_vision: True
+      vision_model:
+        _target_: omnivision.model.checkpoint_utils.build_trunk_from_vissl_config
+        config_file_path: /checkpoint/kalyanv/omnivore/imisra/configs/experiments/pretrain/ibot/imisra/c005_ibot_swinB_LS_in1k_12crops_k400_2crops_fz5ep_mim50_tw30_wdcos_ep200.yaml/0/train_config.yaml
+        in_project_dir: False
