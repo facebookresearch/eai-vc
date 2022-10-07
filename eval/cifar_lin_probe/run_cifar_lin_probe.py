@@ -82,7 +82,7 @@ def precompute_embeddings(model, dataset, config):
 @hydra.main(config_path="conf", config_name="run_cifar_lin_probe")
 def probe_model_eval(config):
     wandb = setup_wandb(config)
-    
+
     # Get base model, transform, and probing classifier
     model, embedding_dim, transform, metadata = hydra.utils.call(config["model"])
     print(f"Loaded model {get_model_tag(metadata)}")
