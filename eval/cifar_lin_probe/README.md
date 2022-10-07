@@ -6,7 +6,7 @@ To launch a linear probing experiment on the cluster with multiple models, use t
 ```
 # From repo root directory
 python eval/cifar_lin_probe/run_cifar_lin_probe.py -m +hydra/launcher=submitit_slurm \
-  model=moco,moco_ego4d,mae_large,mae_large_ego4d,r3m,rn50_sup_imnet
+  model=moco,moco_ego4d,mae_large,mae_large_ego4d,r3m,vip,rn50_sup_imnet
 ```
 
 This should launch 6 experiments in parallel and would take about 10 minutes to complete after launching. The results will be stored in `/checkpoint/yixinlin/eaif/results/${hydra.job.name}/${oc.env:USER}` as specified in the hydra config. The final results should look something like below.
