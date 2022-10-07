@@ -29,6 +29,15 @@ def resnet50(use_avgpool_and_flatten=True, *args, **kwargs):
     return model
 
 
+def resnet50_vip(use_avgpool_and_flatten=True, *args, **kwargs):
+    model = torchvision.models.resnet50(*args, **kwargs)
+    model.fc = torch.nn.modules.linear.Linear(2048, 1024)
+    if not use_avgpool_and_flatten:
+        funcType = types.MethodType
+        model.forward = funcType(forward_without_avgpool_flatten, model)
+    return model
+
+
 def load_moco_checkpoint(checkpoint_path):
     checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
     state_dict = checkpoint["state_dict"]
@@ -54,6 +63,21 @@ def load_r3m_checkpoint(checkpoint_path):
             no_prefix_key = key.replace("module.convnet.", "")
             if no_prefix_key.startswith("fc."):
                 continue
+            result[no_prefix_key] = value
+
+    return result
+
+
+def load_vip_checkpoint(checkpoint_path):
+    state_dict = torch.load(checkpoint_path, map_location=torch.device("cpu"))["vip"]
+
+    result = {}
+
+    ## Hardcodes to remove the language head
+    ## Assumes downstream use is as visual representation
+    for key, value in state_dict.items():
+        if key.startswith("module.convnet."):
+            no_prefix_key = key.replace("module.convnet.", "")
             result[no_prefix_key] = value
 
     return result
