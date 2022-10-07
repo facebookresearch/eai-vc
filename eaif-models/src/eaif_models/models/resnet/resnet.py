@@ -28,6 +28,7 @@ def resnet50(use_avgpool_and_flatten=True, *args, **kwargs):
         model.forward = funcType(forward_without_avgpool_flatten, model)
     return model
 
+
 def resnet50_vip(use_avgpool_and_flatten=True, *args, **kwargs):
     model = torchvision.models.resnet50(*args, **kwargs)
     model.fc = torch.nn.modules.linear.Linear(2048, 1024)
@@ -35,6 +36,7 @@ def resnet50_vip(use_avgpool_and_flatten=True, *args, **kwargs):
         funcType = types.MethodType
         model.forward = funcType(forward_without_avgpool_flatten, model)
     return model
+
 
 def load_moco_checkpoint(checkpoint_path):
     checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
@@ -64,6 +66,7 @@ def load_r3m_checkpoint(checkpoint_path):
             result[no_prefix_key] = value
 
     return result
+
 
 def load_vip_checkpoint(checkpoint_path):
     state_dict = torch.load(checkpoint_path, map_location=torch.device("cpu"))["vip"]
