@@ -1,0 +1,16 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.vit.vit.load_encoder
+  model:
+    _target_: eaif_models.models.vit.vit.vit_base_patch16
+    global_pool: true
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/mvp/vit_b.pth
+transform:
+  _target_: eaif_models.transforms.vit_transforms
+metadata:
+  algo: mvp
+  model: vit_base_patch16
+  data:
+    - ego4d
+    - hoi
+    - imagenet
