@@ -1,4 +1,5 @@
-default:
+defaults:
+    - wandb: eaif
     - override hydra/launcher: local
 
 # general inputs
@@ -45,7 +46,6 @@ bc_kwargs:
 
 # logging
 job_name          :   'dmc_eaif_mujoco'
-wandb             :   eaif
 
 hydra:
     job:
