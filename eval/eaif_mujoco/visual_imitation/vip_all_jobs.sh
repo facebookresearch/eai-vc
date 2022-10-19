@@ -1,0 +1,4 @@
+python hydra_launcher.py --config-name DMC_BC_config.yaml --multirun hydra/launcher=slurm \
+env=dmc_walker_stand-v1,dmc_walker_walk-v1,dmc_reacher_easy-v1,dmc_cheetah_run-v1,dmc_finger_spin-v1 \
+embedding=vip_vit_small_patch16_ego4d,vip_vit_base_patch16_ego4d,vip_globalpool_vit_small_patch16_ego4d,mae_vit_small_patch16_ego4d,mae_vit_large_patch16_ego4d
+# embedding=vip_resnet50_ego4d,vip_vit_small_patch16_ego4d,vip_vit_base_patch16_ego4d,vip_globalpool_vit_small_patch16_ego4d,r3m_resnet50_ego4d,moco_resnet50_ego4d,mae_vit_small_patch16_ego4d,mae_vit_large_patch16_ego4d

@@ -1,0 +1,6 @@
+wandb:
+  project : vip-mae
+  entity  : eai-foundations
+  mode    : online
+  name    : vip-scratch
+  dir     :

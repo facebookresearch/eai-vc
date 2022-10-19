@@ -1,0 +1,39 @@
+defaults:
+  - _self_
+  - override hydra/launcher:  local
+  - override hydra/output:  local
+
+# snapshot
+save_snapshot: false
+load_snap: ""
+
+# replay buffer
+num_workers: 10
+batch_size: 32 
+train_steps: 2000000
+eval_freq: 20000
+
+# misc
+seed: 1
+device: cuda
+
+# experiment
+experiment: train_vip_vit_ego4d
+wandbproject: "vip_vit"
+wandbuser: "jasonyma_fair"
+
+# data
+dataset: ego4d 
+datapath: /checkpoint/yixinlin/eaif/datasets/ego4d/
+# datapath: /checkpoint/jasonyma/ego4d/ego4d/
+doaug: "rctraj"
+
+agent:
+  # _target_: vip.VIP
+  _target_: models.model_vip.VIP
+  device: ${device}
+  lr: 1e-4
+  embedding_dim: 1024
+  backbone: vit-b
+  lweight: 0.0
+  num_negatives: 3

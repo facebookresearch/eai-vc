@@ -1,0 +1,15 @@
+# @package _global_
+hydra:
+    launcher:
+        cpus_per_task: 20
+        gpus_per_node: 8
+        tasks_per_node: 1
+        timeout_min: 4300
+        mem_gb: 160
+        max_num_timeout: 3
+        # constraint: volta32gb
+        name: ${hydra.job.name}
+        partition: devlab
+        # array_parallelism: 256
+        _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+        submitit_folder: ${hydra.sweep.dir}/.submitit/%j
