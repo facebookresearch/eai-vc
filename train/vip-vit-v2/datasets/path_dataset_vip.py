@@ -3,7 +3,7 @@ import os
 from typing import List, Optional, Tuple
 
 import numpy as np
-import torch 
+import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
 from torchvision.datasets import VisionDataset
@@ -39,7 +39,7 @@ class PathDataset(VisionDataset):
         self.extra_transform = extra_transform
         self.mean = mean
         self.std = std
-        self.max_offset = max_offset # not used
+        self.max_offset = max_offset  # not used
         self.randomize_views = randomize_views
 
     def _get_image_raw(self, folder, idx):
@@ -47,7 +47,7 @@ class PathDataset(VisionDataset):
         img = Image.open(path).convert("RGB")
         extra_img = img.copy()
         img, extra_img = TF.to_tensor(img), TF.to_tensor(extra_img)
-        return img, extra_img 
+        return img, extra_img
 
     def _get_image(self, folder, idx):
         path = self.files[folder][idx]
@@ -73,17 +73,17 @@ class PathDataset(VisionDataset):
 
         vidlen = len(images)
         # Sample (o_t, o_k, o_k+1, o_T) for VIP training
-        start_ind = np.random.randint(0, vidlen-2)  
-        end_ind = np.random.randint(start_ind+1, vidlen)
+        start_ind = np.random.randint(0, vidlen - 2)
+        end_ind = np.random.randint(start_ind + 1, vidlen)
         s0_ind_vip = np.random.randint(start_ind, end_ind)
-        s1_ind_vip = min(s0_ind_vip+1, end_ind)
-        offset = s0_ind_vip - start_ind 
+        s1_ind_vip = min(s0_ind_vip + 1, end_ind)
+        offset = s0_ind_vip - start_ind
 
-        # random frames for alignment evaluation 
-        begin_idx = 0 # hack right now
-        s1_ind = np.random.randint(begin_idx+1, vidlen)
+        # random frames for alignment evaluation
+        begin_idx = 0  # hack right now
+        s1_ind = np.random.randint(begin_idx + 1, vidlen)
         s0_ind = np.random.randint(begin_idx, s1_ind)
-        s2_ind = np.random.randint(s1_ind, vidlen+begin_idx)
+        s2_ind = np.random.randint(s1_ind, vidlen + begin_idx)
 
         # TODO: How can we consistentize all transform with a video sequence?
         # o_initial, extra_o_initial = self._get_image(folder, start_ind)
@@ -93,8 +93,8 @@ class PathDataset(VisionDataset):
         # obs = torch.stack([o_initial, o_final, o_middle, o_middle2], 0)
         # obs_extra = torch.stack([extra_o_initial, extra_o_final, extra_o_middle, extra_o_middle2])
 
-        obs = [] 
-        obs_extra = [] 
+        obs = []
+        obs_extra = []
         # for idx in [start_ind, end_ind, s0_ind_vip, s1_ind_vip, s0_ind, s1_ind, s2_ind]:
         for idx in [start_ind, end_ind, s0_ind_vip, s1_ind_vip]:
             o, o_extra = self._get_image_raw(folder, idx)

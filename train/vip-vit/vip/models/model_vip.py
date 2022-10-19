@@ -15,8 +15,18 @@ from pathlib import Path
 from torchvision.utils import save_image
 import torchvision.transforms as T
 
+
 class VIP(nn.Module):
-    def __init__(self, device="cuda", lr=1e-4, embedding_dim=1024, backbone='vit-b', lweight=0.0, gamma=0.98, num_negatives=0):
+    def __init__(
+        self,
+        device="cuda",
+        lr=1e-4,
+        embedding_dim=1024,
+        backbone="vit-b",
+        lweight=0.0,
+        gamma=0.98,
+        num_negatives=0,
+    ):
         super().__init__()
         self.device = device
         self.lweight = lweight
@@ -45,18 +55,22 @@ class VIP(nn.Module):
             self.convnet = torchvision.models.resnet50(pretrained=False)
         elif backbone == "vit-b":
             from eaif_models.models.vit.vit import vit_base_patch16
+
             self.backbone = vit_base_patch16(use_cls=True)
             self.backbone_out_dim = 768
         elif backbone == "vit-s":
             from eaif_models.models.vit.vit import vit_small_patch16
+
             self.backbone = vit_small_patch16(use_cls=True)
             self.backbone_out_dim = 384
 
         params += list(self.backbone.parameters())
 
         # TODO: Is this right?
-        self.normlayer = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.backbone_layer_norm = None 
+        self.normlayer = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        )
+        self.backbone_layer_norm = None
         # Adding layernorm on the output of vision backbone makes the outputs roughly gaussian.
         # This makes it well conditioned for the downstream MLP layers.
         # self.backbone_layer_norm = torch.nn.LayerNorm(self.backbone_out_dim)
@@ -69,26 +83,26 @@ class VIP(nn.Module):
         #                             nn.ReLU(),
         #                             nn.Linear(self.embedding_dim, self.embedding_dim))
         # params += list(self.vision_mlp_head.parameters())
-        
+
         ## Optimizer
-        self.encoder_opt = torch.optim.Adam(params, lr = lr)
+        self.encoder_opt = torch.optim.Adam(params, lr=lr)
 
     def forward(self, x):
         obs_shape = x.shape[1:]
         # if not already resized and cropped, then add those in preprocessing
         if obs_shape != [3, 224, 224]:
             preprocess = nn.Sequential(
-                        transforms.Resize(256),
-                        transforms.CenterCrop(224),
-                        self.normlayer,
-                )
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                self.normlayer,
+            )
         else:
             preprocess = nn.Sequential(
-                        self.normlayer,
-                )
+                self.normlayer,
+            )
 
         ## Input must be [0, 255], [3,224,224]
-        x = x.float() /  255.0
+        x = x.float() / 255.0
         obs_p = preprocess(x)
         out = self.backbone(obs_p)
         if self.backbone_layer_norm is not None:
@@ -97,6 +111,5 @@ class VIP(nn.Module):
         return out
 
     def sim(self, tensor1, tensor2):
-        d = -torch.linalg.norm(tensor1 - tensor2, dim = -1)
+        d = -torch.linalg.norm(tensor1 - tensor2, dim=-1)
         return d
-    

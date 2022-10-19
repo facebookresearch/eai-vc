@@ -54,7 +54,13 @@ def train_one_epoch(
         extra_samples = extra_samples.to(device, non_blocking=True)
 
         with torch.cuda.amp.autocast():
-            loss, alignment, _ = model(samples, extra_samples, mask_ratio=args.mask_ratio, vip=args.vip, use_mask=args.use_mask)
+            loss, alignment, _ = model(
+                samples,
+                extra_samples,
+                mask_ratio=args.mask_ratio,
+                vip=args.vip,
+                use_mask=args.use_mask,
+            )
 
         loss_value = loss.item()
 
@@ -81,9 +87,9 @@ def train_one_epoch(
 
         loss_value_reduce = misc.all_reduce_mean(loss_value)
         log = {"train_loss": loss_value_reduce, "lr": lr}
-        if alignment is not None: 
+        if alignment is not None:
             alignment_value_reduce = misc.all_reduce_mean(alignment)
-            log['alignment'] = alignment_value_reduce
+            log["alignment"] = alignment_value_reduce
         if (data_iter_step + 1) % accum_iter == 0 and misc.get_rank() == 0:
             """We use epoch_1000x as the x-axis in tensorboard.
             This calibrates different curves when batch size changes.

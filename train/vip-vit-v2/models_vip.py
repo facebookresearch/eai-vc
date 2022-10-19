@@ -37,7 +37,7 @@ class MaskedAutoencoderViT(nn.Module):
         norm_layer=nn.LayerNorm,
         norm_pix_loss=False,
         use_cls=True,
-        global_pool=False
+        global_pool=False,
     ):
         super().__init__()
 
@@ -67,8 +67,8 @@ class MaskedAutoencoderViT(nn.Module):
         self.norm = norm_layer(embed_dim)
         # --------------------------------------------------------------------------
 
-        self.use_cls = use_cls  
-        self.global_pool = global_pool 
+        self.use_cls = use_cls
+        self.global_pool = global_pool
         if self.global_pool:
             norm_layer = partial(nn.LayerNorm, eps=1e-6)
             embed_dim = embed_dim
@@ -217,7 +217,7 @@ class MaskedAutoencoderViT(nn.Module):
         if mask_ratio != 0.0:
             x, mask, ids_restore = self.random_masking(x, mask_ratio)
         else:
-            mask, ids_restore = None, None 
+            mask, ids_restore = None, None
 
         # append cls token
         cls_token = self.cls_token + self.pos_embed[:, :1, :]
@@ -281,35 +281,41 @@ class MaskedAutoencoderViT(nn.Module):
         return loss
 
     def sim(self, tensor1, tensor2):
-        d = -torch.linalg.norm(tensor1 - tensor2, dim = -1)
-        return d 
+        d = -torch.linalg.norm(tensor1 - tensor2, dim=-1)
+        return d
 
     def forward_vip_loss(self, x, gamma=0.98, epsilon=1e-6, num_negatives=3):
 
-        e0 = x[:, 0] # initial, o_0
-        eg = x[:, 1] # final, o_g
-        es0_vip = x[:, 2] # o_t
-        es1_vip = x[:, 3] # o_t+1
+        e0 = x[:, 0]  # initial, o_0
+        eg = x[:, 1]  # final, o_g
+        es0_vip = x[:, 2]  # o_t
+        es1_vip = x[:, 3]  # o_t+1
 
         # Compute alignment as a metric
         a_state = None
         if x.shape[1] > 4:
             with torch.no_grad():
-                es0 = x[:, -3] 
+                es0 = x[:, -3]
                 es1 = x[:, -2]
                 es2 = x[:, -1]
-                sim_0_2 = self.sim(es2, es0) 
+                sim_0_2 = self.sim(es2, es0)
                 sim_1_2 = self.sim(es2, es1)
                 sim_0_1 = self.sim(es1, es0)
-                a_state = ((1.0 * (sim_0_2 < sim_1_2)) * (1.0 * (sim_0_1 > sim_0_2))).mean().item()
+                a_state = (
+                    ((1.0 * (sim_0_2 < sim_1_2)) * (1.0 * (sim_0_1 > sim_0_2)))
+                    .mean()
+                    .item()
+                )
                 # metrics['aligned'] = a_state.item()
 
-        ## VIP Loss 
-        V_0 = self.sim(e0, eg) # -||phi(s) - phi(g)||_2
+        ## VIP Loss
+        V_0 = self.sim(e0, eg)  # -||phi(s) - phi(g)||_2
         V_s = self.sim(es0_vip, eg)
         V_s_next = self.sim(es1_vip, eg)
         r = -torch.ones(V_s.shape).to(V_0.device)
-        V_loss = (1-gamma) * -V_0.mean() + torch.log(epsilon + torch.mean(torch.exp(-(r + gamma * V_s_next - V_s))))
+        V_loss = (1 - gamma) * -V_0.mean() + torch.log(
+            epsilon + torch.mean(torch.exp(-(r + gamma * V_s_next - V_s)))
+        )
 
         # Optionally, add additional "negative" observations
         V_s_neg = []
@@ -326,20 +332,27 @@ class MaskedAutoencoderViT(nn.Module):
             V_s_neg = torch.cat(V_s_neg)
             V_s_next_neg = torch.cat(V_s_next_neg)
             r_neg = -torch.ones(V_s_neg.shape).to(V_0.device)
-            V_loss = V_loss + torch.log(epsilon + torch.mean(torch.exp(-(r_neg + gamma * V_s_next_neg - V_s_neg))))
-        
+            V_loss = V_loss + torch.log(
+                epsilon
+                + torch.mean(torch.exp(-(r_neg + gamma * V_s_next_neg - V_s_neg)))
+            )
+
         return V_loss, a_state
 
     def forward(self, imgs, extra_imgs, mask_ratio=0.75, vip=False, use_mask=False):
         # TODO
         if vip:
-            B, N = imgs.shape[0], imgs.shape[1] # batch size, numframes per video
-            imgs_r = imgs.reshape(imgs.shape[0]*imgs.shape[1], 3, self.img_size, self.img_size)
-            if not use_mask: 
+            B, N = imgs.shape[0], imgs.shape[1]  # batch size, numframes per video
+            imgs_r = imgs.reshape(
+                imgs.shape[0] * imgs.shape[1], 3, self.img_size, self.img_size
+            )
+            if not use_mask:
                 mask_ratio = 0.0
-            latent, mask, ids_restore = self.forward_encoder(imgs_r, mask_ratio=mask_ratio)
+            latent, mask, ids_restore = self.forward_encoder(
+                imgs_r, mask_ratio=mask_ratio
+            )
             if self.use_cls:
-                latent = latent[:, 0, :] # use_cls
+                latent = latent[:, 0, :]  # use_cls
             elif self.global_pool:
                 latent = latent[:, 1:, :].mean(dim=1)  # global pool without cls token
                 latent = self.fc_norm(latent)

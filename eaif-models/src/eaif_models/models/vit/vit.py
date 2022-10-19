@@ -180,7 +180,7 @@ def load_encoder(model, checkpoint_path=None):
             getattr(model, "num_tokens", 1),
             model.patch_embed.grid_size,
         )
-    
+
     state_dict = {
         k: v
         for k, v in state_dict.items()
@@ -198,10 +198,12 @@ def load_encoder(model, checkpoint_path=None):
     # model.load_state_dict(state_dict, strict=False)
     return model
 
+
 if __name__ == "__main__":
     vit = vit_small_patch16(use_cls=True)
     print(vit.mask_ratio)
     import numpy as np
+
     image = np.random.randint(0, 1, (2, 4, 3, 224, 224))
     # image = torch.randn((3,3,224,224))
     image = torch.from_numpy(image).float()
@@ -210,4 +212,3 @@ if __name__ == "__main__":
     # feat = projector(features)
     # print(feat.shape)
     print(features.shape)
-

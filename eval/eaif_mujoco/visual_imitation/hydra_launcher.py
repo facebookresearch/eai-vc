@@ -6,7 +6,8 @@ import os
 import hydra
 import multiprocessing
 from omegaconf import DictConfig, OmegaConf
-os.environ['MUJOCO_GL'] = 'egl'
+
+os.environ["MUJOCO_GL"] = "egl"
 
 cwd = os.getcwd()
 

@@ -357,13 +357,13 @@ def save_model(
 
 
 def load_model(args, model_without_ddp, optimizer, loss_scaler):
-    use_checkpoint_stat = True 
+    use_checkpoint_stat = True
     if args.resume.startswith("https"):
         checkpoint = torch.hub.load_state_dict_from_url(
             args.resume, map_location="cpu", check_hash=True
         )
     # Supporting VIP Fine-Tuning on top of a MAE model
-    elif args.resume != "": 
+    elif args.resume != "":
         use_checkpoint_stat = True
         print("Loading {}".format(args.resume))
         checkpoint = torch.load(args.resume, map_location="cpu")

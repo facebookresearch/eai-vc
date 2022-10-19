@@ -42,8 +42,7 @@ def set_seed_everywhere(seed):
 
 def soft_update_params(net, target_net, tau):
     for param, target_param in zip(net.parameters(), target_net.parameters()):
-        target_param.data.copy_(tau * param.data +
-                                (1 - tau) * target_param.data)
+        target_param.data.copy_(tau * param.data + (1 - tau) * target_param.data)
 
 
 def to_torch(xs, device):
@@ -53,13 +52,14 @@ def to_torch(xs, device):
 def weight_init(m):
     if isinstance(m, nn.Linear):
         nn.init.orthogonal_(m.weight.data)
-        if hasattr(m.bias, 'data'):
+        if hasattr(m.bias, "data"):
             m.bias.data.fill_(0.0)
     elif isinstance(m, nn.Conv2d) or isinstance(m, nn.ConvTranspose2d):
-        gain = nn.init.calculate_gain('relu')
+        gain = nn.init.calculate_gain("relu")
         nn.init.orthogonal_(m.weight.data, gain)
-        if hasattr(m.bias, 'data'):
+        if hasattr(m.bias, "data"):
             m.bias.data.fill_(0.0)
+
 
 def accuracy(output, target, topk=(1,)):
     """Computes the precision@k for the specified values of k"""
@@ -75,6 +75,7 @@ def accuracy(output, target, topk=(1,)):
         correct_k = correct[:k].reshape(-1).float().sum(0)
         res.append(correct_k.mul_(1.0 / batch_size))
     return res
+
 
 class Until:
     def __init__(self, until, action_repeat=1):
@@ -131,9 +132,7 @@ class TruncatedNormal(pyd.Normal):
 
     def sample(self, clip=None, sample_shape=torch.Size()):
         shape = self._extended_shape(sample_shape)
-        eps = _standard_normal(shape,
-                               dtype=self.loc.dtype,
-                               device=self.loc.device)
+        eps = _standard_normal(shape, dtype=self.loc.dtype, device=self.loc.device)
         eps *= self.scale
         if clip is not None:
             eps = torch.clamp(eps, -clip, clip)
@@ -145,12 +144,12 @@ def schedule(schdl, step):
     try:
         return float(schdl)
     except ValueError:
-        match = re.match(r'linear\((.+),(.+),(.+)\)', schdl)
+        match = re.match(r"linear\((.+),(.+),(.+)\)", schdl)
         if match:
             init, final, duration = [float(g) for g in match.groups()]
             mix = np.clip(step / duration, 0.0, 1.0)
             return (1.0 - mix) * init + mix * final
-        match = re.match(r'step_linear\((.+),(.+),(.+),(.+),(.+)\)', schdl)
+        match = re.match(r"step_linear\((.+),(.+),(.+),(.+),(.+)\)", schdl)
         if match:
             init, final1, duration1, final2, duration2 = [
                 float(g) for g in match.groups()

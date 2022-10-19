@@ -85,8 +85,11 @@ def main(args: DictConfig):
     else:
         args.output_dir = os.path.join(args.output_dir, args.wandb.name)
         from datetime import datetime
+
         now = datetime.now()
-        args.output_dir = os.path.join(args.output_dir, now.strftime("%Y-%m-%d_%H-%M-%S"))
+        args.output_dir = os.path.join(
+            args.output_dir, now.strftime("%Y-%m-%d_%H-%M-%S")
+        )
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
 
     # Note that the folder will depend on the job_id, to easily track experiments

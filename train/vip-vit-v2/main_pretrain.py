@@ -33,6 +33,7 @@ import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from datasets.dataset_with_txt_files import DatasetWithTxtFiles
 from datasets.omni_dataset import OmniDataset
+
 # from datasets.path_dataset import PathDataset
 from datasets.path_dataset_vip import PathDataset
 
@@ -142,7 +143,11 @@ def main(args: omegaconf.DictConfig):
     )
 
     # define the model
-    model = models_vip.__dict__[args.mae_model](norm_pix_loss=args.norm_pix_loss, use_cls=args.use_cls, global_pool=args.global_pool)
+    model = models_vip.__dict__[args.mae_model](
+        norm_pix_loss=args.norm_pix_loss,
+        use_cls=args.use_cls,
+        global_pool=args.global_pool,
+    )
 
     model.to(device)
 
