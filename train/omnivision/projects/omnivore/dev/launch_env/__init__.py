@@ -3,6 +3,7 @@ Contains defaults for launching jobs
 """
 
 import os
+from dataclasses import dataclass
 
 from hydra._internal.core_plugins.basic_sweeper import BasicSweeper
 from hydra.core.override_parser.overrides_parser import OverridesParser
@@ -13,9 +14,26 @@ CLUSTER_TYPES = [
     "prod",
     "fair",
     "aws",
+    "rsc",
+    "oss",
 ]
 # For some reason can't make multiple BasicSweeper objects in one job...
 SWEEPER = BasicSweeper(max_batch_size=None)
+
+
+@dataclass
+class SlurmClusterSettings:
+    timeout_hour: int
+    cpu: int
+    mem_gb: int
+
+
+SLURM_CLUSTER_DEFAULTS = {
+    "fair": SlurmClusterSettings(timeout_hour=72, cpu=10, mem_gb=480),
+    "aws": SlurmClusterSettings(timeout_hour=72, cpu=10, mem_gb=480),
+    "rsc": SlurmClusterSettings(timeout_hour=168, cpu=32, mem_gb=1900),
+    "oss": SlurmClusterSettings(timeout_hour=72, cpu=10, mem_gb=480),
+}
 
 
 PROD_CLUSTER_DICT = {

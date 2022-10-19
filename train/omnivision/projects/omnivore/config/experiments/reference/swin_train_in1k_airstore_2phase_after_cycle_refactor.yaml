@@ -1,0 +1,16 @@
+# @package _global_
+# based on configs/experiments/pretrain/supervised/video/069_swinT_im1k.yaml
+# expected accuracy: 80.6%
+# obtained accuracy: ???
+# @package _global_
+
+defaults:
+  - /experiments/reference/swin_train_in1k_airstore.yaml
+  - _self_
+
+scratch:
+  # number of classes in the `tool` version of Uru 5B
+  phases_per_epoch: 2
+
+trainer:
+  max_epochs: 600

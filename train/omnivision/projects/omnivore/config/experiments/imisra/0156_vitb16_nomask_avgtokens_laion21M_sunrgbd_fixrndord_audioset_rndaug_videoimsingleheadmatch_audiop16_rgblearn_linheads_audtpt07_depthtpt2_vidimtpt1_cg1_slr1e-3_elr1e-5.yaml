@@ -1,0 +1,66 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0155_vitb16_nomask_laion21M_sunrgbd_fixrndord_audioset_rndaug_videoimsingleheadmatch_audiop16_rgblearn_linheads_audtpt07_depthtpt2_vidimtpt1_cg1_slr1e-3_elr1e-5
+
+trainer:
+  model:
+    _target_: omnivore.models.multimodal_wrapper.MultiModalZeroShotWithTextTargetsWrapper
+    multimodal_model:
+      heads:
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.AvgTokens
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${constants.head_final_embed_dim}
+                bias: false
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: true
+                  mean: 0
+                  std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: vision_tokens
+          output_key: vision_embed
+        - head:
+            _target_: omnivore.models.pooling_helpers.SelectEOSAndProject
+            proj:
+              _target_: torch.nn.Sequential
+              _args_:
+              - _target_: torch.nn.LayerNorm
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+              - _target_: omnivision.model.model_init_utils.init_parameters
+                model:
+                  _target_: torch.nn.Linear
+                  in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                  out_features: ${constants.head_final_embed_dim}
+                  bias: false
+                init_fns:
+                  weight:
+                    _target_: torch.nn.init.normal_
+                    _partial_: true
+                    mean: 0
+                    std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: text_tokens
+          output_key: text_embed
+        - head:
+            _target_: torch.nn.Sequential
+            _args_: ${trainer.model.multimodal_model.heads.0.head._args_}
+          fork_module: ''
+          preprocessed_input_key: audio_tokens
+          output_key: audio_embed
+        - head:
+            _target_: torch.nn.Sequential
+            _args_: ${trainer.model.multimodal_model.heads.0.head._args_}
+          fork_module: ''
+          preprocessed_input_key: depth_tokens_vision_targets
+          output_key: depth_embed_vision_targets
+      

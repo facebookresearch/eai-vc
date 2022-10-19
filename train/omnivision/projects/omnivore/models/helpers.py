@@ -172,17 +172,24 @@ class NoGradWrapper(nn.Module):
     torch.no_grad()
     """
 
-    def __init__(self, module: nn.Module, eval: bool = True):
+    def __init__(self, module: nn.Module, set_to_eval: bool = True):
         super().__init__()
         self.module = module
-        self.eval = eval
+        self.set_to_eval = set_to_eval
+        if set_to_eval:
+            self.eval()
 
-    @torch.no_grad()
-    def forward(self, *args, **kwargs):
+    def train(self, model: bool):
         if self.eval:
             self.module.eval()
         else:
             self.module.train()
+
+    def eval(self):
+        self.module.eval()
+
+    @torch.no_grad()
+    def forward(self, *args, **kwargs):
         return self.module(*args, **kwargs)
 
 

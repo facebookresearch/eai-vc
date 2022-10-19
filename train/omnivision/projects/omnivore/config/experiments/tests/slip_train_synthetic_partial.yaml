@@ -1,0 +1,253 @@
+# @package _global_
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 2
+  mode: train_only
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+  strategy: ddp
+
+  data:
+    _target_: omnivision.data_module.base_data_module.BaseDataModule
+    train:
+      _target_: omnivore.data.torch_dataset.TorchIterableDataset
+      dataset:
+        _target_: omnivore.data.vision_text_dataset.FilteredVisionTextDataset
+        base_dataset:
+          _target_: omnivore.data.synthetic_dataset.SyntheticVisionTextHashtagDataset
+          visual_tensor_shape: [3, 224, 224]
+          length: 128
+          captions:
+            - "a list of words"
+            - ""
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 224
+                  interpolation: 3
+                  scale: [0.9, 1.0]
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                - _target_: omnivore.data.transforms.rand_auto_aug.RandAugment  # Essentially autoagument rand-m9-mstd0.5-inc1
+                  magnitude: 9
+                  magnitude_std: 0.5
+                  increasing_severity: True
+                - _target_: torchvision.transforms.ColorJitter
+                  brightness: 0.4
+                  contrast: 0.4
+                  saturation: 0.4
+                  hue: 0.4
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.RandomErasing
+                  p: .25
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+          - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: omnivore.data.transforms.filter_captions.RemoveSpecialTokens
+          - _target_: omnivore.data.transforms.filter_captions.ReplaceEmptyCaptionWithHashtags
+          - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: omnivore.data.tokenizers.simple_tokenizer.SimpleTokenizer
+                  bpe_path_list:
+                    - /checkpoint/kalyanv/data/slip/bpe_simple_vocab_16e6.txt.gz
+                    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+      batch_size: 32
+      num_workers: 10
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: in1k
+      worker_init_fn: NULL
+
+    val:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels
+        tokenizer:
+          _target_: omnivore.data.tokenizers.simple_tokenizer.SimpleTokenizer
+          bpe_path_list:
+            - /checkpoint/kalyanv/data/slip/bpe_simple_vocab_16e6.txt.gz
+            - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+        label_names_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/classnames_zs.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/classnames_zs.npy
+        templates:
+          _target_: omnivore.utils.data.FileLoader.load
+          return_idx: False
+          path_list:
+            - /checkpoint/imisra/datasets/in1k_disk/templates_openai.npy
+            - manifold://omnivore/tree/datasets/imagenet_1k_meta/templates_openai.npy
+        base_dataset:
+          _target_: omnivore.data.path_dataset.ImagePathDataset
+          path_file_list:
+            - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+            - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+          label_file_list:
+            - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+            - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+          transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: 224
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: 224
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: [0.485, 0.456, 0.406]
+                    std: [0.229, 0.224, 0.225]
+      shuffle: False
+      batch_size: 32
+      num_workers: 8
+      pin_memory: True
+      drop_last: False
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: in1k
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivore.models.openclip_model.MultiModalZeroShotEvalWrapperCLIP
+    image_output_key: image_embed
+    text_output_key: text_embed
+    logit_scale_output_key: logit_scale
+    clip_model:
+      _target_: omnivore.models.clip_partial.CLIP_PartialVision
+      embed_dim: 512
+      vision_width: 768
+      context_length: 77
+      vocab_size: 49408
+      transformer_width: 512
+      transformer_heads: 8
+      transformer_layers: 12
+      freeze_vision: true
+      vision_model:
+        _target_: omnivore.models.vision_transformer.VisionTransformer
+        embed_dim: 768
+        depth: 12
+        classifier_feature: 'last_all'
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+          _partial_: True
+          num_heads: 12
+          proj_drop: 0
+          qk_scale: NULL
+          qkv_bias: True
+          attn_drop: 0
+      vision_proj_head:
+        _target_: omnivore.models.clip_partial.ViTProjectionHead2
+        width: 768
+        num_layers: 3
+        layer_norm_eps: 1e-6
+        use_checkpoint: true
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+          _partial_: True
+          num_heads: 12
+          proj_drop: 0
+          qk_scale: NULL
+          qkv_bias: True
+          attn_drop: 0
+    label_strings:
+      in1k:
+        _target_: omnivore.data.path_dataset.PathDatasetWithTextLabels.gen_label_strings
+        tokenizer: ${trainer.data.val.dataset.tokenizer}
+        label_names_file_list: ${trainer.data.val.dataset.label_names_file_list}
+        templates: ${trainer.data.val.dataset.templates}
+
+  loss:
+    in1k:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: image_embed
+      feat2_name: text_embed
+      logit_scale_name: logit_scale
+
+  optim:
+    gradient_clip: NULL
+    amp:
+      enabled: false
+      amp_dtype: float16 # bfloat16 or float16
+    optimizer:
+      _target_: torch.optim.AdamW
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 10e-7
+                end_value: 10e-4
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: 10e-4
+                end_value: 10e-6
+            lengths: [0.07, 0.93]
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+          module_cls_names: ['torch.nn.LayerNorm']
+  meters:
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+
+  distributed:
+    backend: nccl
+    comms_dtype: float16
+    find_unused_parameters: true
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+    model_weight_initializer: NULL
+
+  cuda:
+    # https://pytorch.org/docs/stable/backends.html
+    allow_tf32: True
+    cudnn_deterministic: False
+    cudnn_benchmark: True
+
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 8
+  experiment_log_dir: ???
+
+
+hydra:
+  output_subdir: NULL
+  run:
+    dir: .

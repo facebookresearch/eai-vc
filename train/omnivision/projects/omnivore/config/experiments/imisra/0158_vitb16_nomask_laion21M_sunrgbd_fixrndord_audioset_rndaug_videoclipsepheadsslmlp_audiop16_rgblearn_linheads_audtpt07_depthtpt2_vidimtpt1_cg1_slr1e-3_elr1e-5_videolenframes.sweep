@@ -1,0 +1,5 @@
++experiments=imisra/0158_vitb16_nomask_laion21M_sunrgbd_fixrndord_audioset_rndaug_videoclipsepheadsslmlp_audiop16_rgblearn_linheads_audtpt07_depthtpt2_vidimtpt1_cg1_slr1e-3_elr1e-5
+constants.audio_freq_mask_param=12
+constants.video_clip_duration=2
+constants.video_num_frames=2,4
+constants.use_grad_checkpoint_audioset_every_n=1

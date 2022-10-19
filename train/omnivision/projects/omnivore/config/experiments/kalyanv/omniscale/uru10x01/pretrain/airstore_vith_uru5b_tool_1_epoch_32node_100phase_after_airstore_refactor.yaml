@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - /experiments/kalyanv/omniscale/uru10x01/pretrain/airstore_vith_uru5b_tool_1_epoch.yaml
+  - _self_
+
+scratch:
+  # number of classes in the `tool` version of Uru 5B
+  num_classes: 28051
+  batch_size: 32
+  phases_per_epoch: 100
+
+launcher:
+  num_nodes: 32
+  gpus_per_node: 8
+  experiment_log_dir: ???

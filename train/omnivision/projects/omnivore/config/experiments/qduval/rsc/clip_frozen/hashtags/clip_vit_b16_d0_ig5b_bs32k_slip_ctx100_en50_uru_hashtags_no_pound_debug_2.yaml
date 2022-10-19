@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - /experiments/qduval/rsc/clip_frozen/hashtags/base_uru_hashtags.yaml
+  - _self_
+
+
+scratch:
+  # CLIP uses 400M images * 32 epochs = 12800M images seen
+  # 5B divided by 100 phases = 50M per epoch * 256 = 12800M
+  phases_per_epoch: 5000
+  num_samples: 5000000000
+  max_epochs: 12800
+  val_epoch_freq: 100
+
+  # Hyper-parameters for image and text
+  english_threshold: 0.5
+  context_length: 100
+  remove_pound: true
+  random_resize_scale: [0.9, 1.0]

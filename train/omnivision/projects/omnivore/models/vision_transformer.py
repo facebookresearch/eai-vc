@@ -498,7 +498,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         # the initialization of the model
         self.fsdp_settings = fsdp_settings
 
-        assert use_cls_token or classifier_feature == "global_pool"
+        assert use_cls_token or classifier_feature in {"global_pool", "last_all"}
         self.patch_drop_max_patches = patch_drop_max_patches
         self.masked_image_modeling = masked_image_modeling
         self.layer_norm_eps = layer_norm_eps
@@ -512,7 +512,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             self.embed_dim
         ) = embed_dim  # num_features for consistency with other models
 
-        assert classifier_feature in ["cls_token", "global_pool"]
+        assert classifier_feature in {"cls_token", "global_pool", "last_all"}
         self.classifier_feature = classifier_feature
 
         assert in_chans == 3, "Only 3 channels supported"
@@ -747,6 +747,10 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             mask is None or self.decoder is None
         ):
             x = x[:, self.first_patch_idx :, ...].mean(dim=1)
+        elif self.classifier_feature == "last_all" and (
+            mask is None or self.decoder is None
+        ):
+            pass  # x = x
         elif self.patch_dropping and mask is not None and self.decoder is not None:
             x = self.norm(x)
             if self.post_encoder:

@@ -383,7 +383,7 @@ class ShardedCheckpointSaver:
 
 class ShardedCheckpointLoader:
     """
-    Helper class to save checkpoints of FSDP models
+    Helper class to load checkpoints of FSDP models
     """
 
     def __init__(self):

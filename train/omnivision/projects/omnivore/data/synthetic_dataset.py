@@ -1,10 +1,10 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 
 import torch
-from omnivore.data.api import VisionSample, VisionTextSample
+from omnivore.data.api import VisionSample, VisionTextHashtagSample, VisionTextSample
 from PIL import Image, ImageFilter
 from torch.utils.data import Dataset
 
@@ -159,5 +159,59 @@ class SyntheticVisionTextDataset(Dataset):
                 label=label,
                 data_valid=True,
                 text=self.caption,
+            )
+        )
+
+
+class SyntheticVisionTextHashtagDataset(Dataset):
+    """
+    Creates VisionTextSample where the image can be generated randomly
+    """
+
+    def __init__(
+        self,
+        visual_tensor_shape: List[int],
+        length: int,
+        random_image: bool = True,
+        num_classes: int = 1,
+        captions: Optional[List[str]] = None,
+        hashtags: str = "cat,dog",
+        transforms=None,
+    ) -> None:
+        self.visual_tensor_shape = visual_tensor_shape
+        self.num_classes = num_classes
+        self.length = length
+        self.random_image = random_image
+        self.captions = captions or ["a list of words"]
+        self.hashtags = hashtags
+        self.transforms = transforms
+
+    def __len__(self) -> int:
+        return self.length
+
+    def apply_transforms(self, sample):
+        if self.transforms is None:
+            return sample
+        for transform in self.transforms:
+            sample = transform(sample)
+        return sample
+
+    def __getitem__(self, idx) -> VisionTextSample:
+        visual_data = generate_image(
+            seed=idx,
+            height=self.visual_tensor_shape[-2],
+            width=self.visual_tensor_shape[-1],
+            random_image=self.random_image,
+        )
+        label = idx % self.num_classes
+        caption = self.captions[idx % len(self.captions)]
+        return self.apply_transforms(
+            VisionTextHashtagSample(
+                vision=visual_data,
+                data_idx=idx,
+                label=label,
+                data_valid=True,
+                text=caption,
+                hashtags=self.hashtags,
             )
         )

@@ -19,6 +19,7 @@ parser.add_argument(
     help="Root dir which contains all tars",
     default=None,
 )
+parser.add_argument("--root_dir_nested", default=False, action="store_true")
 parser.add_argument("--full_data_input_file", type=str, default=None)
 parser.add_argument(
     "--subset_length", type=float, required=True, help="Length of the subset"
@@ -44,8 +45,10 @@ def get_filenames_in_tar(fname, image_extension):
 
 def main():
     args = parser.parse_args()
-    if args.root_dir:
+    if args.root_dir and not args.root_dir_nested:
         tarlist = sorted(glob.glob(args.root_dir + "/*tar"))
+    elif args.root_dir and args.root_dir_nested:
+        tarlist = sorted(glob.glob(args.root_dir + "/*/*tar"))
     if args.full_data_input_file:
         with open(args.full_data_input_file, "rb") as fh:
             tarlist = pickle.load(fh)

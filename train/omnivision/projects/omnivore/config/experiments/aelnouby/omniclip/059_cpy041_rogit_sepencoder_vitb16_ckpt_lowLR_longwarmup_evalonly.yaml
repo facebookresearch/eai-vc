@@ -1,0 +1,332 @@
+# @package _global_
+
+# Follow config/experiments/imisra/014_oclip_vitb32_laion400mact_imval_b32K_lr5e-4_adampt98_ep32_wdpt2_nocoloraug.yaml
+# Use AMP for optimization
+# Use FP16 gradient comm
+# Use Omnivision Trainer
+
+defaults:
+  - /experiments/aelnouby/omniclip/059_cpy041_rogit_sepencoder_vitb16_ckpt_lowLR_longwarmup
+  - /experiments/imisra/base_dataset_paths
+
+
+constants:
+  rgb_crop_size: 224
+  audio_num_mel_bins: 128
+  video_clip_duration: 2
+  # The 102.4 (could have been 100) is for historical reasons where we used 1024
+  # target length for 10s clip as per AST
+  audio_target_len: ${int:${times:${video_clip_duration},102.4}}
+  video_num_frames: ${video_clip_duration}
+  embed_dim: 512
+  learnable_pos_rgbdt: True
+  learnable_pos_audio: True
+  rgb_kernel_size: [2, 16, 16]
+  warmup_epochs: 2.0
+  sunrgbd_interp_int: 2
+  bpe_path_list:
+    - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+    - /checkpoint/imisra/datasets/SLIP/bpe_simple_vocab_16e6.txt.gz
+    - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+trainer:
+  mode: val
+ 
+  data:
+    val:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      datasets:
+      # AudioCaps
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+          base_dataset:
+            _target_: omnivore.data.path_dataset.AudioPathDataset
+            num_mel_bins: ${constants.audio_num_mel_bins}
+            target_length: ${constants.audio_target_len}
+            new_prefix: /datasets01/audioset/042319/data/
+            path_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/test_filelist.npy
+            label_file_list: NULL
+            clip_sampler:
+              _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+              clip_duration: ${constants.video_clip_duration}
+              clips_per_video: ${ceil_int:${divide:10,${constants.video_clip_duration}}}
+            transforms:
+              - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+                field: audio
+                base_transform:
+                  _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                  base_transform:
+                    _target_: torchvision.transforms.Compose
+                    transforms:
+                      - _target_: torchvision.transforms.Normalize
+                        # From table 3 https://arxiv.org/pdf/2207.06405.pdf or https://github.com/YuanGongND/ast/blob/d7d8b4b8e06cdaeb6c843cdb38794c1c7692234c/src/run.py#L62
+                        mean: -4.268
+                        std: ${times:4.569,2}
+          captions_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/test_captions.npy
+          caption2data_mapping_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/test_captions2audio.npy
+          tokenizer:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+              - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+        shuffle: False
+        batch_size: 32
+        num_workers: 8
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: audiocaps
+        worker_init_fn: NULL
+      # Clotho
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+          base_dataset:
+            _target_: omnivore.data.path_dataset.AudioPathDataset
+            num_mel_bins: ${constants.audio_num_mel_bins}
+            target_length: ${constants.audio_target_len}
+            path_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Clotho/evaluation_filelist.npy
+            label_file_list: NULL
+            clip_sampler:
+              _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+              clip_duration: ${constants.video_clip_duration}
+              # 15-30s long audio clips, so need enough clips to cover full audio
+              clips_per_video: ${ceil_int:${divide:30,${constants.video_clip_duration}}}
+            transforms:
+              - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+                field: audio
+                base_transform:
+                  _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                  base_transform:
+                    _target_: torchvision.transforms.Compose
+                    transforms:
+                      - _target_: torchvision.transforms.Normalize
+                        mean: -4.268
+                        std: ${times:4.569,2}
+          captions_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Clotho/evaluation_captions.npy
+          caption2data_mapping_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/Clotho/evaluation_captions2audio.npy
+          tokenizer:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+              - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+        shuffle: False
+        batch_size: 32
+        num_workers: 8
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: clotho
+        worker_init_fn: NULL
+      # MSR VTT
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+          base_dataset:
+            _target_: omnivore.data.path_dataset.VideoPathDataset
+            decode_audio: False
+            path_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/MSR-VTT/1k-A/filelist.npy
+            label_file_list: NULL
+            clip_sampler:
+              _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+              clip_duration: ${constants.video_clip_duration}
+              # 30s is the max length of MSR-VTT videos
+              clips_per_video: ${ceil_int:${divide:30,${constants.video_clip_duration}}}
+            frame_sampler:
+              _target_: pytorchvideo.transforms.UniformTemporalSubsample
+              num_samples: ${constants.video_num_frames}
+            decoder: decord  # since this allows for audio decoding
+            normalize_to_0_1: True
+            transforms:
+              - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+                base_transform:
+                  _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                  base_transform:
+                    _target_: torchvision.transforms.Compose
+                    transforms:
+                    - _target_: pytorchvideo.transforms.ShortSideScale
+                      size: ${constants.rgb_crop_size}  # 256
+                    - _target_: torchvision.transforms.CenterCrop
+                      size: ${constants.rgb_crop_size}
+                    - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                      mean: ${constants.in1k_rgb_mean}
+                      std: ${constants.in1k_rgb_std}
+              # Have to do this transform separately since SpatialCrop was written to
+              # expect a list as input (hence can't wrap with a ListTransform)
+              # TODO: Write a simpler version of spatial transform without expecting
+              # lists and then just flatten the list of lists.
+              - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+                base_transform:
+                  _target_: omnivore.data.transforms.pytorchvideo.SpatialCrop
+                  crop_size: ${constants.rgb_crop_size}
+                  num_crops: 3
+          captions_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/MSR-VTT/1k-A/captions.npy
+          caption2data_mapping_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/MSR-VTT/1k-A/captions2audio.npy
+          tokenizer:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+              - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+        shuffle: False
+        batch_size: 100
+        num_workers: 10
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: msrvtt
+        worker_init_fn: NULL
+      # MSCOCO
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+          base_dataset:
+            _target_: omnivore.data.path_dataset.ImagePathDataset
+            path_file_list:
+              - /checkpoint/aelnouby/datasets/mscoco/filelist.npy
+            label_file_list: NULL
+            transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: ${constants.rgb_crop_size}
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+          captions_file_list:
+            - /checkpoint/aelnouby/datasets/mscoco/captions.npy
+          caption2data_mapping_file_list:
+            - /checkpoint/aelnouby/datasets/mscoco/text2img_mapping.npy
+          tokenizer:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list: ${constants.bpe_path_list}
+        shuffle: False
+        batch_size: 16
+        num_workers: 8 # reduce workers to prevent OOMs
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: mscoco
+        worker_init_fn: NULL
+  meters:
+    val:
+      audiocaps:
+        recall_text2vid:
+          _target_: omnivore.meters.cross_modality_retrieval.CrossModalityRetrieval
+          query_feature: text_embed
+          corpus_feature: audio_embed
+          topks: [1, 10]
+      clotho: ${.audiocaps}
+      msrvtt:
+        recall_text2vid:
+          _target_: omnivore.meters.cross_modality_retrieval.CrossModalityRetrieval
+          query_feature: text_embed
+          corpus_feature: vision_embed
+          topks: [1, 5, 10]
+      mscoco: ${.msrvtt}
+
+  model:
+    zero_shot_with_text_targets: NULL  
+    multimodal_model:
+      dataset_specific_list_input_reduction:
+        # Keep audiocaps output (used in val) as is for retrieval eval
+        # Very important, else it will eval on avg pooled features
+        audiocaps:
+          - field_name: text_embed
+            reduction_op: no_op
+        clotho: ${.audiocaps}
+        msrvtt: ${.audiocaps}
+        mscoco:
+          - field_name: text_embed
+            reduction_op: no_op
+          - field_name: vision_embed
+            reduction_op: no_op
+      sample_to_modality_preprocessor:
+            - sample_type: ${get_class:omnivore.data.api.BatchVisionTextSample}
+              sample_field_to_modality:
+              - input_fields: ["vision"]
+                preprocessor_name: rgbt_preprocessor
+                output_key: "vision_tokens"
+                output_key_for_dict: False
+              - input_fields: ["text"]
+                preprocessor_name: text_preprocessor
+                output_key: "text_tokens"
+                output_key_for_dict: False
+            - sample_type: ${get_class:omnivore.data.api.BatchTextSample}
+              sample_field_to_modality:
+              - input_fields: ["text"]
+                preprocessor_name: text_preprocessor
+                output_key: "text_tokens"
+                output_key_for_dict: False
+            - sample_type: ${get_class:omnivore.data.api.BatchVisionSample}
+              sample_field_to_modality:
+              - input_fields: ["vision"]
+                preprocessor_name: rgbt_preprocessor
+                output_key: "vision_tokens"
+                output_key_for_dict: False
+            - sample_type: ${get_class:omnivore.data.api.BatchVisionAudioSample}
+              sample_field_to_modality:
+              - input_fields: ["vision"]
+                preprocessor_name: rgbt_preprocessor
+                output_key: "vision_tokens"
+                output_key_for_dict: False
+              - input_fields: ["audio"]
+                preprocessor_name: audio_preprocessor
+                output_key: "audio_tokens"
+                output_key_for_dict: False
+            - sample_type: ${get_class:omnivore.data.api.BatchAudioSample}
+              sample_field_to_modality:
+              - input_fields: ["audio"]
+                preprocessor_name: audio_preprocessor
+                output_key: "audio_tokens"
+                output_key_for_dict: False
+            - sample_type: ${get_class:omnivore.data.api.BatchAudioTextSample}
+              sample_field_to_modality:
+              - input_fields: ["audio"]
+                preprocessor_name: audio_preprocessor
+                output_key: "audio_tokens"
+                output_key_for_dict: False
+              - input_fields: ["text"]
+                preprocessor_name: text_preprocessor
+                output_key: "text_tokens"
+                output_key_for_dict: False
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 1 # 0 only last checkpoint is saved.
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      strict: False # heads aren't loaded
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+        ckpt_state_dict_keys: ["model"]
+        checkpoint_path:    /fsx-omnivore/aelnouby/omnivision_omnivore/config/experiments/aelnouby/omniclip/059_cpy041_rogit_sepencoder_vitb16_ckpt_lowLR_longwarmup.yaml/0/checkpoints/checkpoint.pt
+        checkpoint_kernels: NULL
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 8
+
+
+
+

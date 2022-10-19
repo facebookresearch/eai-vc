@@ -1,0 +1,10 @@
+# @package _global_
+
+defaults:
+  - /experiments/qduval/rsc/clip_frozen/hashtags/base_uru_hashtags.yaml
+  - _self_
+
+
+scratch:
+  english_threshold: 0.8
+  context_length: 100

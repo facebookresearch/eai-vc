@@ -10,7 +10,7 @@ constants:
   audio_num_mel_bins: 128
   video_clip_duration: 2
   audio_target_len: ${int:${times:${.video_clip_duration},102.4}}
-  video_num_frames: ${.video_clip_duration}
+  video_num_frames: 2
   head_final_embed_dim: 512
   learnable_pos_rgbt: false
   learnable_pos_audio: true
@@ -18,6 +18,7 @@ constants:
   rgb_kernel_size: [2, 32, 32]
   depth_kernel_size: 32
   audio_kernel_size: 16
+  audio_freq_mask_param: 0 # off by default
   warmup_epochs: 1
   sunrgbd_interp_int: 2
   use_grad_checkpoint_laion: False
@@ -129,7 +130,7 @@ trainer:
                   _target_: torchvision.transforms.Compose
                   transforms:
                   - _target_: torchaudio.transforms.FrequencyMasking
-                    freq_mask_param: 0
+                    freq_mask_param: ${constants.audio_freq_mask_param}
                   - _target_: torchaudio.transforms.TimeMasking
                     time_mask_param: 0
                   - _target_: torchvision.transforms.Normalize

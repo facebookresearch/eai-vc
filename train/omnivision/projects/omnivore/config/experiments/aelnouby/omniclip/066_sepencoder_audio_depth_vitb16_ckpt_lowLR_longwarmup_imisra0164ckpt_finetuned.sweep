@@ -1,0 +1,5 @@
++experiments=aelnouby/omniclip/065_sepencoder_audio_depth_vitb16_ckpt_lowLR_longwarmup_imisra0164ckpt_frozen
+trainer.data.train.repeat_factors=[1.0, 1.25, 50]
+trainer.data.train.datasets.0.dataset.base_dataset.base_dataset_length=50e6
+trainer.loss.laion.scale=1.0
+trainer.optim.options.weight_decay.1.param_names=['*.bias', '*pos_embed', '*cls_token']

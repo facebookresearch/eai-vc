@@ -1,0 +1,21 @@
+# @package _global_
+
+defaults:
+  - /experiments/rgirdhar/0078_audiocaps_ft_10s.yaml
+
+video_clip_duration: 2
+
+trainer:
+  checkpoint:
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      strict: False # heads aren't loaded
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+        checkpoint_path: /fsx-omnivore/rgirdhar/omnivision_omnivore/config/experiments/rgirdhar/0074_fullaudioset_laion_jointEncoder_origLR_32xRGBPatch_1epWarm_0.05WD_freezePos_gradClip1_augFreqm.sweep/0/checkpoints/checkpoint.pt
+        ckpt_state_dict_keys: ["model"]
+        checkpoint_kernels:
+        - _target_: omnivision.model.checkpoint_utils.CkptExcludeKernel
+          key_pattern:
+            - "*.rgbdt_preprocessor*"

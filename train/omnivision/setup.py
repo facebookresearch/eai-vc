@@ -43,7 +43,9 @@ setup(
             "regex",
             "timm",
         ],
-        "omniscale": [],
+        "omniscale": [
+            "torchtext>=0.13.1",
+        ],
     },
     packages=find_packages(exclude=("scripts", "tests")),
 )

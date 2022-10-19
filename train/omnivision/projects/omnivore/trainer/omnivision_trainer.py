@@ -19,7 +19,7 @@ from hydra.utils import instantiate
 from iopath.common.file_io import g_pathmgr
 
 from omnivision.optim import construct_optimizer
-from omnivore.data.api import Sample
+from omnivore.data.api import Batch, DATA_FIELDS, Sample
 
 from omnivore.losses import CORE_LOSS_KEY
 from omnivore.meters import FINAL_LOGITS_NAME
@@ -36,9 +36,14 @@ from omnivore.utils.model_summary import print_model_summary
 def get_supported_dataloader():
     from omnivore.data.airstore_dataset import AirStoreTorchDataLoader
     from omnivore.data.concat_dataset import ConcatDataset
-    from omnivore.data.torch_dataset import TorchDataset
+    from omnivore.data.torch_dataset import TorchDataset, TorchIterableDataset
 
-    supported_dataloaders = (TorchDataset, ConcatDataset, AirStoreTorchDataLoader)
+    supported_dataloaders = (
+        TorchDataset,
+        TorchIterableDataset,
+        ConcatDataset,
+        AirStoreTorchDataLoader,
+    )
     try:
         from omnivore.data.webdataset_helpers import WebVisionDatasetBatchedWithLoader
 
@@ -70,6 +75,7 @@ from omnivore.losses import wrap_base_loss
 from omnivore.train_utils import (
     AverageMeter,
     copy_data_to_device,
+    DurationMeter,
     get_amp_type,
     get_machine_local_and_dist_rank,
     get_resume_checkpoint,
@@ -100,6 +106,11 @@ def get_chunk_from_data(data, chunk_id, num_chunks):
             key: get_chunk_from_data(value, chunk_id, num_chunks)
             for key, value in data.items()
         }
+    elif isinstance(data, str):
+        # Important check: if a string is found and we fall back to Sequence,
+        # and as a string is a sequence of characters which are strings in
+        # Python, we end up with an infinite loop
+        return data
     elif isinstance(data, Sequence):
         return [get_chunk_from_data(value, chunk_id, num_chunks) for value in data]
     elif isinstance(data, Sample):
@@ -178,6 +189,8 @@ class OmnivisionLoggingConf:
     # since these might get too large and this would allow for
     # deleting these tensorboard files separately.
     tensorboard_embedding_writer: Optional[Any] = None
+    log_level_primary: str = "INFO"
+    log_level_secondary: str = "ERROR"
 
 
 class OmnivisionTrainer(object):
@@ -217,6 +230,7 @@ class OmnivisionTrainer(object):
         self._setup_env_variables(env_variables)
         self._print_paths_to_code()
         self._print_env()
+        self._setup_timers()
 
         self.data_conf = data
         self.model_conf = model
@@ -247,6 +261,8 @@ class OmnivisionTrainer(object):
             __name__,
             output_dir=self.logging_conf.log_dir,
             rank=self.local_rank,
+            log_level_primary=self.logging_conf.log_level_primary,
+            log_level_secondary=self.logging_conf.log_level_secondary,
         )
         # TODO: Enable separate seed setting for each data worker.
         set_seeds(seed_value, self.max_epochs, self.distributed_rank)
@@ -262,6 +278,8 @@ class OmnivisionTrainer(object):
         self._construct_optimizer()
         self._setup_ema_if_enabled()
         self._setup_dataloaders()
+
+        self.time_elapsed_meter = DurationMeter("Time Elapsed", self.device, ":.2f")
 
         if self._is_fsdp_training():
             self._setup_distributed_training(distributed, accelerator)
@@ -280,6 +298,14 @@ class OmnivisionTrainer(object):
 
     def _print_env(self):
         print(f"Environment:\n{json.dumps(dict(os.environ), sort_keys=True, indent=2)}")
+
+    def _setup_timers(self):
+        """
+        Initializes counters for elapsed time and eta.
+        """
+        self.start_time = time.time()
+        self.ckpt_time_elapsed = 0
+        self.est_epoch_time = dict.fromkeys([Phase.TRAIN, Phase.VAL], 0)
 
     def _get_meters(self, phase_filters=None):
         if self.meters is None:
@@ -411,10 +437,6 @@ class OmnivisionTrainer(object):
             )
             return
 
-        # DDP checkpoints are only saved on rank 0 (all workers are identical)
-        if self.distributed_rank != 0:
-            return
-
         makedir(checkpoint_folder)
         checkpoint_paths = [os.path.join(checkpoint_folder, "checkpoint.pt")]
         if (
@@ -431,6 +453,7 @@ class OmnivisionTrainer(object):
             "epoch": epoch,
             "loss": self.loss.state_dict(),
             "steps": self.steps,
+            "time_elapsed": self.time_elapsed_meter.val,
         }
         if self.optim_conf.amp.enabled:
             checkpoint["scaler"] = self.scaler.state_dict()
@@ -441,6 +464,10 @@ class OmnivisionTrainer(object):
         train_dataset_state = self._get_train_dataset_checkpoint_state()
         if train_dataset_state is not None:
             checkpoint["train_dataset"] = train_dataset_state
+
+        # DDP checkpoints are only saved on rank 0 (all workers are identical)
+        if self.distributed_rank != 0:
+            return
 
         for checkpoint_path in checkpoint_paths:
             with g_pathmgr.open(checkpoint_path, "wb") as f:
@@ -481,6 +508,9 @@ class OmnivisionTrainer(object):
             self.loss.load_state_dict(checkpoint["loss"], strict=True)
             self.epoch = checkpoint["epoch"]
             self.steps = checkpoint["steps"]
+            # TODO: remove the default value of 0 by 10/31/2022
+            # which was added for backwards compatibility with old checkpoints
+            self.ckpt_time_elapsed = checkpoint.get("time_elapsed", 0)
 
             if self.optim_conf.amp.enabled and "scaler" in checkpoint:
                 self.scaler.load_state_dict(checkpoint["scaler"])
@@ -524,8 +554,6 @@ class OmnivisionTrainer(object):
 
             dataloader = self.train_dataset.get_loader(epoch=int(self.epoch))
             outs = self.train_epoch(dataloader)
-            del dataloader
-            gc.collect()
             self.logger.log_dict(outs, self.epoch)  # Logged only on rank 0
 
             # log train to text file.
@@ -538,6 +566,9 @@ class OmnivisionTrainer(object):
 
             # Save checkpoint before validating
             self.save_checkpoint(self.epoch + 1)
+
+            del dataloader
+            gc.collect()
 
             # Run val, not running on last epoch since will run after the
             # loop anyway
@@ -581,7 +612,7 @@ class OmnivisionTrainer(object):
 
         progress = ProgressMeter(
             iters_per_epoch,
-            [batch_time, data_time, mem],
+            [batch_time, data_time, mem, self.time_elapsed_meter],
             self._get_meters(curr_phases),
             prefix="Val Epoch: [{}]".format(self.epoch),
         )
@@ -626,6 +657,10 @@ class OmnivisionTrainer(object):
             batch_time.update(time.time() - end)
             end = time.time()
 
+            self.time_elapsed_meter.update(
+                time.time() - self.start_time + self.ckpt_time_elapsed
+            )
+
             if torch.cuda.is_available():
                 mem.update(torch.cuda.max_memory_allocated() // 1e9)
 
@@ -640,6 +675,8 @@ class OmnivisionTrainer(object):
                     self.steps[Phase.VAL],
                 )
 
+        self.est_epoch_time[Phase.VAL] = batch_time.avg * iters_per_epoch
+        self._log_timers(Phase.VAL)
         if hasattr(self.model.module, "on_validation_epoch_end"):
             self.model.module.on_validation_epoch_end()
 
@@ -681,7 +718,7 @@ class OmnivisionTrainer(object):
         # TODO: Track optimizer params (LR, WD,) etc.
         progress = ProgressMeter(
             iters_per_epoch,
-            [batch_time, data_time, mem, *loss_mts.values()],
+            [batch_time, data_time, mem, self.time_elapsed_meter, *loss_mts.values()],
             self._get_meters([phase]),
             prefix="Train Epoch: [{}]".format(self.epoch),
         )
@@ -788,6 +825,10 @@ class OmnivisionTrainer(object):
             batch_time.update(time.time() - end)
             end = time.time()
 
+            self.time_elapsed_meter.update(
+                time.time() - self.start_time + self.ckpt_time_elapsed
+            )
+
             mem.update(torch.cuda.max_memory_allocated() // 1e9)
 
             if data_iter % self.logging_conf.log_freq == 0:
@@ -801,6 +842,8 @@ class OmnivisionTrainer(object):
                     self.steps[phase],
                 )
 
+        self.est_epoch_time[Phase.TRAIN] = batch_time.avg * iters_per_epoch
+        self._log_timers(Phase.TRAIN)
         logging.info("Synchronizing meters")
         out_dict = {}
         for key, meter in self._get_meters([phase]).items():
@@ -837,6 +880,35 @@ class OmnivisionTrainer(object):
                     meter_subval,
                     self.steps[phase],
                 )
+
+    def _log_timers(self, phase):
+        time_remaining = 0
+        epochs_remaining = self.max_epochs - self.epoch - 1
+        val_epochs_remaining = sum(
+            n % self.val_epoch_freq == 0 for n in range(self.epoch, self.max_epochs)
+        )
+
+        # Adding the guaranteed val run at the end if val_epoch_freq doesn't coincide with
+        # the end epoch.
+        if (self.max_epochs - 1) % self.val_epoch_freq != 0:
+            val_epochs_remaining += 1
+
+        # Remove the current val run from estimate
+        if phase == Phase.VAL:
+            val_epochs_remaining -= 1
+
+        time_remaining += (
+            epochs_remaining * self.est_epoch_time[Phase.TRAIN]
+            + val_epochs_remaining * self.est_epoch_time[Phase.VAL]
+        )
+
+        self.logger.log(
+            os.path.join("Step_Stats", phase, self.time_elapsed_meter.name),
+            self.time_elapsed_meter.val,
+            self.steps[phase],
+        )
+
+        logging.info(f"Estimated time remaining: {time_remaining:.2f}")
 
     def _reset_meters(self, phases: str) -> None:
         for meter in self._get_meters(phases).values():
@@ -892,7 +964,43 @@ class OmnivisionTrainer(object):
             )
         )
 
-    def _process_batch(self, batch, phase):
+    def _log_batch_mean_var(self, key, batch_sample: Batch, phase: Phase):
+        def get_mean_stddev(tensor):
+            # Assuming (B, C, ...) i.e. 1th dim is channel dimension
+            # But anyway computing over all channels at once though since
+            # otherwise for fields like text you end up with 77 graphs
+            mean = torch.mean(tensor, dtype=torch.float)
+            std = torch.std(tensor.float())
+            return mean, std
+
+        for field in DATA_FIELDS:
+            if not hasattr(batch_sample, field):
+                continue
+            data = getattr(batch_sample, field)
+            # It must be a tensor or list of tensors
+            if isinstance(data, torch.Tensor):
+                mean, std = get_mean_stddev(data)
+            elif isinstance(data, List):
+                assert isinstance(
+                    data[0], torch.Tensor
+                ), "Not handling list of lists etc. Hopefully they don't exist at all."
+                # The other elements of the list are likely crops etc, so only
+                # track the first element
+                mean, std = get_mean_stddev(data[0])
+            else:
+                raise NotImplementedError(f"data of {type(data)}")
+            self.logger.log(
+                f"Data/BatchStats/{phase}/{key}/{field}/mean",
+                mean,
+                self.steps[phase],
+            )
+            self.logger.log(
+                f"Data/BatchStats/{phase}/{key}/{field}/std",
+                std,
+                self.steps[phase],
+            )
+
+    def _process_batch(self, batch: Mapping, phase: Phase):
         assert isinstance(batch, Mapping)
         assert all(isinstance(v, Sample) for v in batch.values())
         assert len(batch) == 1
@@ -902,6 +1010,7 @@ class OmnivisionTrainer(object):
             batch_sample.data_valid.float().mean().item(),
             self.steps[phase],
         )
+        self._log_batch_mean_var(key, batch_sample, phase)
         return key, batch_sample
 
     def _compute_ema_if_enabled(self):

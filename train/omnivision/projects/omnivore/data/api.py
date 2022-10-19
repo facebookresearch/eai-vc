@@ -1,6 +1,9 @@
 from dataclasses import dataclass, field, fields, make_dataclass
 from typing import Any, Callable, Dict
 
+import numpy as np
+import torch
+
 from omnivision.utils.generic import (
     convert_int_or_intlist_to_one_or_multi_hot,
     dataclass_as_dict,
@@ -78,6 +81,13 @@ class VisionTextSample(VisionSample, TextSample):
 
 @create_batch_sample_cls
 @dataclass
+class VisionTextHashtagSample(VisionSample):
+    text: Any = None
+    hashtags: Any = None
+
+
+@create_batch_sample_cls
+@dataclass
 class VisionDepthSample(VisionSample, DepthSample):
     pass
 
@@ -91,7 +101,7 @@ class VisionDepthTextSample(VisionSample, DepthSample, TextSample):
 @create_batch_sample_cls
 @dataclass
 class DepthTextSample(DepthSample, TextSample):
-    vision: Any = None
+    pass
 
 
 @create_batch_sample_cls
@@ -106,17 +116,27 @@ class VisionAudioSample(VisionSample, AudioSample):
     pass
 
 
+@create_batch_sample_cls
+@dataclass
+class AudioTextSample(AudioSample, TextSample):
+    pass
+
+
 UPGRADE_TO_TEXT_SAMPLE = {
     VisionSample: VisionTextSample,
     VisionDepthSample: VisionDepthTextSample,
     DepthSample: DepthTextSample,
+    AudioSample: AudioTextSample,
 }
 
-# Fields that *potentially* contain list of tensors (instead of tensors).
+# Fields that contain data (not labels, etc). Basically stuff that might
+# require a network forward.
+# These firlds can *potentially* contain list of tensors (instead of tensors).
 # This information is used to do, for instance,
 # list inferece when handle_list_inputs=True. These fields are expected
 # to have lists in them in that case.
-FIELDS_WITH_LIST = {
+DATA_FIELDS = {
+    "text",
     "vision",
     "audio",
     "depth",

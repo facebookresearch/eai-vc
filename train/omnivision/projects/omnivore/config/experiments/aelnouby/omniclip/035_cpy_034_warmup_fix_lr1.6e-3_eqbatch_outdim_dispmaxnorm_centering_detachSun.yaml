@@ -2,7 +2,7 @@
 
 defaults:
   - /experiments/imisra/085_simpletx_nomask_vitb32_laion21M_sunrgbdisp50x_imval_srgbdval_linheads_eqbatch_dispmaxnorm_detachrgb_ep32
-out_dim: 512
+
 
 trainer:
   model:
@@ -12,14 +12,14 @@ trainer:
             postprocessor:
               _target_: omnivore.models.helpers.NormalizeAndCenter
               dim: -1
-              out_features: ${out_dim}
+              out_features: ${constants.head_final_embed_dim}
           - name: "normalize_and_scale_text"
             postprocessor:
               _target_: torch.nn.Sequential
               _args_:
                 - _target_: omnivore.models.helpers.NormalizeAndCenter
                   dim: -1
-                  out_features: ${out_dim}
+                  out_features: ${constants.head_final_embed_dim}
                 - _target_: omnivore.models.helpers.LearnableLogitScaling
           - name: "normalize_and_scale_depth"
             postprocessor:
@@ -27,7 +27,7 @@ trainer:
               _args_:
                 - _target_: omnivore.models.helpers.NormalizeAndCenter
                   dim: -1
-                  out_features: ${out_dim}
+                  out_features: ${constants.head_final_embed_dim}
                 - _target_: omnivore.models.helpers.LearnableLogitScaling
                   logit_scale_init: 10 # 1/0.1 as in SimCLR
                   learnable: False
@@ -67,6 +67,7 @@ trainer:
             - "*log_logit_scale"
           module_cls_names: ["torch.nn.LayerNorm"]
 constants:
+  head_final_embed_dim: 512
   sun_rgb_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images/
   sun_depth_prefix: /fsx-omnivore/imisra/datasets/sunrgbd/images_disparity/
   # sun_rgb_prefix: /checkpoint/kalyanv/data/sunrgbd/images/

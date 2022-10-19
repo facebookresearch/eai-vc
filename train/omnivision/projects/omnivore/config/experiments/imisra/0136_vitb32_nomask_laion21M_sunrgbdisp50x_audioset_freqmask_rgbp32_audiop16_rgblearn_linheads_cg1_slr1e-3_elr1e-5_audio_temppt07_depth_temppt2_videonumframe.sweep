@@ -1,0 +1,6 @@
++experiments=imisra/0121_vitb32_nomask_laion21M_sunrgbdisp50x_audioset_rgbp32_audiop16_rgbsinpos_linheads_cg1_slr1e-3_elr1e-5
+constants.inv_depth_temp=0.2
+constants.inv_audio_temp=0.07
+constants.learnable_pos_rgbt=True
+constants.audio_freq_mask_param=12
+constants.video_num_frames=2,8

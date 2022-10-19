@@ -14,8 +14,10 @@
 
 
 import copy
+import fnmatch
+import logging
 from functools import partial
-from typing import Callable
+from typing import Callable, List
 
 import torch
 import torch.nn as nn
@@ -25,13 +27,27 @@ from omnivore.models.vision_transformer import Attention, Mlp, trunc_normal_
 from timm.models.layers import DropPath
 
 
-def copy_trunk_with_unshared_layernorm(trunk_to_clone):
+def copy_trunk_with_unshared_params(
+    trunk_to_clone, unshared_params_keys, freeze_shared=False
+):
+    unshared_params = []
     clone = copy.deepcopy(trunk_to_clone)
     for i, blk in enumerate(clone.blocks):
         for lname, _ in blk.named_children():
-            if lname not in ("norm_1", "norm_2"):
+            if lname not in unshared_params_keys:
                 shared_layer = getattr(trunk_to_clone.blocks[i], lname)
                 setattr(clone.blocks[i], lname, shared_layer)
+                if freeze_shared:
+                    for p in shared_layer.parameters():
+                        p.requires_grad = False
+            else:
+                unshared_params.append(lname)
+
+    if len(unshared_params_keys) == 0:
+        logging.warning(
+            "The unshared_params_keys did not match any parameter. All parameters are shared. Are you sure everything is correct ?"
+        )
+
     return clone
 
 
@@ -129,6 +145,7 @@ class SimpleTransformer(nn.Module):
         attn_target: Callable,
         embed_dim: int,
         num_blocks: int,
+        block: Callable = BlockWithMasking,
         pre_transformer_layer: Callable = None,
         post_transformer_layer: Callable = None,
         drop_path_rate: float = 0.0,
@@ -159,7 +176,7 @@ class SimpleTransformer(nn.Module):
 
         self.blocks = nn.Sequential(
             *[
-                BlockWithMasking(
+                block(
                     dim=embed_dim,
                     attn_target=attn_target,
                     mlp_ratio=mlp_ratio,
@@ -197,6 +214,7 @@ class SimpleTransformer(nn.Module):
         attn_mask: torch.Tensor = None,
         use_checkpoint: bool = False,
         checkpoint_every_n: int = 1,
+        checkpoint_blk_ids: List[int] = None,
     ):
         """
         Inputs
@@ -208,8 +226,16 @@ class SimpleTransformer(nn.Module):
         """
         if self.pre_transformer_layer:
             tokens = self.pre_transformer_layer(tokens)
+        if use_checkpoint and checkpoint_blk_ids is None:
+            checkpoint_blk_ids = [
+                blk_id
+                for blk_id in range(len(self.blocks))
+                if blk_id % checkpoint_every_n == 0
+            ]
+        if checkpoint_blk_ids:
+            checkpoint_blk_ids = set(checkpoint_blk_ids)
         for blk_id, blk in enumerate(self.blocks):
-            if use_checkpoint and blk_id % checkpoint_every_n == 0:
+            if use_checkpoint and blk_id in checkpoint_blk_ids:
                 tokens = checkpoint.checkpoint(
                     blk, tokens, attn_mask, use_reentrant=False
                 )

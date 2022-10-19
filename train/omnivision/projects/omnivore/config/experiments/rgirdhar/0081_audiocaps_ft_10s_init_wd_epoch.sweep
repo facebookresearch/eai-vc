@@ -1,0 +1,14 @@
++experiments=rgirdhar/0079_audiocaps_ft_2s_init
+
+video_clip_duration=10
+
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=5e-4
+# trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1e-8
+
+
+# add causal masking since loading checkpoint with mask
+trainer.model.multimodal_model.modality_preprocessors.0.preprocessor.causal_masking=True
+
+trainer.checkpoint.model_weight_initializer.state_dict.checkpoint_kernels.0.key_pattern=[*.pos_embed, *.rgbdt_preprocessor*]
+trainer.optim.options.weight_decay.0.scheduler.value=0.05,0.1,0.2
+trainer.max_epochs=50,100,200

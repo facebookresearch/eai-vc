@@ -20,7 +20,7 @@ trainer:
       log_dir:  ${launcher.experiment_log_dir}/tensorboard
       flush_secs: 120
     log_dir: ${launcher.experiment_log_dir}/logs
-    log_freq: 10
+    log_freq: 20
 
   distributed:
    backend: nccl

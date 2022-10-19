@@ -1,0 +1,6 @@
+a photo of {}.
+an image of {}.
+a photo containing {}.
+an image containing {}.
+a picture of {}.
+a picture containing {}.

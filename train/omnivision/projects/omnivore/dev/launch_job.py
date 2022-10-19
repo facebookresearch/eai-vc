@@ -25,6 +25,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+from dataclasses import fields
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, List, Tuple
@@ -37,6 +38,8 @@ from launch_env import (
     parse_config_name,
     PROD_CLUSTER_DICT,
     read_txt_file_with_comments,
+    SLURM_CLUSTER_DEFAULTS,
+    SlurmClusterSettings,
 )
 from omegaconf import DictConfig, ListConfig
 from omnivision.utils.env import get_cluster_type
@@ -173,7 +176,7 @@ def launch_one_job_local(
     subprocess.run(cmd, shell=True, check=True)
 
 
-def copy_code(src_path, dst_path, args_yes):
+def copy_code(src_path, dst_path, args_yes, args_no):
     # Files to always ignore during the copy process
     OMIT_DIR_LIST = {
         "__pycache__",
@@ -200,7 +203,7 @@ def copy_code(src_path, dst_path, args_yes):
     if os.path.isdir(dst_path):
         print(f"Dst code dir ({dst_path}) exists.")
         if _get_user_confirmation(
-            "Delete/re-copy code dir (not output dir) and run", args_yes
+            "Delete/re-copy code dir (not output dir) and run", args_yes, args_no
         ):
             PathManager_rm(dst_path)
         else:
@@ -236,11 +239,7 @@ def launch_one_job_slurm(
 
     omnivision_code_dir = Path(__file__).resolve().parents[3]
     code_sandbox_dir = os.path.join(exp_dir, "code")
-    copy_code(
-        omnivision_code_dir,
-        code_sandbox_dir,
-        args.yes,
-    )
+    copy_code(omnivision_code_dir, code_sandbox_dir, args.yes, args.no)
 
     cmd = ""
     for key in env_vars:
@@ -269,7 +268,10 @@ def launch_one_job_slurm(
     submitit_name = exp_name
     if CLUSTER_TYPE == "rsc":
         submitit_name = "omniscale/" + submitit_name
-    cmd += f"++submitit.cpus_per_task={args.cpu} ++submitit.name='{submitit_name}' "
+    cpus = args.cpu
+    if hasattr(cfg.submitit, "cpus_per_task"):
+        cpus = cfg.submitit.cpus_per_task
+    cmd += f"++submitit.cpus_per_task={cpus} ++submitit.name='{submitit_name}' "
 
     for key in hydra_overrides:
         cmd += f"{key}={hydra_overrides[key]} "
@@ -320,10 +322,14 @@ def launch_one_job_oss_local(
     subprocess.run(cmd, shell=True, check=True)
 
 
-def _get_user_confirmation(qs, yes=False):
+def _get_user_confirmation(qs, yes=False, no=False):
+    assert not (yes and no)
     if yes:
         print(f"Assuming 'yes' to: {qs}?")
         return True
+    elif no:
+        print(f"Assuming 'no' to: {qs}?")
+        return False
     else:
         response = input(qs + "? Say 'yes': ")
         if response.lower() == "yes":
@@ -345,7 +351,7 @@ def check_if_already_done(args, exp_dir):
     # exp dir exists and not force running, check if OK to delete
     # Or if it's running locally (debugging), just delete and run
     # if args.local or _get_user_confirmation("Delete it and run", args.yes):
-    if _get_user_confirmation("Delete it and run", args.yes):
+    if _get_user_confirmation("Delete it and run", args.yes, args.no):
         PathManager_rm(exp_dir)
         return False
     return True
@@ -408,7 +414,7 @@ def delete_fpath(fpath):
 
 
 def delete_intermediate_ckpts(
-    exp_dir, args_yes, checkpoints_dir="checkpoints", last_ckpt_name="last.ckpt"
+    exp_dir, checkpoints_dir="checkpoints", last_ckpt_name="last.ckpt"
 ):
     final_ckpt_dir = os.path.join(exp_dir, checkpoints_dir)
     ckpts_list = PathManager_ls(final_ckpt_dir)
@@ -643,6 +649,12 @@ def main():
     parser.add_argument(
         "-y", "--yes", help="Answer yes to every question", action="store_true"
     )
+    # Opposite of --yes, useful for being sure nothing destructive happens when running
+    # a job. Common use case for --no is to restart a job with the same code
+    # when used with --force for slurm jobs.
+    parser.add_argument(
+        "-n", "--no", help="Answer no to every question", action="store_true"
+    )
     parser.add_argument(
         "--tb",
         help="Compare the configs using tensorboard. Works on FAIR/AWS/RSC",
@@ -670,11 +682,9 @@ def main():
     )
     parser.add_argument("--comment", type=str, default="not_filled")
     parser.add_argument("--constraint", type=str, default=None)
-    parser.add_argument("--timeout_hour", type=int, default=72)
-    parser.add_argument("--cpu", type=str, default=32 if CLUSTER_TYPE == "rsc" else 10)
-    parser.add_argument(
-        "--mem_gb", type=str, default=1900 if CLUSTER_TYPE == "rsc" else 480
-    )
+    parser.add_argument("--timeout_hour", type=int, default=None)
+    parser.add_argument("--cpu", type=str, default=None)
+    parser.add_argument("--mem_gb", type=str, default=None)
 
     # FB Cluster settings
     parser.add_argument("--entitlement", type=str, default="dpnb")
@@ -731,6 +741,21 @@ def main():
 
     args = parser.parse_args()
 
+    if args.yes and args.no:
+        parser.error("Cannot pass both --yes and --no")
+
+    # assign default values for settings specified in SLURM_CLUSTER_DEFAULTS
+    # if they haven't been set
+    if CLUSTER_TYPE in SLURM_CLUSTER_DEFAULTS:
+        for field in fields(SlurmClusterSettings):
+            setting = field.name
+            if getattr(args, setting) is None:
+                setattr(
+                    args,
+                    setting,
+                    getattr(SLURM_CLUSTER_DEFAULTS[CLUSTER_TYPE], setting),
+                )
+
     if args.pnb:
         args.entitlement = "pnb"
     if args.prn:
@@ -774,13 +799,20 @@ def main():
 
     if args.delete:
         for job_info in jobs_info:
-            if _get_user_confirmation(f"Delete {job_info['exp_dir']}", args.yes):
+            if _get_user_confirmation(
+                f"Delete {job_info['exp_dir']}", args.yes, args.no
+            ):
                 PathManager_rm(job_info["exp_dir"])
         return
 
     if args.delete_intermediate_ckpts:
         for job_info in jobs_info:
-            delete_intermediate_ckpts(job_info["exp_dir"], args.yes)
+            if _get_user_confirmation(
+                f"Delete intermediate checkpoints for {job_info['exp_dir']}",
+                args.yes,
+                args.no,
+            ):
+                delete_intermediate_ckpts(job_info["exp_dir"])
         return
 
     if args.tb:

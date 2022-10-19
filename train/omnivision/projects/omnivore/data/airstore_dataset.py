@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-
+import ctypes
 import io
 import logging
 from abc import ABC, abstractmethod
 from math import ceil
 from typing import Any, Callable, Iterable, Optional, Tuple
 
+import numpy as np
+import torch.multiprocessing as mp
 import torch.utils.data
 
 try:
@@ -17,8 +19,9 @@ except Exception as e:
 
 from iopath.common.file_io import PathManager
 from omnivision.utils.distributed import get_rank, get_world_size
-from omnivore.data.api import VisionSample, VisionTextSample
+from omnivore.data.api import VisionSample, VisionTextHashtagSample, VisionTextSample
 from omnivore.utils.data import get_mean_image
+from omnivore.utils.distributed import all_gather_batch
 from PIL import Image
 
 from torch.utils.data import DataLoader, Dataset
@@ -49,8 +52,14 @@ class AirStoreTorchDataLoader(OmniDataset):
         self._phased_epoch = 0
         self.dataset.set_batch_size(self.batch_size)
 
+        # create skip counter
+        self._shared_array_base = mp.Array(ctypes.c_int, num_workers)
+        self._shared_array = np.ctypeslib.as_array(self._shared_array_base.get_obj())
+        self.per_worker_counter = torch.from_numpy(self._shared_array)
+
     def get_loader(self, epoch) -> Iterable:
         self.dataset.set_epoch(epoch)
+        self.dataset.set_skip_count(self.per_worker_counter)
         return DataLoader(
             self.dataset,
             batch_size=self.batch_size,
@@ -61,6 +70,29 @@ class AirStoreTorchDataLoader(OmniDataset):
             collate_fn=self.collate_fn,
             worker_init_fn=self.worker_init_fn,
         )
+
+    def load_checkpoint_state(self, dataloader_state) -> None:
+        world_size = get_world_size()
+        rank = get_rank()
+        assert world_size * self.num_workers == len(
+            dataloader_state
+        ), f"Incorrect Airstore checkpoint state. Expected length {world_size * self.num_workers} but received {len(dataloader_state)}"
+        for i, j in zip(
+            range(self.num_workers),
+            range(rank * self.num_workers + (rank + 1) * self.num_workers),
+        ):
+            self.per_worker_counter[i] = dataloader_state[j]
+
+    def get_checkpoint_state(
+        self,
+    ) -> Any:
+        gathered_tensor = all_gather_batch([self.per_worker_counter.cuda()])[0].cpu()
+
+        world_size = get_world_size()
+        assert world_size * self.num_workers == len(
+            gathered_tensor
+        ), "Incorrect Airstore checkpoint length while saving."
+        return gathered_tensor.tolist()
 
 
 class AIRStoreDataset(torch.utils.data.IterableDataset, ABC):
@@ -83,6 +115,7 @@ class AIRStoreDataset(torch.utils.data.IterableDataset, ABC):
         shuffle: bool = True,
         limit: int = -1,
         id_column: Optional[str] = None,
+        skip_none: bool = False,
     ):
         """
         Args:
@@ -116,6 +149,12 @@ class AIRStoreDataset(torch.utils.data.IterableDataset, ABC):
         self._id_column = id_column
         self._label_column = label_column
 
+        self._skip_none = skip_none
+        self.per_worker_counter = None
+
+    def set_skip_count(self, per_worker_counter: torch.Tensor) -> None:
+        self.per_worker_counter = per_worker_counter
+
     def set_epoch(self, epoch: int) -> None:
         self._phased_epoch = epoch
 
@@ -124,30 +163,36 @@ class AIRStoreDataset(torch.utils.data.IterableDataset, ABC):
 
     def apply_transforms(self, sample):
         for transform in self._transforms:
+            # Transformations are allowed to return None to skip a sample
+            if self._skip_none and sample is None:
+                break
             sample = transform(sample)
         return sample
 
-    def __iter__(self):
-        """
-        Returns an iterator for (transformed) image and label
-        """
+    def create_airstore_iterator(self):
         assert (
             self._batch_size is not None
         ), "Please set the batch_size using set_batch_size method in Airstore dataset."
         world_size = get_world_size()
         rank = get_rank()
         num_workers, worker_id = self.get_worker_info()
+        self._worker_id = worker_id
 
         # dataset sharded across airstore_world_size workers
         airstore_world_size = world_size * num_workers
         # each worker takes it's shard based on parent process rank and worker id
         airstore_rank = rank * num_workers + worker_id
 
-        # compute skip samples. This is computed per worker.
-        skip_samples = (len(self) // num_workers) * (
-            self._phased_epoch % self._phases_per_epoch
-        )
         actual_epoch = self._phased_epoch // self._phases_per_epoch
+
+        if self._phased_epoch % self._phases_per_epoch == 0:
+            logging.info(
+                f"#############  Resetting skip counter for the phased epoch: {self._phased_epoch} ###############"
+            )
+            self.per_worker_counter[self._worker_id] = 0
+
+        # compute skip samples. This is computed per worker.
+        skip_samples = self.per_worker_counter[self._worker_id]
 
         logging.info(
             "######## "
@@ -157,7 +202,7 @@ class AIRStoreDataset(torch.utils.data.IterableDataset, ABC):
         )
 
         # TODO: Expose limit and offset methods in OpenT, etc in constructor.
-        airstore_iter = self._pathmgr.opent(
+        return self._pathmgr.opent(
             f"airstore://{self._table_name}",
             world_size=airstore_world_size,
             rank=airstore_rank,
@@ -166,7 +211,35 @@ class AIRStoreDataset(torch.utils.data.IterableDataset, ABC):
             skip_samples=skip_samples,
             env="rsc",
         )
-        return map(lambda sample: self._map_item(sample), airstore_iter)
+
+    def __iter__(self):
+        """
+        Returns an iterator for (transformed) image and label
+        """
+        self._airstore_iter_wrapped = self.create_cycle_wrapped_iter()
+        return self
+
+    def create_cycle_wrapped_iter(self):
+        self._airstore_iter = self.create_airstore_iterator()
+        while True:
+            try:
+                yield next(self._airstore_iter)
+            except StopIteration:
+                del self._airstore_iter
+                self.per_worker_counter[self._worker_id] = 0
+                logging.info(
+                    f"@@@@@@@@@@@@@@@@@@@@@@ Resetting Airstore iterator as it reached the end on worker: {self._worker_id} @@@@@@@@@@@@@@@@@@@@@@"
+                )
+                self._airstore_iter = self.create_airstore_iterator()
+
+    def __next__(self) -> Any:
+        sample = next(self._airstore_iter_wrapped)
+        sample = self._map_item(sample)
+        self.per_worker_counter[self._worker_id] += 1
+
+        if self._skip_none and sample is None:
+            return next(self)
+        return sample
 
     @abstractmethod
     def _map_item(self, sample: Any) -> Any:
@@ -246,6 +319,17 @@ class AirstoreImageDataset(AIRStoreDataset):
 
 
 class AirstoreImageTextDataset(AIRStoreDataset):
+    """
+    Reads VisionTextSample out of a AirStore dataset
+
+    Args:
+        data_column (str): name of image column
+        label_column (str): name of label column
+        text_column (str): name of text column
+        *args
+        **kwargs
+    """
+
     def __init__(self, text_column: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._text_column = text_column
@@ -265,7 +349,7 @@ class AirstoreImageTextDataset(AIRStoreDataset):
             )
             out_sample = self.apply_transforms(out_sample)
         except Exception as e:
-            logging.warn(
+            logging.warning(
                 f"############## Airstore Image Loading Error: {e} ###################"
             )
             image = default_img_generator()
@@ -274,6 +358,56 @@ class AirstoreImageTextDataset(AIRStoreDataset):
                 label=sample[self._label_column],
                 data_idx=int(sample[self._id_column]) if self._id_column else -1,
                 text=sample[self._text_column],
+                data_valid=False,
+            )
+            out_sample = self.apply_transforms(out_sample)
+        return out_sample
+
+
+class AirstoreImageTextHashtagDataset(AIRStoreDataset):
+    """
+    Reads VisionTextSample out of a AirStore dataset
+
+    Args:
+        data_column (str): name of image column
+        label_column (str): name of label column
+        text_column (str): name of text column
+        hash_column (str): name of hashtag column
+        *args
+        **kwargs
+    """
+
+    def __init__(self, text_column: str, hash_column: str, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._text_column = text_column
+        self._hash_column = hash_column
+
+    def _map_item(self, sample):
+
+        try:
+            image = Image.open(io.BytesIO(sample[self._data_column]))
+            if image.mode != "RGB":
+                image = image.convert("RGB")
+            out_sample = VisionTextHashtagSample(
+                vision=image,
+                label=sample[self._label_column],
+                data_idx=int(sample[self._id_column]) if self._id_column else -1,
+                text=sample[self._text_column],
+                hashtags=sample[self._hash_column],
+                data_valid=True,
+            )
+            out_sample = self.apply_transforms(out_sample)
+        except Exception as e:
+            logging.warning(
+                f"############## Airstore Image Loading Error: {e} ###################"
+            )
+            image = default_img_generator()
+            out_sample = VisionTextHashtagSample(
+                vision=image,
+                label=sample[self._label_column],
+                data_idx=int(sample[self._id_column]) if self._id_column else -1,
+                text=sample[self._text_column],
+                hashtags=sample[self._hash_column],
                 data_valid=False,
             )
             out_sample = self.apply_transforms(out_sample)

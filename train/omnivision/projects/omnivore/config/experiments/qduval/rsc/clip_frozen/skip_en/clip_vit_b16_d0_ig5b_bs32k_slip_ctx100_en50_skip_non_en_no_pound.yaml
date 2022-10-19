@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - /experiments/qduval/rsc/clip_frozen/skip_en/base_skip_en.yaml
+  - _self_
+
+
+scratch:
+  english_threshold: 0.5
+  context_length: 100
+  remove_pound: true

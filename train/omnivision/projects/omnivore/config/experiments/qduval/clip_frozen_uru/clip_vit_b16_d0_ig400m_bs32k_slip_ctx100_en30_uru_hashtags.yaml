@@ -1,0 +1,8 @@
+# @package _global_
+
+defaults:
+  - /experiments/qduval/clip_frozen_uru/base_partial.yaml
+  - _self_
+
+scratch:
+  english_threshold: 0.3

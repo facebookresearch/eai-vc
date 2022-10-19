@@ -1,0 +1,45 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0169_vitb32_laion1b-25Mroll_b32K_sunrgbd_losswt1_b4K_audioset_b8K_cg5_slr1e-3_elr1e-5_maskgatherloss_linheads_alllosswt1_ep16
+
+
+constants:
+  loss_wt_audio_video: 5.0
+  loss_wt_image_depth: 1.0
+  audioset_batch_size: 128
+  use_grad_checkpoint_audioset: false
+  use_grad_checkpoint_audioset_blk_ids: [0, 1, 2]
+
+
+trainer:
+  max_epochs: 16
+  optim:
+    options:
+      lr:
+      - scheduler:
+          _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+          schedulers:
+          - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+            start_value: 1e-6
+            end_value: 1e-3
+          - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+            start_value: ${..0.end_value}
+            end_value: 1e-5
+          lengths:
+          - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+          - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+          interval_scaling:
+          - rescaled
+          - rescaled
+  checkpoint:
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      strict: False # we have missing keys for depth, audio
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint
+        pick_recursive_keys:
+          - "model"
+        path_list:
+          - /fsx-omnivore/imisra/omnivision_omnivore/config/experiments/imisra/0164_vitb16_shared_p-2-16-16_laion1b-25Mroll_b32K_cg5_slr1e-3_elr1e-5_maskgatherloss_ep32.yaml/0/checkpoints/checkpoint.pt

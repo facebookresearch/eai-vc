@@ -1,0 +1,20 @@
+# @package _global_
+# modified from config/experiments/kalyanv/omniscale/uru400m_1epoch_vitb_uru_pretrain_individual_new_wrapper_lr_1e_3.yaml
+defaults:
+ - /experiments/mannatsingh/lit/uru400m_2epochs_vitb_uru_pretrain_lit_params_test_crop.yaml
+
+scratch:
+  # number of classes in the `tool` version of Uru 5B
+  num_classes: 28052
+  num_samples: 400000000
+  phases_per_epoch: 40
+
+  batch_size: 256
+  num_nodes: 8
+  num_epochs: 80
+
+trainer:
+  optim:
+    amp:
+      enabled: True
+      amp_dtype: float16 # bfloat16 or float16

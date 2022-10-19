@@ -1,0 +1,108 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0145_oclip_vitb32_laion2b-20Mfixed_b4K_ep32
+
+trainer:
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.vision_text_dataset.VisionTextDataset
+        base_dataset:
+          _target_: omnivore.data.webdataset_helpers.WebVisionTextPipeline
+          base_dataset_length: 20e6
+          base_dataset_fn:
+            _target_: omnivore.data.webdataset_helpers.get_wds_dataset
+            _partial_: True
+            resampled: True
+            urls:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: False
+              path_list:
+                - /checkpoint/imisra/datasets/laion/laion2B-en_clean_tarlist.pkl ## FULL 2B dataset
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: ${constants.rgb_crop_size}
+                  interpolation: 3
+                  scale: [0.9, 1.0]
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: ${constants.in1k_rgb_mean}
+                  std: ${constants.in1k_rgb_std}
+          - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+            base_transform:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list: ${constants.bpe_path_list}
+      shuffle: True
+      batch_size: ${constants.batch_size}
+      num_workers: 12
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: laion
+        batch_kwargs:
+          model_fwd_kwargs:
+            use_checkpoint: ${constants.use_checkpoint}
+            checkpoint_every_n: 2
+      worker_init_fn: NULL
+  model:
+    multimodal_model:
+      trunks:
+        - name: vision
+          trunk:
+            _target_: omnivore.models.simple_transformer.SimpleTransformer
+            embed_dim: 1024
+            num_blocks: 24
+            ffn_dropout_rate: 0.0
+            drop_path_rate: 0.0 # OpenCLIP
+            attn_target:
+              _target_: omnivore.models.simple_transformer.MultiheadAttention
+              embed_dim: ${..embed_dim}
+              num_heads: 16
+              dropout: 0.0
+              bias: True
+              add_bias_kv: True
+              _partial_: True
+            pre_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "b l d -> l b d"
+            post_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "l b d -> b l d"
+        - name: text
+          trunk:
+            _target_: omnivore.models.simple_transformer.SimpleTransformer
+            embed_dim: 768
+            num_blocks: 12
+            ffn_dropout_rate: 0.0
+            drop_path_rate: 0.0 # OpenCLIP
+            attn_target:
+              _target_: omnivore.models.simple_transformer.MultiheadAttention
+              embed_dim: ${..embed_dim}
+              num_heads: 12
+              dropout: 0.0
+              bias: True
+              add_bias_kv: True
+              _partial_: True
+            pre_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "b l d -> l b d"
+            post_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "l b d -> b l d"
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8
+
+constants:
+  batch_size: 128
+  kernel_size: 14
+  warmup_epochs: 1
+  use_checkpoint: true

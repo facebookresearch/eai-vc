@@ -3,11 +3,12 @@ from typing import Optional
 
 import numpy as np
 import torch
+from omnivore.losses import BaseLoss
 from omnivore.losses.clip_loss import CLIPLoss
 from omnivore.utils.distributed import all_gather_batch
 
 
-class ContrastiveLoss(CLIPLoss):
+class ContrastiveLoss(BaseLoss):
     """
     Wrapper around the CLIP loss
     Expects the logit scale to be provided in the model outputs
@@ -29,13 +30,17 @@ class ContrastiveLoss(CLIPLoss):
         normalize: bool = True,
         loss1_weight: float = 0.5,
         loss2_weight: float = 0.5,
+        label_smoothing: float = 0.0,
+        mask_with_data_valid: bool = False,
     ):
-
-        super().__init__(
+        super().__init__()
+        self.clip_loss = CLIPLoss(
             all_gather_fn=all_gather_fn,
             normalize=normalize,
             loss1_weight=loss1_weight,
             loss2_weight=loss2_weight,
+            label_smoothing=label_smoothing,
+            mask_with_data_valid=mask_with_data_valid,
         )
         self.max_temperature_multiplier = max_temperature_multiplier
         self.feat1_name = feat1_name
@@ -43,14 +48,14 @@ class ContrastiveLoss(CLIPLoss):
         self.logit_scale_name = logit_scale_name
         self.feat1_no_grad = feat1_no_grad
         self.feat2_no_grad = feat2_no_grad
+        self.mask_with_data_valid = mask_with_data_valid
         assert self.feat1_no_grad >= 0.0 and self.feat1_no_grad <= 1.0
         assert self.feat2_no_grad >= 0.0 and self.feat2_no_grad <= 1.0
         assert not (
             self.feat1_no_grad and self.feat2_no_grad
         ), "Both features without grad?!"
 
-    def forward(self, outputs, labels):
-        del labels  # This loss doesn't need labels
+    def core_forward(self, outputs, sample):
         new_outputs = {}
         feat1 = outputs[self.feat1_name]
         feat2 = outputs[self.feat2_name]
@@ -66,10 +71,12 @@ class ContrastiveLoss(CLIPLoss):
             )
         else:
             new_outputs["logit_scale"] = 1.0  # no-op
-        return super().forward(new_outputs)
+        if self.mask_with_data_valid:
+            new_outputs["data_valid"] = sample.data_valid
+        return self.clip_loss(new_outputs)
 
     def extra_repr(self):
-        return f"feat1_name={self.feat1_name}, feat2_name={self.feat2_name}, feat1_no_grad={self.feat1_no_grad}, feat2_no_grad={self.feat2_no_grad}, logit_scale_name={self.logit_scale_name}, all_gather_fn={self.all_gather_fn}, max_temperature_multiplier={self.max_temperature_multiplier}, normalize={self.normalize}, loss1_weight={self.loss1_weight}, loss2_weight={self.loss2_weight}"
+        return f"feat1_name={self.feat1_name}, feat2_name={self.feat2_name}, feat1_no_grad={self.feat1_no_grad}, feat2_no_grad={self.feat2_no_grad}, logit_scale_name={self.logit_scale_name}, all_gather_fn={self.clip_loss.all_gather_fn}, max_temperature_multiplier={self.max_temperature_multiplier}, normalize={self.clip_loss.normalize}, loss1_weight={self.clip_loss.loss1_weight}, loss2_weight={self.clip_loss.loss2_weight}, mask_with_data_valid={self.clip_loss.mask_with_data_valid}"
 
 
 class ContrastiveLossLegacy(CLIPLoss):

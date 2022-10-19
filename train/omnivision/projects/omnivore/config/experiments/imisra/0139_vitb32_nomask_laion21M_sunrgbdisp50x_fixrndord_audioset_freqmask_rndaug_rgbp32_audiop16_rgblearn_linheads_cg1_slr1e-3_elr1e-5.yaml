@@ -1,0 +1,201 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0121_vitb32_nomask_laion21M_sunrgbdisp50x_audioset_rgbp32_audiop16_rgbsinpos_linheads_cg1_slr1e-3_elr1e-5
+
+constants:
+  audio_freq_mask_param: 12 # off by default
+  learnable_pos_rgbt: true
+  learnable_pos_audio: true
+  learnable_pos_depth: True
+  inv_depth_temp: 0.2
+  inv_audio_temp: 0.07
+
+trainer:
+  max_epochs: 32
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      repeat_factors: [1.0, 1.0, 50.0]
+      datasets:
+        - _target_: omnivore.data.webdataset_helpers.WebVisionDatasetBatchedWithLoader
+          base_dataset_fn:
+            _target_: omnivore.data.webdataset_helpers.get_wds_dataset_batched
+            _partial_: true
+            urls:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: false
+              path_list: ${constants.laion21m_path_list}
+            dataset_size_file: ${constants.laion21m_dataset_size_file}
+            batch_size: ${constants.rgb_batch_size}
+            num_workers: 12
+            preprocess_txt:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list: ${constants.bpe_path_list}
+            preprocess_img:
+              _target_: torchvision.transforms.Compose
+              transforms:
+              - _target_: torchvision.transforms.RandomResizedCrop
+                size: ${constants.rgb_crop_size}
+                interpolation: 3
+                scale: [0.9, 1.0]
+              - _target_: omnivore.data.transforms.basic.PILToRGB
+              - _target_: torchvision.transforms.ToTensor
+              - _target_: torchvision.transforms.Normalize
+                mean: ${constants.in1k_rgb_mean}
+                std: ${constants.in1k_rgb_std}
+          base_loader_fn:
+            _target_: omnivore.data.webdataset_helpers.get_wds_loader
+            num_workers: ${..base_dataset_fn.num_workers}
+            collate_fn:
+              _target_: omnivore.data.webdataset_helpers.BatchToSampleText
+              collate_fn:
+                _target_: omnivore.data.api.DefaultOmnivoreCollator
+                output_key: laion
+                input_batch_is_collated: true
+                batch_kwargs:
+                  model_fwd_kwargs:
+                    use_checkpoint: ${constants.use_grad_checkpoint_laion}
+                    checkpoint_every_n: 2
+            _partial_: true
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.VideoPathDataset
+            decode_audio: true
+            audio_num_mel_bins: ${constants.audio_num_mel_bins}
+            audio_target_len: ${constants.audio_target_len}
+            label_type: csv
+            decoder_kwargs:
+              sample_rate: 16000
+            copy_on_read: True
+            copy_on_read_dst_basename: ${..collate_fn.output_key}
+            remove_prefix: unbalanced_train_segments/video/
+            new_prefix: /fsx-omnivore/rgirdhar/data/audioset/unbalanced_train_segments/video_mp4-288p/
+            path_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_filelist.npy
+            label_file_list:
+            - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioSetVideo/unbalanced_train_segments_labels.npy
+            clip_sampler:
+              _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
+              clip_duration: ${constants.video_clip_duration}
+            frame_sampler:
+              _target_: pytorchvideo.transforms.UniformTemporalSubsample
+              num_samples: ${constants.video_num_frames}
+            decoder: decord
+            normalize_to_0_1: true
+            transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                  - _target_: omnivore.data.transforms.basic.Permute
+                    ordering: [1, 0, 2, 3]  # C,T,H,W -> T,C,H,W for RandAug
+                  - _target_: pytorchvideo.transforms.RandAugment
+                    magnitude: 7
+                    num_layers: 4
+                    prob: 0.5
+                  - _target_: omnivore.data.transforms.basic.Permute
+                    ordering: [1, 0, 2, 3]  # T,C,H,W -> C,T,H,W after RandAug
+                  - _target_: pytorchvideo.transforms.ShortSideScale
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.RandomResizedCrop
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.RandomHorizontalFlip
+                    p: 0.5
+                  - _target_: torchvision.transforms._transforms_video.NormalizeVideo
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+                  - _target_: omnivore.data.transforms.basic.Permute
+                    ordering: [1, 0, 2, 3]  # C,T,H,W -> T,C,H,W for cube RandErase over batch(time) dim
+                  - _target_: omnivore.data.transforms.video_random_erasing.RandomErasing
+                    probability: 0.25
+                    mode: pixel
+                    max_count: 1
+                    num_splits: 1
+                    cube: True
+                    device: cpu
+                  - _target_: omnivore.data.transforms.basic.Permute
+                    ordering: [1, 0, 2, 3]  # C,T,H,W -> T,C,H,W after RandErase
+            - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+              field: audio
+              base_transform:
+                _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                  - _target_: torchaudio.transforms.FrequencyMasking
+                    freq_mask_param: ${constants.audio_freq_mask_param}
+                  - _target_: torchaudio.transforms.TimeMasking
+                    time_mask_param: 0
+                  - _target_: torchvision.transforms.Normalize
+                    mean: -4.268
+                    std: ${times:4.569,2}
+          shuffle: true
+          batch_size: ${constants.video_batch_size}
+          num_workers: 12
+          pin_memory: true
+          drop_last: true
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: audioset
+            convert_label_to_one_hot_num_classes: 527
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: ${constants.use_grad_checkpoint_audioset}
+          worker_init_fn: null
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.ImageWithDepthPathDataset
+            concatenate_depth_and_rgb_channels: False
+            copy_on_read: True
+            copy_on_read_dst_basename: ${..collate_fn.output_key}
+            path_file_list: ${constants.sun_train_path_file_list}
+            label_file_list: ${constants.sun_train_label_file_list}
+            depth_path_file_list: ${constants.sun_train_depth_path_file_list}
+            new_prefix: ${constants.sun_rgb_prefix}
+            new_depth_prefix: ${constants.sun_depth_prefix}
+            transforms:
+              - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                    - _target_: omnivore.data.transforms.image_rgbd.DepthNorm
+                      max_depth: NULL
+                      compute_max_per_sample: True
+                    - _target_: omnivore.data.transforms.image_rgbd.RandAugment3d  # Essentially autoagument rand-m9-mstd0.5-inc1
+                      num_ops: 2
+                      magnitude: 9
+                      interpolation: ${constants.sunrgbd_interp_int}
+                    - _target_: torchvision.transforms.RandomResizedCrop
+                      size: ${constants.rgb_crop_size}
+                      interpolation: ${constants.sunrgbd_interp_int}
+                    - _target_: torchvision.transforms.RandomHorizontalFlip
+                    - _target_: omnivore.data.transforms.image_rgbd.ColorJitter3d
+                      brightness: 0.4
+                      contrast: 0.4
+                      saturation: 0.4
+                      hue: 0.4
+                    - _target_: torchvision.transforms.RandomErasing
+                      p: .25
+                    - _target_: torchvision.transforms.Normalize
+                      mean: ${constants.sun_rgbdispmax_mean}
+                      std: ${constants.sun_rgbdispmax_std}
+          shuffle: True
+          batch_size: ${constants.rgb_batch_size}
+          num_workers: 12
+          pin_memory: False
+          drop_last: True
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: sunrgbd
+            batch_transforms:
+            - _target_: omnivore.data.transforms.image_rgbd_sample.VisionDepthConcatChannelToVisionDepthBatch
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: ${constants.use_grad_checkpoint_sun}
+                checkpoint_every_n: 2
+          worker_init_fn: NULL
+  

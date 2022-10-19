@@ -1,0 +1,10 @@
+# @package _global_
+defaults:
+  - /experiments/mannatsingh/uru10x10/fine_tune/in1k_vit_gpt_2b_mae_ig_1_epoch_init_stool_224_gpus_64.yaml
+
+trainer:
+  optim:
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: 1
+      norm_type: 2

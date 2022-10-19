@@ -1,0 +1,37 @@
+# @package _global_
+
+# no config changes
+# webdataset seed issue was fixed in code
+
+defaults:
+  - /experiments/imisra/0164_vitb16_shared_p-2-16-16_laion1b-25Mroll_b32K_cg5_slr1e-3_elr1e-5_maskgatherloss_ep32
+
+
+constants:
+  weight_decay: 0.2
+
+trainer:
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+      - 0.9
+      - 0.95
+      eps: 1.0e-06
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: ${constants.grad_clip_norm}
+      norm_type: 2
+    options:
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: ${constants.weight_decay}
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+          - '*.bias'
+          - '*pos_embed'
+          - '*cls_token'
+          module_cls_names: ["torch.nn.LayerNorm"]

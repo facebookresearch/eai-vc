@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import copy
 import logging
 from dataclasses import dataclass
 from enum import Enum
@@ -10,7 +9,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-from omnivore.data.api import BatchSample, BatchTextSample, FIELDS_WITH_LIST, Sample
+from omnivore.data.api import BatchSample, BatchTextSample, DATA_FIELDS, Sample
 from omnivore.meters import FINAL_LOGITS_NAME
 from omnivore.models.helpers import singleton_dict_to_item
 from omnivore.utils import Phase
@@ -34,6 +33,8 @@ class HeadArgs:
     head: nn.Module
     preprocessed_input_key: Optional[str]
     output_key: Optional[str]
+    dataset_keys: Optional[List[str]] = None
+    dataset_omit_keys: Optional[List[str]] = None
     name: str = None
     head_to_clone: str = None
 
@@ -69,6 +70,8 @@ class TrunkArgs:
     name: str
     trunk: nn.Module
     trunk_to_clone: str = None
+    unshared_params_keys: List = None
+    freeze_shared: bool = False
 
 
 @dataclass
@@ -160,7 +163,7 @@ class MultimodalWrapper(nn.Module):
         heads: List[Dict],
         postprocessors: List[Dict],
         head_to_postprocessor: List[Dict],
-        list_input_reduction: str = ListInputReductionOps.CAT,
+        list_input_reduction: str = ListInputReductionOps.NO_OP,
         dataset_specific_list_input_reduction: Dict = None,
     ) -> None:
         super().__init__()
@@ -220,7 +223,7 @@ class MultimodalWrapper(nn.Module):
         for trunk in trunks:
             if trunk.trunk_to_clone is not None:
                 # Copy trunk by reference except for optionally some unshared parameters
-                # (e.g. omnivore.models.simple_transformer.copy_trunk_with_unshared_layernorm)
+                # (e.g. omnivore.models.simple_transformer.copy_trunk_with_unshared_params)
                 assert not isinstance(trunk.trunk, nn.Module)
                 assert trunk.trunk_to_clone in [
                     t.name for t in trunks
@@ -234,7 +237,14 @@ class MultimodalWrapper(nn.Module):
                 assert isinstance(
                     trunk.trunk, Callable
                 ), "Clone trunk has to be instantiated using a callable (e.g. omnivore.models.simple_transformer.copy_trunk_with_unshared_layernorm)."
-                trunk.trunk = trunk.trunk(trunk_to_clone)
+                assert (
+                    trunk.unshared_params_keys is not None
+                ), "unshared_params_keys is not provided. A list of parameter keys to unshare is required.."
+                trunk.trunk = trunk.trunk(
+                    trunk_to_clone,
+                    unshared_params_keys=trunk.unshared_params_keys,
+                    freeze_shared=trunk.freeze_shared,
+                )
 
             assert isinstance(trunk.trunk, nn.Module)
             self.trunks[trunk.name] = trunk.trunk
@@ -260,6 +270,8 @@ class MultimodalWrapper(nn.Module):
         self.head_name_to_fork_module = {}
         self.heads = nn.ModuleList()
         self.head_input_keys = []
+        self.head_dataset_omit_keys = []
+        self.head_dataset_input_keys = []
         self.head_output_keys = []
         self.head_fork_modules = []
 
@@ -285,6 +297,8 @@ class MultimodalWrapper(nn.Module):
 
             self.heads.append(head_args.head)
             self.head_input_keys.append(head_args.preprocessed_input_key)
+            self.head_dataset_input_keys.append(head_args.dataset_keys)
+            self.head_dataset_omit_keys.append(head_args.dataset_omit_keys)
             self.head_output_keys.append(head_args.output_key)
             self.head_fork_modules.append(head_args.fork_module)
 
@@ -310,7 +324,9 @@ class MultimodalWrapper(nn.Module):
             ]
             self.head_to_postprocessor = {}
             for mapping in head_to_postprocessor:
-                assert mapping.input_key in self.head_output_keys
+                assert (
+                    mapping.input_key in self.head_output_keys
+                ), f"postprocessor operates on {mapping.input_key} but heads don't produce this key! heads produce {self.head_output_keys}"
                 assert mapping.postprocessor_name in self.postprocessors
                 self.head_to_postprocessor[
                     mapping.input_key
@@ -330,16 +346,28 @@ class MultimodalWrapper(nn.Module):
                 # late binding in python
                 head_method=head,
                 in_key=self.head_input_keys[i],
+                dataset_key_list=self.head_dataset_input_keys[i],
+                dataset_omit_key_list=self.head_dataset_omit_keys[i],
                 out_key=self.head_output_keys[i],
             ):
-                if in_key is not None and self.head_routing_key != in_key:
+                if in_key is not None and self.head_preprocessor_routing_key != in_key:
+                    return
+                if (
+                    dataset_key_list is not None
+                    and self.current_dataset_key not in dataset_key_list
+                ):
+                    return
+                if (
+                    dataset_omit_key_list is not None
+                    and self.current_dataset_key in dataset_omit_key_list
+                ):
                     return
                 if out_key is None:
-                    out_key = self.head_routing_key
+                    out_key = self.head_preprocessor_routing_key
                 if out_key in self.outputs:
                     # reset state before raising
                     self.outputs = {}
-                    self.head_routing_key = None
+                    self.head_preprocessor_routing_key = None
                     raise ValueError(
                         f"Two heads produced the same output key `{out_key}` during forward"
                     )
@@ -369,12 +397,21 @@ class MultimodalWrapper(nn.Module):
 
         for inputs in sample_mapping.sample_field_to_modality:
             preprocessor = self.modality_preprocessors[inputs.preprocessor_name]
-            preprocessor_input = {x: getattr(sub_batch, x) for x in inputs.input_fields}
+            preprocessor_input = {
+                x: getattr(sub_batch, x)
+                for x in inputs.input_fields
+                # This can happen, for instance in the multi-clip testing where
+                # we do forwards separately for each element in the list, keeping
+                # other fields in the Sample as None.
+                if getattr(sub_batch, x) is not None
+            }
+            if not preprocessor_input:
+                continue
             tokenized_input = preprocessor(**preprocessor_input)
             tokenized_input_for_trunk = tokenized_input["trunk"]
             tokenized_input_for_head = tokenized_input["head"]
-            # set self.head_routing_key so the right heads are called
-            self.head_routing_key = inputs.output_key
+            # set self.head_preprocessor_routing_key so the right heads are called for this preprocessor
+            self.head_preprocessor_routing_key = inputs.output_key
             self.tokenized_input_for_head = tokenized_input_for_head
             # optionally use output key to construct a dict
             # this is useful if the trunk is modality aware
@@ -387,13 +424,13 @@ class MultimodalWrapper(nn.Module):
             # so that won't be checkpointed. Probably not a problem since that is
             # likely a small part of the model, but ideally should allow for
             # checkpointing the full end-to-end model eventually
-            self.trunks[self.tokens_to_trunks[self.head_routing_key]](
+            self.trunks[self.tokens_to_trunks[self.head_preprocessor_routing_key]](
                 *args,
                 **tokenized_input_for_trunk,
                 **kwargs,
             )
             # reset
-            self.head_routing_key = None
+            self.head_preprocessor_routing_key = None
             self.tokenized_input_for_head = None
 
     def run_postprocessor(self, head_output_key: str, head_output):
@@ -410,53 +447,70 @@ class MultimodalWrapper(nn.Module):
     def forward(self, batch: Mapping[str, BatchSample], *args, **kwargs) -> Dict:
         assert isinstance(batch, Mapping), f"Received {type(batch)}"
         assert len(self.outputs) == 0
-        self.head_routing_key = None
+        self.head_preprocessor_routing_key = None
+        self.current_dataset_key = None
+        assert len(batch) == 1, "Supports 1 dataset per batch"
         outputs = {}
         for dataset_key, sub_batch in batch.items():
             # Handle in case the data is a list. This can happen,
             # for example, in multi-crop testing
-            all_data = []
-            all_keys = []
-            for field in FIELDS_WITH_LIST:
-                if not hasattr(sub_batch, field):
+            has_lists = False
+            self.current_dataset_key = dataset_key
+            for field_name in DATA_FIELDS:
+                if not hasattr(sub_batch, field_name):
                     continue
-                all_keys.append(field)
-                this_data = getattr(sub_batch, field)
-                if isinstance(getattr(sub_batch, field), List):
-                    all_data.append(this_data)
-                else:
-                    # Make singleton list to match
-                    all_data.append([this_data])
-            assert all(
-                [len(el) == len(all_data[0]) for el in all_data]
-            ), "All data fields should be same len"
-            assert len(batch) == 1
-            if len(all_data) == 0:
-                # No list field found. Just do a forward for the
-                # Sample as is
+                this_data = getattr(sub_batch, field_name)
+                if isinstance(this_data, List):
+                    has_lists = True
+                    break
+            if not has_lists:
+                # No list field found, or all list fields had tensors.
+                # Just do a forward for the Sample as is
+                # This is important for, eg RGBD samples, where you might want
+                # RGB and D to interact in the forward.
                 self.forward_sub_batch(sub_batch, *args, **kwargs)
             else:
+                # Lists found. In this case, we do a forward for each field
+                # in the Sample separately
                 out_vals = {}
-                for items in zip(*all_data):
-                    e_batch = copy.copy(sub_batch)
-                    for item, key in zip(items, all_keys):
-                        setattr(e_batch, key, item)
-                    self.forward_sub_batch(e_batch, *args, **kwargs)
-                    for out_key, out_val in self.outputs.items():
-                        if out_key not in out_vals:
-                            out_vals[out_key] = []
-                        out_vals[out_key].append(out_val)
-                    # Reset the outputs to capture the next forward sub batch
-                    self.outputs = {}
+                for field_name in DATA_FIELDS:
+                    if not hasattr(sub_batch, field_name):
+                        continue
+                    this_data = getattr(sub_batch, field_name)
+                    was_list = True
+                    if not isinstance(this_data, List):
+                        this_data = [this_data]
+                        was_list = False
+                    data_output = []
+                    data_output_key = None
+                    for data_item in this_data:
+                        assert isinstance(data_item, torch.Tensor)
+                        e_batch = type(sub_batch)()
+                        setattr(e_batch, field_name, data_item)
+                        self.forward_sub_batch(e_batch, *args, **kwargs)
+                        assert (
+                            len(self.outputs) == 1
+                        ), f"Only 1 output expected for {field_name}. Got {self.outputs.keys()}"
+                        if data_output_key is None:
+                            data_output_key = list(self.outputs.keys())[0]
+                        else:
+                            assert data_output_key == list(self.outputs.keys())[0]
+                        data_output.append(self.outputs[data_output_key])
+                        # Reset the outputs to capture the next forward sub batch
+                        self.outputs = {}
+                    if not was_list:
+                        data_output = data_output[0]
+                    out_vals[data_output_key] = data_output
                 for field_key in out_vals.keys():
                     if (
                         self.dataset_specific_list_input_reduction is not None
                         and dataset_key in self.dataset_specific_list_input_reduction
+                        and field_key
+                        in self.dataset_specific_list_input_reduction[dataset_key]
                     ):
-                        field_to_ops = self.dataset_specific_list_input_reduction[
+                        reduction_op_name = self.dataset_specific_list_input_reduction[
                             dataset_key
-                        ]
-                        reduction_op_name = field_to_ops[field_key]
+                        ][field_key]
                     else:
                         reduction_op_name = self.list_input_reduction
 
@@ -480,8 +534,8 @@ class MultimodalWrapper(nn.Module):
 class MultiModalZeroShotWithTextTargetsWrapper(nn.Module):
     def __init__(
         self,
-        zero_shot_with_text_targets: List[Mapping],
         multimodal_model: nn.Module,
+        zero_shot_with_text_targets: Optional[List[Mapping]] = None,
     ):
         super().__init__()
         self.zero_shot_with_text_targets = zero_shot_with_text_targets
@@ -495,6 +549,8 @@ class MultiModalZeroShotWithTextTargetsWrapper(nn.Module):
     @torch.no_grad()
     def on_validation_epoch_start(self):
         self.phase = Phase.VAL
+        if self.zero_shot_with_text_targets is None:
+            return
         assert isinstance(self.zero_shot_with_text_targets, Mapping)
         self.target_text_features = {}
         model_device = next(self.multimodal_model.parameters()).device
@@ -562,6 +618,10 @@ class MultiModalZeroShotWithTextTargetsWrapper(nn.Module):
         model_output = self.multimodal_model(batch, *args, **kwargs)
         # Add the final logits to the model output
         for dataset_key, dataset_outputs in model_output.items():
+            if dataset_key not in self.target_text_features:
+                # This dataset does not need a logits output (eg if the validation
+                # is retrieval based)
+                continue
             non_txt_feature = singleton_dict_to_item(dataset_outputs)
             non_txt_feature = torch.nn.functional.normalize(
                 non_txt_feature, p=2, dim=-1
@@ -597,7 +657,7 @@ class MultiModalZeroShotWithTextTargetsWrapper(nn.Module):
 
     def forward(self, batch: Mapping[str, BatchSample], *args, **kwargs) -> Dict:
         assert isinstance(batch, Mapping), f"Received {type(batch)}"
-        if self.phase == Phase.VAL:
+        if self.phase == Phase.VAL and self.target_text_features is not None:
             # The text features are set by the on_validation_epoch_start function
             # Hence the validation epoch has started, so that forward should be called.
             # When that epoch finishes, the text features are set back to None

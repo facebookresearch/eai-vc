@@ -1,5 +1,4 @@
 import os
-import shutil
 import unittest
 
 from omnivore.utils.testing import (
@@ -66,6 +65,32 @@ class TestFSDPTrainer(unittest.TestCase):
                 ]
             )
             run_integration_test(cfg)
+
+    @gpu_test(gpu_count=2)
+    def test_fsdp_slip_integration(self):
+        with in_temporary_directory() as exp_dir:
+            cfg = compose_omnivore_config(
+                [
+                    "+experiments=tests/slip_train_synthetic_partial",
+                    "launcher.gpus_per_node=2",
+                    f"launcher.experiment_log_dir={exp_dir}",
+                ]
+            )
+            run_integration_test(cfg)
+
+        # TODO - does not work because of the way SLIP works
+        #  Fix is simple but analyse the impact first
+        """
+        with in_temporary_directory() as exp_dir:
+            cfg = compose_omnivore_config(
+                [
+                    "+experiments=tests/slip_train_synthetic_fsdp",
+                    "launcher.gpus_per_node=2",
+                    f"launcher.experiment_log_dir={exp_dir}",
+                ]
+            )
+            run_integration_test(cfg)
+        """
 
     @gpu_test(gpu_count=2)
     def test_fsdp_clip_integration(self):

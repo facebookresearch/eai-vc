@@ -1,0 +1,3 @@
++experiments=aelnouby/omniclip/060_vittL14_b32K_ep6_sunrgbd_audioset_2B_gatherwgrad_maskinvalid_noDroppath
+constants.kernel_size=16
+constants.batch_size=512
