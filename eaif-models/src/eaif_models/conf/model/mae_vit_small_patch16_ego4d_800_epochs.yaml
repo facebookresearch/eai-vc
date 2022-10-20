@@ -1,16 +1,17 @@
 _target_: eaif_models.models.load_model
 model:
   _target_: eaif_models.models.vit.vit.load_encoder
-  checkpoint_path: /checkpoint/yixinlin/eaif/results/vip_training/vip_vit_small_Ego4D_global_pool/2022-10-14_21-34-22/checkpoint.pth
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/mae_ego4d/mae_vit_small_patch16_ego4d_800_epochs.pth
   model:
     _target_: eaif_models.models.vit.vit.vit_small_patch16
     img_size: 224
-    global_pool: True
-    # use_cls: True
+    # global_pool: True
+    use_cls: True
     drop_path_rate: 0.0
 transform:
   _target_: eaif_models.transforms.vit_transforms
 metadata:
-  algo: vip
+  algo: mae
   model: vit_small_patch16
   data: ego4d
+  comment: 800_epochs

@@ -7,9 +7,9 @@ python submitit_pretrain.py \
     batch_size=64 \
     mae_model=mae_vit_small_patch16 \
     vip=True \
-    epochs=800 \
+    epochs=220 \
     warmup_epochs=20 \
-    blr=1.5e-6 \
+    blr=1e-6 \
     weight_decay=0.05 \
     data_path=[/checkpoint/yixinlin/eaif/datasets/ego4d] \
     output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
@@ -24,9 +24,9 @@ python submitit_pretrain.py \
     batch_size=64 \
     mae_model=mae_vit_base_patch16 \
     vip=True \
-    epochs=800 \
+    epochs=220 \
     warmup_epochs=20 \
-    blr=1.5e-6 \
+    blr=1e-6 \
     weight_decay=0.05 \
     data_path=[/checkpoint/yixinlin/eaif/datasets/ego4d] \
     output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
@@ -42,9 +42,9 @@ python submitit_pretrain.py \
     batch_size=64 \
     mae_model=mae_vit_base_patch16 \
     vip=True \
-    epochs=800 \
+    epochs=170 \
     warmup_epochs=20 \
-    blr=1.5e-6 \
+    blr=1e-6 \
     weight_decay=0.05 \
     data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/yixinlin/eaif/datasets/ego4d] \
     output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
@@ -58,9 +58,9 @@ python submitit_pretrain.py \
     batch_size=64 \
     mae_model=mae_vit_small_patch16 \
     vip=True \
-    epochs=800 \
+    epochs=170 \
     warmup_epochs=20 \
-    blr=1.5e-6 \
+    blr=1e-6 \
     weight_decay=0.05 \
     data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/yixinlin/eaif/datasets/ego4d] \
     output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \

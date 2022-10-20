@@ -23,7 +23,6 @@ def configure_jobs(config: dict) -> None:
 
     config = OmegaConf.structured(OmegaConf.to_yaml(config))
 
-    # from eaif_mujoco.visual_imitation.train_loop import bc_pvr_train_loop
     from train_loop import bc_pvr_train_loop
 
     config["cwd"] = cwd

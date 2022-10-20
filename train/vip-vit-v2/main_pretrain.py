@@ -211,7 +211,7 @@ def main(args: omegaconf.DictConfig):
                 epoch=epoch,
                 model_name=("checkpoint.pth"),
             )
-            if epoch % 10 == 0 or epoch + 1 == args.epochs:
+            if epoch % 5 == 0 or epoch + 1 == args.epochs:
                 misc.save_model(
                     args=args,
                     model=model,
