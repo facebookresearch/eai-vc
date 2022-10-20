@@ -20,7 +20,20 @@ Otherwise, follow the instructions on [habitat-lab](https://github.com/facebookr
 
 1. If you want to start a local run, add `hydra/launcher=slurm` at the end of the command listed in the previous point.
 
-1. Once you have trained a model, it is time for evaluation. We evaluate every 5th saved checkpoint. To run an evaluation, just change the mode from `train` to `eval`.
+1. Once you have trained a model, it is time for evaluation. We evaluate every 5th saved checkpoint. To run an evaluation, do the following:
    ```
    python run_habitat_eaif.py -m RUN_TYPE=eval hydra/launcher=slurm_eval NUM_ENVIRONMENTS=14
+   ```
+
+### ObjectNav
+1. For our ObjectNav RL experiments we will be using the HM3DSem v0.2 scene dataset and the corresponding HM3DSem v0.2 ObjectNav episode dataset. Currently the data is available in `/checkpoint/yixinlin/eaif/datasets/habitat_task_dataset/datasets/objectnav/hm3d/v0.2/` on the FAIR cluster. The data is automatically added to the `habitat_eaif` folder when you run the `symlink.sh` file.
+
+1. To start a training run with the `dino_resnet50_omnidata` model use the following command: 
+   ```
+   python run_habitat_eaif.py WANDB.name=Objectnav_first_experiment RL.PPO.lr=0.00025 RL.PPO.encoder_lr=1.5e-6 model=dino_resnet50_omnidata model.transform.randomize_environments=False tasks@_global_=objectnav_hm3d_rl experiments@_global_=objectnav_rl NUM_ENVIRONMENTS=12 hydra.launcher.nodes=5 -m
+   ```
+
+1. Once you have trained a model, it is time for evaluation. We evaluate every 5th saved checkpoint. To run an evaluation, do the following:
+   ```
+   python run_habitat_eaif.py -m WANDB.name=Objectnav_first_experiment RL.PPO.lr=0.00025 RL.PPO.encoder_lr=1.5e-6 model=dino_resnet50_omnidata model.transform.randomize_environments=False tasks@_global_=objectnav_hm3d_rl experiments@_global_=objectnav_rl RUN_TYPE=eval hydra/launcher=slurm_eval NUM_ENVIRONMENTS=20
    ```

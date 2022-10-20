@@ -1,8 +1,10 @@
 VERBOSE: True
-
 TRAINER_NAME: "mddppo"
-ENV_NAME: "SimpleRLEnv"
+ENV_NAME: "NavRLEnv"
 SENSORS: ["RGB_SENSOR"]
+
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
 
 VIDEO_OPTION: []
 VIDEO_DIR: ${hydra:sweep.dir}/video
@@ -12,12 +14,14 @@ CHECKPOINT_FOLDER: ${hydra:sweep.dir}/checkpoints
 LOG_DIR: ${hydra:sweep.dir}/logs
 LOG_FILE: ${hydra:sweep.dir}/train.log
 
-NUM_ENVIRONMENTS: 10
+TEST_EPISODE_COUNT: -1
+
+
+NUM_ENVIRONMENTS: 20
 LOG_INTERVAL: 100
 NUM_CHECKPOINTS: 100
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 500e6
-
+TOTAL_NUM_STEPS: 400e6
 FORCE_TORCH_SINGLE_THREADED: True
 
 EVAL:
@@ -26,13 +30,14 @@ EVAL:
   EVAL_FREQ: 5
 
 RL:
-  REWARD_MEASURE: "simple_reward"
-  SUCCESS_MEASURE: "success"
+  SUCCESS_REWARD: 2.5
+  REWARD_MEASURE: "distance_to_goal"
+  SLACK_REWARD: -1e-3
 
   POLICY:
     name: "EAIPolicy"
+    input_image_size: 256
     hidden_size: 512
-    input_image_size: 128
     rnn_type: "LSTM"
     num_recurrent_layers: 2
     use_augmentations: True
@@ -42,8 +47,9 @@ RL:
     use_cls: False
 
   PPO:
+    # ppo params
     clip_param: 0.2
-    ppo_epoch: 2
+    ppo_epoch: 4
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.01
@@ -61,7 +67,6 @@ RL:
     reward_window_size: 50
     use_normalized_advantage: False
     hidden_size: 512
-    use_double_buffered_sampler: False
 
   DDPPO:
     sync_frac: 0.6
