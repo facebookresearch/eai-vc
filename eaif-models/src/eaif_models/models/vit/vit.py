@@ -20,11 +20,14 @@ from timm.models.vision_transformer import resize_pos_embed
 class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
     """Vision Transformer with support for global average pooling"""
 
-    def __init__(self, global_pool=False, use_cls=True, mask_ratio=None, **kwargs):
+    def __init__(
+        self, global_pool=False, use_cls=True, mask_ratio=None, del_head=True, **kwargs
+    ):
         super(VisionTransformer, self).__init__(**kwargs)
         assert not (global_pool and use_cls)
 
-        del self.head  # don't use prediction head
+        if del_head:
+            del self.head  # don't use prediction head
 
         self.global_pool = global_pool
         if self.global_pool:
@@ -66,6 +69,20 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
 
         return x_masked, mask, ids_restore
 
+    def handle_outcome(self, x):
+        if self.global_pool:
+            x = x[:, 1:, :].mean(dim=1)  # global pool without cls token
+            outcome = self.fc_norm(x)
+        elif self.use_cls:
+            x = self.norm(x)
+            outcome = x[:, 0]  # use cls token
+        else:
+            x = self.norm(x)
+            outcome = reshape_embedding(
+                x[:, 1:]
+            )  # remove cls token and reshape embedding
+        return outcome
+
     def forward_features(self, x):
         B = x.shape[0]
         x = self.patch_embed(x)
@@ -79,28 +96,32 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
 
         # append cls token
         cls_token = self.cls_token + self.pos_embed[:, :1, :]
-        cls_tokens = cls_token.expand(B, -1, -1)
-        x = torch.cat((cls_tokens, x), dim=1)
+        x = torch.cat((cls_token.expand(B, -1, -1), x), dim=1)
 
-        for blk in self.blocks:
-            x = blk(x)
-
-        if self.global_pool:
-            x = x[:, 1:, :].mean(dim=1)  # global pool without cls token
-            outcome = self.fc_norm(x)
-        elif self.use_cls:
-            x = self.norm(x)
-            outcome = x[:, 0]  # use cls token
-        else:
-            x = self.norm(x)
-            outcome = reshape_embedding(
-                x[:, 1:]
-            )  # remove cls token and reshape embedding
-
-        return outcome
+        x = self.blocks(x)
+        return self.handle_outcome(x)
 
     def forward(self, x):
         return self.forward_features(x)
+
+
+class ClipVisionTransformer(VisionTransformer):
+    def forward_features(self, x):
+        B = x.shape[0]
+        x = self.patch_embed(x)
+        x = torch.cat(
+            [
+                self.cls_token.squeeze()
+                + torch.zeros(B, 1, x.shape[-1], device=x.device),
+                x,
+            ],
+            dim=1,
+        )  # shape = [*, grid ** 2 + 1, width]
+        x = x + self.pos_embed.squeeze().to(x.dtype)
+        x = self.norm_pre(x)
+
+        x = self.blocks(x)
+        return self.handle_outcome(x)
 
 
 def reshape_embedding(x):
@@ -135,6 +156,23 @@ def vit_base_patch16(**kwargs):
         mlp_ratio=4,
         qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        **kwargs
+    )
+    return model
+
+
+def clip_vit_base_patch16(**kwargs):
+    model = ClipVisionTransformer(
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        num_heads=12,
+        mlp_ratio=4,
+        qkv_bias=True,
+        norm_layer=partial(nn.LayerNorm, eps=1e-6),
+        # CLIP-specific:
+        pre_norm=True,
+        num_classes=512,
         **kwargs
     )
     return model

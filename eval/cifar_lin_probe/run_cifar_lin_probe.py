@@ -60,7 +60,7 @@ def precompute_embeddings(model, dataset, config):
     # data parallel mode to use both GPUs
     model = model.to(config["device"])
     model = torch.nn.DataParallel(model)
-    model = model.train()
+    model = model.eval()
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=config["batch_size"], shuffle=False, num_workers=2
     )

@@ -2,6 +2,7 @@ import types
 
 import torch
 import torchvision  # noqa
+import clip
 
 
 def forward_without_avgpool_flatten(self, x: torch.Tensor) -> torch.Tensor:
@@ -81,3 +82,42 @@ def load_vip_checkpoint(checkpoint_path):
             result[no_prefix_key] = value
 
     return result
+
+
+# Original forward: https://github.com/openai/CLIP/blob/d50d76daa670286dd6cacf3bcd80b5e4823fc8e1/clip/model.py#L223
+def forward_without_avgpool_flatten_clip(self, x: torch.Tensor) -> torch.Tensor:
+    def stem(x):
+        x = self.relu1(self.bn1(self.conv1(x)))
+        x = self.relu2(self.bn2(self.conv2(x)))
+        x = self.relu3(self.bn3(self.conv3(x)))
+        x = self.avgpool(x)
+        return x
+
+    x = x.type(self.conv1.weight.dtype)
+    x = stem(x)
+    x = self.layer1(x)
+    x = self.layer2(x)
+    x = self.layer3(x)
+    x = self.layer4(x)
+
+    return x
+
+
+# Explanation of difference between torchvision resnet with clip:
+# https://github.com/openai/CLIP/blob/d50d76daa670286dd6cacf3bcd80b5e4823fc8e1/clip/model.py#L95
+def resnet50_clip(use_avgpool_and_flatten=True, *args, **kwargs):
+    model = clip.model.ModifiedResNet(*args, **kwargs)
+    if not use_avgpool_and_flatten:
+        funcType = types.MethodType
+        model.forward = funcType(forward_without_avgpool_flatten_clip, model)
+    return model
+
+
+def load_clip_resnet50_checkpoint(checkpoint_path):
+    checkpoint = torch.jit.load(checkpoint_path, map_location="cpu").state_dict()
+    state_dict = {
+        k.replace("visual.", ""): v
+        for k, v in checkpoint.items()
+        if k.startswith("visual.")
+    }
+    return state_dict
