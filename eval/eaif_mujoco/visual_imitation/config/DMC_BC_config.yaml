@@ -45,15 +45,11 @@ bc_kwargs:
   dropout         :   0
 
 # logging
-<<<<<<< HEAD
 job_name          :   ${embedding}
 wandb:
-  project : vip-mujoco
+  project : dmc_eaif_mujoco
   entity  : eai-foundations
   name    : ${embedding}
-=======
-job_name          :   'dmc_eaif_mujoco'
->>>>>>> main
 
   
 hydra:
