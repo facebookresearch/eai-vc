@@ -58,7 +58,7 @@ Don't forget the `with-proxy` and also the Python version 3.8 and **not** 3.9:
 ```bash
 with-proxy conda create --name ov python=3.8
 conda activate ov
-with-proxy conda install pytorch=1.12 torchvision=0.13 cudatoolkit=11.3 -c pytorch
+with-proxy conda install pytorch=1.12 torchvision=0.13 cudatoolkit=11.3 torchtext -c pytorch
 ```
 
 ### Install airstore

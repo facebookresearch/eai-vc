@@ -20,7 +20,7 @@ from timm.models.vision_transformer import resize_pos_embed
 class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
     """Vision Transformer with support for global average pooling"""
 
-    def __init__(self, global_pool=False, use_cls=False, mask_ratio=None, **kwargs):
+    def __init__(self, global_pool=False, use_cls=True, mask_ratio=None, **kwargs):
         super(VisionTransformer, self).__init__(**kwargs)
         assert not (global_pool and use_cls)
 
@@ -168,7 +168,7 @@ def vit_huge_patch14(**kwargs):
     return model
 
 
-def load_encoder(model, checkpoint_path=None):
+def load_mae_encoder(model, checkpoint_path=None):
     if checkpoint_path is None:
         return model
 
@@ -181,6 +181,7 @@ def load_encoder(model, checkpoint_path=None):
             model.patch_embed.grid_size,
         )
 
+    # filter out keys with name decoder or mask_token
     state_dict = {
         k: v
         for k, v in state_dict.items()
@@ -195,7 +196,6 @@ def load_encoder(model, checkpoint_path=None):
         state_dict["fc_norm.bias"] = model.fc_norm.bias
 
     model.load_state_dict(state_dict)
-    # model.load_state_dict(state_dict, strict=False)
     return model
 
 

@@ -1,0 +1,12 @@
+# @package _global_
+
+# Follow config/experiments/imisra/014_oclip_vitb32_laion400mact_imval_b32K_lr5e-4_adampt98_ep32_wdpt2_nocoloraug.yaml
+# Use AMP for optimization
+# Use FP16 gradient comm
+# Use Omnivision Trainer
+
+
+defaults:
+  - /experiments/rgirdhar/0083_jointEncoder_frameModel.yaml
+
+video_num_frames: ${times:${video_clip_duration},2}

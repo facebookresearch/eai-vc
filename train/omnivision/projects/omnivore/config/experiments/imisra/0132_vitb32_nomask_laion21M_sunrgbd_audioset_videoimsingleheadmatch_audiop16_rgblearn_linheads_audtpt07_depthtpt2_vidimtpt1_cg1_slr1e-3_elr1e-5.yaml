@@ -407,6 +407,16 @@ trainer:
             preprocessor_name: d_preprocessor
             output_key: "depth_tokens_vision_targets"
             output_key_for_dict: False
+        - sample_type: ${get_class:omnivore.data.api.BatchAudioTextSample}
+          sample_field_to_modality:
+          - input_fields: ["audio"]
+            preprocessor_name: audio_preprocessor
+            output_key: "audio_tokens"
+            output_key_for_dict: False
+          - input_fields: ["text"]
+            preprocessor_name: text_preprocessor
+            output_key: "text_tokens"
+            output_key_for_dict: False
       trunks:
         - name: all
           trunk:

@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0147_oclip_vitb32_laion2b-20Mroll_b4K_ep32
+
+constants:
+  batch_size: 256
+  kernel_size: 16
+  warmup_epochs: 1
+  use_checkpoint: True
+  rgb_crop_size: 224

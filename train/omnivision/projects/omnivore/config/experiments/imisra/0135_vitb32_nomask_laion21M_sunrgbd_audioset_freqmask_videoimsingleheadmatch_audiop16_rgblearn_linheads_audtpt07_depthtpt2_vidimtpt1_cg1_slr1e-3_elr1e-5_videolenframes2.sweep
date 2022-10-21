@@ -1,0 +1,4 @@
++experiments=imisra/0132_vitb32_nomask_laion21M_sunrgbd_audioset_videoimsingleheadmatch_audiop16_rgblearn_linheads_audtpt07_depthtpt2_vidimtpt1_cg1_slr1e-3_elr1e-5
+constants.audio_freq_mask_param=12
+constants.video_clip_duration=2
+constants.video_num_frames=2

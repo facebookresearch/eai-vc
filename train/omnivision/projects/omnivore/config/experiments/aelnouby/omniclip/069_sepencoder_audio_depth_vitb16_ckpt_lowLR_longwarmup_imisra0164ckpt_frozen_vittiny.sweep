@@ -1,0 +1,5 @@
++experiments=aelnouby/omniclip/065_sepencoder_audio_depth_vitb16_ckpt_lowLR_longwarmup_imisra0164ckpt_frozen
+trainer.model.multimodal_model.trunks.1.trunk.embed_dim=192
+trainer.model.multimodal_model.trunks.2.trunk.embed_dim=192
+trainer.model.multimodal_model.trunks.1.trunk.attn_target.num_heads=8
+trainer.model.multimodal_model.trunks.2.trunk.attn_target.num_heads=8

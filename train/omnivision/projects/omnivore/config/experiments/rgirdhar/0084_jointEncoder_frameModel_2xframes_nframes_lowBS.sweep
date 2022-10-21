@@ -1,0 +1,3 @@
++experiments=rgirdhar/0084_jointEncoder_frameModel_2xframes
+batch_size=100
+video_clip_duration=6,8

@@ -1,0 +1,159 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0132_vitb32_nomask_laion21M_sunrgbd_audioset_videoimsingleheadmatch_audiop16_rgblearn_linheads_audtpt07_depthtpt2_vidimtpt1_cg1_slr1e-3_elr1e-5
+
+constants:
+  audio_freq_mask_param: 12
+
+trainer:
+  model:
+    multimodal_model:
+      heads:
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.heads.num_token_specific_head.NumTokenSpecificHead
+              heads:
+                # head for images
+                - num_tokens: ${add:${pow:${int:${divide:${constants.rgb_crop_size}, ${constants.rgb_kernel_size.1}}},2},1}
+                  head:
+                    _target_: torch.nn.Sequential
+                    _args_:
+                    - _target_: omnivore.models.pooling_helpers.SelectElement
+                      index: 0
+                    - _target_: omnivision.model.model_init_utils.init_parameters
+                      model:
+                        _target_: torch.nn.Linear
+                        in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                        out_features: ${constants.head_final_embed_dim}
+                        bias: false
+                      init_fns:
+                        weight:
+                          _target_: torch.nn.init.normal_
+                          _partial_: true
+                          mean: 0
+                          std: 0.03608
+                # head for videos
+                - num_tokens: ${add:${int:${divide:${times:${constants.video_num_frames},${pow:${int:${divide:${constants.rgb_crop_size}, ${constants.rgb_kernel_size.1}}},2}},${constants.rgb_kernel_size.0}}},1}
+                  head:
+                    _target_: torch.nn.Sequential
+                    _args_:
+                    - _target_: omnivore.models.pooling_helpers.SelectElement
+                      index: 0
+                    - _target_: omnivision.model.model_init_utils.init_parameters
+                      model:
+                        _target_: torch.nn.Linear
+                        in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                        out_features: ${constants.head_final_embed_dim}
+                        bias: false
+                      init_fns:
+                        weight:
+                          _target_: torch.nn.init.normal_
+                          _partial_: true
+                          mean: 0
+                          std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: vision_tokens
+          output_key: vision_embed
+        - head:
+            _target_: omnivore.models.pooling_helpers.SelectEOSAndProject
+            proj:
+              _target_: torch.nn.Sequential
+              _args_:
+              - _target_: torch.nn.LayerNorm
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+              - _target_: omnivision.model.model_init_utils.init_parameters
+                model:
+                  _target_: torch.nn.Linear
+                  in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                  out_features: ${constants.head_final_embed_dim}
+                  bias: false
+                init_fns:
+                  weight:
+                    _target_: torch.nn.init.normal_
+                    _partial_: true
+                    mean: 0
+                    std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: text_tokens
+          output_key: text_embed
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${constants.head_final_embed_dim}
+                bias: false
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: true
+                  mean: 0
+                  std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: audio_tokens
+          output_key: audio_embed
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${constants.head_final_embed_dim}
+                bias: false
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: true
+                  mean: 0
+                  std: 0.03608
+          fork_module: ''
+          preprocessed_input_key: depth_tokens_vision_targets
+          output_key: depth_embed_vision_targets
+      postprocessors:
+      - name: normalize
+        postprocessor:
+          _target_: omnivore.models.helpers.Normalize
+          dim: -1
+      - name: normalize_and_scale_audio
+        postprocessor:
+          _target_: torch.nn.Sequential
+          _args_:
+          - _target_: omnivore.models.helpers.Normalize
+            dim: -1
+          - _target_: omnivore.models.helpers.LearnableLogitScaling
+            logit_scale_init: ${divide:1,${constants.inv_audio_temp}}
+            learnable: ${constants.audio_temp_learnable}
+      - name: "normalize_and_scale_text"
+        postprocessor:
+          _target_: torch.nn.Sequential
+          _args_:
+            - _target_: omnivore.models.helpers.Normalize
+              dim: -1
+            - _target_: omnivore.models.helpers.LearnableLogitScaling
+              logit_scale_init: ${divide:1,${constants.inv_text_temp}}
+              learnable: ${constants.text_temp_learnable}
+      - name: "normalize_and_scale_depth"
+        postprocessor:
+          _target_: torch.nn.Sequential
+          _args_:
+            - _target_: omnivore.models.helpers.Normalize
+              dim: -1
+            - _target_: omnivore.models.helpers.LearnableLogitScaling
+              logit_scale_init: ${divide:1,${constants.inv_depth_temp}}
+              learnable: ${constants.depth_temp_learnable}
+      

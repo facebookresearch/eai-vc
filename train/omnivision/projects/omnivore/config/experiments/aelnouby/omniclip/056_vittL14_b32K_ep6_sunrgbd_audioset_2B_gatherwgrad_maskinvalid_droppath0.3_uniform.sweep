@@ -1,0 +1,3 @@
++experiments=aelnouby/omniclip/056_vittL14_b32K_ep6_sunrgbd_audioset_2B_gatherwgrad_maskinvalid
+trainer.model.multimodal_model.trunks.0.trunk.drop_path_rate=0.3
++trainer.model.multimodal_model.trunks.0.trunk.drop_path_type=uniform

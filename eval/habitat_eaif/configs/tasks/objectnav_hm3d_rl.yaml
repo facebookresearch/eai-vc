@@ -1,0 +1,40 @@
+TASK_CONFIG:
+  ENVIRONMENT:
+    MAX_EPISODE_STEPS: 500
+    ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS: 50000
+
+  SIMULATOR:
+    FORWARD_STEP_SIZE: 0.25
+    TURN_ANGLE: 30
+    TILT_ANGLE: 30
+    ACTION_SPACE_CONFIG: "v1"
+    AGENT_0:
+      SENSORS: ['RGB_SENSOR']
+      HEIGHT: 0.88
+      RADIUS: 0.18
+    HABITAT_SIM_V0:
+      GPU_DEVICE_ID: 0
+      ALLOW_SLIDING: False
+    RGB_SENSOR:
+      WIDTH: 640
+      HEIGHT: 480
+      HFOV: 79
+      POSITION: [0, 0.88, 0]
+  TASK:
+    TYPE: ObjectNav-v1
+    POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
+
+    SENSORS: ['OBJECTGOAL_SENSOR']
+    GOAL_SENSOR_UUID: objectgoal
+    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
+
+    DISTANCE_TO_GOAL:
+      DISTANCE_TO: VIEW_POINTS
+    SUCCESS:
+      SUCCESS_DISTANCE: 0.1
+
+  DATASET:
+    TYPE: ObjectNav-v1
+    SPLIT: train
+    DATA_PATH: "data/datasets/objectnav/hm3d/v0.2/{split}/{split}.json.gz"
+    SCENES_DIR: "data/scene_datasets/"

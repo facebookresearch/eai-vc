@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0161_vitb16_laion1b-25Mroll_b32K_sunrgbd_b4K_audioset_b32K_cg5_slr1e-3_elr1e-5_maskgatherloss_linheads_ep32
+
+
+constants:
+  loss_wt_audio_video: 5.0
+  audioset_batch_size: 256
+  use_grad_checkpoint_audioset: true
+  use_grad_checkpoint_audioset_blk_ids: [0, 1, 2]

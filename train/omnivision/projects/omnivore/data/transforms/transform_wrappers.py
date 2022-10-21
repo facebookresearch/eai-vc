@@ -21,7 +21,17 @@ class SingleFieldTransform(Callable):
         self.base_transform = base_transform
 
     def __call__(self, sample: Sample) -> Sample:
-        setattr(sample, self.field, self.base_transform(getattr(sample, self.field)))
+        try:
+            setattr(
+                sample, self.field, self.base_transform(getattr(sample, self.field))
+            )
+        except TypeError:
+            # Adding details to classic errors such as:
+            # - TypeError: 'ListConfig' object is not callable
+            transform_type = type(self.base_transform)
+            raise TypeError(
+                f"Is not callable: self.base_transform of type {transform_type}: {self.base_transform}"
+            )
         return sample
 
 

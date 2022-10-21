@@ -1,0 +1,32 @@
+# @package _global_
+
+defaults:
+  - /experiments/kalyanv/omniscale/uru10x01/pretrain/airstore_vith_uru5b_tool_1_epoch.yaml
+  - _self_
+
+scratch:
+  # number of classes in the `tool` version of Uru 5B
+  num_classes: 28051
+  batch_size: 64
+  phases_per_epoch: 100
+
+launcher:
+  num_nodes: 16
+  gpus_per_node: 8
+  experiment_log_dir: ???
+
+trainer:
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 25 # 0 only last checkpoint is saved.
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      strict: False # heads aren't loaded
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint_and_apply_kernels
+        checkpoint_path: /checkpoint/omniscale_oss/kalyanv/mae_pretrain_vit_huge.pth
+        ckpt_state_dict_keys: ["model"]
+        checkpoint_kernels:
+        - _target_: omnivision.model.checkpoint_utils.CkptPrependKernel
+          prepend_pattern: trunk.

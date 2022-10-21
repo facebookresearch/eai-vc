@@ -1,0 +1,2 @@
++experiments=aelnouby/omniclip/060_vittL14_b32K_ep6_sunrgbd_audioset_2B_gatherwgrad_maskinvalid_noDroppath
+trainer.optim.optimizer.betas.1=0.95

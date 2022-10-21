@@ -23,16 +23,26 @@ def make_tensorboard_logger(log_dir: str, **writer_kwargs: Any):
     makedir(log_dir)
 
     if log_dir.startswith("manifold://"):
-        from omnivore.fb.logger import ManifoldTensorBoardLogger  # noqa
+        from fblearner.flow.util.visualization_utils import (
+            log_creation_event,
+            summary_writer,
+        )
 
-        manifold_path = log_dir.replace("manifold://", "")
-        bucket_sep_idx = manifold_path.index("/")
-        bucket = manifold_path[:bucket_sep_idx]
-        path = manifold_path[bucket_sep_idx + 1 :]
+        # TODO: Add support for vis_metrics_from_writer for flow GUI
+        summary_writer_method = summary_writer
+        tensorboard_url = f"https://internalfb.com/intern/tensorboard/?dir={log_dir}"
+        logging.info(f"View TensorBoard logs at: {tensorboard_url}")
 
-        return ManifoldTensorBoardLogger(bucket=bucket, path=path, **writer_kwargs)
+        _, rank = get_machine_local_and_dist_rank()
+        if rank == 0:
+            log_creation_event(log_dir)
+
     else:
-        return TensorBoardLogger(path=log_dir, **writer_kwargs)
+        summary_writer_method = SummaryWriter
+
+    return TensorBoardLogger(
+        path=log_dir, summary_writer_method=summary_writer_method, **writer_kwargs
+    )
 
 
 # TODO: Expose writer building in configs.
@@ -43,7 +53,12 @@ class TensorBoardWriterWrapper(object):
     """
 
     def __init__(
-        self, path: str, *args: Any, filename_suffix: str = None, **kwargs: Any
+        self,
+        path: str,
+        *args: Any,
+        filename_suffix: str = None,
+        summary_writer_method: Any = SummaryWriter,
+        **kwargs: Any,
     ) -> None:
         """Create a new TensorBoard logger.
         On construction, the logger creates a new events file that logs
@@ -66,7 +81,7 @@ class TensorBoardWriterWrapper(object):
             logging.info(
                 f"TensorBoard SummaryWriter instantiated. Files will be stored in: {path}"
             )
-            self._writer = SummaryWriter(
+            self._writer = summary_writer_method(
                 log_dir=path,
                 *args,
                 filename_suffix=filename_suffix or str(uuid.uuid4()),

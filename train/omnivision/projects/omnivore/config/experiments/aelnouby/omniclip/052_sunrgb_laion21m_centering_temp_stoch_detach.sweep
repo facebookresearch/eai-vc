@@ -1,0 +1,5 @@
++experiments=aelnouby/omniclip/035_cpy_034_warmup_fix_lr1.6e-3_eqbatch_outdim_dispmaxnorm_centering_detachSun
+trainer.loss.sunrgbd.loss_fn.feat1_no_grad=0.8
+trainer.optim.options.weight_decay.0.scheduler.value=0.05,0.2
+trainer.model.multimodal_model.postprocessors.2.postprocessor._args_.1.logit_scale_init=14.28,5
+constants.head_final_embed_dim=128,512

@@ -1,0 +1,59 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0164_vitb16_shared_p-2-16-16_laion1b-25Mroll_b32K_cg5_slr1e-3_elr1e-5_maskgatherloss_ep32
+
+trainer:
+  val_epoch_freq: 2
+  max_epochs: 40
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      repeat_factors: [1.0]
+      datasets:
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.vision_text_dataset.VisionTextDataset
+            base_dataset:
+              _target_: omnivore.data.webdataset_helpers.WebVisionTextPipeline
+              base_dataset_length: 25e6
+              base_dataset_fn:
+                _target_: omnivore.data.webdataset_helpers.get_wds_dataset
+                _partial_: True
+                resampled: True
+                urls:
+                  _target_: omnivore.utils.data.FileLoader.load
+                  return_idx: False
+                  path_list:
+                    - /checkpoint/imisra/datasets/laion/laion2B-en_clean_subset800M_tarlist.pkl
+            transforms:
+              - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+                base_transform:
+                  _target_: torchvision.transforms.Compose
+                  transforms:
+                    - _target_: torchvision.transforms.RandomResizedCrop
+                      size: ${constants.rgb_crop_size}
+                      interpolation: 3
+                      scale: [0.9, 1.0]
+                    - _target_: torchvision.transforms.ToTensor
+                    - _target_: torchvision.transforms.Normalize
+                      mean: ${constants.in1k_rgb_mean}
+                      std: ${constants.in1k_rgb_std}
+              - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+                base_transform:
+                  _target_: slip.tokenizer.SimpleTokenizer
+                  bpe_path_list: ${constants.bpe_path_list}
+          shuffle: True
+          batch_size: ${constants.laion_batch_size}
+          num_workers: 12
+          pin_memory: True
+          drop_last: True
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: laion
+            batch_kwargs:
+              model_fwd_kwargs:
+                use_checkpoint: ${constants.use_grad_checkpoint_laion}
+                checkpoint_blk_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+          worker_init_fn: NULL

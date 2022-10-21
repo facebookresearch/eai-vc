@@ -4,32 +4,24 @@ from functools import partial
 import numpy as np
 from scipy import interpolate
 
-import timm.models.beit
+import timm.models.beit as beit
 import torch
 import torch.nn as nn
 
 
 # fmt: off
-class Beit(timm.models.beit.Beit):
+class Beit(beit.Beit):
     """ Vision Transformer w/ Distillation with support for global average pooling
     """
-    def __init__(self, global_pool=False, use_cls=False, mask_ratio=None, use_rel_pos_bias=False, **kwargs):
+    def __init__(self, use_cls=False, **kwargs):
+        kwargs['global_pool'] = 'avg' if kwargs['global_pool'] else ''
         super(Beit, self).__init__(**kwargs)
-        assert not (global_pool and use_cls)
+        assert not (self.global_pool and use_cls)
 
         del self.head  # don't use prediction head
 
-        self.global_pool = global_pool
-        if self.global_pool:
-            norm_layer = kwargs['norm_layer']
-            embed_dim = kwargs['embed_dim']
-            self.fc_norm = norm_layer(embed_dim)
-
-            del self.norm  # remove the original norm
-
         self.use_cls = use_cls
-        self.mask_ratio = mask_ratio
-        self.use_rel_pos_bias = use_rel_pos_bias
+        self.use_rel_pos_bias = kwargs['use_rel_pos_bias']
 
     def forward_features(self, x):
         B = x.shape[0]
@@ -99,7 +91,7 @@ def beit_huge_patch14(**kwargs):
     return model
 
 
-def load_encoder(model, checkpoint_path):
+def load_data2vec_encoder(model, checkpoint_path):
     # Code taken from here: 
     # https://github.com/microsoft/unilm/blob/806a6fd574d0998bcdafacc7191881b162c3b827/beit/run_class_finetuning.py#L331
     checkpoint_model = torch.load(checkpoint_path, map_location="cpu")["model"]
@@ -208,5 +200,17 @@ def load_encoder(model, checkpoint_path):
             pos_tokens = pos_tokens.permute(0, 2, 3, 1).flatten(1, 2)
             new_pos_embed = torch.cat((extra_tokens, pos_tokens), dim=1)
             checkpoint_model['pos_embed'] = new_pos_embed
+
+    # filter out keys with name decoder or mask_token
+    checkpoint_model = {k: v for k, v in checkpoint_model.items() if "decoder" not in k and "mask_token" not in k and "head" not in k}
+    checkpoint_model["rel_pos_bias.relative_position_index"] = model.rel_pos_bias.relative_position_index
+
+    if model.global_pool:
+        # add fc_norm in the state dict from the model
+        checkpoint_model["fc_norm.weight"] = model.fc_norm.weight
+        checkpoint_model["fc_norm.bias"] = model.fc_norm.bias
+        # rel_pos_bias.relative_position_index
+
+    model.load_state_dict(checkpoint_model)
 
     return model

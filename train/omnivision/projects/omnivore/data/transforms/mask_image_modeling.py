@@ -219,3 +219,58 @@ class MaskImageModeling:
             pred_shape=self.pred_shape,
             precomputed_pred_ratio=precomputed_pred_ratio,
         )
+
+
+class MaskForPerformance:
+    """
+    Creates a mask to remove the minimum amount of tokens needed
+    to get a multiple of 8 (to enable tensor cores)
+    """
+
+    def __init__(self, patch_size: int, class_token: bool = True, multiple_of: int = 8):
+        self.patch_size = patch_size
+        self.class_token = class_token
+        self.multiple_of = multiple_of
+
+    def __call__(self, image):
+        patch_size = self.patch_size
+        squeeze_dim, img_t, img_h, img_w = get_image_dims(image)
+
+        h = img_h // patch_size
+        w = img_w // patch_size
+
+        number_of_tokens = h * w
+        if self.class_token:
+            number_of_tokens += 1
+
+        mask = self._drop(h, w, number_of_tokens % self.multiple_of)
+        return {
+            "data": image,
+            "mask": torch.from_numpy(mask),
+        }
+
+    def _drop(self, h: int, w: int, num_drop: int):
+        mask = np.hstack(
+            [
+                np.zeros(h * w - num_drop),
+                np.ones(num_drop),
+            ]
+        ).astype(bool)
+        np.random.shuffle(mask)
+        mask = mask.reshape(h, w)
+        return mask
+
+
+class WithEmptyMask:
+    def __init__(self, patch_size: int):
+        self.patch_size = patch_size
+
+    def __call__(self, image):
+        squeeze_dim, img_t, img_h, img_w = get_image_dims(image)
+        h = img_h // self.patch_size
+        w = img_w // self.patch_size
+        mask = np.zeros((h, w)).astype(bool)
+        return {
+            "data": image,
+            "mask": torch.from_numpy(mask),
+        }

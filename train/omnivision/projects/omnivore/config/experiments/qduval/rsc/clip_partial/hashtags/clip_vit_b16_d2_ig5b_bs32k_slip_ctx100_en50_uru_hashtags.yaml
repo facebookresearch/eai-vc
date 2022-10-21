@@ -1,0 +1,12 @@
+# @package _global_
+
+defaults:
+  - /experiments/qduval/rsc/clip_partial/hashtags/base.yaml
+  - _self_
+
+
+scratch:
+  projector_depth: 2
+  english_threshold: 0.5
+  context_length: 100
+  remove_pound: false

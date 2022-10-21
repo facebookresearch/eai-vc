@@ -1,0 +1,135 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0151_simpletx_vitb32_laion2b-20Mroll_b4k_ep32
+
+
+constants:
+  batch_size: 512
+  kernel_size: 14
+  warmup_epochs: 0.4 # 1ep over 20M
+  use_checkpoint: True
+
+launcher:
+  num_nodes: 8
+  gpus_per_node: 8
+
+trainer:
+  max_epochs: 16
+  model:
+    multimodal_model:
+      trunks:
+          - name: vision
+            trunk:
+              _target_: omnivore.models.simple_transformer.SimpleTransformer
+              block: 
+                _target_: omnivore.models.layers.BlockWithEfficientDropPath
+                _partial_: true
+              embed_dim: 1024
+              num_blocks: 24
+              ffn_dropout_rate: 0.0
+              drop_path_rate: 0.0
+              layer_scale_type: per_channel
+              layer_scale_init_value: 1e-4
+              attn_target:
+                _target_: omnivore.models.simple_transformer.MultiheadAttention
+                embed_dim: ${..embed_dim}
+                num_heads: 16
+                dropout: 0.0
+                bias: True
+                add_bias_kv: True
+                _partial_: True
+              pre_transformer_layer:
+                _target_: omnivore.models.helpers.EinOpsRearrange
+                rearrange_expr: "b l d -> l b d"
+              post_transformer_layer:
+                _target_: omnivore.models.helpers.EinOpsRearrange
+                rearrange_expr: "l b d -> b l d"
+
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.vision_text_dataset.VisionTextDataset
+        base_dataset:
+          _target_: omnivore.data.webdataset_helpers.WebVisionTextPipeline
+          base_dataset_length: 50e6
+          base_dataset_fn:
+            _target_: omnivore.data.webdataset_helpers.get_wds_dataset
+            _partial_: True
+            resampled: True
+            urls:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: False
+              path_list:
+                - /checkpoint/imisra/datasets/laion/laion2B-en_clean_subset1B_tarlist.pkl
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: ${constants.rgb_crop_size}
+                  interpolation: 3
+                  scale: [0.9, 1.0]
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: ${constants.in1k_rgb_mean}
+                  std: ${constants.in1k_rgb_std}
+          - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+            base_transform:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list: ${constants.bpe_path_list}
+      shuffle: True
+      batch_size: ${constants.batch_size}
+      num_workers: 12
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: laion
+        batch_kwargs:
+          model_fwd_kwargs:
+            use_checkpoint: ${constants.use_checkpoint}
+            # checkpoint_every_n: ${constants.use_checkpoint_every_n}
+            # checkpoint_blk_ids: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            # checkpoint_blk_ids: [0, 1, 2, 3, 4, 5, 6]
+      worker_init_fn: NULL
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.98
+      eps: 1e-6
+    amp:
+      enabled: True
+      amp_dtype: bfloat16 # bfloat16 or float16
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1e-3
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1e-5
+            lengths:
+              - ${divide:${constants.warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${constants.warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+            - '*.bias'
+            - '*pos_embed'
+            - '*cls_token'
+            - "*log_logit_scale"
+          module_cls_names: ["torch.nn.LayerNorm"]

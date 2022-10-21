@@ -1,0 +1,3 @@
++experiments=aelnouby/omniclip/054_cpy_035_warmup_fix_lr1.6e-3_eqbatch_outdim_dispmaxnorm_centering_detachSun_cosinewd
+trainer.max_epochs=50
+trainer.loss.sunrgbd.loss_fn.feat1_no_grad=0.8

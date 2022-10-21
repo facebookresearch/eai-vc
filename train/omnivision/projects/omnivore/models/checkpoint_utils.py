@@ -41,3 +41,26 @@ def load_uru_official_checkpoint(
             v = torch.transpose(v, 0, 1)
         state_dict[k] = v
     return state_dict
+
+
+def expand_pos_embedding(
+    state_dict, pos_embedding_key, new_pos_embed_shape, new_pos_embed_init_fn
+):
+    """
+    Expands position embedding of size "k" to a size > "k"
+    1. Create a new random position embedding of size > "k"
+    2. Copy the old position embedding to the first "k" positions
+    """
+    old_pos_embed = state_dict[pos_embedding_key]
+    # initialize new pos embedding
+    new_pos_embed = torch.zeros(list(new_pos_embed_shape))
+    new_pos_embed_init_fn(new_pos_embed)
+    assert new_pos_embed.ndim == 3
+    assert old_pos_embed.ndim == 3
+    assert new_pos_embed.shape[0] == old_pos_embed.shape[0]
+    assert new_pos_embed.shape[1] > old_pos_embed.shape[1]
+    assert new_pos_embed.shape[2] == old_pos_embed.shape[2]
+    old_n_tokens = old_pos_embed.shape[1]
+    new_pos_embed[:, :old_n_tokens, :] = old_pos_embed
+    state_dict[pos_embedding_key] = new_pos_embed
+    return state_dict

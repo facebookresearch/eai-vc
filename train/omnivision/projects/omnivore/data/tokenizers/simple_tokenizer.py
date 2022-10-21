@@ -69,7 +69,7 @@ def whitespace_clean(text):
 
 
 class SimpleTokenizer(object):
-    def __init__(self, bpe_path_list: List[str], context_length=77):
+    def __init__(self, bpe_path_list: List[str], context_length: int = 77):
         self.byte_encoder = bytes_to_unicode()
         self.byte_decoder = {v: k for k, v in self.byte_encoder.items()}
 
@@ -186,3 +186,62 @@ class SimpleTokenizer(object):
         if len(result) == 1:
             return result[0]
         return result
+
+
+class HashtagSimpleTokenizer(SimpleTokenizer):
+    """
+    A simple tokenizer with a specific handling for hashtags:
+    when a word is preceded with a hashtag, the sub words are detached
+    """
+
+    def __init__(
+        self,
+        bpe_path_list: List[str],
+        context_length: int = 77,
+        keep_pound_sign: bool = False,
+        conservative_mode: bool = True,
+    ):
+        super().__init__(bpe_path_list=bpe_path_list, context_length=context_length)
+        self.keep_pound_sign = keep_pound_sign
+        self.conservative_mode = conservative_mode
+
+    def encode(self, text: str) -> List[int]:
+        bpe_tokens = []
+        text = whitespace_clean(basic_clean(text)).lower()
+        prev_token = ""
+        for token in re.findall(self.pat, text):
+            token = "".join(self.byte_encoder[b] for b in token.encode("utf-8"))
+            sub_tokens = list(self.bpe(token).split(" "))
+            if not self.keep_pound_sign:
+                sub_tokens = [sub_token.replace("#", "") for sub_token in sub_tokens]
+                sub_tokens = [
+                    sub_token
+                    for sub_token in sub_tokens
+                    if sub_token not in {"", "</w>"}
+                ]
+
+            if not prev_token.startswith("#"):
+                bpe_tokens.extend(self.encoder[bpe_token] for bpe_token in sub_tokens)
+            else:
+                # Try to split the words if possible
+                indep_sub_tokens = [
+                    sub_token.replace("</w>", "") + "</w>" for sub_token in sub_tokens
+                ]
+                if all(bpe_token in self.encoder for bpe_token in indep_sub_tokens):
+                    bpe_tokens.extend(
+                        self.encoder[bpe_token] for bpe_token in indep_sub_tokens
+                    )
+                elif self.conservative_mode:
+                    bpe_tokens.extend(
+                        self.encoder[bpe_token] for bpe_token in sub_tokens
+                    )
+                else:
+                    for bpe_token in indep_sub_tokens:
+                        if bpe_token in self.encoder:
+                            bpe_tokens.append(self.encoder[bpe_token])
+                        else:
+                            bpe_tokens.append(
+                                self.encoder[bpe_token.replace("</w>", "")]
+                            )
+            prev_token = token
+        return bpe_tokens

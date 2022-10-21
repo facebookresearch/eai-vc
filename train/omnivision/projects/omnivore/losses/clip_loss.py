@@ -5,6 +5,8 @@ from omnivision.utils.distributed import get_rank
 from omnivore.losses import CORE_LOSS_KEY
 from omnivore.utils.distributed import all_gather_batch
 
+IGNORE_INDEX = -100
+
 
 class CLIPLoss(nn.Module):
     def __init__(
@@ -13,6 +15,8 @@ class CLIPLoss(nn.Module):
         normalize: bool = True,
         loss1_weight: float = 0.5,
         loss2_weight: float = 0.5,
+        label_smoothing: float = 0.0,
+        mask_with_data_valid: bool = False,
     ):
         super().__init__()
         self.all_gather_fn = all_gather_fn
@@ -21,6 +25,8 @@ class CLIPLoss(nn.Module):
         self.normalize = normalize
         self.loss1_weight = loss1_weight
         self.loss2_weight = loss2_weight
+        self.label_smoothing = label_smoothing
+        self.mask_with_data_valid = mask_with_data_valid
 
     def forward(self, outputs):
         image_embed = outputs["image_embed"]
@@ -46,8 +52,29 @@ class CLIPLoss(nn.Module):
         logits_per_image = logit_scale * image_embed @ text_embed_all.t()
         logits_per_text = logit_scale * text_embed @ image_embed_all.t()
 
-        loss1 = F.cross_entropy(logits_per_image, self.labels)
-        loss2 = F.cross_entropy(logits_per_text, self.labels)
+        # labels for cross-entropy
+        labels = self.labels
+
+        if self.mask_with_data_valid:
+            data_valid_mask = outputs["data_valid"]
+            # clone the labels since we are caching them
+            labels = labels.clone()
+            # make the mask bool so we may index
+            data_valid_mask = data_valid_mask.bool()
+            labels[~data_valid_mask] = IGNORE_INDEX
+
+        loss1 = F.cross_entropy(
+            logits_per_image,
+            labels,
+            label_smoothing=self.label_smoothing,
+            ignore_index=IGNORE_INDEX,
+        )
+        loss2 = F.cross_entropy(
+            logits_per_text,
+            labels,
+            label_smoothing=self.label_smoothing,
+            ignore_index=IGNORE_INDEX,
+        )
 
         loss = loss1 * self.loss1_weight + loss2 * self.loss2_weight
 

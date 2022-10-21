@@ -1,0 +1,422 @@
+# @package _global_
+
+# Follow config/experiments/imisra/014_oclip_vitb32_laion400mact_imval_b32K_lr5e-4_adampt98_ep32_wdpt2_nocoloraug.yaml
+# Use AMP for optimization
+# Use FP16 gradient comm
+# Use Omnivision Trainer
+
+
+audio_num_mel_bins: 128
+video_clip_duration: 10
+# The 102.4 (could have been 100) is for historical reasons where we used 1024
+# target length for 10s clip as per AST
+audio_target_len: ${int:${times:${video_clip_duration},102.4}}
+video_num_frames: ${video_clip_duration}
+embed_dim: 512
+learnable_pos_rgbdt: False
+learnable_pos_audio: True
+rgb_kernel_size: [2, 32, 32]
+warmup_epochs: 1.0
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 32
+  mode: train
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+
+  data:
+    train:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      datasets:
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+            base_dataset:
+              _target_: omnivore.data.path_dataset.AudioPathDataset
+              num_mel_bins: ${audio_num_mel_bins}
+              target_length: ${audio_target_len}
+              new_prefix: /datasets01/audioset/042319/data/
+              path_file_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/train_filelist.npy
+              label_file_list: NULL
+              clip_sampler:
+                _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+                clip_duration: ${video_clip_duration}
+                clips_per_video: ${ceil_int:${divide:10,${video_clip_duration}}}
+              transforms:
+                - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+                  field: audio
+                  base_transform:
+                    _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                    base_transform:
+                      _target_: torchvision.transforms.Compose
+                      transforms:
+                        - _target_: torchaudio.transforms.FrequencyMasking
+                          freq_mask_param: 48
+                        - _target_: torchaudio.transforms.TimeMasking
+                          time_mask_param: 192
+                        - _target_: torchvision.transforms.Normalize
+                          # From table 3 https://arxiv.org/pdf/2207.06405.pdf or https://github.com/YuanGongND/ast/blob/d7d8b4b8e06cdaeb6c843cdb38794c1c7692234c/src/run.py#L62
+                          mean: -4.268
+                          std: ${times:4.569,2}
+            captions_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/train_captions.npy
+            caption2data_mapping_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/train_captions2audio.npy
+            tokenizer:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Pretrained/bpe_simple_vocab_16e6.txt.gz
+                - manifold://omnivore/tree/datasets/yfcc100m/meta_data/yfcc_meta_data/bpe_simple_vocab_16e6.txt.gz
+          shuffle: True
+          batch_size: 64
+          num_workers: 12
+          pin_memory: True
+          drop_last: False
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: audiocaps
+          worker_init_fn: NULL
+    val:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      datasets:
+        - _target_: omnivore.data.torch_dataset.TorchDataset
+          dataset:
+            _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+            base_dataset:
+              _target_: omnivore.data.path_dataset.AudioPathDataset
+              num_mel_bins: ${audio_num_mel_bins}
+              target_length: ${audio_target_len}
+              new_prefix: /datasets01/audioset/042319/data/
+              path_file_list:
+                - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/test_filelist.npy
+              label_file_list: NULL
+              clip_sampler:
+                _target_: pytorchvideo.data.clip_sampling.ConstantClipsPerVideoSampler
+                clip_duration: ${video_clip_duration}
+                clips_per_video: ${ceil_int:${divide:10,${video_clip_duration}}}
+              transforms:
+                - _target_: omnivore.data.transforms.transform_wrappers.SingleFieldTransform
+                  field: audio
+                  base_transform:
+                    _target_: omnivore.data.transforms.transform_wrappers.ListTransform
+                    base_transform:
+                      _target_: torchvision.transforms.Compose
+                      transforms:
+                        - _target_: torchvision.transforms.Normalize
+                          # From table 3 https://arxiv.org/pdf/2207.06405.pdf or https://github.com/YuanGongND/ast/blob/d7d8b4b8e06cdaeb6c843cdb38794c1c7692234c/src/run.py#L62
+                          mean: -4.268
+                          std: ${times:4.569,2}
+            captions_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/test_captions.npy
+            caption2data_mapping_file_list:
+              - /checkpoint/rgirdhar/Work/FB/2021/003_JointImVid/Datasets/AudioCapsRetrieval/test_captions2audio.npy
+            tokenizer: ${trainer.data.train.datasets.0.dataset.tokenizer}
+          shuffle: False
+          batch_size: 32
+          num_workers: 8
+          pin_memory: True
+          drop_last: False
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: audiocaps
+          worker_init_fn: NULL
+  model:
+    _target_: omnivore.models.multimodal_wrapper.MultiModalZeroShotWithTextTargetsWrapper
+    zero_shot_with_text_targets: NULL
+    multimodal_model:
+      _target_: omnivore.models.multimodal_wrapper.MultimodalWrapper
+      list_input_reduction: mean
+      dataset_specific_list_input_reduction:
+        # Keep audiocaps output (used in val) as is for retrieval eval
+        audiocaps:
+          - field_name: text_embed
+            reduction_op: no_op
+      modality_preprocessors:
+        - name: text_preprocessor
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.TextPreprocessor
+            context_length: 77
+            vocab_size: 49408
+            embed_dim: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            causal_masking: False
+        - name: audio_preprocessor
+          preprocessor:
+            _target_: omnivore.models.multimodal_preprocessors.AudioPreprocessor
+            img_size:
+            - 1
+            - ${audio_num_mel_bins}
+            - ${audio_target_len}
+            num_cls_tokens: 1
+            pos_embed_fn:
+              _target_: omnivore.models.multimodal_preprocessors.SpatioTemporalPosEmbeddingHelper
+              _partial_: true
+              learnable: ${learnable_pos_audio}
+            audio_stem:
+              _target_: omnivore.models.multimodal_preprocessors.PatchEmbedGeneric
+              proj_stem:
+                - _target_: torch.nn.Conv2d
+                  in_channels: 1
+                  kernel_size: 16
+                  out_channels: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                  stride: ${.kernel_size}
+                  bias: False
+              norm_layer:
+                _target_: torch.nn.LayerNorm # called self.ln_pre in VisualTransformer OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+      sample_to_modality_preprocessor:
+        - sample_type: ${get_class:omnivore.data.api.BatchAudioTextSample}
+          sample_field_to_modality:
+          - input_fields: ["audio"]
+            preprocessor_name: audio_preprocessor
+            output_key: "audio_tokens"
+            output_key_for_dict: False
+          - input_fields: ["text"]
+            preprocessor_name: text_preprocessor
+            output_key: "text_tokens"
+            output_key_for_dict: False
+      trunks:
+        - name: all
+          trunk:
+            _target_: omnivore.models.simple_transformer.SimpleTransformer
+            embed_dim: 768
+            num_blocks: 12
+            ffn_dropout_rate: 0.0
+            drop_path_rate: 0.1
+            attn_target:
+              _target_: omnivore.models.simple_transformer.MultiheadAttention
+              embed_dim: ${..embed_dim}
+              num_heads: 12
+              dropout: 0.0
+              bias: True
+              add_bias_kv: True
+              _partial_: True
+            pre_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "b l d -> l b d"
+            post_transformer_layer:
+              _target_: omnivore.models.helpers.EinOpsRearrange
+              rearrange_expr: "l b d -> b l d"
+      tokens_to_trunks:
+        - trunk_name: all
+          input_keys:
+            - vision_tokens
+            - text_tokens
+            - audio_tokens
+      heads:
+        - head:  # Don't need this head but keeping so initialization is easy. also need to keep
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm # called self.ln_post in VisualTransformer OpenCLIP
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0 # select CLS token
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${.in_features}
+                bias: False # OpenCLIP
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.03608 # 768 ** -0.5
+            - _target_: torch.nn.ReLU
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${...2.model.out_features}
+                out_features: ${embed_dim}
+                bias: False # OpenCLIP
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "vision_tokens"
+          output_key: "vision_embed"
+        - head:
+            _target_: omnivore.models.pooling_helpers.SelectEOSAndProject
+            proj:
+              _target_: torch.nn.Sequential
+              _args_:
+              - _target_: torch.nn.LayerNorm # called self.ln_final in CLIP OpenCLIP
+                normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+              - _target_: omnivision.model.model_init_utils.init_parameters
+                model:
+                  _target_: torch.nn.Linear
+                  in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                  out_features: ${embed_dim}
+                  bias: False # OpenCLIP
+                init_fns:
+                  weight:
+                    _target_: torch.nn.init.normal_
+                    _partial_: True
+                    mean: 0
+                    std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "text_tokens"
+          output_key: "text_embed"
+        - head:
+            _target_: torch.nn.Sequential
+            _args_:
+            - _target_: torch.nn.LayerNorm # called self.ln_post in VisualTransformer OpenCLIP
+              normalized_shape: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+            - _target_: omnivore.models.pooling_helpers.SelectElement
+              index: 0 # select CLS token
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${trainer.model.multimodal_model.trunks.0.trunk.embed_dim}
+                out_features: ${.in_features}
+                bias: False # OpenCLIP
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.03608 # 768 ** -0.5
+            - _target_: torch.nn.ReLU
+            - _target_: omnivision.model.model_init_utils.init_parameters
+              model:
+                _target_: torch.nn.Linear
+                in_features: ${...2.model.out_features}
+                out_features: ${embed_dim}
+                bias: False # OpenCLIP
+              init_fns:
+                weight:
+                  _target_: torch.nn.init.normal_
+                  _partial_: True
+                  mean: 0
+                  std: 0.03608 # 768 ** -0.5
+          fork_module: ""
+          preprocessed_input_key: "audio_tokens"
+          output_key: "audio_embed"
+      postprocessors:
+        - name: "normalize"
+          postprocessor:
+            _target_: omnivore.models.helpers.Normalize
+            dim: -1
+        - name: "normalize_and_scale_fixed"
+          postprocessor:
+            _target_: torch.nn.Sequential
+            _args_:
+              - _target_: omnivore.models.helpers.Normalize
+                dim: -1
+              - _target_: omnivore.models.helpers.LearnableLogitScaling
+                learnable: False
+      head_to_postprocessor:
+        - input_key: "text_embed"
+          postprocessor_name: "normalize_and_scale_fixed"
+        - input_key: "audio_embed"
+          postprocessor_name: "normalize"
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas:
+        - 0.9
+        - 0.98
+      eps: 1e-6
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: 1.0
+      norm_type: 2
+    amp:
+      enabled: True
+      amp_dtype: bfloat16 # bfloat16 or float16
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-4
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 1.6e-4
+            lengths:
+              - ${divide:${warmup_epochs},${trainer.max_epochs}}
+              - ${subtract:1,${divide:${warmup_epochs},${trainer.max_epochs}}}
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+            - '*.bias'
+            - '*pos_embed'
+            - '*cls_token'
+          module_cls_names: ["torch.nn.LayerNorm"]
+
+  meters:
+    val:
+      audiocaps:
+        recall_text2vid:
+          _target_: omnivore.meters.cross_modality_retrieval.CrossModalityRetrieval
+          query_feature: text_embed
+          corpus_feature: audio_embed
+          topks: [1, 10]
+  loss:
+    audiocaps:
+      _target_: omnivore.losses.contrastive_loss.ContrastiveLoss
+      feat1_name: audio_embed
+      feat2_name: text_embed
+      logit_scale_name: NULL
+      normalize: False # OpenClip normalizes outputs in the model
+
+  distributed:
+    backend: nccl
+    comms_dtype: bfloat16
+    find_unused_parameters: True
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir: ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+    # tensorboard_embedding_writer:
+    #   _target_: omnivore.logger.TensorBoardEmbeddingLogger
+    #   path: ${..tensorboard_writer.log_dir}
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+    model_weight_initializer: NULL
+
+  cuda:
+    # https://pytorch.org/docs/stable/backends.html
+    allow_tf32: True
+    cudnn_deterministic: False
+    cudnn_benchmark: True
+
+launcher:
+  num_nodes: 1
+  gpus_per_node: 8
+
+hydra:
+  output_subdir: NULL
+  run:
+    dir: .
+
+
+submitit:
+  name: clip_base
+  partition: learnlab
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]

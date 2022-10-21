@@ -1,8 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
+import enum
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, List, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 import torch
@@ -41,25 +42,27 @@ IDENTITY_TRANSFORM = IdentityTransform()
 DEFAULT_SPATIAL_SIZE = 224
 DEFAULT_AUDIO_FRAME_SHIFT_MS = 10  # in milliseconds
 
-# Label types
-LABEL_TYPE_INT = "int"  # default, imagenet, kinetics type labels
-# Comma separated string containing integer values (eg "10,20,30")
-LABEL_TYPE_CSV = "csv"
+
+class LabelTypes(enum.Enum):
+    # default, imagenet, kinetics type labels
+    INT = "int"
+    # Comma separated string containing integer values (eg "10,20,30")
+    CSV = "csv"
 
 
 class PathDataset(Dataset, ABC):
     def __init__(
         self,
         path_file_list: List[str],
-        label_file_list: List[str],
-        remove_prefix="",
-        new_prefix="",
-        remove_suffix="",
-        new_suffix="",
-        label_type: str = LABEL_TYPE_INT,
+        label_file_list: Optional[List[str]] = None,
+        remove_prefix: str = "",
+        new_prefix: str = "",
+        remove_suffix: str = "",
+        new_suffix: str = "",
+        label_type: LabelTypes = LabelTypes.INT,
         copy_on_read: bool = False,
         copy_on_read_dst_basename: str = "data",
-        transforms=None,
+        transforms: Optional[List[callable]] = None,
     ):
         """Creates a dataset where the metadata is stored in a numpy file.
 
@@ -82,7 +85,7 @@ class PathDataset(Dataset, ABC):
         self.new_prefix = new_prefix
         self.remove_suffix = remove_suffix
         self.new_suffix = new_suffix
-        self.label_type = label_type
+        self.label_type = LabelTypes(label_type)
 
         self.paths = None
         self.labels = None
@@ -94,9 +97,10 @@ class PathDataset(Dataset, ABC):
 
         self._load_data()
         self.num_samples = len(self.paths)
-        assert len(self.paths) == len(
-            self.labels
-        ), f"Paths ({len(self.paths)}) != labels ({len(self.labels)})"
+        if self.labels is not None:
+            assert len(self.paths) == len(
+                self.labels
+            ), f"Paths ({len(self.paths)}) != labels ({len(self.labels)})"
         logging.info(
             f"Created dataset from {self.path_file_list} of length: {self.num_samples}"
         )
@@ -107,13 +111,16 @@ class PathDataset(Dataset, ABC):
             logging.info(f"Will copy on read to {self.copy_on_read_dst_dir}")
 
     def _load_data(self):
-        logging.info(f"Loading {self.label_file_list} with shared memory")
-        self.labels, label_file_idx = self.label_sm_loader.load(self.label_file_list)
         logging.info(f"Loading {self.path_file_list} with shared memory")
         self.paths, path_file_idx = self.path_sm_loader.load(self.path_file_list)
-        assert (
-            label_file_idx == path_file_idx
-        ), "Label file and path file were not found at the same index"
+        if self.label_file_list is not None:
+            logging.info(f"Loading {self.label_file_list} with shared memory")
+            self.labels, label_file_idx = self.label_sm_loader.load(
+                self.label_file_list
+            )
+            assert (
+                label_file_idx == path_file_idx
+            ), "Label file and path file were not found at the same index"
         self.is_initialized = True
         self.file_idx = path_file_idx
 
@@ -165,17 +172,18 @@ class PathDataset(Dataset, ABC):
 
     def try_load_object(self, idx):
         is_success = True
+        path = self._get_path(idx)
         try:
-            data = self.load_object(self._get_path(idx))
+            data = self.load_object(path)
         except Exception:
-            logging.warning(f"Couldn't load: {self.paths[idx]}.")
+            logging.warning(f"Couldn't load: {path}.")
             logging.debug("Exception: ", exc_info=True)
             is_success = False
             data = self.default_generator()
         return data, is_success
 
     def get_label(self, idx):
-        return None if self.labels is None else self.labels[idx]
+        return -1 if self.labels is None else self.labels[idx]
 
     @staticmethod
     def create_sample(idx, data, label, is_success):
@@ -191,10 +199,10 @@ class PathDataset(Dataset, ABC):
         return sample
 
     def _process_label(self, label: Union[int, str]) -> Union[int, List[int]]:
-        if self.label_type == LABEL_TYPE_INT:
+        if self.label_type == LabelTypes.INT:
             assert isinstance(label, (int, np.integer))
             return label
-        elif self.label_type == LABEL_TYPE_CSV:
+        elif self.label_type == LabelTypes.CSV:
             assert isinstance(label, str)
             return [int(el) for el in label.split(",")]
         else:
@@ -326,10 +334,8 @@ class ImageWithDepthPathDataset(ImagePathDataset):
                 if depth.ndim == 2:
                     depth = depth[None, ...]  # (1, H, W)
             except Exception:
-                logging.warning(
-                    f"Couldn't load depth image: {self.depth_paths[idx]}. Exception:",
-                    exc_info=True,
-                )
+                logging.warning(f"Couldn't load depth image: {self.depth_paths[idx]}")
+                logging.debug("Exception:", exc_info=True)
                 is_success = False
 
         if not is_success:
@@ -625,10 +631,10 @@ class PathDatasetWithTextLabels:
         self.label_strings = self.gen_label_strings(
             self.tokenizer, self.templates, self.label_names_file_list
         )
-        if self.base_dataset.label_type == LABEL_TYPE_INT:
+        if self.base_dataset.label_type == LabelTypes.INT:
             assert np.issubdtype(self.base_dataset.labels.dtype, np.integer)
             assert max(self.base_dataset.labels) == len(self.label_strings) - 1
-        elif self.base_dataset.label_type == LABEL_TYPE_CSV:
+        elif self.base_dataset.label_type == LabelTypes.CSV:
             # https://stackoverflow.com/questions/10790312/numpy-check-array-for-string-data-type#comment75655003_10790620
             assert self.base_dataset.labels.dtype.kind in {"U", "S"}
             assert (
@@ -705,4 +711,57 @@ class PathDatasetWithTextLabels:
         sample_class_with_text = UPGRADE_TO_TEXT_SAMPLE[type(sample)]
         return sample_class_with_text(
             **dataclass_as_dict(sample), text=self.text_for_label(sample.label)
+        )
+
+
+class PathDatasetWithCaptions:
+    def __init__(
+        self,
+        base_dataset: PathDataset,
+        tokenizer: Any,
+        captions_file_list: List[str] = None,
+        caption2data_mapping_file_list: List[str] = None,
+    ):
+        self.base_dataset = base_dataset
+        self.tokenizer = tokenizer
+        self.captions_sm_loader = SharedMemoryNumpyLoader()
+        self.caption2data_mapping_sm_loader = SharedMemoryNumpyLoader()
+        self.captions, file_idx_caption = self.captions_sm_loader.load(
+            captions_file_list
+        )
+        (
+            self.caption2data_mapping,
+            file_idx_caption2data_mapping,
+        ) = self.caption2data_mapping_sm_loader.load(caption2data_mapping_file_list)
+        assert (
+            self.base_dataset.file_idx
+            == file_idx_caption
+            == file_idx_caption2data_mapping
+        )
+        assert len(self.caption2data_mapping) == len(self.captions)
+        assert max(self.caption2data_mapping) + 1 == len(self.base_dataset)
+        _, counts = np.unique(self.caption2data_mapping, return_counts=True)
+        assert np.all(counts == counts[0]), "Same number of captions per data"
+
+    def __len__(self):
+        return self.base_dataset.num_samples
+
+    def _get_captions(self, idx):
+        caption_idx = np.where(self.caption2data_mapping == idx)[0]
+        # converting to list so that it can collate the individual captions
+        # separately, like in multi-clip/crop testing. The loss/meter
+        # will have to deal with the fact that some clips have >1 captions.
+        captions = [self.tokenizer(el) for el in self.captions[caption_idx].tolist()]
+        assert len(captions) > 0, "There should be at least 1 caption for a given data"
+        # Singleton caption, remove from list so it can be processed as normal
+        # (not multicrop style)
+        if len(captions) == 1:
+            captions = captions[0]
+        return captions
+
+    def __getitem__(self, idx):
+        sample = self.base_dataset[idx]
+        sample_class_with_text = UPGRADE_TO_TEXT_SAMPLE[type(sample)]
+        return sample_class_with_text(
+            **dataclass_as_dict(sample), text=self._get_captions(idx)
         )

@@ -1,0 +1,54 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0151_simpletx_vitb32correct_laion2b-20Mroll_b4k_ep32_faircluster
+
+
+trainer:
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.vision_text_dataset.VisionTextDataset
+        base_dataset:
+          _target_: omnivore.data.webdataset_helpers.WebVisionTextPipeline
+          base_dataset_length: 20e6
+          base_dataset_fn:
+            _target_: omnivore.data.webdataset_helpers.get_wds_dataset
+            _partial_: True
+            resampled: True # needed for multi-node training
+            urls:
+              _target_: omnivore.utils.data.FileLoader.load
+              return_idx: False
+              path_list:
+                - /checkpoint/imisra/datasets/laion/laion2B-en_clean_subset20M_tarlist.pkl
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: ${constants.rgb_crop_size}
+                  interpolation: 3
+                  scale: [0.9, 1.0]
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: ${constants.in1k_rgb_mean}
+                  std: ${constants.in1k_rgb_std}
+          - _target_: omnivore.data.transforms.transform_wrappers.TextTransform
+            base_transform:
+              _target_: slip.tokenizer.SimpleTokenizer
+              bpe_path_list: ${constants.bpe_path_list}
+      shuffle: True
+      batch_size: 256
+      num_workers: 12
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: laion
+        batch_kwargs:
+          model_fwd_kwargs:
+            use_checkpoint: ${constants.use_checkpoint}
+            checkpoint_every_n: 2
+      worker_init_fn: NULL

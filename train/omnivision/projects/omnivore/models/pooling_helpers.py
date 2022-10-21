@@ -12,6 +12,17 @@ class SelectElement(nn.Module):
         return x[:, self.index, ...]
 
 
+class AvgTokens(nn.Module):
+    def __init__(self, start_index: int = 1) -> None:
+        super().__init__()
+        self.start_index = start_index
+
+    def forward(self, x):
+        assert x.ndim >= 3
+        tokens = x[:, self.start_index :, ...]
+        return tokens.mean(dim=1)
+
+
 class SelectEOSAndProject(nn.Module):
     """
     Text Pooling used in OpenCLIP

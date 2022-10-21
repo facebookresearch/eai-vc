@@ -1,0 +1,7 @@
+# @package _global_
+
+# no config changes
+# webdataset seed issue was fixed in code
+
+defaults:
+  - /experiments/imisra/0164_vitb16_shared_p-2-16-16_laion1b-25Mroll_b32K_cg5_slr1e-3_elr1e-5_maskgatherloss_ep32

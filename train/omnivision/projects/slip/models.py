@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 # Modified from github.com/openai/CLIP
+import contextlib
 import sys
 from collections import OrderedDict
 
@@ -105,6 +106,184 @@ class RobertaLMHead(nn.Module):
         return x
 
 
+class CLIPTextEncoder(nn.Module):
+    def __init__(
+        self,
+        context_length: int,
+        vocab_size: int,
+        embed_dim: int,
+        transformer_width: int,
+        transformer_heads: int,
+        transformer_layers: int,
+    ):
+        super().__init__()
+        self.transformer_width = transformer_width
+        self.context_length = context_length
+        self.vocab_size = vocab_size
+
+        self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
+        self.token_embedding = nn.Embedding(vocab_size, transformer_width)
+        self.positional_embedding = nn.Parameter(
+            torch.empty(self.context_length, transformer_width)
+        )
+        self.ln_final = LayerNorm(transformer_width)
+        self.transformer = Transformer(
+            width=transformer_width,
+            layers=transformer_layers,
+            heads=transformer_heads,
+            attn_mask=self.build_attention_mask(),
+        )
+
+        self.initialize_parameters()
+
+    def initialize_parameters(self):
+        nn.init.normal_(self.token_embedding.weight, std=0.02)
+        nn.init.normal_(self.positional_embedding, std=0.01)
+
+        proj_std = (self.transformer.width**-0.5) * (
+            (2 * self.transformer.layers) ** -0.5
+        )
+        attn_std = self.transformer.width**-0.5
+        fc_std = (2 * self.transformer.width) ** -0.5
+        for block in self.transformer.resblocks:
+            nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
+            nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
+            nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
+            nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+
+        nn.init.normal_(self.text_projection, std=self.transformer_width**-0.5)
+
+    def build_attention_mask(self):
+        # lazily create causal attention mask, with full attention between the vision tokens
+        # pytorch uses additive attention mask; fill with -inf
+        mask = torch.empty(self.context_length, self.context_length)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)  # zero out the lower diagonal
+        return mask
+
+    def forward(self, text):
+
+        x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
+        x = x + self.positional_embedding
+        x = x.permute(1, 0, 2)  # NLD -> LND
+
+        x = self.transformer(x)
+
+        x = x.permute(1, 0, 2)  # LND -> NLD
+        x = self.ln_final(x)
+
+        # x.shape = [batch_size, n_ctx, transformer.width]
+        # take features from the eot embedding (eot_token is the highest number in each sequence)
+        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] @ self.text_projection
+
+        return x
+
+
+class CLIPRobertaTextEncoder(nn.Module):
+    def __init__(
+        self,
+        transformer: nn.Module,
+        embed_dim: int,
+        transformer_width: int,
+        freeze_transformer: bool = False,
+        use_cls_token: bool = True,
+    ):
+        super().__init__()
+
+        self.transformer = transformer
+        self.use_cls_token = use_cls_token
+        self.freeze_transformer = freeze_transformer
+        self.transformer_width = transformer_width
+
+        self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
+        nn.init.normal_(self.text_projection, std=self.transformer_width**-0.5)
+
+        if self.freeze_transformer:
+            self.transformer.eval()
+
+    def forward(self, text):
+
+        if self.freeze_transformer:
+            context = torch.no_grad()
+        else:
+            context = contextlib.nullcontext()
+        with context:
+            x = self.transformer(text)
+
+        if self.use_cls_token:
+            x = x[:, 0]
+        else:
+            x = x[:, 1:].mean(dim=1)
+
+        x = x @ self.text_projection
+        return x
+
+
+class CLIP_V2(nn.Module):
+    def __init__(
+        self,
+        embed_dim: int,
+        # vision
+        vision_width: int,
+        vision_model: nn.Module,
+        # text
+        text_model: nn.Module,
+        freeze_vision=False,
+        freeze_text=False,
+        **kwargs,
+    ):
+        super().__init__()
+
+        self.visual = vision_model
+        self.text_model = text_model
+        self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
+        self.image_projection = nn.Parameter(torch.empty(vision_width, embed_dim))
+
+        self.freeze_vision = freeze_vision
+        self.freeze_text = freeze_text
+
+        if self.freeze_vision:
+            self.visual.eval()
+
+        if self.freeze_text:
+            self.text_model.eval()
+
+        nn.init.normal_(self.image_projection, std=vision_width**-0.5)
+
+    def encode_image(self, image, **visual_kwargs):
+        if self.freeze_vision:
+            context = torch.no_grad()
+        else:
+            context = contextlib.nullcontext()
+        with context:
+            x = self.visual(image, **visual_kwargs)
+        x = x @ self.image_projection
+        return x
+
+    def encode_text(self, text):
+        if self.freeze_text:
+            context = torch.no_grad()
+        else:
+            context = contextlib.nullcontext()
+        with context:
+            text_features = self.text_model(text)
+        return text_features
+
+    def forward(self, image, text, **visual_kwargs):
+        if image is None:
+            return self.encode_text(text)
+        elif text is None:
+            return self.encode_image(image, **visual_kwargs)
+
+        image_features = self.encode_image(image, **visual_kwargs)
+        image_features = F.normalize(image_features, dim=-1)
+
+        text_features = self.encode_text(text)
+        text_features = F.normalize(text_features, dim=-1)
+
+        return image_features, text_features, self.logit_scale.exp()
+
+
 class CLIP(nn.Module):
     def __init__(
         self,
@@ -199,7 +378,7 @@ class CLIP(nn.Module):
         mask.triu_(1)  # zero out the lower diagonal
         return mask
 
-    def encode_image(self, image):
+    def encode_image(self, image, use_checkpoint=False):
 
         # Convert single frame videos to images
         #  B, C, T, H, W - >  B, C, H, W
@@ -211,7 +390,7 @@ class CLIP(nn.Module):
             with torch.no_grad():
                 x = self.visual(image)
         else:
-            x = self.visual(image)
+            x = self.visual(image, use_checkpoint=use_checkpoint)
 
         if isinstance(x, list):
             x = x[0]  # TODO: Hack to handle Omnivore models that return list.
@@ -270,11 +449,7 @@ class CLIP(nn.Module):
             return x
 
     def forward(self, image, text, use_checkpoint=False):
-        # return {
-        #     "image_embed": image_embed,
-        #     "text_embed": text_embed,
-        #     "logit_scale": self.logit_scale.exp(),
-        # }
+
         if image is None:
             return self.encode_text(text)
         elif text is None:

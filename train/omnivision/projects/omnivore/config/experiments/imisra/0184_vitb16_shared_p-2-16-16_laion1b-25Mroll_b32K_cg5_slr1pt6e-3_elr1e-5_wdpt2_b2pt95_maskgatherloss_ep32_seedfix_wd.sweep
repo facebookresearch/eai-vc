@@ -1,0 +1,3 @@
++experiments=imisra/0181_vitb16_shared_p-2-16-16_laion1b-25Mroll_b32K_cg5_slr1e-3_elr1e-5_wdpt2_b2pt95_maskgatherloss_ep32_seedfix
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=1.6e-3
+constants.weight_decay=0.2,0.05,0

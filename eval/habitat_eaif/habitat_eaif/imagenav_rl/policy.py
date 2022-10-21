@@ -3,6 +3,7 @@ from typing import Dict, Optional, Tuple
 import torch
 from gym import spaces
 from habitat.config import Config
+from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encoder
 from habitat_baselines.rl.ppo import Net, Policy
@@ -17,6 +18,7 @@ class EAINet(Net):
         self,
         observation_space: spaces.Dict,
         action_space,
+        input_image_size,
         backbone_config,
         hidden_size: int,
         rnn_type: str,
@@ -42,7 +44,7 @@ class EAINet(Net):
 
         self.visual_encoder = VisualEncoder(
             backbone_config=backbone_config,
-            image_size=observation_space.spaces["rgb"].shape[0],
+            image_size=input_image_size,
             global_pool=global_pool,
             use_cls=use_cls,
             use_augmentations=use_augmentations,
@@ -56,11 +58,19 @@ class EAINet(Net):
 
         rnn_input_size += hidden_size
 
-        # goal embedding
+        # object goal embedding
+        if ObjectGoalSensor.cls_uuid in observation_space.spaces:
+            self._n_object_categories = (
+                int(observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]) + 1
+            )
+            self.obj_categories_embedding = nn.Embedding(self._n_object_categories, 32)
+            rnn_input_size += 32
+
+        # image goal embedding
         if ImageGoalRotationSensor.cls_uuid in observation_space.spaces:
             self.goal_visual_encoder = VisualEncoder(
                 backbone_config=backbone_config,
-                image_size=observation_space.spaces["imagegoalrotation"].shape[0],
+                image_size=input_image_size,
                 global_pool=global_pool,
                 use_cls=use_cls,
                 use_augmentations=use_augmentations,
@@ -136,6 +146,10 @@ class EAINet(Net):
             goal = self.goal_visual_fc(goal)
             x.append(goal)
 
+        if ObjectGoalSensor.cls_uuid in observations:
+            object_goal = observations[ObjectGoalSensor.cls_uuid].long()
+            x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
+
         # previous action embedding
         prev_actions = prev_actions.squeeze(-1)
         start_token = torch.zeros_like(prev_actions)
@@ -157,6 +171,7 @@ class EAIPolicy(Policy):
         self,
         observation_space: spaces.Dict,
         action_space,
+        input_image_size,
         backbone_config,
         hidden_size: int = 512,
         rnn_type: str = "GRU",
@@ -173,6 +188,7 @@ class EAIPolicy(Policy):
             EAINet(
                 observation_space=observation_space,
                 action_space=action_space,  # for previous action
+                input_image_size=input_image_size,
                 backbone_config=backbone_config,
                 hidden_size=hidden_size,
                 rnn_type=rnn_type,
@@ -192,6 +208,7 @@ class EAIPolicy(Policy):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
+            input_image_size=config.RL.POLICY.input_image_size,
             backbone_config=config.model,
             hidden_size=config.RL.POLICY.hidden_size,
             rnn_type=config.RL.POLICY.rnn_type,

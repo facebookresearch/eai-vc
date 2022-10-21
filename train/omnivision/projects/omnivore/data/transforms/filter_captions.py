@@ -2,7 +2,10 @@
 
 import json
 import re
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple, Union
+
+from omnivore.data.api import VisionTextHashtagSample, VisionTextSample
+from omnivore.utils.data import FileLoader
 
 try:
     import fasttext as ft
@@ -55,6 +58,22 @@ class RemoveSpecialTokens:
         return remove_special_tokens(text, self.tokens)
 
 
+class RemovePoundSigns:
+    """
+    Remove the pound signs from the text
+    """
+
+    def __init__(self, enabled: bool = True):
+        self.enabled = enabled
+
+    def __call__(self, text: str) -> str:
+        if self.enabled:
+            text = text.replace("#", " ")
+            return clean_double_spaces(text)
+        else:
+            return text
+
+
 class RemoveHashtags:
     """
     Remove all form of hashtag from the text provided as input
@@ -67,6 +86,48 @@ class RemoveHashtags:
     def __call__(self, text: str) -> str:
         text = self.hashtag_pat.sub("", text)
         return clean_double_spaces(text)
+
+
+class HashTagsToCaptions:
+    """
+    Transformation used to map a list of hashtags as strings
+    to the associated captions
+
+    Input format is the content of the 'hashtags' column, i.e.
+    strings separated with comas, without spaces
+
+    For instance: "motherboard,electroniccomputer,graphics"
+
+    Args:
+        separator: separator between the hashtags
+        prompt (str): fixed prompt to use in front of hashtags
+        template_paths (list): templates for prompts to pick from
+    """
+
+    def __init__(
+        self,
+        separator: str = ", ",
+        prompt: Optional[str] = None,
+        template_paths: Optional[List[str]] = None,
+    ):
+        super().__init__()
+        self.prompt = prompt
+        self.separator = separator
+        if template_paths is not None:
+            self.templates = FileLoader.load(template_paths)[0]
+        else:
+            self.templates = None
+
+    def __call__(self, hashtags: str) -> str:
+        hashtags = hashtags.split(",")
+        hashtags = self.separator.join(hashtags)
+        if self.templates is not None:
+            prompt = np.random.choice(self.templates)
+            return prompt.format(hashtags)
+        elif self.prompt is not None and self.prompt != "":
+            return " ".join([self.prompt, hashtags])
+        else:
+            return hashtags
 
 
 class FilterHashtagsIn:
@@ -126,10 +187,12 @@ class FilterCaptionLanguage:
         model_paths: List[str],
         target_label: str = "__label__en",
         threshold: float = 0.8,
+        replace_by_hashtags: bool = True,
     ):
         super().__init__()
         self.target_label = target_label
         self.threshold = threshold
+        self.replace_by_hashtags = replace_by_hashtags
         self.hashtag_pat = re.compile(r"#\w+ ?")
 
         # Load the fastText model from the selected path
@@ -141,8 +204,10 @@ class FilterCaptionLanguage:
         self._lazy_load()
         if self.is_target_language(caption)[0]:
             return caption
-        else:
+        elif self.replace_by_hashtags:
             return self.hashtags_only(caption)
+        else:
+            return ""
 
     def _lazy_load(self):
         # FastText object cannot be pickled so we delay it's creation
@@ -164,6 +229,50 @@ class FilterCaptionLanguage:
 
     def hashtags_only(self, text: str) -> str:
         return "".join(hashtag for hashtag in self.hashtag_pat.findall(text))
+
+
+class DropSamplesWithEmptyCaption:
+    def __call__(
+        self, sample: Union[VisionTextSample, VisionTextHashtagSample]
+    ) -> Union[VisionTextSample, VisionTextHashtagSample]:
+        if sample.text == "":
+            return None
+        else:
+            return sample
+
+
+class ReplaceEmptyCaptionWithHashtags:
+    """
+    Replace the caption inside the VisionTextSample with the hashtags if the caption is empty
+
+    Args:
+        new_value: replacement string for the label
+        separator: separator between hashtags in the text
+        template_paths: templates for the text around the hashtags
+
+    """
+
+    def __init__(
+        self,
+        separator: str = " ",
+        template_paths: Optional[List[str]] = None,
+    ):
+        # TODO - accept a list of transforms instead?
+        self.transform = HashTagsToCaptions(
+            separator=separator, template_paths=template_paths
+        )
+
+    def __call__(
+        self, sample: Union[VisionTextSample, VisionTextHashtagSample]
+    ) -> Union[VisionTextSample, VisionTextHashtagSample]:
+        if isinstance(sample, VisionTextHashtagSample):
+            if sample.text == "":
+                sample.text = self.transform(sample.hashtags)
+            return sample
+        elif isinstance(sample, VisionTextSample):
+            if sample.text == "":
+                sample.text = self.transform(sample.label)
+            return sample
 
 
 class AnalyseCaption:

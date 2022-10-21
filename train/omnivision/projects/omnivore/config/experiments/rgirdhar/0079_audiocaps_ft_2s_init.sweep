@@ -1,0 +1,10 @@
++experiments=rgirdhar/0079_audiocaps_ft_2s_init
+
+
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=1e-3,5e-4,1e-4
+# trainer.optim.options.lr.0.scheduler.schedulers.1.end_value=1e-8
+
+
+# add causal masking since loading checkpoint with mask
+trainer.model.multimodal_model.modality_preprocessors.0.preprocessor.causal_masking=True
+

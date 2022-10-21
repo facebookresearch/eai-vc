@@ -1,0 +1,15 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.regnet.RegNet
+  trunk_config:
+    name: regnet_y_32gf
+checkpoint_dict:
+  _target_: eaif_models.models.regnet.load_vissl_checkpoint
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/seer/seer_regnet32_finetuned_in1k_model_final_checkpoint_phase78.torch
+transform:
+  _target_: eaif_models.transforms.resnet_transforms
+metadata:
+  algo: seer
+  model: regnet_32gf
+  data: instagram_1b
+  comment: finetune_imagenet

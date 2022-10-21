@@ -1,0 +1,245 @@
+# @package _global_
+# based on configs/experiments/pretrain/supervised/video/069_swinT_im1k.yaml
+# expected accuracy: 80.6%
+# obtained accuracy: ??
+
+scratch:
+  # number of classes in the `tool` version of Uru 5B
+  num_classes: 1000 #27999
+  batch_size: 64
+  phases_per_epoch: 2
+  num_samples: 1281167
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 600
+  accelerator: cuda
+  seed_value: 123
+  val_epoch_freq: 1
+  mode: train
+
+  data:
+    train:
+      _target_: omnivore.data.fb.on_box_dataset.OnBoxDataset
+      phase_type: "train"
+      num_reader_worker_threads: 4
+      num_python_transform_workers: 4
+      max_num_dpp_servers_per_node: NULL # Defaults to 1 per GPU
+      dpp_client_prefetch_capacity: NULL # TODO: set this. Defaults to numer of ddp workers
+      dpp_server_glog_options:
+        _target_: pytorch.data.fb.onbox.data_loader.GlogOptions
+        disable_info_logs: True # TODO: Change this to True
+      dataloader_setting:
+        _target_: omnivore.data.fb.on_box_dataset.OnBoxDataLoaderSetting
+        num_samples: ${scratch.num_samples}
+        loader_mode: "WRAP_AROUND" # NORMAL, WRAP_AROUND, "FULL_SYNC"
+        phases_per_epoch: ${scratch.phases_per_epoch}
+        hive_shuffle_order: "NONE" # NONE, Change thils to SHUFFLE_ALL for wrap around.
+
+      dataset:
+        # Uru dataset with 5B images (~3.6B unique images)
+        # be sure to name each version for experiment logging (like I used
+        # `tool` for the Uru 10x10x10 runs) since the set of images and
+        # hashtags changes with each regeneration
+        _target_: omnivore.data.fb.hive_img_dataset.build_everstore_hivedataset
+        batch_size: ${scratch.batch_size}
+        table_name: imagenet_1k_everstore_train
+        namespace: aml
+        everstore_lookup_value: "everstore_handle"
+        schema: ["image_id", "everstore_handle", "raw_image", "label_id"]
+        everstore_output_column: "raw_image"
+        drop_incomplete: True
+        partitions: NULL # Can be a list like  ["id=3", "colum_name=value"]
+        batch_handler:
+          _target_: omnivore.data.fb.hive_img_dataset.ImageIntLabelBatchHiveHandler
+          data_column: "raw_image"
+          label_column: "label_id"
+          id_column: "image_id"
+          transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.RandomResizedCrop
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.RandomHorizontalFlip
+                - _target_: omnivore.data.transforms.rand_auto_aug.RandAugment  # Essentially autoagument rand-m9-mstd0.5-inc1
+                  magnitude: 9
+                  magnitude_std: 0.5
+                  increasing_severity: True
+                - _target_: torchvision.transforms.ColorJitter
+                  brightness: 0.4
+                  contrast: 0.4
+                  saturation: 0.4
+                  hue: 0.4
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.RandomErasing
+                  p: .25
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+          collate_fn:
+            _target_: omnivore.data.api.DefaultOmnivoreCollator
+            output_key: in1k
+            batch_transforms:
+            - _target_: omnivore.data.transforms.cutmixup.CutMixUp
+              mixup_alpha: 0.8 # mixup alpha value, mixup is active if > 0.
+              cutmix_alpha: 1.0 # cutmix alpha value, cutmix is active if > 0.
+              prob: 1.0 # probability of applying mixup or cutmix per batch or element
+              switch_prob: 0.5 # probability of switching to cutmix instead of mixup when both are active
+              mode: batch # how to apply mixup/cutmix params (per 'batch', 'pair' (pair of elements), 'elem' (element)
+              correct_lam: True # apply lambda correction when cutmix bbox clipped by image borders
+              label_smoothing: 0.1 # apply label smoothing to the mixed target tensor
+              num_classes: 1000 # number of classes for target
+
+    val:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        path_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_images_global.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_images_manifold_v2.npy
+        label_file_list:
+          - /checkpoint/imisra/datasets/in1k_disk/val_labels.npy
+          - manifold://omnivore/tree/datasets/imagenet_1k_meta/val_labels.npy
+        transforms:
+          - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+            base_transform:
+              _target_: torchvision.transforms.Compose
+              transforms:
+                - _target_: torchvision.transforms.Resize
+                  size: 224
+                  interpolation: 3
+                - _target_: torchvision.transforms.CenterCrop
+                  size: 224
+                - _target_: torchvision.transforms.ToTensor
+                - _target_: torchvision.transforms.Normalize
+                  mean: [0.485, 0.456, 0.406]
+                  std: [0.229, 0.224, 0.225]
+      shuffle: False
+      batch_size: 64
+      num_workers: 8
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: in1k
+      worker_init_fn: NULL
+
+  model:
+    _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+    trunk:
+      _target_: omnivore.models.swin_transformer.SwinTransformer3D
+      pretrained: NULL
+      pretrained2d: False
+      patch_size: [1, 4, 4]
+      embed_dim: 96
+      depths: [2, 2, 6, 2]
+      num_heads: [3, 6, 12, 24]
+      window_size: [1, 7, 7]
+      mlp_ratio: 4.
+      qkv_bias: True
+      qk_scale: NULL
+      drop_rate: 0.
+      attn_drop_rate: 0.
+      drop_path_rate: 0.2
+      patch_norm: True
+    heads:
+      - head:
+          _target_: omnivision.model.model_init_utils.init_parameters
+          model:
+            _target_: torch.nn.Linear
+            in_features: 768  # 8 * 96
+            out_features: 1000
+          init_fns:
+            weight:
+              _target_: torch.nn.init.normal_
+              _partial_: True
+              mean: 0
+              std: 0.01
+            bias:
+              _target_: torch.nn.init.zeros_
+              _partial_: True
+        fork_module: ""
+        input_key: NULL
+        output_key: NULL
+    trunk_fields:
+      - input_key: NULL
+        args: ["vision"]
+  optim:
+    optimizer:
+      _target_: torch.optim.AdamW
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 10e-7
+                end_value: 10e-4
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: 10e-4
+                end_value: 10e-6
+            lengths: [0.07, 0.93]
+            interval_scaling: ['rescaled', 'rescaled']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+             - '*.bias'
+             #- '*.pos_embed'
+             #- '*.cls_token'
+             #- '*.absolute_pos_embed'
+             - '*.relative_position_bias_table'
+             #- '*.norm'
+          module_cls_names: ['torch.nn.LayerNorm']
+  meters:
+    train:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+    val:
+      in1k:
+        accuracy_top1:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 1
+        accuracy_top5:
+          _target_: omnivision.meters.accuracy_meter.AccuracyMeter
+          top_k: 5
+  loss:
+    in1k:
+      _target_: torch.nn.CrossEntropyLoss
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8
+  experiment_log_dir: ???
+
+submitit:
+  partition: learnlab
+  timeout_hour: 72
+  use_cluster: True
+  cpus_per_task: 12
+  port_range: [10000, 65000]

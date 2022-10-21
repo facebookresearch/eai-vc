@@ -20,7 +20,8 @@ except ImportError as e:
     timm = None
 
 try:
-    from xformers.ops import memory_efficient_attention
+    import xformers
+    from xformers.ops import memory_efficient_attention, unbind
 except ImportError:
     memory_efficient_attention = None
 
@@ -241,33 +242,21 @@ class XformerAttention(nn.Module):
         head_dim = dim // num_heads
         self.scale = head_dim**-0.5
 
-        self.in_proj_weight = nn.Parameter(torch.empty(3 * dim, dim))
+        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
-        self.out_proj = nn.Linear(dim, dim)
+        self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x, **kwargs):
-        # TODO: Match nn.MulitHeadedAttention API
         B, N, C = x.shape
-        qkv = (
-            F.linear(x, self.in_proj_weight)
-            .reshape(B, N, 3, self.num_heads, C // self.num_heads)
-            .permute(2, 0, 3, 1, 4)
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads)
+        q, k, v = unbind(qkv, 2)
+        x = memory_efficient_attention(
+            q, k, v, op=xformers.ops.MemoryEfficientAttentionCutlassFwdFlashBwOp
         )
+        x = x.reshape([B, N, C])
 
-        q, k, v = (
-            qkv[0].reshape(B * self.num_heads, N, C // self.num_heads),
-            qkv[1].reshape(B * self.num_heads, N, C // self.num_heads),
-            qkv[2].reshape(B * self.num_heads, N, C // self.num_heads),
-        )
-        x = memory_efficient_attention(q, k, v)
-        x = (
-            x.reshape([B, self.num_heads, N, C // self.num_heads])
-            .permute([0, 2, 1, 3])
-            .reshape([B, N, C])
-        )
-
-        x = self.out_proj(x)
+        x = self.proj(x)
         x = self.proj_drop(x)
         return x
 

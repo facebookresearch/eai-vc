@@ -1,0 +1,3 @@
++experiments=imisra/0164_vitb16_shared_p-2-16-16_laion1b-25Mroll_b32K_cg5_slr1e-3_elr1e-5_maskgatherloss_ep32
+constants.grad_clip_norm=NULL
+trainer.optim.options.lr.0.scheduler.schedulers.0.end_value=2e-3,2.5e-3

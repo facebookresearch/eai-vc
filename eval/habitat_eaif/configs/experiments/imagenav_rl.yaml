@@ -32,6 +32,7 @@ RL:
   POLICY:
     name: "EAIPolicy"
     hidden_size: 512
+    input_image_size: 128
     rnn_type: "LSTM"
     num_recurrent_layers: 2
     use_augmentations: True

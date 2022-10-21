@@ -1,0 +1,123 @@
+# @package _global_
+
+defaults:
+  - /experiments/imisra/0137_vitb16_nomask_laion21M_sunrgbdisp50x_audioset_freqmask_rgbp32_audiop16_rgblearn_linheads_cg1_slr1e-3_elr1e-5_audio_temppt07_depth_temppt2_validmasking_withgrad
+
+trainer:
+  data:
+    val:
+      _target_: omnivore.data.concat_dataset.ConcatDataset
+      max_steps: sum
+      datasets:
+      # MSCOCO
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+          base_dataset:
+            _target_: omnivore.data.path_dataset.ImagePathDataset
+            path_file_list:
+              - /checkpoint/aelnouby/datasets/mscoco/filelist.npy
+            label_file_list: NULL
+            transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: ${constants.rgb_crop_size}
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+          captions_file_list:
+            - /checkpoint/aelnouby/datasets/mscoco/captions.npy
+          caption2data_mapping_file_list:
+            - /checkpoint/aelnouby/datasets/mscoco/text2img_mapping.npy
+          tokenizer:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list: ${constants.bpe_path_list}
+        shuffle: False
+        batch_size: 16
+        num_workers: 8 # reduce workers to prevent OOMs
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: mscoco
+        worker_init_fn: NULL
+        # Flicker-30k
+      - _target_: omnivore.data.torch_dataset.TorchDataset
+        dataset:
+          _target_: omnivore.data.path_dataset.PathDatasetWithCaptions
+          base_dataset:
+            _target_: omnivore.data.path_dataset.ImagePathDataset
+            path_file_list:
+              - /checkpoint/aelnouby/datasets/flicker30k/filelist.npy
+            label_file_list: NULL
+            transforms:
+            - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+              base_transform:
+                _target_: torchvision.transforms.Compose
+                transforms:
+                  - _target_: torchvision.transforms.Resize
+                    size: ${constants.rgb_crop_size}
+                    interpolation: 3
+                  - _target_: torchvision.transforms.CenterCrop
+                    size: ${constants.rgb_crop_size}
+                  - _target_: torchvision.transforms.ToTensor
+                  - _target_: torchvision.transforms.Normalize
+                    mean: ${constants.in1k_rgb_mean}
+                    std: ${constants.in1k_rgb_std}
+          captions_file_list:
+            - /checkpoint/aelnouby/datasets/flicker30k/captions.npy
+          caption2data_mapping_file_list:
+            - /checkpoint/aelnouby/datasets/flicker30k/text2img_mapping.npy
+          tokenizer:
+            _target_: slip.tokenizer.SimpleTokenizer
+            bpe_path_list: ${constants.bpe_path_list}
+        shuffle: False
+        batch_size: 16
+        num_workers: 8 # reduce workers to prevent OOMs
+        pin_memory: True
+        drop_last: False
+        collate_fn:
+          _target_: omnivore.data.api.DefaultOmnivoreCollator
+          output_key: flicker
+        worker_init_fn: NULL
+  model:
+    zero_shot_with_text_targets: NULL
+    multimodal_model:
+      dataset_specific_list_input_reduction:
+        # Keep audiocaps output (used in val) as is for retrieval eval
+        # Very important, else it will eval on avg pooled features
+        mscoco:
+          - field_name: text_embed
+            reduction_op: no_op
+          - field_name: vision_embed
+            reduction_op: no_op
+        flicker: ${.mscoco}
+        
+  meters:
+    val:
+      mscoco:
+        recall_text2vid:
+          _target_: omnivore.meters.cross_modality_retrieval.CrossModalityRetrieval
+          query_feature: text_embed
+          corpus_feature: vision_embed
+          topks: [1, 5, 10]
+      flicker: ${.mscoco}
+
+  
+  checkpoint:
+    model_weight_initializer:
+      _partial_: True
+      _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+      state_dict:
+        _target_: omnivision.model.checkpoint_utils.load_checkpoint
+        pick_recursive_keys:
+          - "model"
+        path_list:
+          - /fsx-omnivore/imisra/omnivision_omnivore/config/experiments/imisra/0137_vitb16_nomask_laion21M_sunrgbdisp50x_audioset_freqmask_rgbp32_audiop16_rgblearn_linheads_cg1_slr1e-3_elr1e-5_audio_temppt07_depth_temppt2.sweep/0/checkpoints/checkpoint.pt

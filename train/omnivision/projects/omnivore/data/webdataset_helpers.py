@@ -260,12 +260,14 @@ def tarfile_to_samples_nothrow(src, handler=log_and_continue):
 
 def pytorch_worker_seed():
     """get dataloader worker seed from pytorch"""
-    worker_info = get_worker_info()
-    if worker_info is not None:
-        # favour the seed already created for pytorch dataloader workers if it exists
-        return worker_info.seed
+    # worker_info = get_worker_info()
+    # if worker_info is not None:
+    # favour the seed already created for pytorch dataloader workers if it exists
+    # return worker_info.seed
     # fallback to wds rank based seed
-    return wds.utils.pytorch_worker_seed()
+    return (
+        wds.utils.pytorch_worker_seed()
+    )  # Preferred since provides 0 based seeds (e.g. 0, 1, 2, 3)
 
 
 class detshuffle2(wds.PipelineStage):
@@ -333,7 +335,7 @@ class ResampledShards2(IterableDataset):
             epoch = self.epoch
         if self.deterministic:
             # reset seed w/ epoch if deterministic, worker seed should be deterministic due to arg.seed
-            self.rng.seed(self.worker_seed() + epoch + int(get_rank() * 1e6))
+            self.rng.seed((self.worker_seed() * 1e6) + (get_rank() * 1e3) + epoch)
         for _ in range(self.nshards):
             yield {"url": self.rng.choice(self.urls)}
 

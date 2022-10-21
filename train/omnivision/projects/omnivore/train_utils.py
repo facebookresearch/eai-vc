@@ -26,6 +26,7 @@ def register_omegaconf_resolvers():
     OmegaConf.register_new_resolver("add", lambda x, y: x + y)
     OmegaConf.register_new_resolver("times", lambda x, y: x * y)
     OmegaConf.register_new_resolver("divide", lambda x, y: x / y)
+    OmegaConf.register_new_resolver("pow", lambda x, y: x**y)
     OmegaConf.register_new_resolver("subtract", lambda x, y: x - y)
     OmegaConf.register_new_resolver("range", lambda x: list(range(x)))
     OmegaConf.register_new_resolver("int", lambda x: int(x))
@@ -220,6 +221,33 @@ class AverageMeter(object):
         return fmtstr.format(**self.__dict__)
 
 
+class DurationMeter(object):
+    def __init__(self, name, device, fmt=":f"):
+        self.name = name
+        self.device = device
+        self.fmt = fmt
+        self.val = 0
+
+    def reset(self):
+        self.val = 0
+
+    def update(self, val):
+        self.val = val
+
+    def add(self, val):
+        self.val += val
+
+    def _human_readable_time(self):
+        time = int(self.val)
+        minutes, seconds = divmod(time, 60)
+        hours, minutes = divmod(minutes, 60)
+        days, hours = divmod(hours, 24)
+        return f"{days:02}d {hours:02}h {minutes:02}m"
+
+    def __str__(self):
+        return f"{self.name}: {self._human_readable_time()}"
+
+
 class ProgressMeter(object):
     def __init__(self, num_batches, meters, real_meters, prefix=""):
         self.batch_fmtstr = self._get_batch_fmtstr(num_batches)
@@ -261,7 +289,13 @@ def get_resume_checkpoint(checkpoint_save_dir):
 # TODO: Move this to a separate logging file.
 
 
-def setup_logging(name, output_dir=None, rank=0):
+def setup_logging(
+    name,
+    output_dir=None,
+    rank=0,
+    log_level_primary="INFO",
+    log_level_secondary="ERROR",
+):
     """
     Setup various logging streams: stdout and file handlers.
     For file handlers, we only setup for the master gpu.
@@ -274,7 +308,7 @@ def setup_logging(name, output_dir=None, rank=0):
             log_filename = f"{output_dir}/log.txt"
 
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(log_level_primary)
 
     # create formatter
     FORMAT = "%(levelname)s %(asctime)s %(filename)s:%(lineno)4d: %(message)s"
@@ -287,14 +321,17 @@ def setup_logging(name, output_dir=None, rank=0):
 
     # setup the console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
+    if rank == 0:
+        console_handler.setLevel(log_level_primary)
+    else:
+        console_handler.setLevel(log_level_secondary)
 
     # we log to file as well if user wants
     if log_filename and rank == 0:
         file_handler = logging.StreamHandler(_cached_log_stream(log_filename))
-        file_handler.setLevel(logging.DEBUG)
+        file_handler.setLevel(log_level_primary)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
