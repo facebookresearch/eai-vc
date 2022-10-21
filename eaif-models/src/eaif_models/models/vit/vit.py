@@ -197,18 +197,3 @@ def load_mae_encoder(model, checkpoint_path=None):
 
     model.load_state_dict(state_dict)
     return model
-
-
-if __name__ == "__main__":
-    vit = vit_small_patch16(use_cls=True)
-    print(vit.mask_ratio)
-    import numpy as np
-
-    image = np.random.randint(0, 1, (2, 4, 3, 224, 224))
-    # image = torch.randn((3,3,224,224))
-    image = torch.from_numpy(image).float()
-    features = vit(image)
-    # projector = torch.nn.Linear(384,15)
-    # feat = projector(features)
-    # print(feat.shape)
-    print(features.shape)
