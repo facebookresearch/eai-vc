@@ -37,7 +37,26 @@ class AngleToGoal(Measure):
         if not isinstance(current_rotation, quaternion.quaternion):
             current_rotation = quaternion_from_coeff(current_rotation)
 
-        goal_rotation = episode.goals[0].rotation
+        if len(episode.goals) == 1:
+            goal_rotation = episode.goals[0].rotation
+        else:
+            current_position = self._sim.get_agent_state().position
+
+            nearest_goal = None
+            min_dist = float("inf")
+            for goal in episode.goals:
+                for view_point in goal.view_points:
+                    distance = self._sim.geodesic_distance(
+                        current_position,
+                        [view_point.agent_state.position],
+                        episode,
+                    )
+                    if distance < min_dist:
+                        min_dist = distance
+                        nearest_goal = view_point
+                    
+            goal_rotation = nearest_goal.agent_state.rotation
+
         if not isinstance(goal_rotation, quaternion.quaternion):
             goal_rotation = quaternion_from_coeff(goal_rotation)
 
