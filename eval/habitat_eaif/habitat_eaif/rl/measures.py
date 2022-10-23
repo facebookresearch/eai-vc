@@ -54,7 +54,7 @@ class AngleToGoal(Measure):
                     if distance < min_dist:
                         min_dist = distance
                         nearest_goal = view_point
-                    
+
             goal_rotation = nearest_goal.agent_state.rotation
 
         if not isinstance(goal_rotation, quaternion.quaternion):
