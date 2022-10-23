@@ -7,7 +7,7 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Simulator
 from habitat.tasks.nav.nav import DistanceToGoal
 
-from habitat_eaif.imagenav_rl.measures import AngleSuccess, AngleToGoal, TrainSuccess
+from habitat_eaif.rl.imagenav.measures import AngleSuccess, AngleToGoal, TrainSuccess
 
 
 @registry.register_measure
