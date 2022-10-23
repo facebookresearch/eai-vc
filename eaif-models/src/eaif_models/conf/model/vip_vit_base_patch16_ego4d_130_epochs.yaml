@@ -1,7 +1,7 @@
 _target_: eaif_models.models.load_model
 model:
   _target_: eaif_models.models.vit.vit.load_encoder
-  checkpoint_path: /checkpoint/yixinlin/eaif/models/vip/vit/vip_vit_large_patch16_ego4d_130_epochs.pth
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/vip/vit/vip_vit_base_patch16_ego4d_130_epochs.pth
   model:
     _target_: eaif_models.models.vit.vit.vit_base_patch16
     img_size: 224
@@ -13,3 +13,4 @@ metadata:
   algo: vip
   model: vit_base_patch16
   data: ego4d
+  comment: 130_epochs

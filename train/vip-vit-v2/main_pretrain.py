@@ -34,7 +34,6 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from datasets.dataset_with_txt_files import DatasetWithTxtFiles
 from datasets.omni_dataset import OmniDataset
 
-# from datasets.path_dataset import PathDataset
 from datasets.path_dataset_vip import PathDataset
 
 import models_vip
@@ -85,28 +84,8 @@ def main(args: omegaconf.DictConfig):
     assert (
         type(args.data_path) == omegaconf.listconfig.ListConfig
     ), "The data_path argument should be of list type"
-    if args.dataset_type == "dataset_with_txt_files":
-        dataset_train = DatasetWithTxtFiles(
-            args.data_path,
-            transform=transform_train,
-            extra_transform=extra_transform,
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225],
-            mode="train",
-            dataset_type="full",
-        )
-    elif args.dataset_type == "omnidataset":
-        dataset_train = OmniDataset(
-            args.data_path,
-            transform=transform_train,
-            extra_transform=extra_transform,
-            mean=[0.485, 0.456, 0.406],
-            std=[0.229, 0.224, 0.225],
-            mode="train",
-            datasets=args.omnidata_datasets,
-            data_type=args.dataset_size,
-        )
-    elif args.dataset_type == "path_dataset":
+
+    if args.dataset_type == "path_dataset":
         dataset_train = PathDataset(
             args.data_path,
             transform=transform_train,
