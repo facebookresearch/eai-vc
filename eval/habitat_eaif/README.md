@@ -35,7 +35,7 @@ Otherwise, follow the instructions on [habitat-lab](https://github.com/facebookr
 
 1. Once you have trained a model, it is time for evaluation. We evaluate every 5th saved checkpoint. To run an evaluation, do the following:
    ```
-   python run_habitat_eaif.py --config-name=config_objectnav_rl WANDB.name=Objectnav_first_experiment model=dino_resnet50_omnidata RUN_TYPE=eval hydra/launcher=slurm_eval NUM_ENVIRONMENTS=20 -m
+   python run_habitat_eaif.py --config-name=config_objectnav_rl WANDB.name=Objectnav_first_experiment model=dino_resnet50_omnidata RUN_TYPE=eval hydra/launcher=slurm_eval NUM_ENVIRONMENTS=30 -m
    ```
 
 ### ObjectNav
