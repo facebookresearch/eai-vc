@@ -101,8 +101,9 @@ class EAINet(Net):
         if freeze_backbone:
             for p in self.visual_encoder.backbone.parameters():
                 p.requires_grad = False
-            for p in self.goal_visual_encoder.backbone.parameters():
-                p.requires_grad = False
+            if ImageGoalRotationSensor.cls_uuid in observation_space.spaces:
+                for p in self.goal_visual_encoder.backbone.parameters():
+                    p.requires_grad = False
 
         # save configuration
         self._hidden_size = hidden_size
