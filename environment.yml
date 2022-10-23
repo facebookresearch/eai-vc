@@ -56,7 +56,7 @@ dependencies:
     - dm-control==1.0.5
     - gym==0.23.1
     - setuptools==59.5.0
-    - timm==0.6.5
+    - timm==0.6.11
     - git+https://github.com/openai/CLIP.git
     - functorch
     - torchrl

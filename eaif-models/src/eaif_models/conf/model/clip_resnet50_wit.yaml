@@ -1,0 +1,18 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.resnet.resnet.resnet50_clip
+  layers: [3, 4, 6, 3]
+  output_dim: 1024
+  heads: 32
+  input_resolution: 224
+  width: 64
+checkpoint_dict:
+  _target_: eaif_models.models.resnet.resnet.load_clip_resnet50_checkpoint
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/clip/RN50.pt
+transform:
+  _target_: clip.clip._transform
+  n_px: 224
+metadata:
+  algo: clip
+  model: resnet50
+  data: wit
