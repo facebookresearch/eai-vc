@@ -95,8 +95,8 @@ class PathDataset(VisionDataset):
 
         obs = []
         obs_extra = []
-        # for idx in [start_ind, end_ind, s0_ind_vip, s1_ind_vip, s0_ind, s1_ind, s2_ind]:
-        for idx in [start_ind, end_ind, s0_ind_vip, s1_ind_vip]:
+        for idx in [start_ind, end_ind, s0_ind_vip, s1_ind_vip, s0_ind, s1_ind, s2_ind]:
+        # for idx in [start_ind, end_ind, s0_ind_vip, s1_ind_vip]:
             o, o_extra = self._get_image_raw(folder, idx)
             obs.append(o)
             obs_extra.append(o_extra)

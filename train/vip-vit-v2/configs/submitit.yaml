@@ -5,7 +5,7 @@ defaults:
 ngpus: 8
 nodes: 2
 timeout: 4320
-mem_gb: 512
+mem_gb: 1024
 partition: learnlab
 use_volta32: True
 comment: ""

@@ -130,7 +130,7 @@ python submitit_pretrain.py \
     mae_model=mae_vit_base_patch16 \
     use_mask=True \
     vip=True \
-    epochs=800 \
+    epochs=220 \
     warmup_epochs=20 \
     blr=1.5e-6 \
     weight_decay=0.05 \
@@ -142,19 +142,37 @@ python submitit_pretrain.py \
 ```
 ```
 python submitit_pretrain.py \
+    wandb.name=vip_vit_small_Ego4D_mask_finetune \
+    batch_size=128 \
+    mae_model=mae_vit_small_patch16 \
+    use_mask=True \
+    vip=True \
+    epochs=220 \
+    warmup_epochs=20 \
+    blr=1.5e-6 \
+    weight_decay=0.05 \
+    resume=/checkpoint/yixinlin/eaif/models/mae_ego4d/mae_vit_small_patch16_ego4d_800_epochs.pth \
+    data_path=[/checkpoint/yixinlin/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
+    nodes=4 \
+    partition=devlab \
+    use_volta32=True
+```
+```
+python submitit_pretrain.py \
     wandb.name=vip_vit_small_Ego4D_mask \
     batch_size=128 \
     mae_model=mae_vit_small_patch16 \
     use_mask=True \
     vip=True \
-    epochs=800 \
+    epochs=220 \
     warmup_epochs=20 \
     blr=1.5e-6 \
     weight_decay=0.05 \
     data_path=[/checkpoint/yixinlin/eaif/datasets/ego4d] \
     output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
     nodes=4 \
-    partition=learnlab \
+    partition=devlab \
     use_volta32=True
 ```
 
