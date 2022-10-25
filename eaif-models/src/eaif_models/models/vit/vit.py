@@ -234,5 +234,4 @@ def load_mae_encoder(model, checkpoint_path=None):
         state_dict["fc_norm.bias"] = model.fc_norm.bias
 
     model.load_state_dict(state_dict)
-
     return model

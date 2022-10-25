@@ -45,8 +45,13 @@ bc_kwargs:
   dropout         :   0
 
 # logging
-job_name          :   'dmc_eaif_mujoco'
+job_name          :   ${embedding}
+wandb:
+  project : dmc_eaif_mujoco
+  entity  : eai-foundations
+  name    : ${embedding}
 
+  
 hydra:
     job:
         name: dmc_eaif_mujoco

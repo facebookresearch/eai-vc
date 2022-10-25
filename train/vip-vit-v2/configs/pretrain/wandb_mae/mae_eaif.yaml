@@ -1,0 +1,7 @@
+wandb:
+  project : vip-mae-jason
+  # entity  : eai-foundations
+  entity  : jma2020
+  mode    : online
+  name    : vip-scratch
+  dir     :
