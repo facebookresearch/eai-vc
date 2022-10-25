@@ -25,7 +25,7 @@ import torchvision.datasets as datasets
 
 import timm
 
-assert timm.__version__ == "0.6.5"  # version check
+assert timm.__version__ == "0.6.11"  # version check
 import timm.optim.optim_factory as optim_factory
 
 from eaif_models.utils.wandb import setup_wandb
