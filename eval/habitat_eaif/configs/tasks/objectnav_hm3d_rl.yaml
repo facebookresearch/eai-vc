@@ -24,14 +24,46 @@ TASK_CONFIG:
     TYPE: ObjectNav-v1
     POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
 
-    SENSORS: ['OBJECTGOAL_SENSOR']
+    SIMPLE_REWARD:
+      TYPE: "SimpleReward"
+      SUCCESS_REWARD: 5.0
+      ANGLE_SUCCESS_REWARD: 5.0
+      USE_DTG_REWARD: True
+      USE_ATG_REWARD: True
+      ATG_REWARD_DISTANCE: 0.1
+      SLACK_PENALTY: -0.01
+      USE_ATG_FIX: True
+
+    ANGLE_TO_GOAL:
+      TYPE: "AngleToGoal"
+
+    ANGLE_SUCCESS:
+      TYPE: "AngleSuccess"
+      SUCCESS_ANGLE: 25.0
+      USE_TRAIN_SUCCESS: True
+
     GOAL_SENSOR_UUID: objectgoal
-    MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
 
     DISTANCE_TO_GOAL:
       DISTANCE_TO: VIEW_POINTS
     SUCCESS:
       SUCCESS_DISTANCE: 0.1
+    TRAIN_SUCCESS:
+      TYPE: "TrainSuccess"
+      SUCCESS_DISTANCE: 0.1
+
+    SENSORS: ['OBJECTGOAL_SENSOR']
+
+    MEASUREMENTS: [
+      "DISTANCE_TO_GOAL",
+      "SUCCESS",
+      "TRAIN_SUCCESS",
+      "ANGLE_TO_GOAL",
+      "ANGLE_SUCCESS",
+      "SPL",
+      "SOFT_SPL",
+      "SIMPLE_REWARD",
+    ]
 
   DATASET:
     TYPE: ObjectNav-v1

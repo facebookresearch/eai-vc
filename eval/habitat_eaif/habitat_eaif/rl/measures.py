@@ -11,6 +11,7 @@ from habitat.utils.geometry_utils import (
     angle_between_quaternions,
     quaternion_from_coeff,
 )
+from habitat.tasks.nav.object_nav_task import ObjectGoal
 
 
 @registry.register_measure
@@ -32,28 +33,33 @@ class AngleToGoal(Measure):
         self._metric = None
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
 
-    def update_metric(self, episode: NavigationEpisode, *args: Any, **kwargs: Any):
+    def update_metric(self, episode: NavigationEpisode, task: EmbodiedTask, *args: Any, **kwargs: Any):
         current_rotation = self._sim.get_agent_state().rotation
         if not isinstance(current_rotation, quaternion.quaternion):
             current_rotation = quaternion_from_coeff(current_rotation)
 
-        if len(episode.goals) == 1:
+        if not isinstance(episode.goals[0], ObjectGoal):
             goal_rotation = episode.goals[0].rotation
         else:
+            # Hack to save time. We dont need to calculate the angle to goal if we are outside the goal radius
+            if task.measurements.measures[Success.cls_uuid].get_metric() == 0.0:
+                self._metric = np.pi
+                return
+
             current_position = self._sim.get_agent_state().position
 
-            nearest_goal = None
+            nearest_goal = self.get_closest_goal(episode, current_position)
+
             min_dist = float("inf")
-            for goal in episode.goals:
-                for view_point in goal.view_points:
-                    distance = self._sim.geodesic_distance(
-                        current_position,
-                        [view_point.agent_state.position],
-                        episode,
-                    )
-                    if distance < min_dist:
-                        min_dist = distance
-                        nearest_goal = view_point
+            for view_point in nearest_goal.view_points:
+                distance = self._sim.geodesic_distance(
+                    current_position,
+                    [view_point.agent_state.position],
+                    episode,
+                )
+                if distance < min_dist:
+                    min_dist = distance
+                    nearest_goal = view_point
 
             goal_rotation = nearest_goal.agent_state.rotation
 
@@ -62,6 +68,19 @@ class AngleToGoal(Measure):
 
         self._metric = angle_between_quaternions(current_rotation, goal_rotation)
 
+    def get_closest_goal(self, episode, agent_position):
+        min_dist = float("inf")
+        closest_goal = None
+        for goal in episode.goals:
+            # snapped_point = self._sim.path_finder.snap_point(goal.position)
+            distance = self._sim.geodesic_distance(
+                agent_position,
+                [goal.position],
+                episode,
+            )
+            if distance < min_dist:
+                closest_goal = goal
+        return closest_goal
 
 @registry.register_measure
 class AngleSuccess(Measure):
