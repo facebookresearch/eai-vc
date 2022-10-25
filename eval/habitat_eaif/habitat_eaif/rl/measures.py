@@ -33,7 +33,9 @@ class AngleToGoal(Measure):
         self._metric = None
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
 
-    def update_metric(self, episode: NavigationEpisode, task: EmbodiedTask, *args: Any, **kwargs: Any):
+    def update_metric(
+        self, episode: NavigationEpisode, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
         current_rotation = self._sim.get_agent_state().rotation
         if not isinstance(current_rotation, quaternion.quaternion):
             current_rotation = quaternion_from_coeff(current_rotation)
@@ -81,6 +83,7 @@ class AngleToGoal(Measure):
             if distance < min_dist:
                 closest_goal = goal
         return closest_goal
+
 
 @registry.register_measure
 class AngleSuccess(Measure):
