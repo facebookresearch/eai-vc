@@ -30,7 +30,6 @@ EVAL:
   EVAL_FREQ: 5
 
 RL:
-  SUCCESS_REWARD: 2.5
   REWARD_MEASURE: "simple_reward"
   SUCCESS_MEASURE: "success"
   SLACK_REWARD: -1e-3
