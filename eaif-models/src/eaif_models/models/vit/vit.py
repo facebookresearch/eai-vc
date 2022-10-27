@@ -244,9 +244,11 @@ def load_contrastive_vit(model, checkpoint_path=None, state_dict_key="state_dict
     state_dict = torch.load(checkpoint_path, map_location="cpu")[state_dict_key]
     for k in list(state_dict.keys()):
         # retain only base_encoder up to before the embedding layer
-        if k.startswith("module.base_encoder") and not k.startswith("module.base_encoder.head"):
+        if k.startswith("module.base_encoder") and not k.startswith(
+            "module.base_encoder.head"
+        ):
             # remove prefix
-            state_dict[k[len("module.base_encoder."):]] = state_dict[k]
+            state_dict[k[len("module.base_encoder.") :]] = state_dict[k]
         # delete renamed or unused k
         del state_dict[k]
 
