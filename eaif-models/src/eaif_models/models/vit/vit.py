@@ -259,5 +259,13 @@ def load_contrastive_vit(model, checkpoint_path=None, state_dict_key="state_dict
         state_dict["fc_norm.weight"] = model.fc_norm.weight
         state_dict["fc_norm.bias"] = model.fc_norm.bias
 
+    if state_dict["pos_embed"].shape != model.pos_embed.shape:
+        state_dict["pos_embed"] = resize_pos_embed(
+            state_dict["pos_embed"],
+            model.pos_embed,
+            getattr(model, "num_tokens", 1),
+            model.patch_embed.grid_size,
+        )
+
     model.load_state_dict(state_dict)
     return model
