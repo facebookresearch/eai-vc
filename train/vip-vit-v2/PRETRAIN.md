@@ -18,7 +18,6 @@ python submitit_pretrain.py \
     partition=learnlab \
     use_volta32=True
 ```
-
 ```
 python submitit_pretrain.py \
     wandb.name=vip_vit_base_Ego4D \
@@ -64,6 +63,24 @@ python submitit_pretrain.py \
     blr=1e-6 \
     weight_decay=0.05 \
     data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/yixinlin/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
+    nodes=8 \
+    partition=learnlab \
+    use_volta32=True
+```
+
+HGSP:
+```
+python submitit_pretrain.py \
+    wandb.name=vip_vit_base_HGSP \
+    batch_size=64 \
+    mae_model=mae_vit_base_patch16 \
+    vip=True \
+    epochs=800 \
+    warmup_epochs=20 \
+    blr=1e-6 \
+    weight_decay=0.05 \
+    data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train] \
     output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
     nodes=8 \
     partition=learnlab \
