@@ -235,3 +235,38 @@ def load_mae_encoder(model, checkpoint_path=None):
 
     model.load_state_dict(state_dict)
     return model
+
+
+def load_contrastive_vit(model, checkpoint_path=None, state_dict_key="state_dict"):
+    if checkpoint_path is None:
+        return model
+
+    old_state_dict = torch.load(checkpoint_path, map_location="cpu")[state_dict_key]
+    state_dict = {}
+    for k in list(old_state_dict.keys()):
+        # retain only base_encoder up to before the embedding layer
+        if k.startswith("module.base_encoder") and not k.startswith(
+            "module.base_encoder.head"
+        ):
+            # remove prefix
+            state_dict[k[len("module.base_encoder.") :]] = old_state_dict[k]
+        # delete renamed or unused k
+        del old_state_dict[k]
+
+    if model.global_pool:
+        # remove layer that start with norm
+        state_dict = {k: v for k, v in state_dict.items() if not k.startswith("norm")}
+        # add fc_norm in the state dict from the model
+        state_dict["fc_norm.weight"] = model.fc_norm.weight
+        state_dict["fc_norm.bias"] = model.fc_norm.bias
+
+    if state_dict["pos_embed"].shape != model.pos_embed.shape:
+        state_dict["pos_embed"] = resize_pos_embed(
+            state_dict["pos_embed"],
+            model.pos_embed,
+            getattr(model, "num_tokens", 1),
+            model.patch_embed.grid_size,
+        )
+
+    model.load_state_dict(state_dict)
+    return model

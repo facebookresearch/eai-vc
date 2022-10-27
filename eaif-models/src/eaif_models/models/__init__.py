@@ -1,10 +1,10 @@
 import logging
 import torch
-import PIL
+from PIL import Image
 
 log = logging.getLogger(__name__)
 
-zero_img = PIL.Image.new("RGB", (100, 100))
+zero_img = Image.new("RGB", (100, 100))
 
 
 def load_model(
