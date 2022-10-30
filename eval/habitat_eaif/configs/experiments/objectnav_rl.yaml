@@ -32,7 +32,6 @@ EVAL:
 RL:
   REWARD_MEASURE: "simple_reward"
   SUCCESS_MEASURE: "success"
-  SLACK_REWARD: -1e-3
 
   POLICY:
     name: "EAIPolicy"

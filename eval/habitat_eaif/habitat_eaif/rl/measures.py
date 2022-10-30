@@ -40,11 +40,12 @@ class AngleToGoal(Measure):
         if not isinstance(current_rotation, quaternion.quaternion):
             current_rotation = quaternion_from_coeff(current_rotation)
 
+        assert len(episode.goals) > 0, "Episode must have goals"
         if not isinstance(episode.goals[0], ObjectGoal):
             goal_rotation = episode.goals[0].rotation
         else:
             # Hack to save time. We dont need to calculate the angle to goal if we are outside the goal radius
-            if task.measurements.measures[Success.cls_uuid].get_metric() == 0.0:
+            if task.measurements.measures[DistanceToGoal.cls_uuid].get_metric() > 0.1:
                 self._metric = np.pi
                 return
 
@@ -52,18 +53,10 @@ class AngleToGoal(Measure):
 
             nearest_goal = self.get_closest_goal(episode, current_position)
 
-            min_dist = float("inf")
-            for view_point in nearest_goal.view_points:
-                distance = self._sim.geodesic_distance(
-                    current_position,
-                    [view_point.agent_state.position],
-                    episode,
-                )
-                if distance < min_dist:
-                    min_dist = distance
-                    nearest_goal = view_point
-
-            goal_rotation = nearest_goal.agent_state.rotation
+            # find angle between current_position and nearest_goal position
+            goal_vector = nearest_goal.position - current_position
+            goal_angle = np.arctan2(goal_vector[2], goal_vector[0])
+            goal_rotation = quaternion.from_rotation_vector([0, goal_angle, 0])
 
         if not isinstance(goal_rotation, quaternion.quaternion):
             goal_rotation = quaternion_from_coeff(goal_rotation)
@@ -75,6 +68,9 @@ class AngleToGoal(Measure):
         closest_goal = None
         for goal in episode.goals:
             # snapped_point = self._sim.path_finder.snap_point(goal.position)
+            euclidean_dist = np.linalg.norm(np.array(agent_position) - np.array(goal.position))
+            if euclidean_dist >= min_dist:
+                continue
             distance = self._sim.geodesic_distance(
                 agent_position,
                 [goal.position],
