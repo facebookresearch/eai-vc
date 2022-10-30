@@ -1,0 +1,20 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.vit.beit.load_data2vec_encoder
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/d2v_habitat/data2vec_HGSP_vit_base_top3_e400_n4_399.pth
+  model:
+    _target_: eaif_models.models.vit.beit.beit_base_patch16
+    img_size: 224
+    global_pool: False
+    use_cls: True
+    drop_path_rate: 0.0
+    use_rel_pos_bias: False
+    use_shared_rel_pos_bias: True
+    use_abs_pos_emb: False
+    init_values: 0.1
+transform:
+  _target_: eaif_models.transforms.vit_transforms
+metadata:
+  algo: data2vec
+  model: beit_base_patch16
+  data: HGSP
