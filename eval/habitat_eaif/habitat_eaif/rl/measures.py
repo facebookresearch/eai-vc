@@ -68,7 +68,9 @@ class AngleToGoal(Measure):
         closest_goal = None
         for goal in episode.goals:
             # snapped_point = self._sim.path_finder.snap_point(goal.position)
-            euclidean_dist = np.linalg.norm(np.array(agent_position) - np.array(goal.position))
+            euclidean_dist = np.linalg.norm(
+                np.array(agent_position) - np.array(goal.position)
+            )
             if euclidean_dist >= min_dist:
                 continue
             distance = self._sim.geodesic_distance(
