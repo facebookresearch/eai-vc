@@ -2,6 +2,9 @@ import pytest
 
 from hydra import initialize, compose
 from omegaconf import OmegaConf
+
+import habitat
+
 import torch
 
 from eaif_models import eaif_model_zoo
