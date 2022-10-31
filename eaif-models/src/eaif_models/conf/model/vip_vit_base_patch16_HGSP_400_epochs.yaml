@@ -13,4 +13,4 @@ metadata:
   algo: vip
   model: vit_base_patch16
   data: HGSP
-  comment: 130_epochs
+  comment: 400_epochs
