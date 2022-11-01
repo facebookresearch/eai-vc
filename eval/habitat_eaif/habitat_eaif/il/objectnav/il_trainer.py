@@ -41,8 +41,8 @@ from habitat_baselines.utils.common import (
 )
 from habitat_baselines.utils.env_utils import construct_envs
 
-from habitat_eaif.objectnav_il.algos.agent import ILAgent
-from habitat_eaif.objectnav_il.rollout_storage import RolloutStorage
+from habitat_eaif.il.objectnav.algos.agent import ILAgent
+from habitat_eaif.il.objectnav.rollout_storage import RolloutStorage
 import habitat_eaif.utils as utils
 
 
