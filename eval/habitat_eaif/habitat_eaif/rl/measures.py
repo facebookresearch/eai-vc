@@ -41,7 +41,9 @@ class AngleToGoal(Measure):
             current_rotation = quaternion_from_coeff(current_rotation)
 
         assert len(episode.goals) > 0, "Episode must have goals"
-        if not isinstance(episode.goals[0], ObjectGoal):
+
+        is_semantic_nav = isinstance(episode.goals[0], ObjectGoal)
+        if not is_semantic_nav:
             goal_rotation = episode.goals[0].rotation
         else:
             # Hack to save time. We dont need to calculate the angle to goal if we are outside the goal radius
@@ -80,6 +82,7 @@ class AngleToGoal(Measure):
             )
             if distance < min_dist:
                 closest_goal = goal
+                min_dist = distance
         return closest_goal
 
 
