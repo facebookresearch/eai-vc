@@ -221,6 +221,48 @@ class MaskImageModeling:
         )
 
 
+class TmaeMaskImageModeling(MaskImageModeling):
+    def __call__(self, image, do_not_mask=False):
+        precomputed_pred_ratio = None
+        if self.mim_start_epochs > 0 and self.mim_start_epochs > self.current_epoch:
+            precomputed_pred_ratio = 0
+        if do_not_mask is True:
+            precomputed_pred_ratio = 0
+
+        patch_size = self.patch_size
+        pred_ratio = self.pred_ratio
+        pred_ratio_var = self.pred_ratio_var
+        pred_shape = self.pred_shape
+
+        # Modified from ibot_style_mask_image function
+        squeeze_dim, img_t, img_h, img_w = get_image_dims(image)
+        assert img_t // patch_size[0] > 0
+
+        result = []
+        for _ in range(img_t // patch_size[0]):
+            T = 1
+            H = img_h // patch_size[1]
+            W = img_w // patch_size[2]
+            if precomputed_pred_ratio is None:
+                precomputed_pred_ratio = get_pred_ratio(
+                    pred_ratio=pred_ratio, pred_ratio_var=pred_ratio_var
+                )
+            # high is the max number of tokens to mask in the input
+            high = precomputed_pred_ratio * T * H * W
+            mask = pred_shape(T, H, W, high)
+            result.append(mask)
+        mask = np.concatenate(result)
+
+        if squeeze_dim:
+            # Remove the time dim from the mask since the image doesn't have it
+            mask = np.squeeze(mask, axis=0)
+        ret_dict = {
+            "data": image,
+            "mask": torch.from_numpy(mask),
+        }
+        return ret_dict
+
+
 class MaskForPerformance:
     """
     Creates a mask to remove the minimum amount of tokens needed

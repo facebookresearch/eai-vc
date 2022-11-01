@@ -255,14 +255,23 @@ class PatchEmbed(nn.Module):
             img_size[1] // patch_size[1],
         )
         self.num_patches = np.prod(self.patches_layout)
+        self.dec_patches_layout = self.patches_layout
 
         self.proj = nn.Conv2d(
             in_chans, embed_dim, kernel_size=patch_size, stride=patch_size
         )
 
-    def forward(self, x):
-        x = self.proj(x).flatten(2).transpose(1, 2)
+    @staticmethod
+    def reshape_for_encoder(x):
+        # B C H W -> B HW C
+        return x.flatten(2).transpose(1, 2)
+
+    @staticmethod
+    def reshape_for_decoder(x, *args):
         return x
+
+    def forward(self, x):
+        return self.proj(x)
 
 
 class PatchEmbedGeneric(nn.Module):
@@ -293,12 +302,65 @@ class PatchEmbedGeneric(nn.Module):
             )
             self.patches_layout = tuple(self.proj(dummy_img).shape[2:])
             self.num_patches = np.prod(self.patches_layout)
+            self.dec_patches_layout = self.patches_layout
+
+    @staticmethod
+    def reshape_for_encoder(x):
+        # B C (T) H W -> B (T)HW C
+        return x.flatten(2).transpose(1, 2)
+
+    @staticmethod
+    def reshape_for_decoder(x, *args):
+        return x
 
     def forward(self, x):
         # rgirdhar: no flatten here since the projection can handle it in the list of ops
-        x = self.proj(x)
-        # B C (T) H W -> B (T)HW C
+        return self.proj(x)
+
+
+class PatchEmbedTMAE(nn.Module):
+    def __init__(self, proj_stem, input_size):
+        super().__init__()
+
+        if len(proj_stem) > 1:
+            self.proj = nn.Sequential(*proj_stem)
+        else:
+            # Special case to be able to load pre-trained models that were
+            # trained with a standard stem
+            self.proj = proj_stem[0]
+
+        # get the num_patches
+        assert isinstance(input_size, list) and (
+            len(input_size) == 3 or len(input_size) == 4
+        ), "Need the full CxHxW or CxTxHxW input size"
+        with torch.no_grad():
+            dummy_img = torch.zeros(
+                [
+                    1,
+                ]
+                + input_size
+            )
+            proj_output_shape = list(self.proj(dummy_img).shape)  # B C (T) H W
+            self.patches_layout = tuple([1] + proj_output_shape[-2:])
+            self.num_patches = np.prod(self.patches_layout)
+            self.dec_patches_layout = tuple(proj_output_shape[2:])
+
+    @staticmethod
+    def reshape_for_encoder(x):
+        if len(x.shape) == 5:  # has time dimension
+            # B C T H W -> BT C H W
+            x = x.transpose(1, 2).flatten(0, 1)
+        # B(T) C H W -> B(T) HW C
         return x.flatten(2).transpose(1, 2)
+
+    @staticmethod
+    def reshape_for_decoder(x, T):
+        _, HW, C = x.shape
+        # BT HW C -> B THW C
+        return x.reshape([-1, T, HW, C]).flatten(1, 2)
+
+    def forward(self, x):
+        return self.proj(x)
 
 
 class Decoder(nn.Module):
@@ -531,6 +593,12 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
                 patch_embed_params_list, img_size=img_size
             )
 
+        elif patch_embed_type == "tmae":
+
+            self.patch_embed = PatchEmbedTMAE(
+                patch_embed_params_list, input_size=img_size
+            )
+
         num_patches = self.patch_embed.num_patches
 
         if use_cls_token:
@@ -596,7 +664,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             self.decoder = wrap_fsdp_if_enabled(
                 decoder(
                     first_patch_idx=self.first_patch_idx,
-                    patches_layout=self.patch_embed.patches_layout,
+                    patches_layout=self.patch_embed.dec_patches_layout,
                     embed_dim=mask_token_embed_dim,
                     fsdp_settings=fsdp_settings,
                 )
@@ -676,10 +744,17 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         B = x.shape[0]
         input_shape = x.shape
 
+        # embed patches
         x = self.patch_embed(x)
+
+        # get T after patch embedding
+        T = x.shape[2] if len(x.shape) == 5 else 1
+
+        # reshape for encoding
+        x = self.patch_embed.reshape_for_encoder(x)
         npatch_per_img = x.shape[1]
 
-        if self.patch_dropping is False and mask is not None:
+        if not self.patch_dropping and mask is not None:
             x = self.apply_mask(x, mask)
 
         if self.cls_token is not None:
@@ -702,7 +777,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         if self.patch_dropping and mask is not None:
             x = self.masked_patch_drop(x, mask)
         x = self.pos_drop(x)
-        return x
+        return T, x
 
     @classmethod
     def get_pos_embedding(
@@ -728,7 +803,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             mask = None
 
         orig_input_shape = x.shape
-        x = self.prepare_tokens(x, npatch_to_keep, mask=mask)
+        T, x = self.prepare_tokens(x, npatch_to_keep, mask=mask)
 
         for blk in self.blocks:
             if use_checkpoint:
@@ -737,6 +812,9 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
                 )
             else:
                 x = blk(x)
+
+        # reshape for decoding
+        x = self.patch_embed.reshape_for_decoder(x, T)
 
         if self.classifier_feature == "cls_token" and (
             mask is None or self.decoder is None
