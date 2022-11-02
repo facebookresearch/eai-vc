@@ -1,5 +1,6 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
+import os
 import enum
 import logging
 from abc import ABC, abstractmethod
@@ -492,6 +493,79 @@ class VideoPathDataset(PathDataset):
 
     def default_generator(self):
         return self.default_generator_video(), self.default_generator_audio()
+
+
+class VideoPathDatasetFromImages(ImagePathDataset):
+    def __init__(self, frames_per_vid=16, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.frames_per_vid = frames_per_vid
+
+        self.vids = self.get_vids(self.paths, min_num_frames=self.frames_per_vid)
+        self.vid_lens = {k: len(v) for k, v in self.vids.items()}
+        self.total_frames = sum(self.vid_lens.values())
+
+        self.num_clips_per_vid = {
+            k: v - self.frames_per_vid + 1 for k, v in self.vid_lens.items()
+        }
+        self.total_num_clips = sum(self.num_clips_per_vid.values())
+
+        self.num_samples = self.total_num_clips
+        self.idx_to_clips = []
+        for vid, num_clips in self.num_clips_per_vid.items():
+            for i in range(num_clips):
+                self.idx_to_clips.append([vid, i])
+
+    def default_generator(self):
+        return tvf.to_tensor(get_mean_image(DEFAULT_SPATIAL_SIZE)).expand(
+            self.frames_per_vid, -1, -1, -1
+        )
+
+    def load_object(self, vid, start_idx):
+        image_names = self.vids[vid][start_idx : start_idx + self.frames_per_vid]
+        images = [
+            super(VideoPathDatasetFromImages, self).load_object(
+                os.path.join(vid, image_name)
+            )
+            for image_name in image_names
+        ]
+        clip = torch.stack([tvf.to_tensor(image) for image in images])  # T x C x H x W
+        return [clip.transpose(0, 1)]  # C x T x H x W
+
+    def _get_clip_from_idx(self, idx):
+        return self.idx_to_clips[idx]
+
+    def try_load_object(self, idx):
+        is_success = True
+        vid, start_idx = self._get_clip_from_idx(idx)
+        try:
+            data = self.load_object(vid, start_idx)
+        except Exception:
+            logging.warning(f"Couldn't load: {vid} clip {start_idx}.")
+            logging.debug("Exception: ", exc_info=True)
+            is_success = False
+            data = self.default_generator()
+        return data, is_success
+
+    @staticmethod
+    def get_vids(paths, min_num_frames=None):
+        vids = {}
+        for path in paths:
+            vidname, imgname = os.path.split(path)
+            if vidname not in vids:
+                vids[vidname] = []
+            vids[vidname].append(imgname)
+
+        filtered_vids = {}
+        for k, v in vids.items():
+            if min_num_frames is not None and len(v) < min_num_frames:
+                logging.warning(
+                    f"Dropping vid {k} with length {len(v)} < {min_num_frames}"
+                )
+                continue
+            filtered_vids[k] = sorted(v)
+
+        return filtered_vids
 
 
 class AudioPathDataset(PathDataset):

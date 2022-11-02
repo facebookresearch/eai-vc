@@ -11,7 +11,6 @@ def setup_wandb(config):
         log.info(f"wandb initializing...")
         import wandb
 
-        wandb.require("service")
         wandb_run = start_wandb(config, wandb)
 
         log.info(f"wandb initialized")

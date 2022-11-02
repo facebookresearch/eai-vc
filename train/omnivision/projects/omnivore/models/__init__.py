@@ -30,6 +30,9 @@ class Im2Video(nn.Module):
         self.time_dim = time_dim
 
     def forward(self, x):
+        if isinstance(x, list):
+            assert len(x) == 1
+            x = x[0]
         if x.ndim == 4:
             # B, C, H, W -> B, C, T, H, W
             return x.unsqueeze(self.time_dim)

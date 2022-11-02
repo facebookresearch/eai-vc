@@ -83,8 +83,10 @@ def run_one_image(img, model, image_name):
 
 
 if __name__ == "__main__":
-    chkpt_dir = "../data/ddppo-models/mae_small_01.pth"
-    model_mae = prepare_model(chkpt_dir, "mae_vit_small_patch16")
+    model_type = "mae_vit_base_patch16"
+    model_path = "/checkpoint/yixinlin/eaif/models/"
+    chkpt_dir = model_path + "mae_habitat/mae_vit_base_patch16_HGSP_800_epochs.pth"
+    model_mae = prepare_model(chkpt_dir, model_type)
     print("Model loaded.")
 
     img_paths = glob.glob("examples/*.*")

@@ -9,7 +9,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import build_rnn_state_encode
 from habitat_baselines.rl.ppo import Net, Policy
 from torch import nn as nn
 
-from habitat_eaif.imagenav_rl.sensors import ImageGoalRotationSensor
+from habitat_eaif.rl.imagenav.sensors import ImageGoalRotationSensor
 from habitat_eaif.visual_encoder import VisualEncoder
 
 
@@ -101,8 +101,10 @@ class EAINet(Net):
         if freeze_backbone:
             for p in self.visual_encoder.backbone.parameters():
                 p.requires_grad = False
-            for p in self.goal_visual_encoder.backbone.parameters():
-                p.requires_grad = False
+            has_goal_encoder = hasattr(self, "goal_visual_encoder")
+            if has_goal_encoder:
+                for p in self.goal_visual_encoder.backbone.parameters():
+                    p.requires_grad = False
 
         # save configuration
         self._hidden_size = hidden_size

@@ -23,7 +23,7 @@ from habitat_baselines.utils.common import (
 
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 
-from habitat_eaif.imagenav_rl.ppo import MDDPPO, MPPO
+from habitat_eaif.rl.ppo import MDDPPO, MPPO
 import habitat_eaif.utils as utils
 
 

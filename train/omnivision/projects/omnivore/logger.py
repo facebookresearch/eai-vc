@@ -18,7 +18,7 @@ from torch.utils.tensorboard import SummaryWriter
 Scalar = Union[Tensor, ndarray, int, float]
 
 
-def make_tensorboard_logger(log_dir: str, **writer_kwargs: Any):
+def make_tensorboard_logger(log_dir: str, wandb=False, **writer_kwargs: Any):
 
     makedir(log_dir)
 
@@ -39,6 +39,11 @@ def make_tensorboard_logger(log_dir: str, **writer_kwargs: Any):
 
     else:
         summary_writer_method = SummaryWriter
+
+    if wandb and get_machine_local_and_dist_rank()[1] == 0:
+        import wandb
+
+        wandb.init(project="omnivision", sync_tensorboard=True)
 
     return TensorBoardLogger(
         path=log_dir, summary_writer_method=summary_writer_method, **writer_kwargs

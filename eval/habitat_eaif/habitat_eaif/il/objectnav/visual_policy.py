@@ -22,8 +22,8 @@ from habitat_eaif.visual_encoder import VisualEncoder
 from habitat_eaif.models.resnet_encoders import (
     VlnResnetDepthEncoder,
 )
-from habitat_eaif.objectnav_il.rnn_state_encoder import RNNStateEncoder
-from habitat_eaif.objectnav_il.policy import Net, ILPolicy
+from habitat_eaif.il.objectnav.rnn_state_encoder import RNNStateEncoder
+from habitat_eaif.il.objectnav.policy import Net, ILPolicy
 
 
 class ObjectNavILNet(Net):

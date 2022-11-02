@@ -47,7 +47,7 @@ dependencies:
   - transforms3d
   - torchvision
   - tqdm
-  - wandb
+  - wandb>=0.13
   - wheel
   - yacs
   - pip

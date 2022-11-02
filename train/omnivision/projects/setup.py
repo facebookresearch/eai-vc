@@ -20,6 +20,7 @@ setup(
         "regex",
         "timm",
         "webdataset",
+        "wandb>=0.13",
     ],
     packages=find_packages(),
 )

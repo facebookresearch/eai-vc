@@ -17,7 +17,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import rank0_only
 from habitat_eaif.config import get_config
 
 
-@hydra.main(config_path="configs", config_name="config")
+@hydra.main(config_path="configs", config_name="config_imagenav")
 def main(cfg: DictConfig) -> None:
     r"""Main function for habitat_eaif
     Args:
