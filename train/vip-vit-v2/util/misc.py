@@ -364,7 +364,7 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
         )
     # Supporting VIP Fine-Tuning on top of a MAE model
     elif args.resume != "":
-        use_checkpoint_stat = False
+        # use_checkpoint_stat = False
         print("Loading {}".format(args.resume))
         checkpoint = torch.load(args.resume, map_location="cpu")
     elif os.path.isfile(os.path.join(args.output_dir, "checkpoint.pth")):

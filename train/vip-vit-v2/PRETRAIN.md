@@ -80,6 +80,7 @@ python submitit_pretrain.py \
     warmup_epochs=20 \
     blr=1e-6 \
     weight_decay=0.05 \
+    resume=/checkpoint/yixinlin/eaif/results/vip_training/vip_vit_base_HGSP/2022-10-26_21-24-04/checkpoint-400.pth \
     data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train] \
     output_dir=/checkpoint/yixinlin/eaif/results/vip_training/ \
     nodes=8 \
