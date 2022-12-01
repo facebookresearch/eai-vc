@@ -14,11 +14,24 @@ class Beit(beit.Beit):
     """ Vision Transformer w/ Distillation with support for global average pooling
     """
     def __init__(self, use_cls=False, **kwargs):
+        global_pool = kwargs['global_pool']
         kwargs['global_pool'] = 'avg' if kwargs['global_pool'] else ''
         super(Beit, self).__init__(**kwargs)
-        assert not (self.global_pool and use_cls)
+        self.use_compression_layer = not (use_cls or global_pool)
+        assert use_cls ^ global_pool ^ self.use_compression_layer and not (
+            use_cls and global_pool and self.use_compression_layer
+        ), "Only one of use_cls, global_pool, or use_compression_layer can be True"
+
 
         del self.head  # don't use prediction head
+
+        if self.use_compression_layer:
+            self.final_spatial = int(self.patch_embed.num_patches**0.5)
+            self.embed_dim = (
+                self.patch_embed.grid_size[0],
+                self.patch_embed.grid_size[1],
+                kwargs["embed_dim"],
+            )
 
         self.use_cls = use_cls
         self.use_rel_pos_bias = kwargs['use_rel_pos_bias']

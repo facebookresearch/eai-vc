@@ -18,8 +18,8 @@ def backbone_config(request, nocluster):
 
     # Skip everything except randomly-initialized ResNet50 if
     # option "--nocluster" is applied
-    nocluster_models = ["rand_resnet50_none", "rand_vit_base_none"]
-    if nocluster and model_name not in nocluster_models:
+
+    if nocluster and "rand" not in model_name:
         pytest.skip()
 
     with initialize(version_base=None, config_path="../configs/model/transform"):
@@ -42,5 +42,5 @@ def test_env_embedding(backbone_config):
     image = torch.zeros((32, 128, 128, 3))
     embedding = encoder(image, 1)
 
-    assert 4 == len(embedding.shape)
+    assert 2 == len(embedding.shape)
     assert embedding.shape[0] == image.shape[0]

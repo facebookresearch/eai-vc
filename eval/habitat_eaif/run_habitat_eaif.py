@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-import argparse
 import os
 import random
 from datetime import datetime
+
+import habitat
 
 import hydra
 import numpy as np
 from omegaconf import DictConfig, OmegaConf
 import torch
 
-import habitat
 from habitat.config import Config
 from habitat.config.default import Config as CN
 from habitat_baselines.common.baseline_registry import baseline_registry

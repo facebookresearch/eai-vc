@@ -18,11 +18,13 @@ from typing import List, Optional
 
 import hydra
 import numpy as np
+from omegaconf import OmegaConf
 import torch
 import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
 from timm.models.layers import DropPath, trunc_normal_
 from torch.nn.modules.utils import _ntuple
+from timm.models.vision_transformer import resize_pos_embed
 
 
 to_2tuple = _ntuple(2)
@@ -248,14 +250,23 @@ class PatchEmbed(nn.Module):
             img_size[1] // patch_size[1],
         )
         self.num_patches = np.prod(self.patches_layout)
+        self.dec_patches_layout = self.patches_layout
 
         self.proj = nn.Conv2d(
             in_chans, embed_dim, kernel_size=patch_size, stride=patch_size
         )
 
-    def forward(self, x):
-        x = self.proj(x).flatten(2).transpose(1, 2)
+    @staticmethod
+    def reshape_for_encoder(x):
+        # B C H W -> B HW C
+        return x.flatten(2).transpose(1, 2)
+
+    @staticmethod
+    def reshape_for_decoder(x, *args):
         return x
+
+    def forward(self, x):
+        return self.proj(x)
 
 
 class PatchEmbedGeneric(nn.Module):
@@ -286,12 +297,65 @@ class PatchEmbedGeneric(nn.Module):
             )
             self.patches_layout = tuple(self.proj(dummy_img).shape[2:])
             self.num_patches = np.prod(self.patches_layout)
+            self.dec_patches_layout = self.patches_layout
+
+    @staticmethod
+    def reshape_for_encoder(x):
+        # B C (T) H W -> B (T)HW C
+        return x.flatten(2).transpose(1, 2)
+
+    @staticmethod
+    def reshape_for_decoder(x, *args):
+        return x
 
     def forward(self, x):
         # rgirdhar: no flatten here since the projection can handle it in the list of ops
-        x = self.proj(x)
-        # B C (T) H W -> B (T)HW C
+        return self.proj(x)
+
+
+class PatchEmbedTMAE(nn.Module):
+    def __init__(self, proj_stem, input_size):
+        super().__init__()
+
+        if len(proj_stem) > 1:
+            self.proj = nn.Sequential(*proj_stem)
+        else:
+            # Special case to be able to load pre-trained models that were
+            # trained with a standard stem
+            self.proj = proj_stem[0]
+
+        # get the num_patches
+        assert isinstance(input_size, list) and (
+            len(input_size) == 3 or len(input_size) == 4
+        ), "Need the full CxHxW or CxTxHxW input size"
+        with torch.no_grad():
+            dummy_img = torch.zeros(
+                [
+                    1,
+                ]
+                + input_size
+            )
+            proj_output_shape = list(self.proj(dummy_img).shape)  # B C (T) H W
+            self.patches_layout = tuple([1] + proj_output_shape[-2:])
+            self.num_patches = np.prod(self.patches_layout)
+            self.dec_patches_layout = tuple(proj_output_shape[2:])
+
+    @staticmethod
+    def reshape_for_encoder(x):
+        if len(x.shape) == 5:  # has time dimension
+            # B C T H W -> BT C H W
+            x = x.transpose(1, 2).flatten(0, 1)
+        # B(T) C H W -> B(T) HW C
         return x.flatten(2).transpose(1, 2)
+
+    @staticmethod
+    def reshape_for_decoder(x, T):
+        _, HW, C = x.shape
+        # BT HW C -> B THW C
+        return x.reshape([-1, T, HW, C]).flatten(1, 2)
+
+    def forward(self, x):
+        return self.proj(x)
 
 
 class Decoder(nn.Module):
@@ -468,7 +532,10 @@ class VisionTransformer(nn.Module):
     ):
         super().__init__()
 
-        assert use_cls_token or classifier_feature == "global_pool"
+        assert use_cls_token or classifier_feature in [
+            "global_pool",
+            "reshape_embedding",
+        ]
         self.patch_drop_max_patches = patch_drop_max_patches
         self.masked_image_modeling = masked_image_modeling
 
@@ -483,11 +550,12 @@ class VisionTransformer(nn.Module):
             self.embed_dim
         ) = embed_dim  # num_features for consistency with other models
 
-        assert classifier_feature in ["cls_token", "global_pool"]
+        assert classifier_feature in ["cls_token", "global_pool", "reshape_embedding"]
         self.classifier_feature = classifier_feature
 
         assert in_chans == 3, "Only 3 channels supported"
 
+        self.patch_embed_type = patch_embed_type
         if patch_embed_type == "linear":
             self.patch_embed = PatchEmbed(
                 img_size=img_size,
@@ -497,9 +565,13 @@ class VisionTransformer(nn.Module):
             )
 
         elif patch_embed_type == "generic":
-
             self.patch_embed = PatchEmbedGeneric(
                 patch_embed_params_list, img_size=img_size
+            )
+
+        elif patch_embed_type == "tmae":
+            self.patch_embed = PatchEmbedTMAE(
+                patch_embed_params_list, input_size=img_size
             )
 
         num_patches = self.patch_embed.num_patches
@@ -567,7 +639,7 @@ class VisionTransformer(nn.Module):
         if decoder is not None:
             self.decoder = decoder(
                 first_patch_idx=self.first_patch_idx,
-                patches_layout=self.patch_embed.patches_layout,
+                patches_layout=self.patch_embed.dec_patches_layout,
                 embed_dim=mask_token_embed_dim,
             )
 
@@ -590,6 +662,14 @@ class VisionTransformer(nn.Module):
             assert self.patch_drop_max_patches == -1
             # initialized to zeros following iBOT
             self.mask_token = nn.Parameter(torch.zeros(1, mask_token_embed_dim))
+
+        if self.classifier_feature == "reshape_embedding":
+            self.final_spatial = int(self.patch_embed.num_patches**0.5)
+            self.embed_dim = (
+                self.patch_embed.patches_layout[1],
+                self.patch_embed.patches_layout[2],
+                embed_dim,
+            )
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -639,10 +719,17 @@ class VisionTransformer(nn.Module):
         B = x.shape[0]
         input_shape = x.shape
 
+        # embed patches
         x = self.patch_embed(x)
+
+        # get T after patch embedding
+        T = x.shape[2] if len(x.shape) == 5 else 1
+
+        # reshape for encoding
+        x = self.patch_embed.reshape_for_encoder(x)
         npatch_per_img = x.shape[1]
 
-        if self.patch_dropping is False and mask is not None:
+        if not self.patch_dropping and mask is not None:
             x = self.apply_mask(x, mask)
 
         if self.cls_token is not None:
@@ -665,7 +752,7 @@ class VisionTransformer(nn.Module):
         if self.patch_dropping and mask is not None:
             x = self.masked_patch_drop(x, mask)
         x = self.pos_drop(x)
-        return x
+        return T, x
 
     @classmethod
     def get_pos_embedding(
@@ -691,13 +778,16 @@ class VisionTransformer(nn.Module):
             mask = None
 
         orig_input_shape = x.shape
-        x = self.prepare_tokens(x, npatch_to_keep, mask=mask)
+        T, x = self.prepare_tokens(x, npatch_to_keep, mask=mask)
 
         for blk in self.blocks:
             if use_checkpoint:
                 x = checkpoint.checkpoint(blk, x, use_reentrant=False)
             else:
                 x = blk(x)
+
+        # reshape for decoding
+        x = self.patch_embed.reshape_for_decoder(x, T)
 
         if self.classifier_feature == "cls_token" and (
             mask is None or self.decoder is None
@@ -734,6 +824,10 @@ class VisionTransformer(nn.Module):
             pass
 
         x = self.norm(x)
+        if self.classifier_feature == "reshape_embedding" and (
+            mask is None or self.decoder is None
+        ):
+            x = reshape_embedding(x[:, self.first_patch_idx :, ...])
         return self.pre_logits(x)
 
     def get_intermediate_features(
@@ -888,12 +982,44 @@ def reshape_and_init_as_mlp(tensor):
     torch.nn.init.xavier_uniform_(tensor.view([tensor.shape[0], -1]))
 
 
-def vit_base_mae_pretraining(masked_image_modeling=False):
-    return VisionTransformer(
-        img_size=[3, 16, 224, 224],
+def reshape_embedding(x):
+    if len(x.shape) == 3:
+        N, L, D = x.shape
+        H = W = int(L**0.5)
+        x = x.reshape(N, H, W, D)
+        x = torch.einsum("nhwd->ndhw", x)
+    elif len(x.shape) == 4:
+        N, T, L, D = x.shape  # TODO: check if this is the right order
+        H = W = int(L**0.5)
+        x = x.reshape(N, T, H, W, D)
+        x = torch.einsum("nthwd->ntdhw", x)
+    else:
+        raise ValueError("Invalid shape: {}".format(x.shape))
+    return x
+
+
+def vit_base_mae(
+    img_size=[3, 16, 224, 224],
+    global_pool=True,
+    use_cls=False,
+    patch_embed_type="generic",
+):
+    if global_pool:
+        classifier_feature = "global_pool"
+    elif use_cls:
+        classifier_feature = "use_cls_token"
+    else:
+        classifier_feature = "reshape_embedding"
+
+    if OmegaConf.is_list(img_size):
+        img_size = OmegaConf.to_container(img_size)
+
+    embed_dim = 768
+    model = VisionTransformer(
+        img_size=img_size,
         patch_size=[2, 16, 16],
         in_chans=3,
-        embed_dim=768,
+        embed_dim=embed_dim,
         depth=12,
         mlp_ratio=4,
         attn_target=partial(
@@ -907,68 +1033,12 @@ def vit_base_mae_pretraining(masked_image_modeling=False):
         drop_rate=0.0,
         drop_path_rate=0.0,
         drop_path_type="progressive",
-        classifier_feature="global_pool",
-        use_cls_token=False,
+        classifier_feature=classifier_feature,
+        use_cls_token=use_cls,
         learnable_pos_embed=False,
         layer_scale_type=None,
         layer_scale_init_value=0.1,
-        patch_embed_type="generic",
-        patch_embed_params_list=[
-            PadIm2Video(ntimes=2, pad_type="repeat"),
-            make_conv_or_linear(
-                layer=torch.nn.Conv3d(
-                    in_channels=3,
-                    kernel_size=[2, 16, 16],
-                    out_channels=768,
-                    stride=[2, 16, 16],
-                ),
-                init_weight=partial(reshape_and_init_as_mlp),
-            ),
-        ],
-        layer_norm_eps=1e-6,
-        masked_image_modeling=masked_image_modeling,
-        patch_drop_max_patches=-1,
-        add_pos_same_dtype=False,
-        patch_dropping=True,
-        post_encoder_params=None,
-        decoder=partial(
-            Decoder,
-            attn_target=partial(Attention, num_heads=16),
-            decoder_depth=4,
-            decoder_embed_dim=384,
-            embed_dim=768,
-            learnable_pos_embed=False,
-            qkv_bias=True,
-        ),
-        mask_token_embed_dim=None,
-    )
-
-
-def vit_base_mae_finetune_ssv2():
-    return VisionTransformer(
-        img_size=[3, 16, 224, 224],
-        patch_size=[2, 16, 16],
-        in_chans=3,
-        embed_dim=768,
-        depth=12,
-        mlp_ratio=4,
-        attn_target=partial(
-            Attention,
-            attn_drop=0,
-            num_heads=12,
-            proj_drop=0,
-            qk_scale=False,
-            qkv_bias=True,
-        ),
-        drop_rate=0.0,
-        drop_path_rate=0.1,
-        drop_path_type="progressive",
-        classifier_feature="global_pool",
-        use_cls_token=False,
-        learnable_pos_embed=False,
-        layer_scale_type=None,
-        layer_scale_init_value=0.1,
-        patch_embed_type="generic",
+        patch_embed_type=patch_embed_type,
         patch_embed_params_list=[
             PadIm2Video(ntimes=2, pad_type="repeat"),
             make_conv_or_linear(
@@ -991,58 +1061,17 @@ def vit_base_mae_finetune_ssv2():
         mask_token_embed_dim=None,
     )
 
-
-def vit_base_mae_finetune_in1k():
-    return VisionTransformer(
-        img_size=[3, 16, 224, 224],
-        patch_size=[2, 16, 16],
-        in_chans=3,
-        embed_dim=768,
-        depth=12,
-        mlp_ratio=4,
-        attn_target=partial(
-            Attention,
-            attn_drop=0,
-            num_heads=12,
-            proj_drop=0,
-            qk_scale=False,
-            qkv_bias=True,
-        ),
-        drop_rate=0.0,
-        drop_path_rate=0.1,
-        drop_path_type="progressive",
-        classifier_feature="global_pool",
-        use_cls_token=False,
-        learnable_pos_embed=False,
-        layer_scale_type=None,
-        layer_scale_init_value=0.1,
-        patch_embed_type="generic",
-        patch_embed_params_list=[
-            PadIm2Video(ntimes=2, pad_type="repeat"),
-            make_conv_or_linear(
-                layer=torch.nn.Conv3d(
-                    in_channels=3,
-                    kernel_size=[2, 16, 16],
-                    out_channels=768,
-                    stride=[2, 16, 16],
-                ),
-                init_weight=partial(reshape_and_init_as_mlp),
-            ),
-        ],
-        layer_norm_eps=1e-6,
-        masked_image_modeling=False,
-        patch_drop_max_patches=-1,
-        add_pos_same_dtype=False,
-        patch_dropping=False,
-        post_encoder_params=None,
-        decoder=None,
-        mask_token_embed_dim=None,
-    )
+    return model
 
 
-def load_omnimae_checkpoint(checkpoint_path, masked_image_modeling=False):
+def load_omnimae_encoder(model, checkpoint_path=None):
+    if checkpoint_path is None:
+        return model
+
     state_dict = torch.load(checkpoint_path, map_location="cpu")
-    if not masked_image_modeling and "trunk.mask_token" in state_dict:
+    if "model" in state_dict:
+        state_dict = state_dict["model"]
+    if "trunk.mask_token" in state_dict:
         state_dict.pop("trunk.mask_token")
 
     trunk_only_state_dict = {
@@ -1050,4 +1079,29 @@ def load_omnimae_checkpoint(checkpoint_path, masked_image_modeling=False):
         for k, v in state_dict.items()
         if k.startswith("trunk.")
     }
-    return trunk_only_state_dict
+
+    checkpoint_dict = {
+        k: v for k, v in trunk_only_state_dict.items() if not k.startswith("decoder.")
+    }
+
+    if checkpoint_dict["pos_embed"].shape != model.pos_embed.shape:
+        if model.patch_embed_type == "generic":
+            train_time_dim = 8
+            train_grid_size = int(
+                (checkpoint_dict["pos_embed"].shape[1] // train_time_dim) ** 0.5
+            )
+            checkpoint_pos_embed = checkpoint_dict["pos_embed"].reshape(
+                1, train_time_dim, train_grid_size, train_grid_size, model.embed_dim
+            )[:, 0]
+            checkpoint_pos_embed = checkpoint_pos_embed.reshape(1, -1, model.embed_dim)
+        else:
+            checkpoint_pos_embed = checkpoint_dict["pos_embed"]
+        checkpoint_dict["pos_embed"] = resize_pos_embed(
+            checkpoint_pos_embed,
+            model.pos_embed,
+            model.classifier_feature == "use_cls_token",
+            model.patch_embed.patches_layout[1:],
+        )
+
+    model.load_state_dict(checkpoint_dict, strict=True)
+    return model

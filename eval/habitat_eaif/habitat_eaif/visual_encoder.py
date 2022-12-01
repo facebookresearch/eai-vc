@@ -9,6 +9,8 @@ from torch.nn import functional as F
 from habitat import logger
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import RunningMeanAndVar
 
+from eaif_models.models.compression_layer import create_compression_layer
+
 
 class VisualEncoder(nn.Module):
     def __init__(
@@ -47,7 +49,10 @@ class VisualEncoder(nn.Module):
 
             final_spatial_compress = 1.0 / (2**5)
             final_spatial = int(image_size * final_spatial_compress)
-            self.create_compression_layer(embed_dim, final_spatial)
+            self.compression, _, self.output_size = create_compression_layer(
+                embed_dim, final_spatial
+            )
+
         elif (
             "vit" in backbone_config.metadata.model
             or "beit" in backbone_config.metadata.model
@@ -57,50 +62,35 @@ class VisualEncoder(nn.Module):
                 global_pool and use_cls
             ) is False, "Both global_pool and use_cls config param cant be 'True'"
             backbone_config.defrost()
-            backbone_config.model.model.img_size = image_size
-            backbone_config.model.model.global_pool = global_pool
-            backbone_config.model.model.use_cls = use_cls
+            if "model" in backbone_config.model:
+                model = backbone_config.model.model
+            else:
+                model = backbone_config.model
+
+            if (
+                backbone_config.metadata.algo in "omnimae"
+                or backbone_config.metadata.algo in "tmae"
+            ):
+                model.img_size = [3, image_size, image_size]
+            else:
+                model.img_size = image_size
+            model.global_pool = global_pool
+            model.use_cls = use_cls
             backbone_config.freeze()
+
             self.backbone, embed_dim, self.visual_transform, _ = hydra.utils.call(
                 backbone_config
             )
 
-            # TODO: move this outside habitat codebase
-            if (
-                backbone_config.model.model.global_pool
-                or backbone_config.model.model.use_cls
-            ):
+            if model.global_pool or model.use_cls:
                 self.compression = nn.Identity()
                 self.output_size = embed_dim
             else:
-                final_spatial = int(self.backbone.patch_embed.num_patches**0.5)
-                self.create_compression_layer(embed_dim, final_spatial)
+                self.compression, _, self.output_size = create_compression_layer(
+                    embed_dim, self.backbone.final_spatial
+                )
         else:
             raise ValueError(f"unknown backbone {backbone_config.metadata.model}")
-
-    def create_compression_layer(self, embed_dim, final_spatial):
-        after_compression_flat_size = 2048
-        num_compression_channels = int(
-            round(after_compression_flat_size / (final_spatial**2))
-        )
-        self.compression = nn.Sequential(
-            nn.Conv2d(
-                embed_dim,
-                num_compression_channels,
-                kernel_size=3,
-                padding=1,
-                bias=False,
-            ),
-            nn.GroupNorm(1, num_compression_channels),
-            nn.ReLU(True),
-        )
-
-        output_shape = (
-            num_compression_channels,
-            final_spatial,
-            final_spatial,
-        )
-        self.output_size = np.prod(output_shape)
 
     def forward(self, x: torch.Tensor, number_of_envs: int) -> torch.Tensor:  # type: ignore
         x = (

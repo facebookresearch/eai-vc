@@ -2,7 +2,6 @@ import math
 import torch
 import torch.nn as nn
 
-
 # fmt: off
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
@@ -135,12 +134,14 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(
             block, ngroups, base_planes * 8, layers[3], stride=2
         )
-        self.avgpool_and_flatten = nn.Identity()
-        if use_avgpool_and_flatten:
-            self.avgpool_and_flatten = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten())
 
         self.final_channels = self.inplanes
         self.final_spatial_compress = 1.0 / (2**5)
+
+        if use_avgpool_and_flatten:
+            self.final_operation = nn.Sequential(nn.AdaptiveAvgPool2d((1, 1)), nn.Flatten())
+        else:
+            self.final_operation = nn.Identity()
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -194,7 +195,7 @@ class ResNet(nn.Module):
         x = self.layer3(x)
         x = self.layer4(x)
 
-        x = self.avgpool_and_flatten(x)
+        x = self.final_operation(x)
         
         return x
 

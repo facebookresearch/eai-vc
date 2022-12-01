@@ -51,7 +51,6 @@ class EAINet(Net):
         )
 
         self.visual_fc = nn.Sequential(
-            nn.Flatten(),
             nn.Linear(self.visual_encoder.output_size, hidden_size),
             nn.ReLU(True),
         )
@@ -77,7 +76,6 @@ class EAINet(Net):
             )
 
             self.goal_visual_fc = nn.Sequential(
-                nn.Flatten(),
                 nn.Linear(self.goal_visual_encoder.output_size, hidden_size),
                 nn.ReLU(True),
             )

@@ -24,20 +24,31 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         self, global_pool=False, use_cls=True, mask_ratio=None, del_head=True, **kwargs
     ):
         super(VisionTransformer, self).__init__(**kwargs)
-        assert not (global_pool and use_cls)
+        if global_pool:
+            self.classifier_feature = "global_pool"
+        elif use_cls:
+            self.classifier_feature = "use_cls_token"
+        else:
+            self.classifier_feature = "reshape_embedding"
 
         if del_head:
             del self.head  # don't use prediction head
 
-        self.global_pool = global_pool
-        if self.global_pool:
+        if self.classifier_feature == "global_pool":
             norm_layer = kwargs["norm_layer"]
             embed_dim = kwargs["embed_dim"]
             self.fc_norm = norm_layer(embed_dim)
 
             del self.norm  # remove the original norm
 
-        self.use_cls = use_cls
+        if self.classifier_feature == "reshape_embedding":
+            self.final_spatial = int(self.patch_embed.num_patches**0.5)
+            self.embed_dim = (
+                self.patch_embed.grid_size[0],
+                self.patch_embed.grid_size[1],
+                kwargs["embed_dim"],
+            )
+
         self.mask_ratio = mask_ratio
 
     def random_masking(self, x, mask_ratio):
@@ -70,17 +81,20 @@ class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
         return x_masked, mask, ids_restore
 
     def handle_outcome(self, x):
-        if self.global_pool:
+        if self.classifier_feature == "global_pool":
             x = x[:, 1:, :].mean(dim=1)  # global pool without cls token
             outcome = self.fc_norm(x)
-        elif self.use_cls:
+        elif self.classifier_feature == "use_cls_token":
             x = self.norm(x)
             outcome = x[:, 0]  # use cls token
-        else:
+        elif self.classifier_feature == "reshape_embedding":
             x = self.norm(x)
             outcome = reshape_embedding(
                 x[:, 1:]
             )  # remove cls token and reshape embedding
+        else:
+            raise NotImplementedError
+
         return outcome
 
     def forward_features(self, x):
@@ -226,7 +240,7 @@ def load_mae_encoder(model, checkpoint_path=None):
         if "decoder" not in k and "mask_token" not in k
     }
 
-    if model.global_pool:
+    if model.classifier_feature == "global_pool":
         # remove layer that start with norm
         state_dict = {k: v for k, v in state_dict.items() if not k.startswith("norm")}
         # add fc_norm in the state dict from the model
@@ -253,7 +267,7 @@ def load_contrastive_vit(model, checkpoint_path=None, state_dict_key="state_dict
         # delete renamed or unused k
         del old_state_dict[k]
 
-    if model.global_pool:
+    if model.classifier_feature == "global_pool":
         # remove layer that start with norm
         state_dict = {k: v for k, v in state_dict.items() if not k.startswith("norm")}
         # add fc_norm in the state dict from the model

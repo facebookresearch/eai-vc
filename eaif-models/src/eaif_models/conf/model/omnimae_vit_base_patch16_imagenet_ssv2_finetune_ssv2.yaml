@@ -1,8 +1,8 @@
 _target_: eaif_models.models.load_model
 model:
-  _target_: eaif_models.models.vit.omnimae_vit.vit_base_mae_finetune_ssv2
-checkpoint_dict:
-  _target_: eaif_models.models.vit.omnimae_vit.load_omnimae_checkpoint
+  _target_: eaif_models.models.vit.omnimae_vit.load_omnimae_encoder
+  model:
+    _target_: eaif_models.models.vit.omnimae_vit.vit_base_mae
   checkpoint_path: /checkpoint/yixinlin/eaif/models/omnimae/vitb_ssv2_ft.torch
 transform:
   _target_: eaif_models.transforms.vit_transforms
