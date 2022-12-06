@@ -3,6 +3,7 @@ from mjrl.samplers.core import sample_paths
 from mjrl.policies.gaussian_mlp import MLP, BatchNormMLP
 from mjrl.algos.behavior_cloning import BC
 from eaif_mujoco.gym_wrapper import env_constructor
+from eaif_mujoco.rollout_utils import rollout_from_init_states
 from eaif_mujoco.model_loading import (
     load_pretrained_model,
     fuse_embeddings_concat,
@@ -74,6 +75,16 @@ def bc_pvr_train_loop(config: dict) -> None:
     print("Number of demonstrations used : %i" % len(demo_paths))
     print("Demonstration score : %.2f " % demo_score)
 
+    # store init_states for evaluation on training trajectories
+    if config["env_kwargs"]["suite"] == "dmc":
+        init_states = [
+            p["env_infos"]["internal_state"][0].astype(np.float64) for p in demo_paths
+        ]
+    elif config["env_kwargs"]["suite"] == "adroit":
+        init_states = [p["init_state_dict"] for p in demo_paths]
+    elif config["env_kwargs"]["suite"] == "metaworld":
+        init_states = []
+
     # construct the environment and policy
     env_kwargs = config["env_kwargs"]
     e = env_constructor(**env_kwargs, fuse_embeddings=fuse_embeddings_flare)
@@ -97,6 +108,7 @@ def bc_pvr_train_loop(config: dict) -> None:
         demo_paths,
         history_window=config["env_kwargs"]["history_window"],
         fuse_embeddings=fuse_embeddings_flare,
+        proprio_key=config["env_kwargs"]["proprio_key"],
     )
     gc.collect()  # garbage collection to free up RAM
     dataset = FrozenEmbeddingDataset(
@@ -129,7 +141,8 @@ def bc_pvr_train_loop(config: dict) -> None:
     if os.path.isdir("logs") == False:
         os.mkdir("logs")
 
-    highest_score, highest_success = -np.inf, 0.0
+    highest_tr_score, highest_score = -np.inf, -np.inf
+    highest_tr_success, highest_success = 0.0, 0.0
     for epoch in tqdm(range(config["epochs"])):
         # move the policy to correct device
         policy.model.to(config["device"])
@@ -166,29 +179,64 @@ def bc_pvr_train_loop(config: dict) -> None:
                 base_seed=config["seed"],
                 num_cpu=config["num_cpu"],
             )
-            mean_score = np.mean([np.sum(p["rewards"]) for p in paths])
-            min_score = np.min([np.sum(p["rewards"]) for p in paths])
-            max_score = np.max([np.sum(p["rewards"]) for p in paths])
-            try:
-                success_percentage = e.env.unwrapped.evaluate_success(paths)
-            except:
-                print("Success percentage function not implemented in env")
-                success_percentage = -1
-
-            highest_success = (
-                success_percentage
-                if success_percentage >= highest_success
-                else highest_success
+            (
+                mean_score,
+                success_percentage,
+                highest_score,
+                highest_success,
+            ) = compute_metrics_from_paths(
+                env=e,
+                suite=config["env_kwargs"]["suite"],
+                paths=paths,
+                highest_score=highest_score,
+                highest_success=highest_success,
             )
-            highest_score = mean_score if mean_score >= highest_score else highest_score
             epoch_log = {}
-            epoch_log["eval_epoch"] = epoch
-            epoch_log["eval_score_mean"] = mean_score
-            epoch_log["eval_score_min"] = min_score
-            epoch_log["eval_score_max"] = max_score
-            epoch_log["eval_success"] = success_percentage
-            epoch_log["highest_success"] = highest_success
-            epoch_log["highest_score"] = highest_score
+            epoch_log["eval/epoch"] = epoch
+            epoch_log["eval/score_mean"] = mean_score
+            epoch_log["eval/success"] = success_percentage
+            epoch_log["eval/highest_success"] = highest_success
+            epoch_log["eval/highest_score"] = highest_score
+
+            # log statistics on training paths
+            if len(init_states) > 0:
+                paths = rollout_from_init_states(
+                    init_states[: config["eval_num_traj"]],
+                    e,
+                    policy,
+                    eval_mode=True,
+                    horizon=e.horizon,
+                )
+            else:
+                # use same seed as used for collecting the training paths
+                paths = sample_paths(
+                    num_traj=config["eval_num_traj"],
+                    env=e,
+                    policy=policy,
+                    eval_mode=True,
+                    horizon=e.horizon,
+                    base_seed=54321,
+                    num_cpu=config["num_cpu"],
+                )
+            (
+                tr_score,
+                tr_success,
+                highest_tr_score,
+                highest_tr_success,
+            ) = compute_metrics_from_paths(
+                env=e,
+                suite=config["env_kwargs"]["suite"],
+                paths=paths,
+                highest_score=highest_tr_score,
+                highest_success=highest_tr_success,
+            )
+            epoch_log["train/epoch"] = epoch
+            epoch_log["train/score"] = tr_score
+            epoch_log["train/success"] = tr_success
+            epoch_log["train/highest_score"] = highest_tr_score
+            epoch_log["train/highest_success"] = highest_tr_success
+
+            # Log with wandb
             wandb_run.log(data=epoch_log)
 
             print(
@@ -203,6 +251,31 @@ def bc_pvr_train_loop(config: dict) -> None:
             # pickle.dump(agent.policy, open('./iterations/policy_%i.pickle' % epoch, 'wb'))
             if highest_score == mean_score:
                 pickle.dump(policy, open("./iterations/best_policy.pickle", "wb"))
+
+
+def compute_metrics_from_paths(
+    env: GymEnv,
+    suite: str,
+    paths: list,
+    highest_score: float = -1.0,
+    highest_success: float = -1.0,
+):
+    mean_score = np.mean([np.sum(p["rewards"]) for p in paths])
+    if suite == "dmc":
+        # we evaluate dmc based on returns, not success
+        success_percentage = -1.0
+    if suite == "adroit":
+        success_percentage = env.env.unwrapped.evaluate_success(paths)
+    if suite == "metaworld":
+        sc = []
+        for i, path in enumerate(paths):
+            sc.append(path["env_infos"]["success"][-1])
+        success_percentage = np.mean(sc) * 100
+    highest_score = mean_score if mean_score >= highest_score else highest_score
+    highest_success = (
+        success_percentage if success_percentage >= highest_success else highest_success
+    )
+    return mean_score, success_percentage, highest_score, highest_success
 
 
 class FrozenEmbeddingDataset(Dataset):
@@ -282,6 +355,7 @@ def precompute_features(
     paths: list,
     history_window: int = 1,
     fuse_embeddings: callable = None,
+    proprio_key: str = None,
 ):
     assert "embeddings" in paths[0].keys()
     for path in paths:
@@ -294,6 +368,9 @@ def precompute_features(
                 ::-1
             ]  # emb_hist_t[-1] should correspond to time t embedding
             feat_t = fuse_embeddings(emb_hist_t)
+            if proprio_key not in [None, "None"]:
+                assert proprio_key in path["env_infos"].keys()
+                feat_t = np.concatenate([feat_t, path["env_infos"][proprio_key][t]])
             features.append(feat_t.copy())
         path["features"] = np.array(features)
     return paths
