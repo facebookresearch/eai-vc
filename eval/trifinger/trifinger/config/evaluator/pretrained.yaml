@@ -1,0 +1,8 @@
+_target_: imitation_learning.utils.evaluator.PretrainedEvaluator
+rnn_hxs_dim: ${policy.recurrent_hidden_size}
+num_render: 0
+fps: 10
+# save_traj_name: 
+num_envs: ${num_envs}
+num_steps: ${num_steps}
+info_keys: ${info_keys}

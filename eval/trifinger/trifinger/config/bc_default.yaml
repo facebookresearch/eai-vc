@@ -1,0 +1,43 @@
+defaults:
+    - algo: bc_finetune
+    - _self_
+
+#demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/demos_d-1_train-1_test-1_scale-100_dts-0p4.json
+#demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/franzi.json
+#demo_path: /private/home/clairelchen/projects/demos_colored_cube/preloaded_dataset_stats/demos_d-1_train-100_test-10_scale-100_dts-0p4.json
+demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/demos_d-1_train-100_test-20_scale-100_dts-0p4.json
+no_wandb: False
+seed: 10
+eval_envs: ["sim_env_demo"]
+
+algo:
+    lr: 1e-4
+    visual_lr: 1e-4
+    #obj_state_type: "obj"
+    n_epoch_every_log: 20
+    batch_size: 32
+    state_type: ftpos_obj
+    goal_type: goal_cond
+    n_outer_iter: 500
+    latent_dim: Null
+    freeze_pretrained_rep: true
+    pretrained_rep: mae_vit_base_patch16_ego4d_210_epochs
+
+    image_aug_dict: {
+      augment_prob: 0.0, 
+      times_to_use_demo: 1, 
+      jitter_brightness: 0.3,
+      jitter_contrast: 0.3,
+      jitter_saturation: 0.3, 
+      jitter_hue: 0.03,
+      shift_pad: 10,
+    }
+
+run_id: ${hydra:job.num}
+exp_dir_to_resume: null
+
+
+hydra:
+    sweep:
+        dir: multirun/${now:%Y-%m-%d}/exp_bc_finetune_${now:%Y-%m-%d}-${now:%H-%M-%S}
+        subdir: ${hydra.job.num}

@@ -1,0 +1,16 @@
+defaults:
+    - _self_
+    - algo: bc_finetune
+
+demo_path: ???
+no_wandb: False
+wandb_entity: fmeier
+run_id: ${hydra:job.num}
+seed: 10
+exp_dir_to_resume: null
+
+hydra:
+    sweep:
+        dir: multirun/${now:%Y-%m-%d}/exp_${hydra.runtime.choices.experiment}-${now:%Y-%m-%d}-${now:%H-%M-%S}
+        subdir: ${hydra.job.num}
+

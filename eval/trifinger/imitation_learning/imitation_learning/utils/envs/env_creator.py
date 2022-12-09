@@ -6,7 +6,7 @@ import torch
 
 from imitation_learning.utils.envs.registry import full_env_registry
 from rl_utils.envs.wrappers import TimeLimitMask
-from torchrl.envs import GymWrapper
+from torchrl.envs.libs.gym import GymWrapper
 
 
 def make_single_gym_env(

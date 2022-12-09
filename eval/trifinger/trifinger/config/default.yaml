@@ -1,0 +1,78 @@
+defaults:
+  - _self_
+  - logger: wandb
+  - env: reach_env
+  - evaluator:  default
+#  - override hydra/launcher: submitit_slurm  
+env_settings: {}
+max_goal_dist: 1
+camera_id: 0
+start_radius: 0.02
+sample_goals: False
+
+obs_shape: ???
+action_dim: ???
+total_num_updates: ???
+action_is_discrete: ???
+
+num_steps: 40
+num_envs: 32
+device: "cpu"
+only_eval: False
+seed: 31
+num_eval_episodes: 100
+num_env_steps: 5e6
+pretrained_model: ""
+visual_observation: False
+recurrent_hidden_state_size: 128
+gamma: 0.99
+info_keys: ["value_preds","reward","a_min","a_max","a_std"]
+
+# Intervals
+log_interval: 1
+eval_interval: 100
+save_interval: 100
+
+# Saving / Loading
+load_checkpoint: null
+load_policy: True
+resume_training: False
+
+policy:
+  _target_: imitation_learning.policy_opt.policy.Policy
+  hidden_size: 128
+  recurrent_hidden_size: 128
+  
+  is_recurrent: False
+  obs_shape: ${obs_shape}
+  action_dim: ${action_dim}
+  action_is_discrete: ${action_is_discrete}
+  std_init: -1.0
+  num_envs: ${num_envs}
+
+policy_updater:
+  _target_: imitation_learning.policy_opt.ppo.PPO
+  _recursive_: False
+
+  use_clipped_value_loss: True
+  clip_param: 0.4
+  value_loss_coef: 0.5
+  entropy_coef: 0.001
+  max_grad_norm: 0.5
+  num_epochs: 2
+  num_mini_batch: 4
+  num_envs: ${num_envs}
+  num_steps: ${num_steps}
+
+  # Returns calculation
+  gae_lambda: 0.95
+  use_gae: True
+  gamma: ${gamma}
+
+  optimizer_params:
+    _target_: torch.optim.Adam
+    lr: 1e-4
+
+hydra:
+  run:
+    dir: ./

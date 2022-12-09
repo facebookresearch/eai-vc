@@ -72,7 +72,7 @@ class Logger:
         if step_info_keys:
             for key in step_info_keys:
                 if key in infos.keys():
-                    self._step_log_info[key].append(infos[key].numpy())
+                    self._step_log_info[key].append(infos[key].cpu().numpy())
 
     def collect_infos(
         self, info: Dict[str, float], prefix: str = "", no_rolling_window: bool = False
@@ -165,6 +165,7 @@ class Logger:
             # Print log values from the updater if requested.
             for k, v in log_dat.items():
                 print(f"    - {k}: {v}")
+            print("", flush=True)
 
         # Log all values
         log_dat["fps"] = fps

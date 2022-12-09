@@ -1,0 +1,10 @@
+name: "bc"
+lr: 1e-3
+batch_size: 16
+state_type: "obj"
+obj_state_type: "eaif_r3m"
+goal_type: "goal_cond"
+n_outer_iter: 100
+n_epoch_every_log: 100
+run_sim: true
+max_demo_per_diff: 10

@@ -1,0 +1,9 @@
+defaults:
+    - submitit_slurm
+
+partition: learnfair
+cpus_per_task: 10
+gpus_per_node: 2
+mem_gb: 64
+timeout_min: 1440
+array_parallelism: 30

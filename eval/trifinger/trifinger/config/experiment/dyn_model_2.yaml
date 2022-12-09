@@ -1,0 +1,23 @@
+# @package _global_
+hydra:
+  sweeper:
+    params:
+        demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/demos_d-1_3_9_train-100_100_96_test-20_20_16_scale-100.json
+        no_wandb: False
+        seed: 10, 20
+        algo: forward_model
+
+        algo.lr: 
+          1e-3,
+          1e-4
+        algo.n_epochs: 500
+        algo.obj_state_type:
+          orig_r3m,
+          eaif_r3m,
+          vip, 
+          encdec-exp_finetune_exp_3-2022-09-14-22-56-00_r-35,
+          encdec-exp_finetune_exp_3-2022-09-14-22-56-00_r-13
+        algo.use_ftpos: False, True
+        algo.n_epoch_every_save: 50
+        algo.hidden_dims: 4096-2048
+        algo.augment_data: False, True

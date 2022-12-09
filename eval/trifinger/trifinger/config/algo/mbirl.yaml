@@ -1,0 +1,15 @@
+name: mbirl
+cost_type: Weighted
+cost_lr: 1e-3
+action_lr: 1e-3
+n_inner_iter: 100
+cost_state: obj
+irl_loss_state: obj
+rbf_kernels: 5
+rbf_width: 2
+n_outer_iter: 500
+n_epoch_every_log: 1
+mpc_type: learned
+mpc_forward_model_ckpt: null
+policy_type: nn
+run_sim: false

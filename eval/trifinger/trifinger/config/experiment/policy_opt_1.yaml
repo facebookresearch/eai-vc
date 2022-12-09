@@ -1,0 +1,63 @@
+# @package _global_
+hydra:
+  sweeper:
+    params:
+        demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/demos_d-1_train-1_test-1_scale-100.json
+        no_wandb: False
+        seed: 10, 20
+        algo: policy_opt
+
+        algo.action_lr:
+          1e-3,
+          1e-4
+        algo.n_inner_iter: 100
+        algo.n_outer_iter: 1
+        algo.n_epoch_every_log: 10
+        algo.mpc_type: learned
+        algo.mpc_forward_model_ckpt:
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/3/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/21/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/62/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/60/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/67/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/25/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/66/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/64/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/31/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/69/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/70/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/28/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/59/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/37/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/38/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/36/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/75/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/73/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/74/ckpts/epoch_500_ckpt.pth,
+          /private/home/clairelchen/projects/eai-foundations/eval/trifinger/trifinger_claire/multirun/2022-09-26/exp_dyn_model_2-2022-09-26-17-15-36/72/ckpts/epoch_500_ckpt.pth
+          # 3: orig_r3m, use_ftpos, augment_data
+          # 21: orig_r3m, no ftpos, augment_data
+          # 62:orig_r3m, use_ftpos, no augment_data
+          # 60: orig_r3m, no ftpos, no augment_data
+          # 67: eaif_r3m, use_ftpos, augment_data
+          # 25: eaif_r3m, no ftpos, augment_data
+          # 66: eaif_r3m, use_ftpos, no augment_data
+          # 64: eaif_r3m, no ftpos, no augment_data
+          # 31: vip, use_ftpos, augment_data
+          # 69: vip, no ftpos, augment_data
+          # 70: vip, use_ftpos, no augment_data
+          # 28: vip, no ftpos, no augment_data
+          # 59: finet r13, use_ftpos, augment_data
+          # 37: finet r13, no ftpos, augment_data
+          # 38: finet r13, use_ftpos, no augment_data
+          # 36: finet r13, no ftpos, no augment_data
+          # 75: finet r35, use_ftpos, augment_data
+          # 73: finet r35, no ftpos, augment_data
+          # 74: finet r35, use_ftpos, no augment_data
+          # 72: finet r35, no ftpos, no augment_data
+        algo.cost_state: obj
+        algo.cost_type: Weighted
+        algo.train_forward_model: False
+        algo.policy_type: actions, nn
+        algo.optimizer: adam, sgd
+

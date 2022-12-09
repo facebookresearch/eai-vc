@@ -1,0 +1,5 @@
+env_name: "TrifingerReachOrigEnv-v0"
+env_settings:
+  params:
+    _target_: trifinger_envs.trifinger_reach_orig.TriFingerReach
+  set_eval: False

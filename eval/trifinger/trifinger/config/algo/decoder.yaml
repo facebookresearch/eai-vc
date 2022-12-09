@@ -1,0 +1,9 @@
+name: decoder
+lr: 1e-3
+n_epochs: 2000
+n_epoch_every_save: 100
+batch_size: 16
+model: decoder
+freeze_pretrained_rep: false
+latent_dim: 50
+pretrained_rep: orig_r3m

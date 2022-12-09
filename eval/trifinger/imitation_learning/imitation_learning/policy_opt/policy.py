@@ -4,16 +4,21 @@ import numpy as np
 import torch
 import torch.nn as nn
 from rl_utils.models import build_rnn_state_encoder
-
+from torchrl.data.tensor_specs import CompositeSpec
+from tensordict import TensorDict
+from torchrl.data.tensor_specs import NdBoundedTensorSpec
 from imitation_learning.utils.distributions import FixedNormal, FixedCategorical
 from torchrl.modules import (
     ConvNet,
-    TensorDictModule,
-    TensorDictSequence,
     ProbabilisticActor,
     ValueOperator,
     ActorValueOperator,
 )
+from tensordict.nn import (
+    TensorDictModule,
+    TensorDictSequential,
+)
+from gym.spaces import Box
 
 
 def init_weights(m, gain=1):
@@ -39,22 +44,18 @@ class CategoricalParams(nn.Module):
 class DiagGaussianParams(nn.Module):
     """Returns the parameters for a normal distribution."""
 
-    def __init__(self, hidden_size, action_dim, std_init, squash_mean):
+    def __init__(self, hidden_size, action_dim, std_init):
         super().__init__()
 
-        if squash_mean:
-            self.fc_mean = nn.Linear(hidden_size, action_dim)
-        else:
-            self.fc_mean = nn.Sequential(
-                nn.Linear(hidden_size, action_dim),
-                nn.Tanh(),
-            )
+        self.fc_mean = nn.Sequential(
+            nn.Linear(hidden_size, action_dim),
+            nn.Tanh(),
+        )
         self.logstd = nn.Parameter(torch.full((1, action_dim), float(std_init)))
         self.apply(init_weights)
 
     def forward(self, x):
         action_mean = self.fc_mean(x)
-
         action_logstd = self.logstd.expand_as(action_mean)
         return action_mean, action_logstd.exp()
 
@@ -69,20 +70,36 @@ class Policy(nn.Module):
         recurrent_hidden_size,
         is_recurrent,
         num_envs,
+        device="cpu",
         std_init=0.0,
-        squash_mean=False,
+        encoder_model=None,
+        encoder_key="observation",
+        finetune=False,
     ):
         super().__init__()
+        std_init = torch.tensor(std_init)
         self.num_envs = num_envs
         self.hidden_size = hidden_size
         self.recurrent_hidden_size = recurrent_hidden_size
         self.action_is_discrete = action_is_discrete
 
+        if encoder_model is not None:
+            # expects model, embedding_dir, transform, metadata to be returned but only require model
+            self.pretrained_model, _, _, _ = (
+                encoder_model[0],
+                encoder_model[1],
+                encoder_model[2],
+                encoder_model[3],
+            )
+        else:
+            self.pretrained_model = None
+
+        self.encoder_key = encoder_key
+
         if isinstance(obs_shape, dict):
             is_visual_obs = any([len(v) == 3 for k, v in obs_shape.items()])
         else:
             is_visual_obs = len(obs_shape) == 3
-
         if is_visual_obs:
             conv_subnet = ConvNet(
                 depth=3,
@@ -103,9 +120,12 @@ class Policy(nn.Module):
 
             input_size = hidden_size
         else:
-            net = nn.Sequential()
+            if self.pretrained_model is not None:
+                net = nn.Sequential(self.pretrained_model)
+            else:
+                net = nn.Sequential()
             self.backbone = TensorDictModule(
-                module=net, in_keys=["observation"], out_keys=["hidden"]
+                module=net, in_keys=[self.encoder_key], out_keys=["hidden"]
             )
             input_size = obs_shape[0]
 
@@ -128,9 +148,7 @@ class Policy(nn.Module):
             distribution_class = FixedCategorical
             param_keys = ["logits"]
         else:
-            dist_params_net = DiagGaussianParams(
-                hidden_size, action_dim, std_init, squash_mean
-            )
+            dist_params_net = DiagGaussianParams(hidden_size, action_dim, std_init)
             distribution_class = FixedNormal
             param_keys = ["loc", "scale"]
 
@@ -146,12 +164,22 @@ class Policy(nn.Module):
             module=actor, in_keys=["hidden"], out_keys=param_keys
         )
         self.actor_module = actor_module
-        actor_subnet = ProbabilisticActor(
-            module=actor_module,
-            dist_param_keys=param_keys,
-            distribution_class=distribution_class,
-            default_interaction_mode="random",
-        )
+        try:
+            actor_subnet = ProbabilisticActor(
+                module=actor_module,
+                spec=NdBoundedTensorSpec(shape=torch.Size([9]), minimum=-1, maximum=1),
+                dist_param_keys=param_keys,
+                distribution_class=distribution_class,
+                default_interaction_mode="random",
+            )
+        except TypeError:
+            actor_subnet = ProbabilisticActor(
+                module=actor_module,
+                spec=NdBoundedTensorSpec(shape=torch.Size([9]), minimum=-1, maximum=1),
+                dist_in_keys=param_keys,
+                distribution_class=distribution_class,
+                default_interaction_mode="random",
+            )
 
         critic = nn.Sequential(
             nn.Linear(input_size, hidden_size),
@@ -164,8 +192,12 @@ class Policy(nn.Module):
 
         self.apply(partial(init_weights, gain=np.sqrt(2)))
 
-        self.hidden = TensorDictSequence(self.backbone, self.rnn_encoder)
-        self.module = ActorValueOperator(self.hidden, actor_subnet, critic_subnet)
+        self.hidden = TensorDictSequential(self.backbone, self.rnn_encoder)
+        self.backbone.requires_grad_(finetune)
+
+        self.module = ActorValueOperator(self.hidden, actor_subnet, critic_subnet).to(
+            device
+        )
         self.actor = self.module.get_policy_operator()
         self.critic = self.module.get_value_operator()
 
@@ -209,7 +241,6 @@ class Policy(nn.Module):
 
         action_log_probs = dist.log_prob(action)
         dist_entropy = dist.entropy()
-
         if hidden_td.get("recurrent_hidden_states", None) is None:
             td["recurrent_hidden_states"] = torch.zeros(
                 self.num_envs, self.recurrent_hidden_size
@@ -219,3 +250,6 @@ class Policy(nn.Module):
         td["sample_log_prob"] = action_log_probs
         td["value_preds"] = critic_value
         td["dist_entropy"] = dist_entropy
+        td["a_min"] = dist.loc.min().expand_as(action_log_probs)
+        td["a_max"] = dist.loc.max().expand_as(action_log_probs)
+        td["a_std"] = dist.scale.mean().expand_as(action_log_probs)

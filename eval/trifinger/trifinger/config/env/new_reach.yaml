@@ -1,0 +1,3 @@
+env_name: "ReachEnv-v1"
+env_settings:
+  set_eval: False

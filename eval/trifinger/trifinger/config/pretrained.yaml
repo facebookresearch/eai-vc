@@ -1,0 +1,68 @@
+defaults:
+  - _self_
+  - logger: wandb
+  - policy: finetune
+  - env: reach_env
+  - evaluator: pretrained
+  - model: mae_vit_base_patch16_ego4d_210_epochs
+  - override hydra/launcher: submitit_slurm  
+
+env_settings: {}
+sample_goals: False
+start_radius: 0.0
+camera_id: 0
+max_goal_dist: 1
+obs_shape: ???
+action_dim: ???
+total_num_updates: ???
+action_is_discrete: ???
+
+num_steps: 20
+num_envs: 4
+device: ???
+only_eval: False
+seed: 12345
+num_eval_episodes: 10
+num_env_steps: 6e6
+visual_observation: True
+recurrent_hidden_state_size: 128
+gamma: 0.99
+info_keys: ["value_preds","reward","a_min","a_max","a_std"]
+
+# Intervals
+log_interval: 1
+eval_interval: 100
+save_interval: 500
+
+# Saving / Loading
+load_checkpoint: null
+load_policy: True
+resume_training: False
+
+policy_updater:
+  _target_: imitation_learning.policy_opt.ppo.PPO
+  _recursive_: False
+
+  use_clipped_value_loss: True
+  clip_param: 0.4
+  value_loss_coef: 0.5
+  entropy_coef: 0.1
+  max_grad_norm: 0.5
+  num_epochs: 3
+  num_mini_batch: 4
+  num_envs: ${num_envs}
+  num_steps: ${num_steps}
+
+  # Returns calculation
+  gae_lambda: 0.95
+  use_gae: True
+  gamma: ${gamma}
+
+  optimizer_params:
+    _target_: torch.optim.Adam
+    lr: 1e-4 #0.001, 0.0001
+
+hydra:
+  run:
+    dir: ./
+  

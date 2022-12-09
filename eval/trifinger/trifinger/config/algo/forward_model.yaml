@@ -1,0 +1,9 @@
+name: forward_model
+lr: 1e-4
+n_epochs: 500
+obj_state_type: orig_r3m
+use_ftpos: False
+n_epoch_every_save: 50
+hidden_dims: 4096-2048
+augment_data: false
+loss_fn: mse

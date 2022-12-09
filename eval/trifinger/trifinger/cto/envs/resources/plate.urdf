@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<robot name="plate">
+  <link name="plateLink">
+  <contact>
+      <lateral_friction value="1"/>
+  </contact>
+  <collision>
+      <geometry>
+          <box size="0.1 0.2 0.02"/>
+      </geometry>
+  </collision>
+  <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+       <mass value=".1"/>
+       <inertia ixx="0.00083" ixy="0" ixz="0" iyy="0.00083" iyz="0" izz="0.00083"/>
+    </inertial>
+  <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+				<box size="0.1 0.2 0.02"/>
+      </geometry>
+       <material name="green">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+    
+  </link>
+</robot>

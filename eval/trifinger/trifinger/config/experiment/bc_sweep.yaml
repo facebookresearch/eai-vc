@@ -1,0 +1,24 @@
+# @package _global_
+hydra:
+  sweeper:
+    params:
+        demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/demos_d-1_3_train-100_100_test-20_20_scale-100_dts-0p4.json
+        no_wandb: False
+        seed: 0, 1, 2
+        algo: bc_finetune
+
+        algo.lr: 
+          1e-3,
+          1e-4
+        algo.pretrained_rep:
+          r3m,
+          vip
+        algo.n_epoch_every_log: 25
+        algo.batch_size: 16
+        algo.state_type: ftpos_obj, obj
+        algo.goal_type: goal_cond
+        algo.n_outer_iter: 1000
+        algo.latent_dim: 16, 64, 256, null
+        algo.freeze_pretrained_rep: true, false
+        algo.run_sim: true
+        algo.max_demo_per_diff: 10
