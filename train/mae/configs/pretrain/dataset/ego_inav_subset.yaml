@@ -1,0 +1,35 @@
+# @package _global_
+
+# dataset arguments ** NEW **
+data_path:  # The data_path can point to multiple datasets
+  # - /checkpoint/yixinlin/eaif/datasets/manifests/imagenet_manifest.txt  # 1,431,167 frames
+
+  ### Ego ###
+  # - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_manifest.txt  # 4,874,498 frames
+  - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_unfinished_full_frames_manifest.txt  # 59,072,000 frames
+  # - /checkpoint/yixinlin/eaif/datasets/manifests/100DOH_manifest.txt  # 99,899 frames
+  # - /checkpoint/yixinlin/eaif/datasets/manifests/epic_kitchens_manifest.txt  # 19,965,439 frames
+  # - /checkpoint/yixinlin/eaif/datasets/manifests/ssv2_manifest.txt  # 25,209,271 frames
+
+  ### INav
+  # - /checkpoint/yixinlin/eaif/datasets/manifests/re10k_manifest.txt  # 303,087 frames
+  - /checkpoint/yixinlin/eaif/datasets/manifests/oh24_manifest.txt  # 499,442 frames
+# sample_size:
+#   - 100
+#   - 100
+#   - 100
+#   - 100
+#   - 100
+every_k:
+### Ego (1,768,205 frames total) ###
+  - 30  # Ego4D unfinished full with 1,969,066 frames
+  # - 30  # Ego4D with 162,484 frames
+  # - 1  # 100DOH with 99,899 frames
+  # - 30  # Epic Kitchens with 665,515 frames
+  # - 30  # SSV2 with 840,310 frames
+
+  ### INav (802,529 frames total) ###
+  # - 1  # RE10K with 303,087 frames
+  - 1  # OH24 with 499,442 frames
+dataset_type: path_dataset_with_manifest        # choices [dataset_with_txt_files, omnidataset, path_dataset, path_dataset_with_manifest],
+dataset_size: 2_5m                              # choices=["14_5m", "3_6m", "1_45m", "145k"],

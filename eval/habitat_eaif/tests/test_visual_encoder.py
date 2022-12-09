@@ -40,7 +40,13 @@ def backbone_config(request, nocluster):
 def test_env_embedding(backbone_config):
     encoder = VisualEncoder(backbone_config)
     image = torch.zeros((32, 128, 128, 3))
-    embedding = encoder(image, 1)
+
+    image = (
+        image.permute(0, 3, 1, 2).float() / 255
+    )  # convert channels-last to channels-first
+    image = encoder.visual_transform(image, 1)
+
+    embedding = encoder(image)
 
     assert 2 == len(embedding.shape)
     assert embedding.shape[0] == image.shape[0]

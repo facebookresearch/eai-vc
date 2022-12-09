@@ -22,6 +22,7 @@ class VisualEncoder(nn.Module):
         global_pool: bool = False,
         use_cls: bool = False,
         use_augmentations: bool = False,
+        loaded_backbone_data=None,
     ):
         super().__init__()
 
@@ -43,14 +44,24 @@ class VisualEncoder(nn.Module):
             backbone_config.model.use_avgpool_and_flatten = False
             backbone_config.freeze()
 
-            self.backbone, embed_dim, self.visual_transform, _ = hydra.utils.call(
-                backbone_config
-            )
+            if loaded_backbone_data is None:
+                (
+                    self.backbone,
+                    self.embed_dim,
+                    self.visual_transform,
+                    _,
+                ) = hydra.utils.call(backbone_config)
+            else:
+                (
+                    self.backbone,
+                    self.embed_dim,
+                    self.visual_transform,
+                ) = loaded_backbone_data
 
             final_spatial_compress = 1.0 / (2**5)
             final_spatial = int(image_size * final_spatial_compress)
             self.compression, _, self.output_size = create_compression_layer(
-                embed_dim, final_spatial
+                self.embed_dim, final_spatial
             )
 
         elif (
@@ -68,8 +79,8 @@ class VisualEncoder(nn.Module):
                 model = backbone_config.model
 
             if (
-                backbone_config.metadata.algo in "omnimae"
-                or backbone_config.metadata.algo in "tmae"
+                backbone_config.metadata.algo == "omnimae"
+                or backbone_config.metadata.algo == "tmae"
             ):
                 model.img_size = [3, image_size, image_size]
             else:
@@ -78,25 +89,34 @@ class VisualEncoder(nn.Module):
             model.use_cls = use_cls
             backbone_config.freeze()
 
-            self.backbone, embed_dim, self.visual_transform, _ = hydra.utils.call(
-                backbone_config
-            )
+            if loaded_backbone_data is None:
+                (
+                    self.backbone,
+                    self.embed_dim,
+                    self.visual_transform,
+                    _,
+                ) = hydra.utils.call(backbone_config)
+            else:
+                (
+                    self.backbone,
+                    self.embed_dim,
+                    self.visual_transform,
+                ) = loaded_backbone_data
 
             if model.global_pool or model.use_cls:
                 self.compression = nn.Identity()
-                self.output_size = embed_dim
+                self.output_size = self.embed_dim
             else:
                 self.compression, _, self.output_size = create_compression_layer(
-                    embed_dim, self.backbone.final_spatial
+                    self.embed_dim, self.backbone.final_spatial
                 )
         else:
             raise ValueError(f"unknown backbone {backbone_config.metadata.model}")
 
-    def forward(self, x: torch.Tensor, number_of_envs: int) -> torch.Tensor:  # type: ignore
-        x = (
-            x.permute(0, 3, 1, 2).float() / 255
-        )  # convert channels-last to channels-first
-        x = self.visual_transform(x, number_of_envs)
+    def get_loaded_backbone_data(self):
+        return self.backbone, self.embed_dim, self.visual_transform
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore
         x = self.running_mean_and_var(x)
         x = self.backbone(x)
         x = self.compression(x)

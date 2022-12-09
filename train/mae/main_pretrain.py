@@ -8,10 +8,10 @@
 # DeiT: https://github.com/facebookresearch/deit
 # BEiT: https://github.com/microsoft/unilm/tree/master/beit
 # --------------------------------------------------------
-import argparse
 import datetime
 import json
 import numpy as np
+import random
 import os
 import time
 from pathlib import Path
@@ -25,7 +25,7 @@ import torchvision.datasets as datasets
 
 import timm
 
-assert timm.__version__ == "0.6.5"  # version check
+assert timm.__version__ == "0.6.11"  # version check
 import timm.optim.optim_factory as optim_factory
 
 from eaif_models.utils.wandb import setup_wandb
@@ -34,6 +34,7 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from datasets.dataset_with_txt_files import DatasetWithTxtFiles
 from datasets.omni_dataset import OmniDataset
 from datasets.path_dataset import PathDataset
+from datasets.path_dataset import PathDatasetWithManifest
 
 import models_mae
 
@@ -57,6 +58,7 @@ def main(args: omegaconf.DictConfig):
     seed = args.seed + misc.get_rank()
     torch.manual_seed(seed)
     np.random.seed(seed)
+    random.seed(seed)
 
     cudnn.benchmark = True
 
@@ -107,6 +109,26 @@ def main(args: omegaconf.DictConfig):
     elif args.dataset_type == "path_dataset":
         dataset_train = PathDataset(
             args.data_path,
+            transform=transform_train,
+            extra_transform=extra_transform,
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225],
+        )
+    elif args.dataset_type == "path_dataset_with_manifest":
+        sample_size = (
+            omegaconf.OmegaConf.to_container(args.sample_size)
+            if "sample_size" in args
+            else None
+        )
+        every_k = (
+            omegaconf.OmegaConf.to_container(args.every_k)
+            if "every_k" in args
+            else None
+        )
+        dataset_train = PathDatasetWithManifest(
+            root=args.data_path,
+            sample_size=sample_size,
+            every_k=every_k,
             transform=transform_train,
             extra_transform=extra_transform,
             mean=[0.485, 0.456, 0.406],

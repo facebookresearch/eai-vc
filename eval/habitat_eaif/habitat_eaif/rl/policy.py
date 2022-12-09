@@ -73,6 +73,9 @@ class EAINet(Net):
                 global_pool=global_pool,
                 use_cls=use_cls,
                 use_augmentations=use_augmentations,
+                loaded_backbone_data=self.visual_encoder.get_loaded_backbone_data()
+                if freeze_backbone
+                else None,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -121,6 +124,25 @@ class EAINet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
+    def transform_images(self, observations, number_of_envs):
+        images = observations["rgb"]
+
+        imagenav_task = ImageGoalRotationSensor.cls_uuid in observations
+
+        # concatenate images
+        if imagenav_task:
+            goal_images = observations[ImageGoalRotationSensor.cls_uuid]
+            x = torch.cat([images, goal_images], dim=0)
+        else:
+            x = images
+
+        x = (
+            x.permute(0, 3, 1, 2).float() / 255
+        )  # convert channels-last to channels-first
+        x = self.visual_encoder.visual_transform(x, number_of_envs)
+
+        return x.chunk(2, dim=0) if imagenav_task else x
+
     def forward(
         self,
         observations: Dict[str, torch.Tensor],
@@ -133,18 +155,18 @@ class EAINet(Net):
         # number of environments
         N = rnn_hidden_states.size(0)
 
+        rgb, goal_rgb = self.transform_images(observations, N)
+
         # visual encoder
-        rgb = observations["rgb"]
-        rgb = self.visual_encoder(rgb, N)
+        rgb = self.visual_encoder(rgb)
         rgb = self.visual_fc(rgb)
         x.append(rgb)
 
         # goal embedding
         if ImageGoalRotationSensor.cls_uuid in observations:
-            goal = observations[ImageGoalRotationSensor.cls_uuid]
-            goal = self.goal_visual_encoder(goal, N)
-            goal = self.goal_visual_fc(goal)
-            x.append(goal)
+            goal_rgb = self.goal_visual_encoder(goal_rgb)
+            goal_rgb = self.goal_visual_fc(goal_rgb)
+            x.append(goal_rgb)
 
         if ObjectGoalSensor.cls_uuid in observations:
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()

@@ -1,6 +1,7 @@
 defaults:
   - _self_
   - wandb_mae@: mae_eaif 
+  - dataset: ego_inav
 
 batch_size: 64                  # Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus)
 epochs: 400
@@ -8,6 +9,7 @@ accum_iter: 1                   # Accumulate gradient iterations (for increasing
 
 # Model parameters
 mae_model: mae_vit_large_patch16    # Name of model to train
+# mae_model: mae_vit_base_patch16    # Name of model to train
 input_size: 224                 # images input size
 mask_ratio: 0.75                # Masking ratio (percentage of removed patches)
 norm_pix_loss: False            # Use (per-patch) normalized pixels as targets for computing loss
@@ -19,8 +21,6 @@ blr: 1e-3                       # base learning rate: absolute_lr = base_lr * to
 min_lr: 0.0                     # lower lr bound for cyclic schedulers that hit 0
 warmup_epochs: 40               # epochs to warmup LR
 
-# Dataset parameters
-data_path: ["/datasets01/imagenet_full_size/061417/"]                 # The data_path can point to multiple datasets
 output_dir: "./output_dir"      # path where to save, empty for no saving
 device: cuda                    # device to use for training / testing
 seed: 0
@@ -36,8 +36,20 @@ dist_on_itp: False
 dist_url: "env://"               # url used to set up distributed training"
 distributed: True
 
-# dataset arguments ** NEW **
-dataset_type: path_dataset        # choices [dataset_with_txt_files, omnidataset, path_dataset],
 omnidata_datasets: all           # Which omnidata datasets to use
-dataset_size: 12m                # choices=["14_5m", "3_6m", "1_45m", "145k"],
 color_jitter: False              # apply color jitter as a part of transforms
+
+# submitit
+
+ngpus: 8
+nodes: 2
+timeout: 4320
+partition: learnlab
+# partition: devlab
+use_volta32: False
+comment: ""
+
+# params filled by submitit
+gpu: 0
+rank: 0
+dist_backend: nccl

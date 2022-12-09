@@ -1,5 +1,6 @@
 import glob
 import os
+import random
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -20,6 +21,15 @@ class PathDataset(VisionDataset):
         super().__init__(root=root)
 
         self.files = []
+        self.transform = transform
+        self.extra_transform = extra_transform
+        self.mean = mean
+        self.std = std
+        assert (mean is None) == (std is None)
+
+        self.get_files()
+
+    def get_files(self):
         for folder in self.root:
             self.files.extend(
                 sorted(glob.glob(os.path.join(folder, "*", "*", "*.jpg")))
@@ -27,12 +37,6 @@ class PathDataset(VisionDataset):
             self.files.extend(
                 sorted(glob.glob(os.path.join(folder, "*", "*", "*.png")))
             )
-
-        self.transform = transform
-        self.extra_transform = extra_transform
-        self.mean = mean
-        self.std = std
-        assert (mean is None) == (std is None)
 
     def __len__(self) -> int:
         return len(self.files)
@@ -51,6 +55,51 @@ class PathDataset(VisionDataset):
             img = TF.normalize(img, self.mean, self.std)
             extra_img = TF.normalize(extra_img, self.mean, self.std)
         return img, extra_img, 0
+
+
+class PathDatasetWithManifest(PathDataset):
+    def __init__(self, sample_size=None, every_k=None, *args, **kwargs):
+        """
+        `sample_size` is either None or a list of integers corresponding to
+        each manifest file. The datasets are sampled to the size of each
+        corresponding integer; if the integer is -1, then the full dataset is
+        retained. `sample_size is None` is equivalent to -1 for all datasets.
+
+        `every_k` is either None or a list of integers corresponding to a
+        simply picking every k-th file in each dataset manifest.
+        """
+        self.sample_size = sample_size
+        self.every_k = every_k
+        super().__init__(*args, **kwargs)
+        assert sample_size is None or len(sample_size) == len(self.root)
+        assert every_k is None or len(every_k) == len(self.root)
+        assert not (sample_size is not None and every_k is not None)
+
+    def get_files(self):
+        manifest_files = self.root
+
+        def read_manifest(manifest_file):
+            with open(manifest_file) as f:
+                return [line.rstrip() for line in f]
+
+        self.total_file_dict = {
+            manifest_file: read_manifest(manifest_file) for manifest_file in self.root
+        }
+
+        for i, manifest_file in enumerate(manifest_files):
+            files = self.total_file_dict[manifest_file]
+            print(f"Manifest file {manifest_file} has {len(files):,} files")
+            if self.sample_size and self.sample_size[i] != -1:
+                files = random.sample(files, self.sample_size[i])
+                print(
+                    f"Sampling dataset of {manifest_file} so that corresponding dataset has {len(files):,} files"
+                )
+            elif self.every_k and self.every_k[i] > 1:
+                files = files[:: self.every_k[i]]
+                print(
+                    f"Using every {self.every_k[i]} file in {manifest_file} so that corresponding dataset has {len(files):,} files"
+                )
+            self.files.extend(files)
 
 
 if __name__ == "__main__":

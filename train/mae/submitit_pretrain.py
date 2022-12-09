@@ -76,7 +76,7 @@ class Trainer(object):
         print(f"Process group: {job_env.num_tasks} tasks, rank: {job_env.global_rank}")
 
 
-@hydra.main(config_path="configs", config_name="submitit")
+@hydra.main(config_path="configs/pretrain", config_name="config")
 def main(args: DictConfig):
     original_working_dir = hydra.utils.get_original_cwd()
 
@@ -121,7 +121,9 @@ def main(args: DictConfig):
     job = executor.submit(trainer)
 
     print(f"Submitted job_id: {job.job_id}")
-    print(f"Logs and checkpoints will be saved at: {args.output_dir}")
+    print(
+        f"Logs and checkpoints will be saved at: {os.path.join(os.getcwd(), args.output_dir)}"
+    )
 
 
 if __name__ == "__main__":

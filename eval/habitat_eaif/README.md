@@ -43,10 +43,10 @@ Otherwise, follow the instructions on [habitat-lab](https://github.com/facebookr
 
 1. To start a training run with the `dino_resnet50_omnidata` model use the following command: 
    ```
-   python run_habitat_eaif.py WANDB.name=Objectnav_first_experiment RL.PPO.lr=0.00025 RL.PPO.encoder_lr=1.5e-6 model=dino_resnet50_omnidata model.transform.randomize_environments=False tasks@_global_=objectnav_hm3d_rl experiments@_global_=objectnav_rl NUM_ENVIRONMENTS=12 hydra.launcher.nodes=5 -m
+   python run_habitat_eaif.py --config-name=config_objectnav_rl WANDB.name=Objectnav_first_experiment model=dino_resnet50_omnidata -m
    ```
 
 1. Once you have trained a model, it is time for evaluation. We evaluate every 5th saved checkpoint. To run an evaluation, do the following:
    ```
-   python run_habitat_eaif.py -m WANDB.name=Objectnav_first_experiment RL.PPO.lr=0.00025 RL.PPO.encoder_lr=1.5e-6 model=dino_resnet50_omnidata model.transform.randomize_environments=False tasks@_global_=objectnav_hm3d_rl experiments@_global_=objectnav_rl RUN_TYPE=eval hydra/launcher=slurm_eval NUM_ENVIRONMENTS=20
+   python run_habitat_eaif.py --config-name=config_objectnav_rl WANDB.name=Objectnav_first_experiment model=dino_resnet50_omnidata RUN_TYPE=eval hydra/launcher=slurm_eval NUM_ENVIRONMENTS=20
    ```
