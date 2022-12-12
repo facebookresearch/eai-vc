@@ -477,10 +477,35 @@ class Decoder(nn.Module):
                 ),
             )
 
+    def apply_masks(self, x, mask):
+        mask = mask.view(x.shape[0], -1)
+        cls_token, patches = (
+            x[:, : self.first_patch_idx],
+            x[:, self.first_patch_idx :],
+        )
+        patches = patches[mask].reshape(x.shape[0], -1, patches.shape[-1])
+        x = torch.cat([cls_token, patches], dim=1)
+        return x
+
+    def undo_masks(self, x, mask):
+        mask = mask.view(x.shape[0], -1)
+        cls_token, patches = (
+            x[:, : self.first_patch_idx],
+            x[:, self.first_patch_idx :],
+        )
+        B, N = mask.shape
+        embed_dim = x.shape[-1]
+        # fill masked patches with zeros
+        temp_patches = torch.zeros(B, N, embed_dim, dtype=x.dtype, device=x.device)
+        temp_patches[mask] = patches.reshape(-1, x.shape[-1])
+        x = torch.cat([cls_token, temp_patches], dim=1)
+        return x
+
     def forward(
         self,
         x,
         orig_input_shape,
+        decoder_mask=None,
         input_pos_embed=None,
         use_checkpoint=False,
     ):
@@ -496,6 +521,11 @@ class Decoder(nn.Module):
         if self.pos_sum_embed_only:
             return x
         x = self.decoder_embed(x)
+
+        # apply mask
+        if decoder_mask is not None:
+            x = self.apply_masks(x, decoder_mask)
+
         interim = []
         for i, blk in enumerate(self.decoder_blocks):
             if self.fsdp_settings is not None:
@@ -511,6 +541,10 @@ class Decoder(nn.Module):
                 x = blk(x)
             if self.return_interim_layers or i == (len(self.decoder_blocks) - 1):
                 interim.append(x)
+
+        # undo masking
+        if decoder_mask is not None:
+            interim = [self.undo_masks(el, decoder_mask) for el in interim]
 
         interim = [self.norm(el) for el in interim]
         if self.final_projection is not None:
@@ -712,6 +746,37 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
     def no_weight_decay(self):
         return {"pos_embed", "cls_token"}
 
+    @staticmethod
+    def correct_mask(mask: torch.Tensor):
+        """Fixes a temporal masks with different masking ratios.
+
+        If masking ratios are different, each timestep will have a different
+        number of masked patches, so patch dropping will not work.  This
+        function adds random 0s to the masks so that each timestep has the same
+        number of masked patches. Useful for dropping the maximum number of
+        patches, while setting the remaining masked but not "corrected" patches
+        to zero.
+        """
+        corrected_mask = mask.detach().clone()  # copy mask
+
+        # get minimum number of masked patches (i.e. 1s) per timestep
+        min_ones = min(m.sum() for el in corrected_mask for m in el)
+
+        # set all masks to only have `min_ones` 1s
+        for sample_mask in corrected_mask:  # for each mask in a batch of masks
+            for m in sample_mask:  # for each timestep in a mask
+                if m.sum() == min_ones:
+                    continue  # already correct
+                diff = int(m.sum() - min_ones)  # num zeros to add
+                idx = torch.where(m.view(-1) == True)[0]  # index of ones
+                idx = idx[torch.randperm(len(idx))]  # shuffle indices
+                m.view(-1)[idx[:diff]] = False  # set first `diff` 1s to 0s
+
+        # check corrected masks all have the same number of 1s
+        assert all(m.sum() == min_ones for el in corrected_mask for m in el)
+
+        return corrected_mask
+
     def masked_patch_drop(self, x, mask):
         mask = mask.view(x.shape[0], -1)
         cls_token, patches = (
@@ -725,9 +790,12 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         x = torch.cat([cls_token, patches], dim=1)
         return x
 
-    def apply_mask(self, x, mask):
+    def apply_mask(self, x, mask, use_first_patch_idx=False):
         mask = mask.view(x.shape[0], -1)
-        x[mask, :] = self.mask_token.to(x.dtype)
+        if use_first_patch_idx:
+            x[:, self.first_patch_idx :][mask, :] = self.mask_token.to(x.dtype)
+        else:
+            x[mask, :] = self.mask_token.to(x.dtype)
         return x
 
     def insert_masks(self, x, mask):
@@ -740,7 +808,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         x = torch.cat([x[:, : self.first_patch_idx], tmp], dim=1)
         return x
 
-    def prepare_tokens(self, x, npatch_to_keep, mask):
+    def prepare_tokens(self, x, npatch_to_keep, mask, corrected_mask=None):
         B = x.shape[0]
         input_shape = x.shape
 
@@ -755,6 +823,10 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         npatch_per_img = x.shape[1]
 
         if not self.patch_dropping and mask is not None:
+            x = self.apply_mask(x, mask)
+
+        # set masked patches to the mask_token when using a corrected_mask
+        if self.patch_dropping and corrected_mask is not None:
             x = self.apply_mask(x, mask)
 
         if self.cls_token is not None:
@@ -774,8 +846,13 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             pos_embed = pos_embed.type_as(x)
         x = x + pos_embed
 
-        if self.patch_dropping and mask is not None:
+        if self.patch_dropping and mask is not None and corrected_mask is None:
             x = self.masked_patch_drop(x, mask)
+
+        # Drop the maximum number of patches possible using the corrected_mask
+        if self.patch_dropping and mask is not None and corrected_mask is not None:
+            x = self.masked_patch_drop(x, corrected_mask)
+
         x = self.pos_drop(x)
         return T, x
 
@@ -797,13 +874,21 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         )
         return pos_embed
 
-    def forward_features(self, x, npatch_to_keep, mask=None, use_checkpoint=False):
+    def forward_features(
+        self, x, npatch_to_keep, mask=None, decoder_mask=None, use_checkpoint=False
+    ):
         assert npatch_to_keep is None
         if mask is not None and isinstance(mask, list) and not all(mask):
             mask = None
 
+        corrected_mask = None
+        if mask is not None:
+            corrected_mask = self.correct_mask(mask)
+
         orig_input_shape = x.shape
-        T, x = self.prepare_tokens(x, npatch_to_keep, mask=mask)
+        T, x = self.prepare_tokens(
+            x, npatch_to_keep, mask=mask, corrected_mask=corrected_mask
+        )
 
         for blk in self.blocks:
             if use_checkpoint:
@@ -829,18 +914,30 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             mask is None or self.decoder is None
         ):
             pass  # x = x
-        elif self.patch_dropping and mask is not None and self.decoder is not None:
+        elif (
+            self.patch_dropping
+            and mask is not None
+            and corrected_mask is not None
+            and self.decoder is not None
+        ):
             x = self.norm(x)
             if self.post_encoder:
                 x_dtype = x.dtype
                 x = self.post_encoder(x).to(x_dtype)
-            x = self.insert_masks(x, mask)
+            # the corrected_mask is used to restore dropped patches
+            x = self.insert_masks(x, corrected_mask)
+            # the mask is used to assign all masked patches to the masked_token
+            x = self.apply_mask(x, mask, use_first_patch_idx=True)
             if self.first_patch_idx == 0:
                 cls_token = None
             else:
                 cls_token = x[:, self.first_patch_idx]
             x = self.decoder(
-                x, orig_input_shape, self.pos_embed, use_checkpoint=use_checkpoint
+                x,
+                orig_input_shape,
+                decoder_mask=decoder_mask,
+                input_pos_embed=self.pos_embed,
+                use_checkpoint=use_checkpoint,
             )
             # cls_token comes from the encoder and the x comes from
             # the decoder. Since they can have different dimensionality, they
@@ -919,11 +1016,16 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         npatch_to_keep: int = None,
         use_checkpoint: bool = False,
         mask: Optional[torch.Tensor] = None,
+        decoder_mask: Optional[torch.Tensor] = None,
     ) -> List[torch.Tensor]:
         assert (not self.masked_image_modeling) or (mask is not None)
         if out_feat_keys is None or len(out_feat_keys) == 0:
             x = self.forward_features(
-                x, npatch_to_keep, mask=mask, use_checkpoint=use_checkpoint
+                x,
+                npatch_to_keep,
+                mask=mask,
+                decoder_mask=decoder_mask,
+                use_checkpoint=use_checkpoint,
             )
         else:
             # we specified a feature layer name

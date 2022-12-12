@@ -496,12 +496,18 @@ class VideoPathDataset(PathDataset):
 
 
 class VideoPathDatasetFromImages(ImagePathDataset):
-    def __init__(self, frames_per_vid=16, *args, **kwargs):
+    def __init__(
+        self, *args, frames_per_vid=16, every_k=1, randomly_reverse=False, **kwargs
+    ):
         super().__init__(*args, **kwargs)
 
         self.frames_per_vid = frames_per_vid
+        self.every_k = every_k
+        self.randomly_reverse = randomly_reverse
 
-        self.vids = self.get_vids(self.paths, min_num_frames=self.frames_per_vid)
+        self.vids = self.get_vids(
+            self.paths, every_k=self.every_k, min_num_frames=self.frames_per_vid
+        )
         self.vid_lens = {k: len(v) for k, v in self.vids.items()}
         self.total_frames = sum(self.vid_lens.values())
 
@@ -523,6 +529,8 @@ class VideoPathDatasetFromImages(ImagePathDataset):
 
     def load_object(self, vid, start_idx):
         image_names = self.vids[vid][start_idx : start_idx + self.frames_per_vid]
+        if self.randomly_reverse and np.random.rand() > 0.5:
+            image_names = list(reversed(image_names))
         images = [
             super(VideoPathDatasetFromImages, self).load_object(
                 os.path.join(vid, image_name)
@@ -548,7 +556,9 @@ class VideoPathDatasetFromImages(ImagePathDataset):
         return data, is_success
 
     @staticmethod
-    def get_vids(paths, min_num_frames=None):
+    def get_vids(paths, every_k=None, min_num_frames=None):
+        sampling_k = 1 if every_k is None else every_k
+
         vids = {}
         for path in paths:
             vidname, imgname = os.path.split(path)
@@ -556,8 +566,14 @@ class VideoPathDatasetFromImages(ImagePathDataset):
                 vids[vidname] = []
             vids[vidname].append(imgname)
 
-        filtered_vids = {}
+        sampled_vids = {}
         for k, v in vids.items():
+            sampled_vids[k] = []
+            for i in range(0, len(v), sampling_k):
+                sampled_vids[k].append(v[i])
+
+        filtered_vids = {}
+        for k, v in sampled_vids.items():
             if min_num_frames is not None and len(v) < min_num_frames:
                 logging.warning(
                     f"Dropping vid {k} with length {len(v)} < {min_num_frames}"

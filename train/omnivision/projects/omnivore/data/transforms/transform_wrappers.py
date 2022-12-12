@@ -3,10 +3,15 @@
 All Transform wrappers take as input a Sample, and return a Sample.
 """
 import copy
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Union
 
 from omnivision.utils.generic import dataclass_as_dict
-from omnivore.data.api import Sample, VisionMaskSample, VisionSample
+from omnivore.data.api import (
+    Sample,
+    VisionMaskSample,
+    VisionDecoderMaskSample,
+    VisionSample,
+)
 
 
 class SingleFieldTransform(Callable):
@@ -119,6 +124,15 @@ class MaskingTransform(Callable):
         super().__init__(*args, **kwargs)
         self.masking_object = masking_object
 
-    def __call__(self, sample: VisionSample) -> VisionMaskSample:
-        mask = self.masking_object(sample.vision)["mask"]
-        return VisionMaskSample(mask=mask, **dataclass_as_dict(sample))
+    def __call__(
+        self, sample: VisionSample
+    ) -> Union[VisionMaskSample, VisionDecoderMaskSample]:
+        ret_dict = self.masking_object(sample.vision)
+        if "decoder_mask" not in ret_dict:
+            return VisionMaskSample(mask=ret_dict["mask"], **dataclass_as_dict(sample))
+        else:
+            return VisionDecoderMaskSample(
+                mask=ret_dict["mask"],
+                decoder_mask=ret_dict["decoder_mask"],
+                **dataclass_as_dict(sample),
+            )

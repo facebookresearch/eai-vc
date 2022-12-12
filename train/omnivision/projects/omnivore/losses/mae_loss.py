@@ -95,7 +95,10 @@ class MAELoss(BaseLoss):
         Modified from: https://github.com/facebookresearch/mae/blob/main/models_mae.py
         """
         img = sample.vision
-        mask = sample.mask
+        if hasattr(sample, "decoder_mask"):
+            mask = sample.mask * sample.decoder_mask
+        else:
+            mask = sample.mask
         pred = output
         return self.compute_mae_loss(pred, mask, img)
 

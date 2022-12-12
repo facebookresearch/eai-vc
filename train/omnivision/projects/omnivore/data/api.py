@@ -75,6 +75,13 @@ class VisionMaskSample(VisionSample):
 
 @create_batch_sample_cls
 @dataclass
+class VisionDecoderMaskSample(VisionSample):
+    mask: Any = None
+    decoder_mask: Any = None
+
+
+@create_batch_sample_cls
+@dataclass
 class VisionTextSample(VisionSample, TextSample):
     pass
 

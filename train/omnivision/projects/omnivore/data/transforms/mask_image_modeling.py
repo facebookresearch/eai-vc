@@ -3,7 +3,8 @@
 import math
 import random
 from abc import ABC
-from typing import List, Tuple
+from typing import List, Tuple, Union
+from omegaconf import ListConfig
 
 import numpy as np
 import torch
@@ -24,7 +25,7 @@ def get_image_dims(img):
 
 
 def get_pred_ratio(pred_ratio, pred_ratio_var):
-    if isinstance(pred_ratio, list):
+    if isinstance(pred_ratio, (list, ListConfig)):
         curr_pred_ratio = []
         for prm, prv in zip(pred_ratio, pred_ratio_var):
             assert prm >= prv
@@ -221,7 +222,95 @@ class MaskImageModeling:
         )
 
 
+def tmae_style_encoder_masking(
+    image: torch.Tensor,
+    patch_size: List[int],  # [patch_t, patch_h, patch_w]
+    pred_ratio: Tuple[float],
+    pred_ratio_var: Tuple[float],
+    pred_shape: Masking = RandMasking,
+    precomputed_pred_ratio: float = None,
+):
+    # Modified from ibot_style_mask_image function
+    squeeze_dim, img_t, img_h, img_w = get_image_dims(image)
+    assert img_t // patch_size[0] > 0
+    assert not squeeze_dim
+
+    result = []
+    for _ in range(img_t // patch_size[0]):
+        H = img_h // patch_size[1]
+        W = img_w // patch_size[2]
+        if precomputed_pred_ratio is not None:
+            sample_pred_ratio = precomputed_pred_ratio
+        else:
+            sample_pred_ratio = get_pred_ratio(
+                pred_ratio=pred_ratio, pred_ratio_var=pred_ratio_var
+            )
+        # high is the max number of tokens to mask in the input
+        high = sample_pred_ratio * H * W
+        mask = pred_shape(1, H, W, high)
+        result.append(mask)
+    mask = np.concatenate(result)
+    return mask
+
+
+def tmae_style_decoder_masking(
+    encoder_mask: torch.Tensor,
+    pred_ratio: Union[float, Tuple[float]],
+    pred_ratio_var: Union[float, Tuple[float]],
+):
+    """Produces a decoder mask conditioned on an encoder mask.
+
+    The decoder mask will mask out a percentage of patches at each timestep
+    based on the `pred_ratio` and `pred_ratio_var`. This function ensures that
+    any patches masked in the encoder mask will also be masked in the decoder.
+    """
+    # calculate number of 1s in per timestep decoder masks
+    _, H, W = encoder_mask.shape
+    pr = random.uniform(
+        pred_ratio - pred_ratio_var,
+        pred_ratio + pred_ratio_var,
+    )
+    num_decoder_ones = int(H * W * pr)
+
+    result = []
+    for m in encoder_mask:
+        # calculate number of new 0s (0s will be flipped to 1s)
+        num_encoder_zeros = torch.sum(m == False).item()
+        new_zeros = num_decoder_ones - num_encoder_zeros
+        assert new_zeros > 0
+
+        # randomly shuffle the indices of 1s
+        idx = torch.where(m.view(-1) == True)[0]
+        idx = idx[torch.randperm(len(idx))][:new_zeros]
+
+        # create a copy of the mask and add 0s
+        new_m = m.detach().clone()
+        new_m.view(-1)[idx] = False
+
+        # flip 0s to 1s
+        result.append(~new_m)
+
+    decoder_mask = torch.stack(result)
+    return decoder_mask
+
+
 class TmaeMaskImageModeling(MaskImageModeling):
+    def __init__(
+        self,
+        pred_ratio: Tuple[float],
+        pred_ratio_var: Tuple[float],
+        patch_size: List[int],
+        pred_shape: Masking = RandMasking,
+        mim_start_epochs: float = 0,
+        decoder_pred_ratio: Tuple[float] = None,
+        decoder_pred_ratio_var: Tuple[float] = None,
+    ):
+        super().__init__(
+            pred_ratio, pred_ratio_var, patch_size, pred_shape, mim_start_epochs
+        )
+        self.decoder_pred_ratio = decoder_pred_ratio
+        self.decoder_pred_ratio_var = decoder_pred_ratio_var
+
     def __call__(self, image, do_not_mask=False):
         precomputed_pred_ratio = None
         if self.mim_start_epochs > 0 and self.mim_start_epochs > self.current_epoch:
@@ -234,33 +323,32 @@ class TmaeMaskImageModeling(MaskImageModeling):
         pred_ratio_var = self.pred_ratio_var
         pred_shape = self.pred_shape
 
-        # Modified from ibot_style_mask_image function
-        squeeze_dim, img_t, img_h, img_w = get_image_dims(image)
-        assert img_t // patch_size[0] > 0
+        mask = tmae_style_encoder_masking(
+            image,
+            patch_size=patch_size,
+            pred_ratio=pred_ratio,
+            pred_ratio_var=pred_ratio_var,
+            pred_shape=pred_shape,
+            precomputed_pred_ratio=precomputed_pred_ratio,
+        )
+        mask = torch.from_numpy(mask)
 
-        result = []
-        for _ in range(img_t // patch_size[0]):
-            T = 1
-            H = img_h // patch_size[1]
-            W = img_w // patch_size[2]
-            if precomputed_pred_ratio is None:
-                precomputed_pred_ratio = get_pred_ratio(
-                    pred_ratio=pred_ratio, pred_ratio_var=pred_ratio_var
-                )
-            # high is the max number of tokens to mask in the input
-            high = precomputed_pred_ratio * T * H * W
-            mask = pred_shape(T, H, W, high)
-            result.append(mask)
-        mask = np.concatenate(result)
+        decoder_pred_ratio = self.decoder_pred_ratio
+        decoder_pred_ratio_var = self.decoder_pred_ratio_var
 
-        if squeeze_dim:
-            # Remove the time dim from the mask since the image doesn't have it
-            mask = np.squeeze(mask, axis=0)
-        ret_dict = {
+        decoder_mask = None
+        if decoder_pred_ratio is not None and decoder_pred_ratio_var is not None:
+            decoder_mask = tmae_style_decoder_masking(
+                encoder_mask=mask,
+                pred_ratio=decoder_pred_ratio,
+                pred_ratio_var=decoder_pred_ratio_var,
+            )
+
+        return {
             "data": image,
-            "mask": torch.from_numpy(mask),
+            "mask": mask,
+            "decoder_mask": decoder_mask,
         }
-        return ret_dict
 
 
 class MaskForPerformance:
