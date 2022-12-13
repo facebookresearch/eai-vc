@@ -198,7 +198,7 @@ def env_constructor(
     fuse_embeddings: callable = None,
     render_gpu_id: int = -1,
     seed: int = 123,
-    add_proprio = False,
+    add_proprio=False,
     *args,
     **kwargs
 ) -> GymEnv:
