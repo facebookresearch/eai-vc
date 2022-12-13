@@ -4,6 +4,7 @@ import gym
 from mjrl.utils.gym_env import GymEnv
 from gym.spaces.box import Box
 from eaif_mujoco.model_loading import load_pretrained_model
+from eaif_mujoco.supported_envs import ENV_TO_SUITE
 from typing import Union, Tuple
 
 
@@ -197,14 +198,14 @@ def env_constructor(
     fuse_embeddings: callable = None,
     render_gpu_id: int = -1,
     seed: int = 123,
-    suite: str = "dmc",
-    add_proprio=True,
+    add_proprio = False,
     *args,
     **kwargs
 ) -> GymEnv:
 
     # construct basic gym environment
-    assert suite in ["dmc", "adroit", "metaworld"]
+    assert env_name in ENV_TO_SUITE.keys()
+    suite = ENV_TO_SUITE[env_name]
     if suite == "metaworld":
         # Meta world natively misses many specs. We will explicitly add them here.
         from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
