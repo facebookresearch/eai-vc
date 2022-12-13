@@ -25,7 +25,7 @@ def device(request):
     return request.param
 
 
-@pytest.fixture(params=["dmc_walker_stand-v1", "relocate-v0", "kitchen_sdoor_open-v3"])
+@pytest.fixture(params=["dmc_walker_stand-v1", "relocate-v0"])
 def env_name(request):
     return request.param
 
