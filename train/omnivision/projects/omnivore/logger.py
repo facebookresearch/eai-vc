@@ -43,7 +43,9 @@ def make_tensorboard_logger(log_dir: str, wandb=False, **writer_kwargs: Any):
     if wandb and get_machine_local_and_dist_rank()[1] == 0:
         import wandb
 
-        wandb.init(project="omnivision", sync_tensorboard=True)
+        wandb.init(
+            project="omnivision", entity="eai-foundations", sync_tensorboard=True
+        )
 
     return TensorBoardLogger(
         path=log_dir, summary_writer_method=summary_writer_method, **writer_kwargs
