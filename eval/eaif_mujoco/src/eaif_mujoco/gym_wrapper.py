@@ -4,6 +4,8 @@ import gym
 from mjrl.utils.gym_env import GymEnv
 from gym.spaces.box import Box
 from eaif_mujoco.model_loading import load_pretrained_model
+from eaif_mujoco.supported_envs import ENV_TO_SUITE
+from typing import Union, Tuple
 
 
 class MuJoCoPixelObsWrapper(gym.ObservationWrapper):
@@ -62,26 +64,29 @@ class FrozenEmbeddingWrapper(gym.ObservationWrapper):
     This wrapper places a frozen vision model over the image observation.
 
     Args:
-        env (Gym environment): the original environment,
+        env (Gym environment): the original environment
+        suite (str): category of environment ["dmc", "adroit", "metaworld"]
         embedding_name (str): name of the embedding to use (name of config)
         history_window (int, 1) : timesteps of observation embedding to incorporate into observation (state)
         embedding_fusion (callable, 'None'): function for fusing the embeddings into a state.
             Defaults to concatenation if not specified
         obs_dim (int, 'None') : dimensionality of observation space. Inferred if not specified.
             Required if function != None. Defaults to history_window * embedding_dim
+        add_proprio (bool, 'False') : flag to specify if proprioception should be appended to observation
         device (str, 'cuda'): where to allocate the model.
-
     """
 
     def __init__(
         self,
         env,
         embedding_name: str,
+        suite: str,
         history_window: int = 1,
         fuse_embeddings: callable = None,
         obs_dim: int = None,
         device: str = "cuda",
         seed: int = None,
+        add_proprio: bool = False,
         *args,
         **kwargs
     ):
@@ -115,10 +120,21 @@ class FrozenEmbeddingWrapper(gym.ObservationWrapper):
             embedding_dim,
             transforms,
         )
+
+        # proprioception
+        if add_proprio:
+            self.get_proprio = lambda: get_proprioception(self.unwrapped, suite)
+            proprio = self.get_proprio()
+            self.proprio_dim = 0 if proprio is None else proprio.shape[0]
+        else:
+            self.proprio_dim = 0
+            self.get_proprio = None
+
+        # final observation space
         obs_dim = (
             obs_dim
             if obs_dim != None
-            else int(self.history_window * self.embedding_dim)
+            else int(self.history_window * self.embedding_dim + self.proprio_dim)
         )
         self.observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_dim,))
 
@@ -153,6 +169,10 @@ class FrozenEmbeddingWrapper(gym.ObservationWrapper):
             # print("Fuse embedding function not given. Defaulting to concat.")
             obs = np.array(self.embedding_buffer).ravel()
 
+        # add proprioception if necessary
+        if self.proprio_dim > 0:
+            proprio = self.get_proprio()
+            obs = np.concatenate([obs, proprio])
         return obs
 
     def get_obs(self):
@@ -178,15 +198,33 @@ def env_constructor(
     fuse_embeddings: callable = None,
     render_gpu_id: int = -1,
     seed: int = 123,
+    add_proprio=False,
     *args,
     **kwargs
 ) -> GymEnv:
+
+    # construct basic gym environment
+    assert env_name in ENV_TO_SUITE.keys()
+    suite = ENV_TO_SUITE[env_name]
+    if suite == "metaworld":
+        # Meta world natively misses many specs. We will explicitly add them here.
+        from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
+        from collections import namedtuple
+
+        e = ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE[env_name]()
+        e._freeze_rand_vec = False
+        e.spec = namedtuple("spec", ["id", "max_episode_steps"])
+        e.spec.id = env_name
+        e.spec.max_episode_steps = 500
+    else:
+        e = gym.make(env_name)
+    # seed the environment for reproducibility
+    e.seed(seed)
+
     # get correct camera name
     camera_name = (
         None if (camera_name == "None" or camera_name == "default") else camera_name
     )
-    e = gym.make(env_name)
-    e.seed(seed)
     # Use appropriate observation wrapper
     if pixel_based:
         e = MuJoCoPixelObsWrapper(
@@ -199,14 +237,40 @@ def env_constructor(
         e = FrozenEmbeddingWrapper(
             env=e,
             embedding_name=embedding_name,
+            suite=suite,
             history_window=history_window,
             fuse_embeddings=fuse_embeddings,
             device=device,
             seed=seed,
+            add_proprio=add_proprio,
         )
         e = GymEnv(e)
     else:
         e = GymEnv(e)
+
     # Output wrapped env
     e.set_seed(seed)
     return e
+
+
+def get_proprioception(env: gym.Env, suite: str) -> Union[np.ndarray, None]:
+    assert isinstance(env, gym.Env)
+    if suite == "metaworld":
+        return env.unwrapped._get_obs()[:4]
+    elif suite == "adroit":
+        # In adroit, in-hand tasks like pen lock the base of the hand
+        # while other tasks like relocate allow for movement of hand base
+        # as if attached to an arm
+        if env.unwrapped.spec.id == "pen-v0":
+            return env.unwrapped.get_obs()[:24]
+        elif env.unwrapped.spec.id == "relocate-v0":
+            return env.unwrapped.get_obs()[:30]
+        else:
+            print("Unsupported environment. Proprioception is defaulting to None.")
+            return None
+    elif suite == "dmc":
+        # no proprioception used for dm-control
+        return None
+    else:
+        print("Unsupported environment. Proprioception is defaulting to None.")
+        return None

@@ -7,25 +7,25 @@ env               :   ???                     # name of environment (e.g. reloca
 algorithm         :   BC
 pixel_based       :   True                    # pixel based (True) or state based (False) experiment
 embedding         :   ???                     # choice of embedding network
-camera            :   vil_camera              # choice of camera to use for image generation
+camera            :   top_cap2                # choice of camera to use for image generation
 device            :   cuda
-data_dir          :   /checkpoint/yixinlin/eaif/datasets/adroit-expert-v0.1/
+data_dir          :   /checkpoint/yixinlin/eaif/datasets/metaworld-expert-v0.1/
 data_parallel     :   True
 
 # experiment and evaluation
-seed              :   54321                   # used as base_seed for rolling out policy for eval in sample_paths
+seed              :   12345                   # used as base_seed for rolling out policy for eval in sample_paths
 epochs            :   100                     # number of outer epochs
 eval_frequency    :   5                       # frequency of epochs for evaluation and logging
 save_frequency    :   10                      # frequency of epochs for saving policies
 eval_num_traj     :   25                      # number of rollouts to eval
 num_cpu           :   1                       # for rolling out paths when evaluating                 
-num_demos         :   100                     # path to demo file auto-inferred from other inputs
+num_demos         :   25                      # path to demo file auto-inferred from other inputs
 exp_notes         :   Add experiment notes here to help organize results down the road.
 
 # environment related kwargs
 env_kwargs:
     env_name      :   ${env}
-    suite         :   adroit                
+    suite         :   metaworld                
     device        :   ${device}               # device to use for representation network (policy clamped to CPU for now)
     image_width   :   256
     image_height  :   256
@@ -36,7 +36,7 @@ env_kwargs:
     seed          :   ${seed}
     history_window :  3
     add_proprio   :   True
-    proprio_key   :   proprio   
+    proprio_key   :   gripper_proprio 
 
 # BC agent setup
 bc_kwargs:
@@ -48,7 +48,7 @@ bc_kwargs:
     dropout       :   0
 
 # logging
-job_name          :   adroit_cortex_vil
+job_name          :   metaworld_cortex_vil
 wandb:
   project         :   ???
   entity          :   ???
@@ -56,4 +56,4 @@ wandb:
 
 hydra:
     job:
-        name: adroit_cortex_vil
+        name: metaworld_cortex_vil
