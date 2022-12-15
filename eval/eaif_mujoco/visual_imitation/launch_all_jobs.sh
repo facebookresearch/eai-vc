@@ -1,5 +1,5 @@
 # Set W&B to public instance to log to shared team
-wandb login --host=https://api.wandb.ai --relogin
+export WANDB_BASE_URL="https://api.wandb.ai"
 
 # DMC
 python hydra_launcher.py --config-name DMC_BC_config.yaml --multirun hydra/launcher=slurm \

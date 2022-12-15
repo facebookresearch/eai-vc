@@ -84,6 +84,9 @@ def bc_pvr_train_loop(config: dict) -> None:
         init_states = [p["init_state_dict"] for p in demo_paths]
     elif config["env_kwargs"]["suite"] == "metaworld":
         init_states = []
+    else:
+        print("\n\n Unsupported environment suite.")
+        quit()
 
     # construct the environment and policy
     env_kwargs = config["env_kwargs"]
