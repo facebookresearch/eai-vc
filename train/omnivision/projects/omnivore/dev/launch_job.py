@@ -504,6 +504,7 @@ def get_jobs_to_run_per_config(args, config_path):
 
     hydra_overrides = {
         "+experiments": "$CONFIG_SAN",
+        "++launcher.experiment_name": "$CONFIG_SAN",
         "++launcher.experiment_log_dir": "$EXP_DIR",
     }  # TODO: Change this to Ordered Dict
 

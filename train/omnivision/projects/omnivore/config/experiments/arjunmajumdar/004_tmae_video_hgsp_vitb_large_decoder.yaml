@@ -195,6 +195,7 @@ trainer:
       log_dir:  ${launcher.experiment_log_dir}/tensorboard
       flush_secs: 120
       wandb: true
+      wandb_name: ${launcher.experiment_name}
     log_dir: ${launcher.experiment_log_dir}/logs
     log_freq: 10
 
@@ -206,6 +207,7 @@ trainer:
 launcher:
   num_nodes: 4
   gpus_per_node: 8
+  experiment_name: ???
   experiment_log_dir: ???
 
 submitit:

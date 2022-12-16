@@ -19,9 +19,9 @@ from torch.utils.tensorboard import SummaryWriter
 Scalar = Union[Tensor, ndarray, int, float]
 
 
-def _setup_wandb(log_dir: str):
+def _setup_wandb(log_dir: str, wandb_name: Optional[str] = None):
     try:
-        logging.info(f"initializing wandb...")
+        logging.info("initializing wandb...")
         import wandb
 
         resume = "allow"
@@ -41,16 +41,20 @@ def _setup_wandb(log_dir: str):
         wandb.init(
             project="omnivision",
             entity="eai-foundations",
+            name=wandb_name,
             sync_tensorboard=True,
             resume=resume,
             id=wandb_id,
         )
-        logging.info(f"initializing wandb... done!")
+        logging.info("initializing wandb... done!")
     except Exception as e:
         logging.warning(f"could not initialize wandb: {e}")
 
 
-def make_tensorboard_logger(log_dir: str, wandb=False, **writer_kwargs: Any):
+def make_tensorboard_logger(
+    log_dir: str, wandb=False, wandb_name=None, **writer_kwargs: Any
+):
+    print(writer_kwargs)
 
     makedir(log_dir)
 
@@ -73,7 +77,7 @@ def make_tensorboard_logger(log_dir: str, wandb=False, **writer_kwargs: Any):
         summary_writer_method = SummaryWriter
 
     if wandb and get_machine_local_and_dist_rank()[1] == 0:
-        _setup_wandb(log_dir)
+        _setup_wandb(log_dir, wandb_name)
 
     return TensorBoardLogger(
         path=log_dir, summary_writer_method=summary_writer_method, **writer_kwargs
