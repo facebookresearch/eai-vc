@@ -4,6 +4,7 @@
 import atexit
 import gc
 import logging
+import os
 import uuid
 from typing import Any, Dict, Optional, Union
 
@@ -16,6 +17,37 @@ from torch import Tensor
 from torch.utils.tensorboard import SummaryWriter
 
 Scalar = Union[Tensor, ndarray, int, float]
+
+
+def _setup_wandb(log_dir: str):
+    try:
+        logging.info(f"initializing wandb...")
+        import wandb
+
+        resume = "allow"
+        wandb_id = wandb.util.generate_id()
+
+        wandb_filename = os.path.join(log_dir, "wandb", "wandb_id.txt")
+        if os.path.exists(wandb_filename):
+            # if file exists, then we are resuming from a previous eval
+            resume = "must"
+            with open(wandb_filename, "r") as file:
+                wandb_id = file.read().rstrip("\n")
+        else:
+            # save wandb file
+            os.makedirs(os.path.dirname(wandb_filename), exist_ok=True)
+            with open(wandb_filename, "w") as file:
+                file.write(wandb_id)
+        wandb.init(
+            project="omnivision",
+            entity="eai-foundations",
+            sync_tensorboard=True,
+            resume=resume,
+            id=wandb_id,
+        )
+        logging.info(f"initializing wandb... done!")
+    except Exception as e:
+        logging.warning(f"could not initialize wandb: {e}")
 
 
 def make_tensorboard_logger(log_dir: str, wandb=False, **writer_kwargs: Any):
@@ -41,11 +73,7 @@ def make_tensorboard_logger(log_dir: str, wandb=False, **writer_kwargs: Any):
         summary_writer_method = SummaryWriter
 
     if wandb and get_machine_local_and_dist_rank()[1] == 0:
-        import wandb
-
-        wandb.init(
-            project="omnivision", entity="eai-foundations", sync_tensorboard=True
-        )
+        _setup_wandb(log_dir)
 
     return TensorBoardLogger(
         path=log_dir, summary_writer_method=summary_writer_method, **writer_kwargs

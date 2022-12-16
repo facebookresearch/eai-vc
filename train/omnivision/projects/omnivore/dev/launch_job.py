@@ -513,6 +513,10 @@ def get_jobs_to_run_per_config(args, config_path):
     if args.local:
         dst_base_dir = LOCAL_EXP_DIR
 
+    # use eaif checkpoint folder
+    if not (args.local or args.no_eaif):
+        dst_base_dir = "/checkpoint/yixinlin/eaif/results/omnivision"
+
     overall_exp_dir = os.path.join(dst_base_dir, config_path).replace(
         "${USER}", getpass.getuser()
     )
@@ -673,6 +677,9 @@ def main():
         type=str,
         nargs="+",
     )
+
+    # eaif settings
+    parser.add_argument("--no_eaif", default=False, action="store_true")
 
     # SLURM settings
     parser.add_argument(
