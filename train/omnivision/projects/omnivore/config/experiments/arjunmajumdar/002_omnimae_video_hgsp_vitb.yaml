@@ -141,7 +141,10 @@ trainer:
         args: ["vision"]
         kwargs: {"mask": "mask"}
   optim:
-    gradient_clip: NULL
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: 0.02
+      norm_type: 2
     amp:
       enabled: True
       amp_dtype: float16 # bfloat16 or float16
