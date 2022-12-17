@@ -9,7 +9,6 @@ from habitat.utils.visualizations.utils import (
     append_text_to_image,
 )
 
-# from scripts.parsing.parse_objectnav_dataset import write_json
 from habitat_eaif.il.objectnav.dataset import ObjectNavDatasetV2
 
 config = habitat.get_config("configs/tasks/objectnav_hm3d_il.yaml")

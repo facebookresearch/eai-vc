@@ -24,7 +24,7 @@ class ILAgent(nn.Module):
         lr: Optional[float] = None,
         eps: Optional[float] = None,
         max_grad_norm: Optional[float] = None,
-        wd: Optional[float] = None,
+        wd: Optional[float] = None
     ) -> None:
 
         super().__init__()
@@ -51,7 +51,9 @@ class ILAgent(nn.Module):
         total_loss_epoch = 0.0
 
         profiling_wrapper.range_push("BC.update epoch")
-        data_generator = rollouts.recurrent_generator(self.num_mini_batch)
+        data_generator = rollouts.recurrent_generator(
+            self.num_mini_batch
+        )
         cross_entropy_loss = torch.nn.CrossEntropyLoss(reduction="none")
         hidden_states = []
 
@@ -62,11 +64,15 @@ class ILAgent(nn.Module):
                 actions_batch,
                 prev_actions_batch,
                 masks_batch,
-                idx,
+                idx
             ) = sample
 
             # Reshape to do in a single forward pass for all steps
-            (logits, rnn_hidden_states, distribution_entropy) = self.model(
+            (
+                logits,
+                rnn_hidden_states,
+                distribution_entropy
+            ) = self.model(
                 obs_batch,
                 recurrent_hidden_states_batch,
                 prev_actions_batch,
@@ -76,16 +82,12 @@ class ILAgent(nn.Module):
             T, N, _ = actions_batch.shape
             logits = logits.view(T, N, -1)
 
-            action_loss = cross_entropy_loss(
-                logits.permute(0, 2, 1), actions_batch.squeeze(-1)
-            )
+            action_loss = cross_entropy_loss(logits.permute(0, 2, 1), actions_batch.squeeze(-1))
 
             self.optimizer.zero_grad()
             inflections_batch = obs_batch["inflection_weight"]
 
-            total_loss = (
-                (inflections_batch * action_loss).sum(0) / inflections_batch.sum(0)
-            ).mean()
+            total_loss = ((inflections_batch * action_loss).sum(0) / inflections_batch.sum(0)).mean()
 
             self.before_backward(total_loss)
             total_loss.backward()
@@ -113,7 +115,9 @@ class ILAgent(nn.Module):
         pass
 
     def before_step(self) -> None:
-        nn.utils.clip_grad_norm_(self.model.parameters(), self.max_grad_norm)
+        nn.utils.clip_grad_norm_(
+            self.model.parameters(), self.max_grad_norm
+        )
 
     def after_step(self) -> None:
         pass
@@ -123,6 +127,7 @@ EPS_PPO = 1e-5
 
 
 class DecentralizedDistributedMixin:
+
     def init_distributed(self, find_unused_params: bool = True) -> None:
         r"""Initializes distributed training for the model
 

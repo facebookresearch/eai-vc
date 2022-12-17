@@ -15,15 +15,18 @@ from habitat.tasks.nav.nav import (
 from habitat.tasks.nav.object_nav_task import (
     ObjectGoalSensor,
 )
-from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.rl.ppo import Net
 
+from habitat_eaif.il.objectnav.custom_baseline_registry import custom_baseline_registry
+from habitat_eaif.transforms import get_transform
+from habitat_eaif.utils import load_encoder
 from habitat_eaif.visual_encoder import VisualEncoder
 
 from habitat_eaif.models.resnet_encoders import (
     VlnResnetDepthEncoder,
 )
 from habitat_eaif.il.objectnav.rnn_state_encoder import RNNStateEncoder
-from habitat_eaif.il.objectnav.policy import Net, ILPolicy
+from habitat_eaif.il.objectnav.policy import ILPolicy
 
 
 class ObjectNavILNet(Net):
@@ -61,6 +64,7 @@ class ObjectNavILNet(Net):
                 trainable=model_config.DEPTH_ENCODER.trainable,
             )
             rnn_input_size += model_config.DEPTH_ENCODER.output_size
+            logger.info("Initializing {} depth encoder".format(model_config.DEPTH_ENCODER.cnn_type))
         else:
             self.depth_encoder = None
 
@@ -68,7 +72,7 @@ class ObjectNavILNet(Net):
         assert model_config.RGB_ENCODER.cnn_type in [
             "VisualEncoder",
             "None",
-        ], "RGB_ENCODER.cnn_type must be 'VisualEncoder' or 'None'."
+        ], "RGB_ENCODER.cnn_type must be 'VisualEncoder', or 'None'."
 
         rgb_config = model_config.RGB_ENCODER
         if model_config.RGB_ENCODER.cnn_type == "VisualEncoder":
@@ -78,9 +82,7 @@ class ObjectNavILNet(Net):
             if rgb_config.use_augmentations_test_time and run_type == "eval":
                 name = rgb_config.augmentations_name
             self.visual_transform = get_transform(name, size=rgb_config.image_size)
-            self.visual_transform.randomize_environments = (
-                rgb_config.randomize_augmentations_over_envs
-            )
+            self.visual_transform.randomize_environments = rgb_config.randomize_augmentations_over_envs
 
             self.visual_encoder = VisualEncoder(
                 image_size=rgb_config.image_size,
@@ -98,44 +100,48 @@ class ObjectNavILNet(Net):
 
             self.visual_fc = nn.Sequential(
                 nn.Flatten(),
-                nn.Linear(
-                    self.visual_encoder.output_size,
-                    model_config.RGB_ENCODER.hidden_size,
-                ),
+                nn.Linear(self.visual_encoder.output_size, model_config.RGB_ENCODER.hidden_size),
                 nn.ReLU(True),
             )
 
             rnn_input_size += model_config.RGB_ENCODER.hidden_size
+            logger.info("RGB encoder is {}".format(model_config.RGB_ENCODER.cnn_type))
         else:
             self.visual_encoder = None
             logger.info("RGB encoder is none")
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
-            input_gps_dim = observation_space.spaces[EpisodicGPSSensor.cls_uuid].shape[
-                0
-            ]
+            input_gps_dim = observation_space.spaces[
+                EpisodicGPSSensor.cls_uuid
+            ].shape[0]
             self.gps_embedding = nn.Linear(input_gps_dim, 32)
             rnn_input_size += 32
             logger.info("\n\nSetting up GPS sensor")
-
+        
         if EpisodicCompassSensor.cls_uuid in observation_space.spaces:
             assert (
-                observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[0] == 1
+                observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[
+                    0
+                ]
+                == 1
             ), "Expected compass with 2D rotation."
             input_compass_dim = 2  # cos and sin of the angle
             self.compass_embedding_dim = 32
-            self.compass_embedding = nn.Linear(
-                input_compass_dim, self.compass_embedding_dim
-            )
+            self.compass_embedding = nn.Linear(input_compass_dim, self.compass_embedding_dim)
             rnn_input_size += 32
             logger.info("\n\nSetting up Compass sensor")
 
         if ObjectGoalSensor.cls_uuid in observation_space.spaces:
             self._n_object_categories = (
-                int(observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]) + 1
+                int(
+                    observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]
+                )
+                + 1
             )
             logger.info("Object categories: {}".format(self._n_object_categories))
-            self.obj_categories_embedding = nn.Embedding(self._n_object_categories, 32)
+            self.obj_categories_embedding = nn.Embedding(
+                self._n_object_categories, 32
+            )
             rnn_input_size += 32
             logger.info("\n\nSetting up Object Goal sensor")
 
@@ -145,13 +151,11 @@ class ObjectNavILNet(Net):
 
         self.rnn_input_size = rnn_input_size
 
-        # pretrained weights\
+        # pretrained weights
         logger.info("encoder: {}".format(rgb_config.pretrained_encoder is not None))
         if rgb_config.pretrained_encoder is not None:
             msg = load_encoder(self.visual_encoder, rgb_config.pretrained_encoder)
-            logger.info(
-                "Using weights from {}: {}".format(rgb_config.pretrained_encoder, msg)
-            )
+            logger.info("Using weights from {}: {}".format(rgb_config.pretrained_encoder, msg))
 
         # freeze backbone
         if rgb_config.freeze_backbone:
@@ -173,7 +177,7 @@ class ObjectNavILNet(Net):
 
     @property
     def is_blind(self):
-        return self.rgb_encoder.is_blind and self.depth_encoder.is_blind
+        return self.visual_encoder.is_blind and self.depth_encoder.is_blind
 
     @property
     def num_recurrent_layers(self):
@@ -186,13 +190,13 @@ class ObjectNavILNet(Net):
         rgb_embedding: [batch_size x RGB_ENCODER.output_size]
         """
         rgb_obs = observations["rgb"]
-        depth_obs = observations["depth"]
 
         N = rnn_hidden_states.size(1)
 
         x = []
 
         if self.depth_encoder is not None:
+            depth_obs = observations["depth"]
             if len(depth_obs.size()) == 5:
                 observations["depth"] = depth_obs.contiguous().view(
                     -1, depth_obs.size(2), depth_obs.size(3), depth_obs.size(4)
@@ -206,7 +210,6 @@ class ObjectNavILNet(Net):
                 observations["rgb"] = rgb_obs.contiguous().view(
                     -1, rgb_obs.size(2), rgb_obs.size(3), rgb_obs.size(4)
                 )
-
             # visual encoder
             rgb = observations["rgb"]
             rgb = self.visual_transform(rgb, N)
@@ -219,7 +222,7 @@ class ObjectNavILNet(Net):
             if len(obs_gps.size()) == 3:
                 obs_gps = obs_gps.contiguous().view(-1, obs_gps.size(2))
             x.append(self.gps_embedding(obs_gps))
-
+        
         if EpisodicCompassSensor.cls_uuid in observations:
             obs_compass = observations["compass"]
             if len(obs_compass.size()) == 3:
@@ -231,9 +234,7 @@ class ObjectNavILNet(Net):
                 ],
                 -1,
             )
-            compass_embedding = self.compass_embedding(
-                compass_observations.squeeze(dim=1)
-            )
+            compass_embedding = self.compass_embedding(compass_observations.float().squeeze(dim=1))
             x.append(compass_embedding)
 
         if ObjectGoalSensor.cls_uuid in observations:
@@ -254,14 +255,10 @@ class ObjectNavILNet(Net):
         return x, rnn_hidden_states
 
 
-@baseline_registry.register_policy
+@custom_baseline_registry.register_il_policy
 class ObjectNavILPolicy(ILPolicy):
     def __init__(
-        self,
-        observation_space: Space,
-        action_space: Space,
-        model_config: Config,
-        run_type: str,
+        self, observation_space: Space, action_space: Space, model_config: Config, run_type: str
     ):
         super().__init__(
             ObjectNavILNet(
@@ -271,13 +268,12 @@ class ObjectNavILPolicy(ILPolicy):
                 run_type=run_type,
             ),
             action_space.n,
-            no_critic=model_config.CRITIC.no_critic,
-            mlp_critic=model_config.CRITIC.mlp_critic,
-            critic_hidden_dim=model_config.CRITIC.hidden_dim,
         )
 
     @classmethod
-    def from_config(cls, config: Config, observation_space, action_space):
+    def from_config(
+        cls, config: Config, observation_space, action_space
+    ):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
