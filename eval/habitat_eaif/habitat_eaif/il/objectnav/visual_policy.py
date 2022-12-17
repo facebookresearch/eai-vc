@@ -1,12 +1,7 @@
-from typing import Dict, Optional
-
-import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from gym import Space
-from gym.spaces import Dict, Box
 from habitat import Config, logger
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -50,65 +45,34 @@ class ObjectNavILNet(Net):
         self.model_config = model_config
         rnn_input_size = 0
 
-        # Init the depth encoder
-        assert model_config.DEPTH_ENCODER.cnn_type in [
-            "VlnResnetDepthEncoder",
-            "None",
-        ], "DEPTH_ENCODER.cnn_type must be VlnResnetDepthEncoder"
-        if model_config.DEPTH_ENCODER.cnn_type == "VlnResnetDepthEncoder":
-            self.depth_encoder = VlnResnetDepthEncoder(
-                observation_space,
-                output_size=model_config.DEPTH_ENCODER.output_size,
-                checkpoint=model_config.DEPTH_ENCODER.ddppo_checkpoint,
-                backbone=model_config.DEPTH_ENCODER.backbone,
-                trainable=model_config.DEPTH_ENCODER.trainable,
-            )
-            rnn_input_size += model_config.DEPTH_ENCODER.output_size
-            logger.info("Initializing {} depth encoder".format(model_config.DEPTH_ENCODER.cnn_type))
-        else:
-            self.depth_encoder = None
-
+        rgb_config = model_config.RGB_ENCODER
         # Init the RGB visual encoder
-        assert model_config.RGB_ENCODER.cnn_type in [
+        assert rgb_config.cnn_type in [
             "VisualEncoder",
             "None",
         ], "RGB_ENCODER.cnn_type must be 'VisualEncoder', or 'None'."
 
-        rgb_config = model_config.RGB_ENCODER
-        if model_config.RGB_ENCODER.cnn_type == "VisualEncoder":
-            name = "resize"
-            if rgb_config.use_augmentations and run_type == "train":
-                name = rgb_config.augmentations_name
-            if rgb_config.use_augmentations_test_time and run_type == "eval":
-                name = rgb_config.augmentations_name
-            self.visual_transform = get_transform(name, size=rgb_config.image_size)
-            self.visual_transform.randomize_environments = rgb_config.randomize_augmentations_over_envs
+        use_augmentations = False
+        if (rgb_config.use_augmentations and run_type == "train") or (
+            rgb_config.use_augmentations_test_time and run_type == "eval"
+        ):
+            use_augmentations = True
 
-            self.visual_encoder = VisualEncoder(
-                image_size=rgb_config.image_size,
-                backbone=rgb_config.backbone,
-                input_channels=3,
-                resnet_baseplanes=rgb_config.resnet_baseplanes,
-                resnet_ngroups=rgb_config.resnet_baseplanes // 2,
-                vit_use_fc_norm=rgb_config.vit_use_fc_norm,
-                vit_global_pool=rgb_config.vit_global_pool,
-                vit_use_cls=rgb_config.vit_use_cls,
-                vit_mask_ratio=rgb_config.vit_mask_ratio,
-                avgpooled_image=rgb_config.avgpooled_image,
-                drop_path_rate=rgb_config.drop_path_rate,
-            )
+        self.visual_encoder = VisualEncoder(
+            image_size=rgb_config.image_size,
+            backbone_config=rgb_config,
+            global_pool=rgb_config.global_pool,
+            use_cls=rgb_config.use_cls,
+            use_augmentations=use_augmentations,
+        )
 
-            self.visual_fc = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(self.visual_encoder.output_size, model_config.RGB_ENCODER.hidden_size),
-                nn.ReLU(True),
-            )
+        self.visual_fc = nn.Sequential(
+            nn.Linear(self.visual_encoder.output_size, rgb_config.hidden_size),
+            nn.ReLU(True),
+        )
 
-            rnn_input_size += model_config.RGB_ENCODER.hidden_size
-            logger.info("RGB encoder is {}".format(model_config.RGB_ENCODER.cnn_type))
-        else:
-            self.visual_encoder = None
-            logger.info("RGB encoder is none")
+        rnn_input_size += rgb_config.hidden_size
+        logger.info("RGB encoder is {}".format(rgb_config.cnn_type))
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
@@ -177,7 +141,7 @@ class ObjectNavILNet(Net):
 
     @property
     def is_blind(self):
-        return self.visual_encoder.is_blind and self.depth_encoder.is_blind
+        return False
 
     @property
     def num_recurrent_layers(self):
@@ -195,27 +159,16 @@ class ObjectNavILNet(Net):
 
         x = []
 
-        if self.depth_encoder is not None:
-            depth_obs = observations["depth"]
-            if len(depth_obs.size()) == 5:
-                observations["depth"] = depth_obs.contiguous().view(
-                    -1, depth_obs.size(2), depth_obs.size(3), depth_obs.size(4)
-                )
-
-            depth_embedding = self.depth_encoder(observations)
-            x.append(depth_embedding)
-
-        if self.visual_encoder is not None:
-            if len(rgb_obs.size()) == 5:
-                observations["rgb"] = rgb_obs.contiguous().view(
-                    -1, rgb_obs.size(2), rgb_obs.size(3), rgb_obs.size(4)
-                )
-            # visual encoder
-            rgb = observations["rgb"]
-            rgb = self.visual_transform(rgb, N)
-            rgb = self.visual_encoder(rgb)
-            rgb = self.visual_fc(rgb)
-            x.append(rgb)
+        if len(rgb_obs.size()) == 5:
+            observations["rgb"] = rgb_obs.contiguous().view(
+                -1, rgb_obs.size(2), rgb_obs.size(3), rgb_obs.size(4)
+            )
+        # visual encoder
+        rgb = observations["rgb"]
+        rgb = self.visual_transform(rgb, N)
+        rgb = self.visual_encoder(rgb)
+        rgb = self.visual_fc(rgb)
+        x.append(rgb)
 
         if EpisodicGPSSensor.cls_uuid in observations:
             obs_gps = observations[EpisodicGPSSensor.cls_uuid]
