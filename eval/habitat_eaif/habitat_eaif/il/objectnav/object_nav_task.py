@@ -10,8 +10,7 @@ from habitat.core.utils import not_none_validator
 
 @attr.s(auto_attribs=True, kw_only=True)
 class AgentStateSpec:
-    r"""Agent data specifications that capture states of agent and sensor in replay state.
-    """
+    r"""Agent data specifications that capture states of agent and sensor in replay state."""
     position: Optional[List[float]] = attr.ib(default=None)
     rotation: Optional[List[float]] = attr.ib(default=None)
     sensor_data: Optional[dict] = attr.ib(default=None)
@@ -19,8 +18,7 @@ class AgentStateSpec:
 
 @attr.s(auto_attribs=True, kw_only=True)
 class ReplayActionSpec:
-    r"""Replay specifications that capture metadata associated with action.
-    """
+    r"""Replay specifications that capture metadata associated with action."""
     action: str = attr.ib(default=None, validator=not_none_validator)
     agent_state: Optional[AgentStateSpec] = attr.ib(default=None)
 
@@ -58,7 +56,7 @@ class ObjectNavigationTask(NavigationTask):
         super().__init__(**kwargs)
         self._is_episode_active = False
         self._is_resetting = False
-    
+
     def reset(self, episode):
         self._is_resetting = True
         obs = super().reset(episode)

@@ -25,8 +25,7 @@ class CustomBaselineRegistry(BaselineRegistry):
         """
         from habitat_eaif.il.objectnav.policy import ILPolicy
 
-        return cls._register_impl(
-            "policy", to_register, name, assert_type=ILPolicy
-        )
+        return cls._register_impl("policy", to_register, name, assert_type=ILPolicy)
+
 
 custom_baseline_registry = CustomBaselineRegistry()

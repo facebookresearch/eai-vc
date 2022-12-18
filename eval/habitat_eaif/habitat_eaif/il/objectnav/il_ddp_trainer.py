@@ -26,7 +26,7 @@ from habitat_baselines.common.environments import get_env_class
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
-    get_active_obs_transforms
+    get_active_obs_transforms,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
 from habitat_baselines.rl.ddppo.ddp_utils import (
@@ -63,7 +63,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         if interrupted_state is not None:
             config = interrupted_state["config"]
 
-        super().__init__(config)  
+        super().__init__(config)
 
     def _setup_actor_critic_agent(self, il_cfg: Config, model_config: Config) -> None:
         r"""Sets up actor critic and agent for PPO.
@@ -105,7 +105,8 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                 {
                     k.replace("model.", ""): v
                     for k, v in pretrained_state["state_dict"].items()
-                }, strict=False
+                },
+                strict=False,
             )
             logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
 
@@ -126,9 +127,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         Returns:
             None
         """
-        self.local_rank, tcp_store = init_distrib_slurm(
-            self.config.IL.distrib_backend
-        )
+        self.local_rank, tcp_store = init_distrib_slurm(self.config.IL.distrib_backend)
         add_signal_handlers()
 
         profiling_wrapper.configure(
@@ -136,7 +135,9 @@ class ILEnvDDPTrainer(ILEnvTrainer):
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
         SLURM_JOBID = os.environ.get("SLURM_JOB_ID", None)
-        interrupted_state_file = os.path.join(self.config.CHECKPOINT_FOLDER, "{}.pth".format(SLURM_JOBID))
+        interrupted_state_file = os.path.join(
+            self.config.CHECKPOINT_FOLDER, "{}.pth".format(SLURM_JOBID)
+        )
 
         interrupted_state = load_resume_state(self.config)
         if interrupted_state is not None:
@@ -144,9 +145,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
             self.config = interrupted_state["config"]
 
         # Stores the number of workers that have finished their rollout
-        num_rollouts_done_store = distrib.PrefixStore(
-            "rollout_tracker", tcp_store
-        )
+        num_rollouts_done_store = distrib.PrefixStore("rollout_tracker", tcp_store)
         num_rollouts_done_store.set("num_done", "0")
 
         self.world_rank = distrib.get_rank()
@@ -156,9 +155,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         self.config.TORCH_GPU_ID = self.local_rank
         self.config.SIMULATOR_GPU_ID = self.local_rank
         # Multiply by the number of simulators to make sure they also get unique seeds
-        self.config.TASK_CONFIG.SEED += (
-            self.world_rank * self.config.NUM_PROCESSES
-        )
+        self.config.TASK_CONFIG.SEED += self.world_rank * self.config.NUM_PROCESSES
         self.config.freeze()
 
         random.seed(self.config.TASK_CONFIG.SEED)
@@ -178,16 +175,11 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         )
 
         logger.info(
-            "[ train_loader has {} samples ]".format(
-                self.envs.count_episodes()
-            )
+            "[ train_loader has {} samples ]".format(self.envs.count_episodes())
         )
 
         il_cfg = self.config.IL.BehaviorCloning
-        if (
-            not os.path.isdir(self.config.CHECKPOINT_FOLDER)
-            and self.world_rank == 0
-        ):
+        if not os.path.isdir(self.config.CHECKPOINT_FOLDER) and self.world_rank == 0:
             os.makedirs(self.config.CHECKPOINT_FOLDER)
 
         self._setup_actor_critic_agent(il_cfg, self.config.MODEL)
@@ -216,14 +208,17 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         obs_space = self.obs_space
 
         # To handle LSTM input
-        num_rnn_layer_multiplier = 2 if self.config.MODEL.STATE_ENCODER.rnn_type == "LSTM" else 1
+        num_rnn_layer_multiplier = (
+            2 if self.config.MODEL.STATE_ENCODER.rnn_type == "LSTM" else 1
+        )
         rollouts = RolloutStorage(
             il_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
             self.envs.action_spaces[0],
             self.config.MODEL.STATE_ENCODER.hidden_size,
-            num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers * num_rnn_layer_multiplier,
+            num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers
+            * num_rnn_layer_multiplier,
         )
         rollouts.to(self.device)
 
@@ -236,9 +231,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         batch = None
         observations = None
 
-        current_episode_reward = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
+        current_episode_reward = torch.zeros(self.envs.num_envs, 1, device=self.device)
         running_episode_stats = dict(
             count=torch.zeros(self.envs.num_envs, 1, device=self.device),
             reward=torch.zeros(self.envs.num_envs, 1, device=self.device),
@@ -261,9 +254,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         )
         if interrupted_state is not None:
             self.agent.load_state_dict(interrupted_state["state_dict"])
-            self.agent.optimizer.load_state_dict(
-                interrupted_state["optim_state"]
-            )
+            self.agent.optimizer.load_state_dict(interrupted_state["optim_state"])
             lr_scheduler.load_state_dict(interrupted_state["lr_sched_state"])
 
             requeue_stats = interrupted_state["requeue_stats"]
@@ -275,9 +266,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
             prev_time = requeue_stats["prev_time"]
 
         with (
-            TensorboardWriter(
-                self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs
-            )
+            TensorboardWriter(self.config.TENSORBOARD_DIR, flush_secs=self.flush_secs)
             if self.world_rank == 0
             else contextlib.suppress()
         ) as writer:
@@ -289,7 +278,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                 if update > 0 and il_cfg.use_linear_lr_decay:
                     lr_scheduler.step()  # type: ignore
 
-                if update > 0 and  il_cfg.use_linear_clip_decay:
+                if update > 0 and il_cfg.use_linear_clip_decay:
                     self.agent.clip_param = il_cfg.clip_param * linear_decay(
                         update, self.config.NUM_UPDATES
                     )
@@ -316,7 +305,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                                 config=self.config,
                                 requeue_stats=requeue_stats,
                             ),
-                            interrupted_state_file
+                            interrupted_state_file,
                         )
 
                     requeue_job()
@@ -340,8 +329,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                     # This is where the preemption of workers happens.  If a
                     # worker detects it will be a straggler, it preempts itself!
                     if (
-                        step
-                        >= il_cfg.num_steps * self.SHORT_ROLLOUT_THRESHOLD
+                        step >= il_cfg.num_steps * self.SHORT_ROLLOUT_THRESHOLD
                     ) and int(num_rollouts_done_store.get("num_done")) > (
                         il_cfg.sync_frac * self.world_size
                     ):
@@ -349,13 +337,10 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                 profiling_wrapper.range_pop()  # rollouts loop
 
                 num_rollouts_done_store.add("num_done", 1)
-                #logger.info("update: {}".format(update))
+                # logger.info("update: {}".format(update))
 
                 self.agent.train()
-                (
-                    delta_pth_time,
-                    total_loss
-                ) = self._update_agent(il_cfg, rollouts)
+                (delta_pth_time, total_loss) = self._update_agent(il_cfg, rollouts)
                 pth_time += delta_pth_time
 
                 stats_ordering = sorted(running_episode_stats.keys())
@@ -390,7 +375,9 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                     }
                     deltas["count"] = max(deltas["count"], 1.0)
 
-                    wandb.log({"reward": deltas["reward"] / deltas["count"]}, step=count_steps)
+                    wandb.log(
+                        {"reward": deltas["reward"] / deltas["count"]}, step=count_steps
+                    )
 
                     # Check to see if there are any metrics
                     # that haven't been logged yet
@@ -402,23 +389,24 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                     if len(metrics) > 0:
                         wandb.log(metrics, step=count_steps)
 
-                    wandb.log({k: l for l, k in zip(losses, ["action_loss"])}, step=count_steps)
+                    wandb.log(
+                        {k: l for l, k in zip(losses, ["action_loss"])},
+                        step=count_steps,
+                    )
 
                     # log stats
                     if update > 0 and update % self.config.LOG_INTERVAL == 0:
                         logger.info(
                             "update: {}\tfps: {:.3f}\tloss: {:.3f}".format(
                                 update,
-                                count_steps
-                                / ((time.time() - t_start) + prev_time), losses[0]
+                                count_steps / ((time.time() - t_start) + prev_time),
+                                losses[0],
                             )
                         )
 
                         logger.info(
                             "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s"
-                            "frames: {}".format(
-                                update, env_time, pth_time, count_steps
-                            )
+                            "frames: {}".format(update, env_time, pth_time, count_steps)
                         )
                         logger.info(
                             "Average window size: {}  {}".format(
@@ -438,7 +426,6 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                             dict(step=count_steps),
                         )
                         count_checkpoints += 1
-
 
                 profiling_wrapper.range_pop()  # train update
 

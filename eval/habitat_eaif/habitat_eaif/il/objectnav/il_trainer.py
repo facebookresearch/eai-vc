@@ -43,14 +43,14 @@ from habitat_baselines.utils.env_utils import construct_envs
 
 from habitat_eaif.il.objectnav.algos.agent import ILAgent
 from habitat_eaif.il.objectnav.rollout_storage import RolloutStorage
-from habitat_eaif.il.objectnav.custom_baseline_registry  import custom_baseline_registry
+from habitat_eaif.il.objectnav.custom_baseline_registry import custom_baseline_registry
 
 import habitat_eaif.utils as utils
 
+
 @baseline_registry.register_trainer(name="il-trainer")
 class ILEnvTrainer(BaseRLTrainer):
-    r"""Trainer class for behavior cloning.
-    """
+    r"""Trainer class for behavior cloning."""
     supported_tasks = ["ObjectNav-v1"]
 
     def __init__(self, config=None):
@@ -103,7 +103,8 @@ class ILEnvTrainer(BaseRLTrainer):
                 {
                     k.replace("model.", ""): v
                     for k, v in pretrained_state["state_dict"].items()
-                }, strict=False
+                },
+                strict=False,
             )
             logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
 
@@ -136,9 +137,7 @@ class ILEnvTrainer(BaseRLTrainer):
         if extra_state is not None:
             checkpoint["extra_state"] = extra_state
 
-        torch.save(
-            checkpoint, os.path.join(self.config.CHECKPOINT_FOLDER, file_name)
-        )
+        torch.save(checkpoint, os.path.join(self.config.CHECKPOINT_FOLDER, file_name))
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
         r"""Load checkpoint of specified path as a dict.
@@ -153,12 +152,14 @@ class ILEnvTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision", "room_visitation_map"}
+    METRICS_BLACKLIST = {
+        "top_down_map",
+        "collisions.is_collision",
+        "room_visitation_map",
+    }
 
     @classmethod
-    def _extract_scalars_from_info(
-        cls, info: Dict[str, Any]
-    ) -> Dict[str, float]:
+    def _extract_scalars_from_info(cls, info: Dict[str, Any]) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
             if k in cls.METRICS_BLACKLIST:
@@ -168,9 +169,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 result.update(
                     {
                         k + "." + subk: subv
-                        for subk, subv in cls._extract_scalars_from_info(
-                            v
-                        ).items()
+                        for subk, subv in cls._extract_scalars_from_info(v).items()
                         if (k + "." + subk) not in cls.METRICS_BLACKLIST
                     }
                 )
@@ -192,7 +191,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 results[k].append(v)
 
         return results
-    
+
     @staticmethod
     def _pause_envs(
         envs_to_pause: List[int],
@@ -202,7 +201,7 @@ class ILEnvTrainer(BaseRLTrainer):
         current_episode_reward: Tensor,
         prev_actions: Tensor,
         batch: Dict[str, Tensor],
-        rgb_frames: Union[List[List[Any]], List[List[ndarray]]]
+        rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
     ) -> Tuple[
         Union[VectorEnv, RLEnv, Env],
         Tensor,
@@ -220,9 +219,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 envs.pause_at(idx)
 
             # indexing along the batch dimensions
-            test_recurrent_hidden_states = test_recurrent_hidden_states[
-                :, state_index
-            ]
+            test_recurrent_hidden_states = test_recurrent_hidden_states[:, state_index]
             not_done_masks = not_done_masks[state_index]
             current_episode_reward = current_episode_reward[state_index]
             prev_actions = prev_actions[state_index]
@@ -262,9 +259,7 @@ class ILEnvTrainer(BaseRLTrainer):
         profiling_wrapper.range_pop()  # compute actions
 
         outputs = self.envs.step(step_data)
-        observations, rewards_l, dones, infos = [
-            list(x) for x in zip(*outputs)
-        ]
+        observations, rewards_l, dones, infos = [list(x) for x in zip(*outputs)]
 
         env_time += time.time() - t_step_env
 
@@ -336,9 +331,7 @@ class ILEnvTrainer(BaseRLTrainer):
             num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
         )
 
-        self.envs = construct_envs(
-            self.config, get_env_class(self.config.ENV_NAME)
-        )
+        self.envs = construct_envs(self.config, get_env_class(self.config.ENV_NAME))
 
         il_cfg = self.config.IL.BehaviorCloning
         self.device = (
@@ -410,7 +403,7 @@ class ILEnvTrainer(BaseRLTrainer):
             for update in range(self.config.NUM_UPDATES):
                 profiling_wrapper.on_start_step()
                 profiling_wrapper.range_push("train update")
-                
+
                 self.current_update = update
 
                 if il_cfg.use_linear_lr_decay and update > 0:
@@ -435,10 +428,7 @@ class ILEnvTrainer(BaseRLTrainer):
                     count_steps += delta_steps
                 profiling_wrapper.range_pop()  # rollouts loop
 
-                (
-                    delta_pth_time,
-                    total_loss
-                ) = self._update_agent(il_cfg, rollouts)
+                (delta_pth_time, total_loss) = self._update_agent(il_cfg, rollouts)
                 pth_time += delta_pth_time
 
                 for k, v in running_episode_stats.items():
@@ -446,15 +436,15 @@ class ILEnvTrainer(BaseRLTrainer):
 
                 deltas = {
                     k: (
-                        (v[-1] - v[0]).sum().item()
-                        if len(v) > 1
-                        else v[0].sum().item()
+                        (v[-1] - v[0]).sum().item() if len(v) > 1 else v[0].sum().item()
                     )
                     for k, v in window_episode_stats.items()
                 }
                 deltas["count"] = max(deltas["count"], 1.0)
 
-                wandb.log({"reward": deltas["reward"] / deltas["count"]}, step=count_steps)
+                wandb.log(
+                    {"reward": deltas["reward"] / deltas["count"]}, step=count_steps
+                )
 
                 # Check to see if there are any metrics
                 # that haven't been logged yet
@@ -480,9 +470,7 @@ class ILEnvTrainer(BaseRLTrainer):
 
                     logger.info(
                         "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                        "frames: {}".format(
-                            update, env_time, pth_time, count_steps
-                        )
+                        "frames: {}".format(update, env_time, pth_time, count_steps)
                     )
 
                     logger.info(
@@ -531,7 +519,7 @@ class ILEnvTrainer(BaseRLTrainer):
             config = self._setup_eval_config(ckpt_dict["config"])
         else:
             config = self.config.clone()
-        
+
         if self.wandb_initialized == False:
             utils.setup_wandb(self.config, train=False, project_name="objectnav_mae")
             self.wandb_initialized = True
@@ -552,7 +540,7 @@ class ILEnvTrainer(BaseRLTrainer):
         self.envs = construct_envs(config, get_env_class(config.ENV_NAME))
         self._setup_actor_critic_agent(il_cfg, config.MODEL)
 
-        self.agent.load_state_dict(ckpt_dict["state_dict"], strict=True)    
+        self.agent.load_state_dict(ckpt_dict["state_dict"], strict=True)
         self.policy = self.agent.model
         self.policy.eval()
 
@@ -560,9 +548,7 @@ class ILEnvTrainer(BaseRLTrainer):
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
-        current_episode_reward = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
+        current_episode_reward = torch.zeros(self.envs.num_envs, 1, device=self.device)
 
         test_recurrent_hidden_states = torch.zeros(
             config.MODEL.STATE_ENCODER.num_recurrent_layers,
@@ -573,16 +559,12 @@ class ILEnvTrainer(BaseRLTrainer):
         prev_actions = torch.zeros(
             config.NUM_PROCESSES, 1, device=self.device, dtype=torch.long
         )
-        not_done_masks = torch.zeros(
-            config.NUM_PROCESSES, 1, device=self.device
-        )
+        not_done_masks = torch.zeros(config.NUM_PROCESSES, 1, device=self.device)
         stats_episodes: Dict[
             Any, Any
         ] = {}  # dict of dicts that stores stats per episode
 
-        current_episode_steps = torch.zeros(
-            self.envs.num_envs, 1, device=self.device
-        )
+        current_episode_steps = torch.zeros(self.envs.num_envs, 1, device=self.device)
 
         rgb_frames = [
             [] for _ in range(config.NUM_PROCESSES)
@@ -605,18 +587,11 @@ class ILEnvTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         episode_meta = []
-        while (
-            len(stats_episodes) < number_of_eval_episodes
-            and self.envs.num_envs > 0
-        ):
+        while len(stats_episodes) < number_of_eval_episodes and self.envs.num_envs > 0:
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                (
-                    logits,
-                    test_recurrent_hidden_states,
-                    dist_entropy,
-                ) = self.policy(
+                (logits, test_recurrent_hidden_states, dist_entropy,) = self.policy(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
@@ -635,9 +610,7 @@ class ILEnvTrainer(BaseRLTrainer):
 
             outputs = self.envs.step(step_data)
 
-            observations, rewards_l, dones, infos = [
-                list(x) for x in zip(*outputs)
-            ]
+            observations, rewards_l, dones, infos = [list(x) for x in zip(*outputs)]
             batch = batch_obs(observations, device=self.device)
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)
 
@@ -666,16 +639,20 @@ class ILEnvTrainer(BaseRLTrainer):
                     pbar.update()
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
-                    episode_stats.update(
-                        self._extract_scalars_from_info(infos[i])
-                    )
+                    episode_stats.update(self._extract_scalars_from_info(infos[i]))
                     current_episode_reward[i] = 0
-                    logger.info("Success: {}, SPL: {}".format(episode_stats["success"], episode_stats["spl"]))
-                    episode_meta.append({
-                        "scene_id": current_episodes[i].scene_id,
-                        "episode_id": current_episodes[i].episode_id,
-                        "metrics": episode_stats,
-                    })
+                    logger.info(
+                        "Success: {}, SPL: {}".format(
+                            episode_stats["success"], episode_stats["spl"]
+                        )
+                    )
+                    episode_meta.append(
+                        {
+                            "scene_id": current_episodes[i].scene_id,
+                            "episode_id": current_episodes[i].episode_id,
+                            "metrics": episode_stats,
+                        }
+                    )
                     utils.write_json(episode_meta, self.config.EVAL.meta_file)
 
                     # use scene_id + episode_id as unique id for storing stats
@@ -702,9 +679,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
-                    frame = observations_to_image(
-                        {"rgb": batch["rgb"][i]}, infos[i]
-                    )
+                    frame = observations_to_image({"rgb": batch["rgb"][i]}, infos[i])
                     rgb_frames[i].append(frame)
 
             (
@@ -730,8 +705,7 @@ class ILEnvTrainer(BaseRLTrainer):
         aggregated_stats = {}
         for stat_key in next(iter(stats_episodes.values())).keys():
             aggregated_stats[stat_key] = (
-                sum(v[stat_key] for v in stats_episodes.values())
-                / num_episodes
+                sum(v[stat_key] for v in stats_episodes.values()) / num_episodes
             )
 
         for k, v in aggregated_stats.items():
@@ -746,7 +720,7 @@ class ILEnvTrainer(BaseRLTrainer):
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         if len(metrics) > 0:
             wandb.log(metrics, step=step_id)
-        
+
         utils.write_json(episode_meta, self.config.EVAL.meta_file)
 
         self.envs.close()

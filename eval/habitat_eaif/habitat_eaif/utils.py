@@ -224,10 +224,12 @@ def write_json(data, path):
     with open(path, "w") as file:
         file.write(json.dumps(data))
 
+
 def load_dataset(path):
     with gzip.open(path, "rb") as file:
         data = json.loads(file.read(), encoding="utf-8")
     return data
+
 
 def load_json_dataset(path):
     file = open(path, "r")

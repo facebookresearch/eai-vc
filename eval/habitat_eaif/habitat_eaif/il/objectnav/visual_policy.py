@@ -71,37 +71,31 @@ class ObjectNavILNet(Net):
         logger.info("RGB encoder is {}".format(rgb_config.model_type))
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
-            input_gps_dim = observation_space.spaces[
-                EpisodicGPSSensor.cls_uuid
-            ].shape[0]
+            input_gps_dim = observation_space.spaces[EpisodicGPSSensor.cls_uuid].shape[
+                0
+            ]
             self.gps_embedding = nn.Linear(input_gps_dim, 32)
             rnn_input_size += 32
             logger.info("\n\nSetting up GPS sensor")
-        
+
         if EpisodicCompassSensor.cls_uuid in observation_space.spaces:
             assert (
-                observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[
-                    0
-                ]
-                == 1
+                observation_space.spaces[EpisodicCompassSensor.cls_uuid].shape[0] == 1
             ), "Expected compass with 2D rotation."
             input_compass_dim = 2  # cos and sin of the angle
             self.compass_embedding_dim = 32
-            self.compass_embedding = nn.Linear(input_compass_dim, self.compass_embedding_dim)
+            self.compass_embedding = nn.Linear(
+                input_compass_dim, self.compass_embedding_dim
+            )
             rnn_input_size += 32
             logger.info("\n\nSetting up Compass sensor")
 
         if ObjectGoalSensor.cls_uuid in observation_space.spaces:
             self._n_object_categories = (
-                int(
-                    observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]
-                )
-                + 1
+                int(observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]) + 1
             )
             logger.info("Object categories: {}".format(self._n_object_categories))
-            self.obj_categories_embedding = nn.Embedding(
-                self._n_object_categories, 32
-            )
+            self.obj_categories_embedding = nn.Embedding(self._n_object_categories, 32)
             rnn_input_size += 32
             logger.info("\n\nSetting up Object Goal sensor")
 
@@ -174,7 +168,7 @@ class ObjectNavILNet(Net):
             if len(obs_gps.size()) == 3:
                 obs_gps = obs_gps.contiguous().view(-1, obs_gps.size(2))
             x.append(self.gps_embedding(obs_gps))
-        
+
         if EpisodicCompassSensor.cls_uuid in observations:
             obs_compass = observations["compass"]
             if len(obs_compass.size()) == 3:
@@ -186,7 +180,9 @@ class ObjectNavILNet(Net):
                 ],
                 -1,
             )
-            compass_embedding = self.compass_embedding(compass_observations.float().squeeze(dim=1))
+            compass_embedding = self.compass_embedding(
+                compass_observations.float().squeeze(dim=1)
+            )
             x.append(compass_embedding)
 
         if ObjectGoalSensor.cls_uuid in observations:
@@ -215,7 +211,7 @@ class ObjectNavILPolicy(ILPolicy):
         action_space: Space,
         backbone_config: Config,
         model_config: Config,
-        run_type: str
+        run_type: str,
     ):
         super().__init__(
             ObjectNavILNet(
@@ -229,9 +225,7 @@ class ObjectNavILPolicy(ILPolicy):
         )
 
     @classmethod
-    def from_config(
-        cls, config: Config, observation_space, action_space
-    ):
+    def from_config(cls, config: Config, observation_space, action_space):
         return cls(
             observation_space=observation_space,
             action_space=action_space,

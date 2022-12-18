@@ -25,9 +25,7 @@ class RolloutStorage:
 
         for sensor in observation_space.spaces:
             self.observations[sensor] = torch.zeros(
-                num_steps + 1,
-                num_envs,
-                *observation_space.spaces[sensor].shape
+                num_steps + 1, num_envs, *observation_space.spaces[sensor].shape
             )
 
         self.recurrent_hidden_states = torch.zeros(
@@ -77,16 +75,14 @@ class RolloutStorage:
         masks,
     ):
         for sensor in observations:
-            self.observations[sensor][self.step + 1].copy_(
-                observations[sensor]
-            )
+            self.observations[sensor][self.step + 1].copy_(observations[sensor])
         self.actions[self.step].copy_(actions)
         self.prev_actions[self.step + 1].copy_(actions)
         self.rewards[self.step].copy_(rewards)
         self.masks[self.step + 1].copy_(masks)
 
         self.step = self.step + 1
-    
+
     def update_running_episode_step(self, masks):
         for i in range(self.num_envs):
             self.episode_step_index[i] += 1
@@ -95,13 +91,9 @@ class RolloutStorage:
 
     def after_update(self, rnn_hidden_states):
         for sensor in self.observations:
-            self.observations[sensor][0].copy_(
-                self.observations[sensor][self.step]
-            )
+            self.observations[sensor][0].copy_(self.observations[sensor][self.step])
 
-        self.recurrent_hidden_states[0].copy_(
-            rnn_hidden_states.detach()
-        )
+        self.recurrent_hidden_states[0].copy_(rnn_hidden_states.detach())
         self.masks[0].copy_(self.masks[self.step])
         self.prev_actions[0].copy_(self.prev_actions[self.step])
         self.step = 0
@@ -153,9 +145,7 @@ class RolloutStorage:
 
             # These are all tensors of size (T, N, -1)
             for sensor in observations_batch:
-                observations_batch[sensor] = torch.stack(
-                    observations_batch[sensor], 1
-                )
+                observations_batch[sensor] = torch.stack(observations_batch[sensor], 1)
 
             actions_batch = torch.stack(actions_batch, 1)
             prev_actions_batch = torch.stack(prev_actions_batch, 1)
@@ -172,7 +162,7 @@ class RolloutStorage:
                 actions_batch,
                 prev_actions_batch,
                 masks_batch,
-                index_batch
+                index_batch,
             )
 
     @staticmethod
