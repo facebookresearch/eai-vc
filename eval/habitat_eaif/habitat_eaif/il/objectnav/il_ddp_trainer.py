@@ -44,6 +44,7 @@ from habitat_baselines.utils.env_utils import construct_envs
 from habitat_eaif.il.objectnav.algos.agent import DDPILAgent
 from habitat_eaif.il.objectnav.il_trainer import ILEnvTrainer
 from habitat_eaif.il.objectnav.rollout_storage import RolloutStorage
+from habitat_eaif.il.objectnav.custom_baseline_registry import custom_baseline_registry
 import habitat_eaif.utils as utils
 
 
@@ -205,7 +206,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
             )
 
             if self.wandb_initialized == False:
-                utils.setup_wandb(self.config, train=True, project_name="objectnav_mae")
+                utils.setup_wandb(self.config, train=True)
                 self.wandb_initialized = True
 
         observations = self.envs.reset()
@@ -214,13 +215,15 @@ class ILEnvDDPTrainer(ILEnvTrainer):
 
         obs_space = self.obs_space
 
+        # To handle LSTM input
+        num_rnn_layer_multiplier = 2 if self.config.MODEL.STATE_ENCODER.rnn_type == "LSTM" else 1
         rollouts = RolloutStorage(
             il_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
             self.envs.action_spaces[0],
             self.config.MODEL.STATE_ENCODER.hidden_size,
-            num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
+            num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers * num_rnn_layer_multiplier,
         )
         rollouts.to(self.device)
 

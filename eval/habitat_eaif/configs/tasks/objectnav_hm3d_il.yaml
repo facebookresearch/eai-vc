@@ -8,28 +8,16 @@ TASK_CONFIG:
     TILT_ANGLE: 30
     ACTION_SPACE_CONFIG: "v1"
     AGENT_0:
-      SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
+      SENSORS: ['RGB_SENSOR']
       HEIGHT: 0.88
       RADIUS: 0.18
     HABITAT_SIM_V0:
       GPU_DEVICE_ID: 0
       ALLOW_SLIDING: False
-    SEMANTIC_SENSOR:
-      WIDTH: 640
-      HEIGHT: 480
-      HFOV: 79
-      POSITION: [0, 0.88, 0]
     RGB_SENSOR:
       WIDTH: 640
       HEIGHT: 480
       HFOV: 79
-      POSITION: [0, 0.88, 0]
-    DEPTH_SENSOR:
-      WIDTH: 640
-      HEIGHT: 480
-      HFOV: 79
-      MIN_DEPTH: 0.5
-      MAX_DEPTH: 5.0
       POSITION: [0, 0.88, 0]
   TASK:
     TYPE: ObjectNav-v2
@@ -58,7 +46,7 @@ TASK_CONFIG:
   DATASET:
     TYPE: ObjectNav-v2
     SPLIT: train
-    DATA_PATH: "data/datasets/objectnav/objectnav_hm3d/objectnav_hm3d_10k/{split}/{split}.json.gz"
+    DATA_PATH: "data/datasets/objectnav/hm3d/objectnav_hm3d_77k/{split}/{split}.json.gz"
     SCENES_DIR: "data/scene_datasets/"
     MAX_EPISODE_STEPS: 500
 

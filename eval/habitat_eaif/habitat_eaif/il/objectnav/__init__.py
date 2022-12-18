@@ -7,4 +7,3 @@ from habitat_eaif.il.objectnav import policy  # noqa
 from habitat_eaif.il.objectnav import visual_policy  # noqa
 from habitat_eaif.il.objectnav import rollout_storage  # noqa
 from habitat_eaif.il.objectnav import sensors  # noqa
-from habitat_eaif.il.objectnav import utils  # noqa

@@ -13,13 +13,8 @@ from habitat.tasks.nav.object_nav_task import (
 from habitat_baselines.rl.ppo import Net
 
 from habitat_eaif.il.objectnav.custom_baseline_registry import custom_baseline_registry
-from habitat_eaif.transforms import get_transform
-from habitat_eaif.utils import load_encoder
 from habitat_eaif.visual_encoder import VisualEncoder
 
-from habitat_eaif.models.resnet_encoders import (
-    VlnResnetDepthEncoder,
-)
 from habitat_eaif.il.objectnav.rnn_state_encoder import RNNStateEncoder
 from habitat_eaif.il.objectnav.policy import ILPolicy
 
@@ -38,6 +33,7 @@ class ObjectNavILNet(Net):
         self,
         observation_space: Space,
         model_config: Config,
+        backbone_config: Config,
         num_actions: int,
         run_type: str,
     ):
@@ -47,10 +43,10 @@ class ObjectNavILNet(Net):
 
         rgb_config = model_config.RGB_ENCODER
         # Init the RGB visual encoder
-        assert rgb_config.cnn_type in [
+        assert rgb_config.model_type in [
             "VisualEncoder",
             "None",
-        ], "RGB_ENCODER.cnn_type must be 'VisualEncoder', or 'None'."
+        ], "RGB_ENCODER.model_type must be 'VisualEncoder', or 'None'."
 
         use_augmentations = False
         if (rgb_config.use_augmentations and run_type == "train") or (
@@ -60,7 +56,7 @@ class ObjectNavILNet(Net):
 
         self.visual_encoder = VisualEncoder(
             image_size=rgb_config.image_size,
-            backbone_config=rgb_config,
+            backbone_config=backbone_config,
             global_pool=rgb_config.global_pool,
             use_cls=rgb_config.use_cls,
             use_augmentations=use_augmentations,
@@ -72,7 +68,7 @@ class ObjectNavILNet(Net):
         )
 
         rnn_input_size += rgb_config.hidden_size
-        logger.info("RGB encoder is {}".format(rgb_config.cnn_type))
+        logger.info("RGB encoder is {}".format(rgb_config.model_type))
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
@@ -115,12 +111,6 @@ class ObjectNavILNet(Net):
 
         self.rnn_input_size = rnn_input_size
 
-        # pretrained weights
-        logger.info("encoder: {}".format(rgb_config.pretrained_encoder is not None))
-        if rgb_config.pretrained_encoder is not None:
-            msg = load_encoder(self.visual_encoder, rgb_config.pretrained_encoder)
-            logger.info("Using weights from {}: {}".format(rgb_config.pretrained_encoder, msg))
-
         # freeze backbone
         if rgb_config.freeze_backbone:
             for p in self.visual_encoder.backbone.parameters():
@@ -147,6 +137,16 @@ class ObjectNavILNet(Net):
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
 
+    def transform_images(self, observations, number_of_envs):
+        x = observations["rgb"]
+
+        x = (
+            x.permute(0, 3, 1, 2).float() / 255
+        )  # convert channels-last to channels-first
+        x = self.visual_encoder.visual_transform(x, number_of_envs)
+
+        return x
+
     def forward(self, observations, rnn_hidden_states, prev_actions, masks):
         r"""
         instruction_embedding: [batch_size x INSTRUCTION_ENCODER.output_size]
@@ -164,8 +164,7 @@ class ObjectNavILNet(Net):
                 -1, rgb_obs.size(2), rgb_obs.size(3), rgb_obs.size(4)
             )
         # visual encoder
-        rgb = observations["rgb"]
-        rgb = self.visual_transform(rgb, N)
+        rgb = self.transform_images(observations, N)
         rgb = self.visual_encoder(rgb)
         rgb = self.visual_fc(rgb)
         x.append(rgb)
@@ -211,12 +210,18 @@ class ObjectNavILNet(Net):
 @custom_baseline_registry.register_il_policy
 class ObjectNavILPolicy(ILPolicy):
     def __init__(
-        self, observation_space: Space, action_space: Space, model_config: Config, run_type: str
+        self,
+        observation_space: Space,
+        action_space: Space,
+        backbone_config: Config,
+        model_config: Config,
+        run_type: str
     ):
         super().__init__(
             ObjectNavILNet(
                 observation_space=observation_space,
                 model_config=model_config,
+                backbone_config=backbone_config,
                 num_actions=action_space.n,
                 run_type=run_type,
             ),
@@ -230,6 +235,7 @@ class ObjectNavILPolicy(ILPolicy):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
+            backbone_config=config.model,
             model_config=config.MODEL,
             run_type=config.RUN_TYPE,
         )
