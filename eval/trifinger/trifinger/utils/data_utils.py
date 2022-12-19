@@ -8,6 +8,8 @@ import hydra
 import torchvision.transforms as T
 from PIL import Image
 
+import control.finger_utils as f_utils
+
 import eaif_models
 
 eaif_models_abs_path = os.path.dirname(os.path.abspath(eaif_models.__file__))
@@ -319,13 +321,16 @@ def resize_img(img, new_dim=64):
     return resized_img
 
 
-def save_gif(images, save_str):
+def save_gif(images, save_str, duration=None):
 
     frames = []
     for i, img in enumerate(images):
         # img = resize_img(img).detach().numpy().transpose(1,2,0) * 255.
         frames.append(img.astype(np.uint8))
-    imageio.mimsave(save_str, frames)
+    if duration is None:
+        imageio.mimsave(save_str, frames)
+    else:
+        imageio.mimsave(save_str, frames, duration=duration)
 
 
 def add_actions_to_obs(observation_list):
@@ -390,3 +395,31 @@ def get_per_finger_ftpos_err(pred_ftpos, gt_ftpos, fnum=3):
         )
         ftpos_err[:, i] = per_finger_err
     return ftpos_err
+
+
+def get_reach_scaled_err(
+    finger_to_move_list, init_ft_pos, cur_ft_pos, cube_pos, cube_half_size
+):
+
+    """Given list of finger ids to move, compute average scaled error"""
+
+    total_scaled_err = 0
+    for finger_to_move in finger_to_move_list:
+
+        # Add distance between fingertip frame and surface to cube_half_size
+        cube_half_size += f_utils.DIST_FRAME_TO_SURFACE
+
+        cur_ft_pos_i = cur_ft_pos[3 * finger_to_move : 3 * finger_to_move + 3]
+        cur_dist_to_obj = max(
+            np.linalg.norm(cur_ft_pos_i - cube_pos) - cube_half_size, 0
+        )
+        init_ft_pos_i = init_ft_pos[3 * finger_to_move : 3 * finger_to_move + 3]
+        init_dist_to_obj = max(
+            np.linalg.norm(init_ft_pos_i - cube_pos) - cube_half_size, 0
+        )
+        scaled_err = min(1, (cur_dist_to_obj / init_dist_to_obj))
+        total_scaled_err += scaled_err
+
+    avg_scaled_err = total_scaled_err / len(finger_to_move_list)
+
+    return avg_scaled_err

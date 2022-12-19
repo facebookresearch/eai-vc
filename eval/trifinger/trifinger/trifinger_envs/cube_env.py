@@ -362,6 +362,7 @@ class SimCubeEnv(BaseCubeEnv):
         camera_view: str = "default",
         arena_color: str = "default",
         random_q_init: bool = False,
+        fix_cube_base: bool = False,
     ):
         """Initialize.
 
@@ -385,6 +386,7 @@ class SimCubeEnv(BaseCubeEnv):
                 object detection).
             time_step (float): Simulation timestep
             random_q_init (bool): If true, use random intitial joint positions
+            fix_cube_base (bool): Fix cube base
         """
         super().__init__(
             goal_pose=goal_pose,
@@ -422,6 +424,7 @@ class SimCubeEnv(BaseCubeEnv):
             enable_shadows=self.enable_shadows,
             camera_view=self.camera_view,
             arena_color=arena_color,
+            fix_cube_base=fix_cube_base,
         )
 
         # visualize the cube vertices

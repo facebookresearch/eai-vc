@@ -16,7 +16,7 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
         self,
         demo_list,
         state_type="ftpos_obj",
-        obj_state_type="r3m",
+        obj_state_type="pos",
         device="cpu",
         augment_prob=0.0,
         times_to_use_demo=1,
@@ -25,6 +25,7 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
         jitter_saturation=0.5,
         jitter_hue=0.03,
         shift_pad=10,
+        task="move_cube",
     ):
         """
         args:
@@ -32,6 +33,8 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
             obj_state_type: ["pos", "vertices"] +  MODEL_NAMES
             augment_prob: probablity to augment images [0.0, 1.0]
             times_to_use_demo: (int) number of times to use each demo
+            task: task name (str)
+                if "reach_cube", take subset of action corresponding to diff (number of fingers that move)
         """
         self.dataset = []
         self.state_type = state_type
@@ -39,6 +42,13 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
         self.device = device
         self.augment_prob = augment_prob
         self.times_to_use_demo = times_to_use_demo
+        self.task = task
+        if self.task == "reach_cube":
+            self.n_fingers_to_move = int(
+                str(demo_list[0]["diff"])[0]
+            )  # Get first digit of diff
+        else:
+            self.n_fingers_to_move = 3
 
         # Get transformation for img preproc
         if self.obj_state_type in MODEL_NAMES:
@@ -110,6 +120,9 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
 
             # Action (fingertip position deltas)
             action = torch.FloatTensor(demo["delta_ftpos"][i])
+            # Get subset of delta_ftpos that corresonds to diff (number of fingers that move)
+            if self.task == "reach_cube":
+                action = action[: self.n_fingers_to_move * 3]
 
             # transform expects images as float tensor with values in range [0.0, 1.0]
             orig_img = (

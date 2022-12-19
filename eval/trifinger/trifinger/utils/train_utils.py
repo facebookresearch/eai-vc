@@ -16,6 +16,8 @@ from utils.preprocess_trajs import (
 from utils.encoder_model import EncDecModel
 from utils.decoder_model import DecoderModel
 
+DEMO_TRAJ_IDS = [1, 2, 3, 110, 210, 310, 111, 211, 311]
+
 
 def get_exp_dir(params_dict):
     """
@@ -205,7 +207,7 @@ def get_traj_range(traj_list, key, traj_stats=None):
 
     if key == "position_error":
         for i, traj in enumerate(traj_list):
-            if traj_stats and traj_stats[i]["diff"] not in [1, 2, 3, 11, 21, 31]:
+            if traj_stats and traj_stats[i]["diff"] not in DEMO_TRAJ_IDS:
                 # For getting ranges, skip non-demo trajectories
                 continue
             traj_for_key = traj[key]
@@ -218,7 +220,7 @@ def get_traj_range(traj_list, key, traj_stats=None):
             min_val = min(min_val, traj_for_key[-1])
     else:
         for i, traj in enumerate(traj_list):
-            if traj_stats and traj_stats[i]["diff"] not in [1, 2, 3, 11, 21, 31]:
+            if traj_stats and traj_stats[i]["diff"] not in DEMO_TRAJ_IDS:
                 # For getting ranges, skip non-demo trajectories
                 continue
             traj_for_key = traj[key]
@@ -235,7 +237,7 @@ def get_traj_range_per_dim(traj_list, key, traj_stats=None):
     max_val = np.ones(traj_list[0][key].shape[1]) * -np.inf
 
     for i, traj in enumerate(traj_list):
-        if traj_stats and traj_stats[i]["diff"] not in [1, 2, 3, 11, 21, 31]:
+        if traj_stats and traj_stats[i]["diff"] not in DEMO_TRAJ_IDS:
             # For getting ranges, skip non-demo trajectories
             continue
         traj_for_key = traj[key]

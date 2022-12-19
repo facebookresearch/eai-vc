@@ -35,6 +35,7 @@ class ExecuteNNPolicy:
         training_traj_scale=1,
         min_a_per_dim=None,
         max_a_per_dim=None,
+        n_fingers_to_move=3,
     ):
         """ """
 
@@ -45,6 +46,7 @@ class ExecuteNNPolicy:
         self.training_traj_scale = training_traj_scale
         self.state_type = state_type
         self.goal_type = goal_type
+        self.n_fingers_to_move = n_fingers_to_move
 
         # TODO hardcoded
         robot_properties_path = (
@@ -60,7 +62,7 @@ class ExecuteNNPolicy:
 
         self.Nf = 3  # Number of fingers
         self.Nq = self.Nf * 3  # Number of joints in hand
-        self.a_dim = self.Nf * 3
+        self.a_dim = self.n_fingers_to_move * 3
 
         # class with kinematics functions
         self.kinematics = CustomPinocchioUtils(
@@ -211,8 +213,12 @@ class ExecuteNNPolicy:
 
         pred_action = np.squeeze(a.cpu().detach().numpy())
 
+        # Fill rest of actions with 0
+        full_action = np.zeros(self.Nf * 3)
+        full_action[: self.n_fingers_to_move * 3] = pred_action
+
         # Add ft delta to current ft pos
-        ft_pos_next = self.ft_pos_cur_plan.copy() + pred_action
+        ft_pos_next = self.ft_pos_cur_plan.copy() + full_action
 
         # Lin interp from current ft pos to next ft waypoint
         # Scale back to meters

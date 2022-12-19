@@ -7,6 +7,7 @@ import logging
 
 import utils.train_utils as t_utils
 import utils.data_utils as d_utils
+import control.cube_utils as c_utils
 
 from utils.policy import DeterministicPolicy
 from utils.dataset import BCFinetuneDataset
@@ -16,8 +17,6 @@ from utils.sim_nn import SimNN
 # A logger for this file
 log = logging.getLogger(__name__)
 
-# TODO: could also train one policy per goal, rather than goal conditioned
-
 
 class BCFinetune:
     def __init__(self, conf, traj_info, device):
@@ -26,6 +25,17 @@ class BCFinetune:
         self.algo_conf = conf.algo
         self.traj_info = traj_info
         self.device = device
+
+        # Get task name
+        if "task" in self.traj_info:
+            self.task = self.traj_info["task"]
+            if self.task == "reach_cube":
+                assert (
+                    self.algo_conf.goal_type == "goal_none"
+                ), f"Need to use algo.goal_type=goal_none when running {self.task} task"
+        else:
+            # For "move_cube" demo files generated before fix_cube_base flag was added
+            self.task = "move_cube"
 
         # Make dataset and dataloader
         train_dataset = BCFinetuneDataset(
@@ -40,6 +50,7 @@ class BCFinetune:
             jitter_saturation=self.algo_conf.image_aug_dict["jitter_saturation"],
             jitter_hue=self.algo_conf.image_aug_dict["jitter_hue"],
             shift_pad=self.algo_conf.image_aug_dict["shift_pad"],
+            task=self.task,
         )
         self.train_dataloader = torch.utils.data.DataLoader(
             train_dataset, batch_size=self.algo_conf.batch_size, shuffle=True
@@ -61,10 +72,13 @@ class BCFinetune:
             jitter_saturation=self.algo_conf.image_aug_dict["jitter_saturation"],
             jitter_hue=self.algo_conf.image_aug_dict["jitter_hue"],
             shift_pad=self.algo_conf.image_aug_dict["shift_pad"],
+            task=self.task,
         )
         self.test_dataloader = torch.utils.data.DataLoader(
             test_dataset, batch_size=self.algo_conf.batch_size, shuffle=True
         )
+
+        self.n_fingers_to_move = train_dataset.n_fingers_to_move
 
         log.info(
             f"Loaded test dataset with {test_dataset.n_augmented_samples} / {len(test_dataset)} augmented samples"
@@ -86,10 +100,11 @@ class BCFinetune:
             state_dim = train_dataset[0]["input"]["ft_state"].shape[0]
         else:
             raise NameError("Invalid state_type")
+        # TODO for reach_cube task, do I want to just use ft_state of n_fingers_to_move
+        # even though visual state will include those fingers as well?
 
         if self.algo_conf.goal_type == "goal_none":
             in_dim = state_dim
-            obs_vec = state
         elif self.algo_conf.goal_type == "goal_cond":
             in_dim = state_dim + o_state_dim
         elif self.algo_conf.goal_type == "goal_o_pos":
@@ -103,6 +118,7 @@ class BCFinetune:
             max_a=self.traj_info["max_a"],
             device=self.device,
         )
+        log.info(f"Policy:\n{self.policy}")
 
         # Encoder
         self.encoder = EncoderModel(
@@ -311,6 +327,8 @@ class BCFinetune:
                 enable_shadows=sim_params["enable_shadows"],
                 camera_view=sim_params["camera_view"],
                 arena_color=sim_params["arena_color"],
+                task=self.task,
+                n_fingers_to_move=self.n_fingers_to_move,
             )
             for split_name in ["train", "test"]:
                 traj_list = self.traj_info[f"{split_name}_demos"]
@@ -367,15 +385,32 @@ class BCFinetune:
                     # Achieved object distance to goal
                     sim_obj_pos_err = sim_traj_dict["position_error"][-1]
 
-                    # Compute scaled error and reward
-                    init_obj_pos_err = sim_traj_dict["position_error"][0]
-                    scaled_obj_pos_err = min(1, sim_obj_pos_err / init_obj_pos_err)
-                    scaled_reward = 1 - scaled_obj_pos_err
+                    # Compute scaled error and reward, based on task
+                    if self.task == "move_cube":
+                        init_obj_pos_err = sim_traj_dict["position_error"][0]
+                        scaled_err = min(1, sim_obj_pos_err / init_obj_pos_err)
+                    elif self.task == "reach_cube":
+                        # Compute scaled error for reaching task for finger_to_move
+                        final_ft_pos = sim_traj_dict["ft_pos_cur"][-1]
+                        init_ft_pos = sim_traj_dict["ft_pos_cur"][0]
+                        cube_pos = sim_traj_dict["o_pos_cur"][0]
+
+                        scaled_err = d_utils.get_reach_scaled_err(
+                            list(range(self.n_fingers_to_move)),
+                            init_ft_pos,
+                            final_ft_pos,
+                            cube_pos,
+                            c_utils.CUBE_HALF_SIZE
+                            * self.traj_info["scale"],  # scale m to cm
+                        )
+                    else:
+                        raise ValueError(f"Invalid task: {self.task}")
+                    scaled_reward = 1 - scaled_err
 
                     # Per traj log
                     log_dict[sim_env_name][split_name][traj_label] = {
                         "sim_obj_pos_err": sim_obj_pos_err,
-                        "scaled_obj_pos_err": scaled_obj_pos_err,
+                        "scaled_err": scaled_err,
                         "scaled_reward": scaled_reward,
                         "final_ftpos_dist_0": final_ftpos_dist[0],
                         "final_ftpos_dist_1": final_ftpos_dist[1],
@@ -384,7 +419,7 @@ class BCFinetune:
 
                     if diff in totals_dict:
                         totals_dict[diff]["sim_obj_pos_err"] += sim_obj_pos_err
-                        totals_dict[diff]["scaled_obj_pos_err"] += scaled_obj_pos_err
+                        totals_dict[diff]["scaled_err"] += scaled_err
                         totals_dict[diff]["scaled_reward"] += scaled_reward
                         totals_dict[diff]["final_ftpos_dist_0"] += final_ftpos_dist[0]
                         totals_dict[diff]["final_ftpos_dist_1"] += final_ftpos_dist[1]
@@ -392,7 +427,7 @@ class BCFinetune:
                     else:
                         totals_dict[diff] = {
                             "sim_obj_pos_err": sim_obj_pos_err,
-                            "scaled_obj_pos_err": scaled_obj_pos_err,
+                            "scaled_err": scaled_err,
                             "scaled_reward": scaled_reward,
                             "final_ftpos_dist_0": final_ftpos_dist[0],
                             "final_ftpos_dist_1": final_ftpos_dist[1],

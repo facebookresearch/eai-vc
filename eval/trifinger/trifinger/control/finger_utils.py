@@ -1,5 +1,7 @@
 import numpy as np
 
+DIST_FRAME_TO_SURFACE = 0.01
+
 
 def get_ft_radius(finger_type):
     # These are offsets to cube half size for computing contact points

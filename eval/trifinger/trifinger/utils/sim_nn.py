@@ -38,16 +38,29 @@ class SimNN:
         enable_shadows=False,
         camera_view="default",
         arena_color="default",
+        task="move_cube",
+        n_fingers_to_move=3,
     ):
 
         self.sim_time_step = 0.004
         self.downsample_time_step = downsample_time_step
         self.traj_scale = traj_scale
+        self.n_fingers_to_move = n_fingers_to_move
 
         if object_type == "colored_cube":
             self.object_type = ObjectType.COLORED_CUBE
         elif object_type == "green_cube":
             self.object_type = ObjectType.GREEN_CUBE
+        else:
+            raise NameError
+
+        # Set fix_cube_base flag based on task
+        if task == "move_cube":
+            fix_cube_base = False
+            episode_steps = 1000  # TODO hardcoded
+        elif task == "reach_cube":
+            fix_cube_base = True
+            episode_steps = 500  # TODO hardcoded
         else:
             raise NameError
 
@@ -64,6 +77,7 @@ class SimNN:
             enable_shadows=enable_shadows,
             camera_view=camera_view,
             arena_color=arena_color,
+            fix_cube_base=fix_cube_base,
         )
 
         self.policy = ExecuteNNPolicy(
@@ -74,11 +88,13 @@ class SimNN:
             self.env.platform,
             time_step=self.sim_time_step,
             downsample_time_step=self.downsample_time_step,
+            episode_steps=episode_steps,
             training_traj_scale=self.traj_scale,
             finger_type=finger_type,
             goal_type=goal_type,
             min_a_per_dim=min_a_per_dim,
             max_a_per_dim=max_a_per_dim,
+            n_fingers_to_move=self.n_fingers_to_move,
         )
 
     def close(self):
