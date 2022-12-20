@@ -26,7 +26,7 @@ dependencies:
   - mamba
   - mkl-service
   - moviepy
-  - numpy
+  - numpy==1.23.4
   - opencv
   - pandas
   - patchelf
