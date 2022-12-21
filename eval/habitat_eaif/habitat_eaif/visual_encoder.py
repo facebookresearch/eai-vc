@@ -88,7 +88,6 @@ class VisualEncoder(nn.Module):
             model.global_pool = global_pool
             model.use_cls = use_cls
             backbone_config.freeze()
-
             if loaded_backbone_data is None:
                 (
                     self.backbone,

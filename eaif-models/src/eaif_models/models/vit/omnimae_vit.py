@@ -533,6 +533,7 @@ class VisionTransformer(nn.Module):
         super().__init__()
 
         assert use_cls_token or classifier_feature in [
+            "cls_token",
             "global_pool",
             "reshape_embedding",
         ]
@@ -1000,27 +1001,37 @@ def reshape_embedding(x):
 
 def vit_base_mae(
     img_size=[3, 16, 224, 224],
-    global_pool=True,
+    patch_size=[2, 16, 16],
+    global_pool=False,
     use_cls=False,
+    train_cls=False,
     patch_embed_type="generic",
 ):
+    if OmegaConf.is_list(img_size):
+        img_size = OmegaConf.to_container(img_size)
+    if OmegaConf.is_list(patch_size):
+        patch_size = OmegaConf.to_container(patch_size)
+
     if global_pool:
         classifier_feature = "global_pool"
     elif use_cls:
-        classifier_feature = "use_cls_token"
+        classifier_feature = "cls_token"
     else:
         classifier_feature = "reshape_embedding"
 
-    if OmegaConf.is_list(img_size):
-        img_size = OmegaConf.to_container(img_size)
+    # fixed parameters
+    rgb_channels = 3
+    vitb_embed_dim = 768
+    ntimes = patch_size[0] if isinstance(patch_size, list) else 1
+    vitb_depth = 12
 
-    embed_dim = 768
+    # construct model
     model = VisionTransformer(
         img_size=img_size,
-        patch_size=[2, 16, 16],
-        in_chans=3,
-        embed_dim=embed_dim,
-        depth=12,
+        patch_size=patch_size,
+        in_chans=rgb_channels,
+        embed_dim=vitb_embed_dim,
+        depth=vitb_depth,
         mlp_ratio=4,
         attn_target=partial(
             Attention,
@@ -1034,37 +1045,37 @@ def vit_base_mae(
         drop_path_rate=0.0,
         drop_path_type="progressive",
         classifier_feature=classifier_feature,
-        use_cls_token=use_cls,
+        use_cls_token=train_cls,
         learnable_pos_embed=False,
         layer_scale_type=None,
         layer_scale_init_value=0.1,
         patch_embed_type=patch_embed_type,
         patch_embed_params_list=[
-            PadIm2Video(ntimes=2, pad_type="repeat"),
+            PadIm2Video(ntimes=ntimes, pad_type="repeat"),
             make_conv_or_linear(
                 layer=torch.nn.Conv3d(
-                    in_channels=3,
-                    kernel_size=[2, 16, 16],
-                    out_channels=768,
-                    stride=[2, 16, 16],
+                    in_channels=rgb_channels,
+                    kernel_size=patch_size,
+                    out_channels=vitb_embed_dim,
+                    stride=patch_size,
                 ),
                 init_weight=partial(reshape_and_init_as_mlp),
             ),
         ],
         layer_norm_eps=1e-6,
         masked_image_modeling=False,
-        patch_drop_max_patches=-1,
         add_pos_same_dtype=False,
         patch_dropping=False,
         post_encoder_params=None,
         decoder=None,
         mask_token_embed_dim=None,
+        patch_drop_max_patches=-1,
     )
 
     return model
 
 
-def load_omnimae_encoder(model, checkpoint_path=None):
+def load_omnimae_encoder(model, train_time_dim=1, checkpoint_path=None):
     if checkpoint_path is None:
         return model
 
@@ -1086,20 +1097,26 @@ def load_omnimae_encoder(model, checkpoint_path=None):
 
     if checkpoint_dict["pos_embed"].shape != model.pos_embed.shape:
         if model.patch_embed_type == "generic":
-            train_time_dim = 8
-            train_grid_size = int(
-                (checkpoint_dict["pos_embed"].shape[1] // train_time_dim) ** 0.5
+            use_cls_token = model.cls_token is not None
+            size_pos_embed = checkpoint_dict["pos_embed"].shape[1] - use_cls_token
+            train_grid_size = int((size_pos_embed // train_time_dim) ** 0.5)
+            train_embed_dim = checkpoint_dict["pos_embed"].shape[2]
+            cls_token, other_tokens = (
+                checkpoint_dict["pos_embed"][:, :use_cls_token],
+                checkpoint_dict["pos_embed"][:, use_cls_token:],
             )
-            checkpoint_pos_embed = checkpoint_dict["pos_embed"].reshape(
-                1, train_time_dim, train_grid_size, train_grid_size, model.embed_dim
+            other_tokens = other_tokens.reshape(
+                1, train_time_dim, train_grid_size, train_grid_size, train_embed_dim
             )[:, 0]
-            checkpoint_pos_embed = checkpoint_pos_embed.reshape(1, -1, model.embed_dim)
+            checkpoint_pos_embed = torch.cat(
+                [cls_token, other_tokens.reshape(1, -1, train_embed_dim)], dim=1
+            )
         else:
             checkpoint_pos_embed = checkpoint_dict["pos_embed"]
         checkpoint_dict["pos_embed"] = resize_pos_embed(
             checkpoint_pos_embed,
             model.pos_embed,
-            model.classifier_feature == "use_cls_token",
+            model.cls_token is not None,
             model.patch_embed.patches_layout[1:],
         )
 
