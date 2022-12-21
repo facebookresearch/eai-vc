@@ -44,20 +44,19 @@ def save_traj_stats(traj_load_info, dts, save_path=None):
     test_demo_stats = []
 
     # Load and downsample test trajectories for each difficulty
-    for i, diff in enumerate(traj_load_info["difficulty"]):
+    for i, diff in enumerate(traj_load_info["diff_train"]):
         train_demo_ids = traj_load_info["train_demos"][i]
+        for demo_id in train_demo_ids:
+            demo_dir = get_demo_dir(top_demo_dir, diff, dts, demo_id)
+            demo_stats = {"path": demo_dir, "diff": diff, "id": demo_id}
+            train_demo_stats.append(demo_stats)
+
+    for i, diff in enumerate(traj_load_info["diff_test"]):
         test_demo_ids = traj_load_info["test_demos"][i]
-
-        for demo_id_list, stats_list in [
-            [train_demo_ids, train_demo_stats],
-            [test_demo_ids, test_demo_stats],
-        ]:
-
-            for demo_id in demo_id_list:
-                demo_dir = get_demo_dir(top_demo_dir, diff, dts, demo_id)
-
-                demo_stats = {"path": demo_dir, "diff": diff, "id": demo_id}
-                stats_list.append(demo_stats)
+        for demo_id in test_demo_ids:
+            demo_dir = get_demo_dir(top_demo_dir, diff, dts, demo_id)
+            demo_stats = {"path": demo_dir, "diff": diff, "id": demo_id}
+            test_demo_stats.append(demo_stats)
 
     print(f"Loaded {len(train_demo_stats)} training demos")
     print(f"Loaded {len(test_demo_stats)} test demos")
@@ -116,41 +115,38 @@ def main(args):
     train_demo_ids = []  # List of train demo ids for each difficulty
     test_demo_ids = []  # List of test demo ids for each difficulty
 
-    diff_str = "_".join(map(str, args.difficulty))
-
-    if args.id_train is None:
-        for i in range(len(args.difficulty)):
-            n_train = args.n_train[i]
-            n_test = args.n_test[i]
-
-            train_demo_ids.append(list(range(n_train)))
-            test_demo_ids.append(list(range(n_train, n_train + n_test)))
-
-        n_train_str = "_".join(map(str, args.n_train))
-        n_test_str = "_".join(map(str, args.n_test))
-        dts_dir_name = get_dts_dir_name(args.dts)
-        save_str = f"demos_d-{diff_str}_train-{n_train_str}_test-{n_test_str}_scale-{SCALE}_{dts_dir_name}.json"
-        save_path = os.path.join(save_dir, save_str)
-
+    diff_str_train = "_".join(map(str, args.diff_train))
+    if len(args.diff_test) > 0:
+        diff_str_test = "_".join(map(str, args.diff_test))
     else:
-        train_demo_ids.append(args.id_train)
+        diff_str_test = "none"
 
-        if args.id_test:
-            test_demo_ids.append(args.id_test)
-            id_test_str = "_".join(map(str, args.id_test))
-        else:
-            test_demo_ids.append([])
-            id_test_str = "none"
+    r_str_train = "_".join(args.r_train)
+    if args.r_test is not None:
+        r_str_test = "_".join(args.r_test)
+    else:
+        r_str_test = "none"
 
-        id_train_str = "_".join(map(str, args.id_train))
-        dts_dir_name = get_dts_dir_name(args.dts)
-        save_str = f"demos_d-{diff_str}_train_id-{id_train_str}_test_id-{id_test_str}_scale-{SCALE}_{dts_dir_name}.json"
-        save_path = os.path.join(save_dir, save_str)
+    assert args.diff_train is not None
+
+    for d_range_str in args.r_train:
+        d_range = d_range_str.split("-")
+        train_demo_ids.append(list(range(int(d_range[0]), int(d_range[1]))))
+
+    if args.r_test is not None:
+        for d_range_str in args.r_test:
+            d_range = d_range_str.split("-")
+            test_demo_ids.append(list(range(int(d_range[0]), int(d_range[1]))))
+
+    dts_dir_name = get_dts_dir_name(args.dts)
+    save_str = f"demos_dtrain-{diff_str_train}_train-{r_str_train}_dtest-{diff_str_test}_test-{r_str_test}_scale-{SCALE}_{dts_dir_name}.json"
+    save_path = os.path.join(save_dir, save_str)
 
     # Info for loading trajectories
     traj_load_info = {
         "demo_dir": args.top_demo_dir,
-        "difficulty": args.difficulty,
+        "diff_train": args.diff_train,
+        "diff_test": args.diff_test,
         "train_demos": train_demo_ids,
         "test_demos": test_demo_ids,
     }
@@ -169,35 +165,24 @@ def parse_args():
         help="Directory containing demos",
     )
     parser.add_argument(
-        "--difficulty", type=int, nargs="*", default=[1], help="Difficulty levels"
+        "--diff_train", type=int, nargs="*", default=[1], help="Difficulty levels"
+    )
+    parser.add_argument(
+        "--diff_test", type=int, nargs="*", default=[], help="Difficulty levels"
     )
 
     parser.add_argument("--dts", type=float, default=0.2, help="Downsample time step")
 
-    # Two different ways of specifying training and test trajectory splits
-    # Method 1: Specify number of training and test trajectories for each difficulty
-    # with --n_train and --n_test
+    # Specify ranges of training and test trajectory ides
     parser.add_argument(
-        "--n_train",
-        type=int,
-        nargs="*",
-        default=[10],
-        help="Number of training trajectories",
-    )
-    parser.add_argument(
-        "--n_test", type=int, nargs="*", default=[0], help="Number of test trajectories"
-    )
-    # Method 2: Specify IDs of training and test trajectories with --id_train and --id_test
-    # TODO For now, will only work with one difficulty specified
-    parser.add_argument(
-        "--id_train",
-        type=int,
+        "--r_train",
+        type=str,
         nargs="*",
         default=None,
         help="IDs of training trajectories",
     )
     parser.add_argument(
-        "--id_test", type=int, nargs="*", default=None, help="IDs of test trajectories"
+        "--r_test", type=str, nargs="*", default=None, help="IDs of test trajectories"
     )
 
     args = parser.parse_args()

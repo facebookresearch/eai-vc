@@ -410,17 +410,15 @@ def get_reach_scaled_err(
     total_scaled_err = 0
     for finger_to_move in finger_to_move_list:
 
-        # Add distance between fingertip frame and surface to cube_half_size
-        cube_half_size += f_utils.DIST_FRAME_TO_SURFACE
-
         cur_ft_pos_i = cur_ft_pos[3 * finger_to_move : 3 * finger_to_move + 3]
         cur_dist_to_obj = max(
             np.linalg.norm(cur_ft_pos_i - cube_pos) - cube_half_size, 0
         )
         init_ft_pos_i = init_ft_pos[3 * finger_to_move : 3 * finger_to_move + 3]
-        init_dist_to_obj = max(
-            np.linalg.norm(init_ft_pos_i - cube_pos) - cube_half_size, 0
-        )
+        init_dist_to_obj = np.linalg.norm(init_ft_pos_i - cube_pos) - cube_half_size
+        if init_dist_to_obj <= 0:
+            # To prevent divide-by-0 error
+            init_dist_to_obj = np.linalg.norm(init_ft_pos_i - cube_pos)
         scaled_err = min(1, (cur_dist_to_obj / init_dist_to_obj))
         total_scaled_err += scaled_err
 
