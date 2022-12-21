@@ -16,12 +16,12 @@ class SimpleRLEnv(habitat.RLEnv):
         return (-np.inf, np.inf)
 
     def get_reward(self, observations):
-        return self._env.get_metrics()[self.config.RL.REWARD_MEASURE]
+        return self._env.get_metrics()[self._core_env_config.RL.REWARD_MEASURE]
 
     def get_done(self, observations):
         if self._env.episode_over:
             return True
-        if self._env.get_metrics()[self.config.RL.SUCCESS_MEASURE]:
+        if self._env.get_metrics()[self._core_env_config.RL.SUCCESS_MEASURE]:
             return True
         return False
 
