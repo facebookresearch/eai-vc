@@ -1,0 +1,14 @@
+# @package _global_
+
+# dataset arguments ** NEW **
+data_path:  # The data_path can point to multiple datasets
+  ### INav
+  - /checkpoint/yixinlin/eaif/datasets/manifests/re10k_manifest.txt  # 303,087 frames
+  - /checkpoint/yixinlin/eaif/datasets/manifests/oh24_manifest.txt  # 499,442 frames
+
+every_k:
+  ### INav (802,529 frames total) ###
+  - 1  # RE10K with 303,087 frames
+  - 1  # OH24 with 499,442 frames
+dataset_type: path_dataset_with_manifest        # choices [dataset_with_txt_files, omnidataset, path_dataset, path_dataset_with_manifest],
+dataset_size: 800k

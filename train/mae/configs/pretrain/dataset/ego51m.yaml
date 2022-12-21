@@ -1,0 +1,19 @@
+# @package _global_
+
+# dataset arguments ** NEW **
+data_path:  # The data_path can point to multiple datasets
+  ### Ego ###
+  - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_42m_manifest.txt  # 418,578,043 frames subsampled at 2 fps
+  - /checkpoint/yixinlin/eaif/datasets/manifests/100DOH_manifest.txt  # 99,899 frames
+  - /checkpoint/yixinlin/eaif/datasets/manifests/epic_kitchens_manifest.txt  # 19,965,439 frames
+  - /checkpoint/yixinlin/eaif/datasets/manifests/ssv2_manifest.txt  # 25,209,271 frames
+
+every_k:
+### Ego (50,992,643 frames total) ###
+  - 1   # Ego4D full already subsampled with 41,857,804 frames
+  - 1   # 100DOH with 99,899 frames
+  - 5  # Epic Kitchens with 3,993,086 frames
+  - 5  # SSV2 with 5,041,854 frames
+
+dataset_type: path_dataset_with_manifest        # choices [dataset_with_txt_files, omnidataset, path_dataset, path_dataset_with_manifest],
+dataset_size: 51m                               # choices=["14_5m", "3_6m", "1_45m", "145k"],

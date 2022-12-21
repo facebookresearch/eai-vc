@@ -4,20 +4,19 @@ defaults:
   - dataset: ego_inav
 
 batch_size: 64                  # Batch size per GPU (effective batch size is batch_size * accum_iter * # gpus)
-epochs: 400
+epochs: 800
 accum_iter: 1                   # Accumulate gradient iterations (for increasing the effective batch size under memory constraints)
 
 # Model parameters
-mae_model: mae_vit_large_patch16    # Name of model to train
-# mae_model: mae_vit_base_patch16    # Name of model to train
-input_size: 224                 # images input size
-mask_ratio: 0.75                # Masking ratio (percentage of removed patches)
-norm_pix_loss: False            # Use (per-patch) normalized pixels as targets for computing loss
+mae_model: mae_vit_large_patch16 # Name of model to train
+input_size: 224                  # images input size
+mask_ratio: 0.75                 # Masking ratio (percentage of removed patches)
+norm_pix_loss: True              # Use (per-patch) normalized pixels as targets for computing loss
 
 # Optimizer parameters
 weight_decay: 0.05
 lr:                             # absolute lr
-blr: 1e-3                       # base learning rate: absolute_lr = base_lr * total_batch_size / 256 (use either lr or blr)
+blr: 1.5e-4                     # base learning rate: absolute_lr = base_lr * total_batch_size / 256 (use either lr or blr)
 min_lr: 0.0                     # lower lr bound for cyclic schedulers that hit 0
 warmup_epochs: 40               # epochs to warmup LR
 
@@ -40,12 +39,10 @@ omnidata_datasets: all           # Which omnidata datasets to use
 color_jitter: False              # apply color jitter as a part of transforms
 
 # submitit
-
 ngpus: 8
 nodes: 2
 timeout: 4320
 partition: learnlab
-# partition: devlab
 use_volta32: False
 comment: ""
 
