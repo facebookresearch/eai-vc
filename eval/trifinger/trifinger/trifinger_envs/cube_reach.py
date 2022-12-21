@@ -18,6 +18,8 @@ from control.impedance_controller import ImpedanceController
 from control.custom_pinocchio_utils import CustomPinocchioUtils
 from trifinger_simulation.trifinger_platform import ObjectType
 
+import utils.data_utils as d_utils
+
 try:
     import robot_fingers
 except ImportError:
@@ -26,8 +28,7 @@ except ImportError:
 import control.cube_utils as c_utils
 
 
-# REACH_EPISODE_LENGTH = 500
-REACH_EPISODE_LENGTH = 1000
+REACH_EPISODE_LENGTH = 500
 
 
 class CubeReachEnv(gym.Env):
@@ -44,12 +45,17 @@ class CubeReachEnv(gym.Env):
         enable_cameras: bool = True,
         camera_id: int = 0,
         finger_type: str = "trifingerpro",
-        camera_delay_steps: int = 90,
+        camera_delay_steps: int = 0,
         time_step: float = 0.004,
         randomize_starts: bool = True,
         randomize_all: bool = False,
         sample_radius: float = 0.00,
         max_goal_dist: float = 100,
+        object_type: ObjectType = ObjectType.COLORED_CUBE,
+        enable_shadows: bool = False,
+        camera_view: str = "default",
+        arena_color: str = "default",
+        run_rl_policy: bool = True,
     ):
         """Initialize.
 
@@ -72,6 +78,7 @@ class CubeReachEnv(gym.Env):
                 happening on the real system due to processing (mostly the
                 object detection).
             time_step (float): Simulation timestep
+            run_rl_policy (bool): If true, don't add extra observation fields used for bc policy
         """
         super().__init__()
         if render_mode == "human":
@@ -79,6 +86,8 @@ class CubeReachEnv(gym.Env):
         self.visualization = visualization
         self.enable_cameras = enable_cameras
         self.finger_type = finger_type
+        self.run_rl_policy = run_rl_policy
+
         self.time_step = time_step
         self.randomize_starts = randomize_starts
         self.sample_radius = sample_radius
@@ -94,32 +103,45 @@ class CubeReachEnv(gym.Env):
         self.max_episode_len = REACH_EPISODE_LENGTH
         if self.randomize_all:
             self.max_episode_len = 1000
+
         # initialize simulation
-        # initial_robot_position = trifingerpro_limits.robot_position.default
-        initial_robot_position = [-0.08, 1.15, -1.5] * 3
+        self.q_nominal = np.array([-0.08, 1.15, -1.5] * 3)
 
         self.platform = trifinger_simulation.TriFingerPlatform(
             visualization=self.visualization,
             enable_cameras=self.enable_cameras,
             finger_type=self.finger_type,
             time_step_s=self.time_step,
-            initial_robot_position=initial_robot_position,
+            initial_robot_position=self.q_nominal,
             camera_delay_steps=camera_delay_steps,
-            object_type=ObjectType.COLORED_CUBE,
+            object_type=object_type,
+            enable_shadows=enable_shadows,
+            camera_view=camera_view,
+            arena_color=arena_color,
+            fix_cube_base=True,
         )
 
         self.hand_kinematics = HandKinematics(self.platform.simfinger)
-        self.tricamera = camera.TriFingerCameras(
-            pybullet_client_id=self.platform.simfinger._pybullet_client_id
-        )
-        self.vert_markers = None
+
+        # Make camera for RL training
+        if self.run_rl_policy:
+            target_positions = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+            camera_up_vectors = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+            field_of_view = 33
+            self.tricamera = camera.TriFingerCameras(
+                pybullet_client_id=self.platform.simfinger._pybullet_client_id,
+                target_positions=target_positions,
+                camera_up_vectors=camera_up_vectors,
+                field_of_view=field_of_view,
+            )
+        else:
+            self.tricamera = None
+
         # Basic initialization
         # ====================
 
         self.visual_observation = visual_observation
         self.action_type = action_type
-        self.previous_dist_to_goal = 100
-        self.previous_joint_velocities = 0
         self.dense_reward_weights = np.zeros(2)
         self.dense_reward_weights[0] = 100000
 
@@ -154,8 +176,8 @@ class CubeReachEnv(gym.Env):
         )
 
         self.action_space = gym.spaces.Box(
-            low=np.ones(9) * -2,
-            high=np.ones(9) * 2,
+            low=np.ones(3) * -2,
+            high=np.ones(3) * 2,
         )
 
         # used for initializing random start positions
@@ -192,7 +214,7 @@ class CubeReachEnv(gym.Env):
         )
         self.observation_space = gym.spaces.Dict(
             {
-                "ftip_dist": self.observation_state_space,
+                "observation": self.observation_state_space,
             }
         )
 
@@ -224,9 +246,148 @@ class CubeReachEnv(gym.Env):
         #     pybullet_client_id=self.platform.simfinger._pybullet_client_id,
         # )
 
+        self.eval_goal_list = self.get_eval_goal_list()
+        self.train_goal_list = self.get_train_goal_list()
+
+        # Finger ids to move
+        self.finger_to_move_list = [0]  # TODO hardcoded
+
     """
         mode=rgb_array returns numpy.ndarray with shape (x, y, 3) of current observation
     """
+
+    def get_train_goal_list(self):
+        return [
+            np.array([3.05603813, -7.55214019, 3.25]),
+            np.array([-3.15326713, 0.35681094, 3.25]),
+            np.array([-0.20568451, 7.48419172, 3.25]),
+            np.array([-1.80023987, -3.33667845, 3.25]),
+            np.array([0.63224735, -0.20621713, 3.25]),
+            np.array([2.49144056, -1.52591661, 3.25]),
+            np.array([-8.10157516, 3.60477928, 3.25]),
+            np.array([-4.75578621, -5.62289382, 3.25]),
+            np.array([0.60647659, -2.64716854, 3.25]),
+            np.array([-1.11332975, 5.00887828, 3.25]),
+            np.array([5.98420496, -4.31522391, 3.25]),
+            np.array([-4.18048378, 5.86477577, 3.25]),
+            np.array([2.63104316, -0.24772835, 3.25]),
+            np.array([-4.98861264, 5.96657986, 3.25]),
+            np.array([-2.10679078, -3.15221106, 3.25]),
+            np.array([-7.90809522, -4.2657171, 3.25]),
+            np.array([-1.3794515, 5.83348671, 3.25]),
+            np.array([4.48787389, -2.4191718, 3.25]),
+            np.array([-1.36567956, -5.11484226, 3.25]),
+            np.array([-2.9759321, 7.29904344, 3.25]),
+            np.array([-1.68308814, 0.35553572, 3.25]),
+            np.array([8.93032708, 0.30403264, 3.25]),
+            np.array([4.41736031, -6.83057901, 3.25]),
+            np.array([-3.28454635, 2.72672544, 3.25]),
+            np.array([4.51527941, 3.46186233, 3.25]),
+            np.array([0.02471094, 6.74989932, 3.25]),
+            np.array([-7.25012877, -4.12715448, 3.25]),
+            np.array([0.08717153, 6.12825175, 3.25]),
+            np.array([0.47511044, -4.20393201, 3.25]),
+            np.array([8.20551313, 0.42598918, 3.25]),
+            np.array([7.53531281, -3.53960009, 3.25]),
+            np.array([1.63535131, -4.59013092, 3.25]),
+            np.array([0.65539638, 6.58593092, 3.25]),
+            np.array([2.83107544, -2.68763681, 3.25]),
+            np.array([2.82826438, -8.44225464, 3.25]),
+            np.array([-1.55811306, -3.29802461, 3.25]),
+            np.array([8.48321033, 0.93042389, 3.25]),
+            np.array([-3.14584343, -4.08948458, 3.25]),
+            np.array([-2.80634012, -8.02044702, 3.25]),
+            np.array([3.14693547, 8.00778896, 3.25]),
+            np.array([-6.57006396, -4.22565421, 3.25]),
+            np.array([-2.99551142, -3.63649108, 3.25]),
+            np.array([-1.08590006, 6.13535156, 3.25]),
+            np.array([-6.13850402, -5.16321051, 3.25]),
+            np.array([2.82973147, 4.65223176, 3.25]),
+            np.array([2.87652314, -4.5091759, 3.25]),
+            np.array([2.89854216, -6.15023629, 3.25]),
+            np.array([-0.24121648, 5.12888577, 3.25]),
+            np.array([-5.52839414, 2.1008083, 3.25]),
+            np.array([6.99050079, 2.24616699, 3.25]),
+            np.array([-0.96494484, -3.1828791, 3.25]),
+            np.array([-3.10124255, 3.8221943, 3.25]),
+            np.array([-2.56092877, -3.03297289, 3.25]),
+            np.array([4.50346113, -7.31932264, 3.25]),
+            np.array([5.91994241, 4.94647579, 3.25]),
+            np.array([-0.48606156, -5.32731048, 3.25]),
+            np.array([-0.32667426, -8.66828972, 3.25]),
+            np.array([1.07453595, 7.36318464, 3.25]),
+            np.array([-3.25205737, 6.89068226, 3.25]),
+            np.array([3.26506201, 3.42383366, 3.25]),
+            np.array([2.07172391, 2.67414843, 3.25]),
+            np.array([0.48822116, -8.55367921, 3.25]),
+            np.array([4.83845338, -0.06968285, 3.25]),
+            np.array([2.81093887, 7.46827855, 3.25]),
+            np.array([0.16453263, 2.7395888, 3.25]),
+            np.array([0.72086808, 3.73863384, 3.25]),
+            np.array([-2.60081194, -4.16909876, 3.25]),
+            np.array([3.839713, -0.29123967, 3.25]),
+            np.array([-1.61879305, -4.78198183, 3.25]),
+            np.array([-7.55117813, 1.13727678, 3.25]),
+            np.array([3.66259269, 6.03049238, 3.25]),
+            np.array([-4.33543528, -4.87801221, 3.25]),
+            np.array([-1.29923973, -0.15892838, 3.25]),
+            np.array([3.68191348, -4.96217322, 3.25]),
+            np.array([-3.81746439, 6.50004219, 3.25]),
+            np.array([-3.421152, -5.53083725, 3.25]),
+            np.array([5.49898056, -2.90976879, 3.25]),
+            np.array([-0.38942852, -6.84294041, 3.25]),
+            np.array([3.27499388, 3.09205193, 3.25]),
+            np.array([1.468062, 8.53217955, 3.25]),
+            np.array([-4.66475019, -3.24606976, 3.25]),
+            np.array([-4.65764194, 3.18195181, 3.25]),
+            np.array([-1.57019021, -6.97081706, 3.25]),
+            np.array([7.57547351, 0.02846027, 3.25]),
+            np.array([-4.86324653, -1.69117867, 3.25]),
+            np.array([0.96394429, 0.18087209, 3.25]),
+            np.array([-3.34152739, -5.18181183, 3.25]),
+            np.array([-4.18771876, 3.58084266, 3.25]),
+            np.array([5.86468526, -5.3484374, 3.25]),
+            np.array([1.59870173, 8.36118042, 3.25]),
+            np.array([5.89203303, 2.6759065, 3.25]),
+            np.array([-0.79057999, 6.58881004, 3.25]),
+            np.array([-4.04837897, 2.31781327, 3.25]),
+            np.array([3.66880724, -6.76704128, 3.25]),
+            np.array([-6.97825733, 3.36637523, 3.25]),
+            np.array([5.63888276, 4.1776771, 3.25]),
+            np.array([-2.15349959, 5.91943316, 3.25]),
+            np.array([-4.85276579, 4.91514082, 3.25]),
+            np.array([-7.31107254, -3.19688512, 3.25]),
+            np.array([-7.56355014, -2.69394404, 3.25]),
+        ]
+
+    def get_eval_goal_list(self):
+        return [
+            np.array([0.00927656, 3.03888736, 3.25]),
+            np.array([1.0535054, 0.54244131, 3.25]),
+            np.array([2.97988333, 2.19828506, 3.25]),
+            np.array([-0.08625725, -2.66008382, 3.25]),
+            np.array([-5.53817563, 1.30016464, 3.25]),
+            np.array([-7.34284403, -3.30897914, 3.25]),
+            np.array([5.34721599, -7.04574016, 3.25]),
+            np.array([1.5701743, 2.77699441, 3.25]),
+            np.array([5.51455727, 6.71779349, 3.25]),
+            np.array([-0.62604526, 1.95728886, 3.25]),
+            np.array([2.18948636, -7.21505172, 3.25]),
+            np.array([0.99774909, -8.47347619, 3.25]),
+            np.array([8.5452943, 0.08286776, 3.25]),
+            np.array([-7.71756237, 3.42348443, 3.25]),
+            np.array([3.66341366, 1.91997392, 3.25]),
+            np.array([4.89323018, 6.2648753, 3.25]),
+            np.array([4.04716893, 3.53093616, 3.25]),
+            np.array([8.5513687, 0.39826775, 3.25]),
+            np.array([-3.07441005, -3.34725609, 3.25]),
+            np.array([-3.42368536, -4.14163919, 3.25]),
+            np.array([2.61979674, 5.75253347, 3.25]),
+            np.array([0.54666075, -1.66785584, 3.25]),
+            np.array([4.90558802, 2.54940494, 3.25]),
+            np.array([5.24091262, 6.37654168, 3.25]),
+            np.array([3.30044642, 6.45136387, 3.25]),
+        ]
 
     def render(self, mode="human"):
         # TODO implement "human" and "ansi" modes
@@ -261,26 +422,27 @@ class CubeReachEnv(gym.Env):
             d[k] = torch.sum(torch.sqrt(x**2))
         return d
 
-    def start_to_goal(self):
-        d = []
-        x0 = torch.tensor(self.start_pos[0])
-        d = x0 - self.goal
-        return d
+    def scaled_success(self, cur_ft_pos):
+        """
+        args:
+            ftpos (np.array): current fingertip positions [9,]
+        """
 
-    def scaled_success(self, obs, total_dist):
-        total_success = 0
-        dist_to_goal = obs[0:3] - self.goal
-        s = task._CUBE_WIDTH
-        success = 1 - ((dist_to_goal.norm() - s / 2) / (total_dist.norm() - s / 2))
-        if success < 0:
-            success = 0
+        cube_pos = self.goal.clone().detach().cpu().numpy()
+        cube_half_size = task._CUBE_WIDTH / 2
+        init_ft_pos = self.start_pos
+
+        scaled_err = d_utils.get_reach_scaled_err(
+            self.finger_to_move_list,
+            init_ft_pos,
+            cur_ft_pos,
+            cube_pos,
+            cube_half_size,
+        )
+
+        success = 1 - scaled_err
+
         return success
-
-    def _get_fingertip_pos(self, t):
-        # r_obs = self.platform.get_robot_observation(t)
-        r_obs = self.platform.simfinger.get_observation(t)
-        # pass joint pos for xyz coordinates
-        return self.hand_kinematics.get_ft_pos(r_obs.position)
 
     def compute_reward(
         self,
@@ -309,7 +471,6 @@ class CubeReachEnv(gym.Env):
         """
         current_dist_to_goal = (achieved_goal[0:3] - self.goal).norm()
         reward = -750 * (current_dist_to_goal)
-        # self.previous_dist_to_goal = current_dist_to_goal
         return reward
 
     def step(self, action):
@@ -332,16 +493,25 @@ class CubeReachEnv(gym.Env):
               step() calls will return undefined results.
             - info (dict): info dictionary containing the current time index.
         """
-        initial_action = np.copy(action)
-        action = action / 50.0
-        action = np.clip(action, -0.02, 0.02)
+
+        if self.run_rl_policy:
+            action = torch.tensor(action) / 50.0
+            action = torch.clip(action, -0.02, 0.02)
 
         if not self.action_space.contains(np.array(action, dtype=np.float32)):
             print(action)
             raise ValueError("Given action is not contained in the action space.")
 
-        num_steps = self.step_size
+        # TODO add option for more than one finger?
+        # TODO check if tensor
+        if self.run_rl_policy:
+            three_finger_action = torch.zeros(9, dtype=torch.float32)
+            three_finger_action[0:3] = action.clone().detach()
+        else:
+            three_finger_action = torch.zeros(9)
+            three_finger_action[0:3] = torch.FloatTensor(action).detach()
 
+        num_steps = self.step_size
         # ensure episode length is not exceeded due to step_size
         step_count_after = self.step_count + num_steps
         if step_count_after > self.max_episode_len:
@@ -349,26 +519,24 @@ class CubeReachEnv(gym.Env):
             num_steps = max(1, num_steps - excess)
 
         reward = 0.0
-        x_curr = self._get_fingertip_pos(self.step_count)
-        initial_position = np.copy(x_curr)
-        x_des = x_curr + action
-        for _ in range(num_steps):
+        for i in range(num_steps):
+            # Get current robot state
+            robot_obs = self.platform.get_robot_observation(self.step_count)
+            joint_position = robot_obs.position
+            joint_velocity = robot_obs.velocity
+
             self.step_count += 1
             if self.step_count > self.max_episode_len:
                 raise RuntimeError("Exceeded number of steps for one episode.")
 
-            robot_obs = self.platform.simfinger.get_observation(self.step_count - 1)
+            # Update desired position and velocity
+            x_des_i = self.x_des_plan + (i + 1) * (three_finger_action / num_steps)
+            dx_des_i = three_finger_action / (self.step_size * self.time_step)
 
-            joint_position = robot_obs.position
-            joint_velocity = robot_obs.velocity
-
-            x_curr = self.hand_kinematics.get_ft_pos(joint_position)
-            x_i = x_curr + (action / num_steps)
-            dx_des = action / (self.step_size * self.time_step)
-
+            # Compute torque with impedance controller
             torque = self.hand_kinematics.get_torque(
-                x_i,
-                dx_des,
+                x_des_i,
+                dx_des_i,
                 joint_position,
                 joint_velocity,
             )
@@ -376,14 +544,14 @@ class CubeReachEnv(gym.Env):
                 torque, self.robot_torque_space.low, self.robot_torque_space.high
             )
 
-            # send action to robot
+            # Send action to robot
             robot_action = self._gym_action_to_robot_action(torque)
-            t = self.platform.simfinger.append_desired_action(robot_action)
+            t = self.platform.append_desired_action(robot_action)
 
             # Use observations of step t + 1 to follow what would be expected
             # in a typical gym environment.  Note that on the real robot, this
             # will not be possible
-            # self.info["time_index"] = t + 1
+            self.info["time_index"] = t + 1
 
             # Alternatively use the observation of step t.  This is the
             # observation from the moment before action_t is applied, i.e. the
@@ -392,46 +560,44 @@ class CubeReachEnv(gym.Env):
             # When using this observation, the resulting cumulative reward
             # should match exactly the one computed during replay (with the
             # above it will differ slightly).
-            self.info["time_index"] = t
+            # self.info["time_index"] = t
 
             observation = self._create_observation(self.info["time_index"])
 
-        reward = 0
-        achieved_position = observation[:9]
+        # Update plan with action
+        self.x_des_plan += three_finger_action
 
-        reward += self.compute_reward(
-            observation[:9],
-            self.goal,
-            self.info,
-        )
+        # Compute reward
+        reward = 0
+        if self.run_rl_policy:
+            reward += self.compute_reward(
+                observation["ftip_dist"][:9],
+                self.goal,
+                self.info,
+            )
 
         is_done = self.step_count >= self.max_episode_len
 
-        if self.visual_observation:
-            observation = {
-                "pixels": self.render("rgb_array"),
-                "ftip_dist": observation,
-                "scaled_success": self.scaled_success(
-                    observation, self.start_to_goal()
-                ),
-            }
         return observation, reward, is_done, self.info
 
     def rand_step(self, tensordict):
-        action = (np.random.rand(9) * 2) - np.ones(9)
+        action = (np.random.rand(3) * 2) - np.ones(3)
+        print("rand_step")
+        print(action)
         return self.step(action)
 
     def state_dict(self):
         return {}
 
     def fake_tensordict(self):
+        # TODO is this still used?
         observation = self._create_observation(self.info["time_index"])
         if self.visual_observation:
             observation = {
                 "pixels": self.render("rgb_array"),
                 "ftip_dist": observation,
                 "scaled_success": self.scaled_success(
-                    observation, self.start_to_goal()
+                    observation,
                 ),
             }
         return observation
@@ -456,62 +622,71 @@ class CubeReachEnv(gym.Env):
                 return initial_robot_position
 
     def choose_goal(self):
-        # TODO work for cube
-        # makes sure that goal is above bowl
-        # while True:
-        #     target_joint_config = np.asarray(
-        #         sample.feasible_random_joint_positions_for_reaching(
-        #             self.platform.simfinger, self.action_bounds
-        #         )
-        #     )
-        #     goal = self.platform.simfinger.kinematics.forward_kinematics(
-        #         target_joint_config
-        #     )
-        #     dist_to_start = np.linalg.norm(
-        #         np.array(self.start_pos[0]).flatten() - np.array(goal).flatten()
-        #     )
-        #     if self._is_above_table(goal):
-        #         return torch.tensor(goal)
         return self.goal
 
-    def get_start_pos(self, return_goal=False):
-        return np.concatenate(
-            (self.start_pos[0], self.start_pos[1], self.start_pos[2], self.goal)
+    def choose_goal_from_demos(self, eval=False):
+        if eval:
+            goal_pos_list = self.eval_goal_list
+        else:
+            goal_pos_list = self.train_goal_list
+
+        idx = np.random.randint(0, len(goal_pos_list))
+        return torch.FloatTensor(goal_pos_list[idx] / 100.0)
+
+    def sample_init_robot_position(self):
+
+        q0_range = [-0.15, 0.15]
+        q1_range = [0.8, 1.15]
+        q2_range = [-1.35, -1.65]
+
+        i = 0
+        q_new = np.array([q0_range[i], q1_range[i], q2_range[i]] * 3)
+
+        q_new = np.zeros(9)
+        for i in range(3):
+            q0 = np.random.uniform(q0_range[0], q0_range[1])
+            q1 = np.random.uniform(q1_range[0], q1_range[1])
+            q2 = np.random.uniform(q2_range[0], q2_range[1])
+
+            q_new[3 * i] = q0
+            q_new[3 * i + 1] = q1
+            q_new[3 * i + 2] = q2
+
+        return q_new
+
+    def reset(self, init_pose_dict=None, init_robot_position=None, eval_mode=False):
+        """Reset the environment."""
+
+        # initialize cube at the centre
+        if init_pose_dict is None:
+            initial_object_pose = task.sample_goal(difficulty=-1)
+        else:
+            initial_object_pose = task.Pose.from_dict(init_pose_dict)
+
+        if self.run_rl_policy:
+            # train/test split use same pos. as those used in demonstrations
+            initial_object_pose.position = self.choose_goal_from_demos(eval_mode)
+
+        if init_robot_position is None:
+            init_robot_position = self.sample_init_robot_position()
+
+        self.platform.reset(
+            initial_object_pose=initial_object_pose,
+            initial_robot_position=init_robot_position,
         )
 
-    def reset(self, init_pose_dict=None, init_robot_position=None):
-        """Reset the environment."""
-        self.platform.simfinger.reset()
-        start_to_goal = 1000.0
-        while start_to_goal > self.max_goal_dist:
-            if self.randomize_starts:
-                initial_robot_position = self.choose_start_pos()
-                self.start_pos = self.platform.simfinger.kinematics.forward_kinematics(
-                    initial_robot_position
-                )
-                self.platform.simfinger.reset_finger_positions_and_velocities(
-                    initial_robot_position
-                )
+        # Set pybullet GUI params
+        self._set_sim_params()
 
-            # Set pybullet GUI params
-            self._set_sim_params()
-
-            self.goal = torch.tensor(self.platform.cube.get_state()[0])
-            self.previous_dist_to_goal = 100
-            if self.randomize_all:
-                self.goal = self.choose_goal()
-            start_to_goal = (torch.tensor(self.start_pos[0]) - self.goal).norm()
+        self.start_pos = self.hand_kinematics.get_ft_pos(init_robot_position)
+        self.goal = torch.tensor(initial_object_pose.position)  # Cube is fixed
         self.info = {"time_index": -1, "goal": self.goal}
         self.step_count = 0
-        if self.visual_observation:
-            obs = self._create_observation(0)
-            new_obs = {
-                "pixels": self.render("rgb_array"),
-                "ftip_dist": obs,
-                "scaled_success": self.scaled_success(obs, self.start_to_goal()),
-            }
-        else:
-            new_obs = self._create_observation(0)
+
+        new_obs = self._create_observation(0)
+
+        # Reset state for policy execution
+        self.x_des_plan = torch.FloatTensor(self.start_pos.copy())
 
         return new_obs
 
@@ -536,25 +711,91 @@ class CubeReachEnv(gym.Env):
         return [seed]
 
     def _create_observation(self, t):
-        # robot_observation = self.platform.get_robot_observation(t)
-        robot_observation = self.platform.simfinger.get_observation(t)
-        # camera_observation = self.platform.get_camera_observation(t)
+
+        robot_observation = self.platform.get_robot_observation(t)
         ftip_pos = self.hand_kinematics.get_ft_pos(robot_observation.position)
-        goal_pos = torch.clone(torch.FloatTensor(ftip_pos))
-        goal_pos[0:3] = self.goal
-        observation = torch.cat(
-            (torch.FloatTensor(ftip_pos), torch.FloatTensor(goal_pos))
-        )
+        scaled_success = self.scaled_success(ftip_pos)
+        if self.run_rl_policy:
+            goal_pos = torch.clone(torch.FloatTensor(ftip_pos))
+            goal_pos[0:3] = self.goal
+            observation_vec = torch.cat(
+                (torch.FloatTensor(ftip_pos), torch.FloatTensor(goal_pos))
+            )
+            if self.visual_observation:
+                observation = {
+                    "pixels": self.render("rgb_array"),
+                    "ftip_dist": observation_vec,
+                    "scaled_success": scaled_success,
+                }
+            else:
+                # robot_observation = self.platform.simfinger.get_observation(t)
+                # camera_observation = self.platform.get_camera_observation(t)
+                goal_pos = torch.clone(torch.FloatTensor(ftip_pos))
+                goal_pos[0:3] = self.goal
+                observation = torch.cat(
+                    (torch.FloatTensor(ftip_pos), torch.FloatTensor(goal_pos))
+                )
+        else:
+            camera_observation = self.platform.get_camera_observation(t)
+            object_observation = camera_observation.filtered_object_pose
+
+            # Get cube vertices
+            obj_pose = {
+                "position": object_observation.position,
+                "orientation": object_observation.orientation,
+            }
+            observation = {
+                "t": t,
+            }
+
+            # Compute distances of each finger to object
+            ftpos_dist_to_obj = d_utils.get_per_finger_ftpos_err(
+                np.expand_dims(ftip_pos, 0),
+                np.tile(object_observation.position, (1, 3)),
+            )
+
+            # Add new observation fields
+            v_wf_dict = c_utils.get_vertices_wf(obj_pose)
+            observation["robot_position"] = robot_observation.position
+            observation["object_position"] = object_observation.position
+            observation["object_orientation"] = object_observation.orientation
+            observation["object_vertices"] = v_wf_dict
+            observation["desired_goal"] = self.goal.clone().detach().cpu().numpy()
+            observation["scaled_success"] = scaled_success
+            observation["achieved_goal_position_error"] = ftpos_dist_to_obj
+            observation["ft_pos_cur"] = ftip_pos
+            # Save camera observation images
+            if self.visual_observation:
+                camera_observation_dict = {
+                    "camera60": {
+                        "image": camera_observation.cameras[0].image,
+                        "timestamp": camera_observation.cameras[0].timestamp,
+                    },
+                    "camera180": {
+                        "image": camera_observation.cameras[1].image,
+                        "timestamp": camera_observation.cameras[1].timestamp,
+                    },
+                    "camera300": {
+                        "image": camera_observation.cameras[2].image,
+                        "timestamp": camera_observation.cameras[2].timestamp,
+                    },
+                }
+
+                observation["camera_observation"] = camera_observation_dict
+            observation["policy"] = {
+                "controller": self.hand_kinematics.get_observation()
+            }
+
         return observation
 
     def _gym_action_to_robot_action(self, gym_action):
         # construct robot action depending on action type
         if self.action_type == ActionType.TORQUE:
-            robot_action = self.platform.simfinger.Action(torque=gym_action)
+            robot_action = self.platform.Action(torque=gym_action)
         elif self.action_type == ActionType.POSITION:
-            robot_action = self.platform.simfinger.Action(position=gym_action)
+            robot_action = self.platform.Action(position=gym_action)
         elif self.action_type == ActionType.TORQUE_AND_POSITION:
-            robot_action = self.platform.simfinger.Action(
+            robot_action = self.platform.Action(
                 torque=gym_action["torque"], position=gym_action["position"]
             )
         else:
@@ -595,3 +836,6 @@ class HandKinematics:
 
     def get_torque(self, x_des, dx_des, q_cur, dq_cur):
         return self.controller.get_command_torque(x_des, dx_des, q_cur, dq_cur)
+
+    def get_observation(self):
+        return self.controller.get_observation()

@@ -14,7 +14,7 @@ from omegaconf import OmegaConf
 from imitation_learning.utils.logging import Logger
 
 from imitation_learning.utils import flatten_info_dict_reader
-from imitation_learning.utils.evaluator import PretrainedEvaluator
+from imitation_learning.utils.evaluator import CubeEvaluator
 from tensordict import TensorDict
 from torchrl.envs import (
     ParallelEnv,
@@ -39,18 +39,6 @@ import wandb
 import numpy as np
 import random
 from rl_utils import common
-
-
-def compute_ftip_dists(obs):
-    ftip_dists = []
-    num_fingers = 3
-    for i in range(num_fingers):
-        ftip_dists.append(
-            torch.norm(
-                obs[:, 3 * i : 3 + (3 * i)] - obs[:, 9 + 3 * i : 12 + (3 * i)], dim=1
-            )
-        )
-    return ftip_dists
 
 
 def create_trifinger_env(env_name, seed, env_kwargs, sample_radius, sample_goals):
@@ -152,7 +140,6 @@ def main(cfg) -> Dict[str, float]:
     random.seed(cfg.seed)
     common.core_utils.set_seed(cfg.seed)
 
-    max_env_step_idx = 19
     steps_per_update = cfg.num_steps * cfg.num_envs
     num_updates = int(cfg.num_env_steps) // steps_per_update
 
@@ -169,7 +156,7 @@ def main(cfg) -> Dict[str, float]:
         cfg.policy_updater, policy=policy, device=policy.actor.device
     )
     print("Instantiating evaluator....")
-    evaluator: PretrainedEvaluator = hydra_instantiate(
+    evaluator: CubeEvaluator = hydra_instantiate(
         cfg.evaluator,
         envs=envs,
         num_render=cfg.num_eval_episodes,
@@ -203,6 +190,8 @@ def main(cfg) -> Dict[str, float]:
     num_steps = cfg.num_steps
     print("Resetting envs ....")
     td = envs.reset()
+    max_env_step_idx = envs.max_episode_len()[0] / envs.step_size()[0]
+
     storage_td = TensorDict({}, batch_size=[cfg.num_envs, num_steps], device=device)
     print("Beginning updates ....")
     env_steps = 0
@@ -215,67 +204,20 @@ def main(cfg) -> Dict[str, float]:
             envs.step(td)
             storage_td[:, step_idx] = td
             if env_steps >= max_env_step_idx:
-                completed_td = td["ftip_dist"].detach()
-
-                ftip_distances = torch.norm(
-                    completed_td[:, :9] - completed_td[:, 9:], dim=1
-                )
-
-                per_finger_dists = compute_ftip_dists(completed_td)
-                avg_ftip_dist = 0
-                for f in per_finger_dists:
-                    avg_ftip_dist += f
-                avg_ftip_dist = avg_ftip_dist / 3
-                logger.collect_info(
-                    "avg_ftip_dist",
-                    avg_ftip_dist.mean().item(),
-                    no_rolling_window=True,
-                )
-                logger.collect_info(
-                    "ftip0_dist",
-                    per_finger_dists[0].mean().item(),
-                    no_rolling_window=True,
-                )
-                logger.collect_info(
-                    "ftip1_dist",
-                    per_finger_dists[1].mean().item(),
-                    no_rolling_window=True,
-                )
-                logger.collect_info(
-                    "ftip2_dist",
-                    per_finger_dists[2].mean().item(),
-                    no_rolling_window=True,
-                )
                 # scaled_success = compute_success(completed_td,td["total_dist"].detach())
                 logger.collect_info(
                     "scaled_success",
                     td["scaled_success"].detach().mean().item(),
                     no_rolling_window=True,
                 )
-
                 # success_rate = percentage done and w/ distance less than X / all storage_td
-                success_rate = (
-                    avg_ftip_dist < 0.02 * td["done"].T
-                ).sum() / avg_ftip_dist.shape[0]
-                logger.collect_info(
-                    "success_total_size",
-                    ftip_distances.shape[0],
-                    no_rolling_window=True,
-                )
-                logger.collect_info(
-                    "success_rate", success_rate.mean().item(), no_rolling_window=True
-                )
-                logger.collect_info(
-                    "fingertip_dist",
-                    ftip_distances.mean().item(),
-                    no_rolling_window=True,
-                )
+
                 # logger.collect_env_step_info(td, cfg.info_keys)
                 for k in cfg.info_keys:
                     logger.collect_info(k, td[k].cpu().numpy(), no_rolling_window=True)
 
                 td.set("reset_workers", td["done"])
-                envs.reset(tensordict=td)
+                envs.reset()
                 td["next"]["pixels"] = td["pixels"]
                 logger.collect_env_step_info(td, cfg.info_keys)
                 env_steps = -1

@@ -69,16 +69,10 @@ class Evaluator:
 
         if not os.path.exists("data/logs/"):
             os.mkdir("data/logs/")
-        os.mkdir(self._parent_dir)
+        if not os.path.exists(self._parent_dir):
+            os.mkdir(self._parent_dir)
 
     def _clear_save_trajs(self, max_evals):
-
-        if self._all_traj_td is None:
-            self._all_traj_td = TensorDict(
-                {},
-                batch_size=[self._num_envs, max_evals, self._num_steps],
-                device=self._device,
-            )
         self._save_traj_td = self._save_traj_td.empty()
         self._all_traj_td = self._all_traj_td.empty()
         self._mask_traj = torch.zeros(self._num_envs, max_evals)
@@ -324,7 +318,7 @@ class PretrainedEvaluator(Evaluator):
         left_over_evals = num_episodes % self._num_envs
         num_evals = [evals_per_proc for _ in range(self._num_envs)]
         num_evals[-1] += left_over_evals
-        self._clear_save_trajs(num_evals[-1] + 1)
+        # self._clear_save_trajs(num_evals[-1] + 1)
         step_num = 0
 
         all_frames = []
@@ -348,8 +342,6 @@ class PretrainedEvaluator(Evaluator):
             policy.act(td, deterministic=True)
             self._envs.step(td)
 
-            # next_obs, done = td["next_observation"], td["done"]
-            # next_obs, done = td["next_pixels"], td["done"]
             next_obs = td["next"]["pixels"]
             done = td["done"]
             rnn_hxs = td["recurrent_hidden_states"]
@@ -442,4 +434,113 @@ class PretrainedEvaluator(Evaluator):
         #     print(v)
         #     ret_dict[k] =  np.mean(np.array(v))
         # return ret_dict
+        return {k: np.mean(np.array(v)) for k, v in accum_stats.items()}
+
+
+class CubeEvaluator(Evaluator):
+    def __init__(
+        self,
+        envs: VecEnv,
+        rnn_hxs_dim: int,
+        num_render: Optional[int],
+        vid_dir: str,
+        fps: int,
+        num_envs: int,
+        num_steps: int,
+        info_keys: List[str],
+        device,
+        pretrained_model=None,
+        embedding_size=None,
+        preprocess_func=None,
+        preprocess_transform=None,
+        save_traj_name: Optional[str] = None,
+        **kwargs,
+    ):
+        super().__init__(
+            envs,
+            rnn_hxs_dim,
+            num_render,
+            vid_dir,
+            fps,
+            num_envs,
+            num_steps,
+            info_keys,
+            device,
+            save_traj_name,
+            **kwargs,
+        )
+
+    def evaluate(
+        self, policy: BasePolicy, num_episodes: int, eval_i: int
+    ) -> Dict[str, float]:
+        if isinstance(policy, nn.Module):
+            device = next(policy.parameters()).device
+        else:
+            device = torch.device("cpu")
+
+        obs = self._envs.reset(eval_mode=True)
+
+        rnn_hxs = torch.zeros(self._num_envs, self._rnn_hxs_dim).to(device)
+        eval_masks = torch.zeros(self._num_envs, 1, device=device)
+
+        evals_per_proc = num_episodes // self._num_envs
+        left_over_evals = num_episodes % self._num_envs
+        num_evals = [evals_per_proc for _ in range(self._num_envs)]
+        num_evals[-1] += left_over_evals
+        # self._clear_save_trajs(num_evals[-1] + 1)
+        step_num = 0
+
+        all_frames = []
+        accum_stats = defaultdict(list)
+        total_evaluated = 0
+
+        if self._num_render is None:
+            num_render = num_episodes
+        else:
+            num_render = self._num_render
+
+        obs = obs["pixels"]
+        print("cube_evaluator")
+        while sum(num_evals) != 0:
+            td = TensorDict(
+                source={"pixels": obs, "hxs": rnn_hxs, "mask": eval_masks},
+                batch_size=[self._num_envs],
+                device=device,
+            )
+
+            policy.act(td)
+            self._envs.step(td)
+
+            next_obs = td["next"]["pixels"]
+            done = td["done"]
+            rnn_hxs = td["recurrent_hidden_states"]
+            if total_evaluated < num_render:
+                # TODO try catch for other envs
+                frames = self._envs.render(mode="eval")
+                all_frames.append(frames[0])
+
+            for env_i in range(self._num_envs):
+                if done[env_i]:
+                    total_evaluated += 1
+                    if num_evals[env_i] > 0:
+                        num_evals[env_i] -= 1
+
+            step_num += 1
+            if step_num == self._num_steps:
+                step_num = 0
+
+            if self._envs.is_done:
+                accum_stats["scaled_success"].append(
+                    td["next"]["scaled_success"].detach().mean().item()
+                )
+                td.set("reset_workers", td["done"])
+                reset_td = self._envs.reset(tensordict=td, eval_mode=True)
+                next_obs = reset_td["pixels"]
+
+            obs = next_obs
+
+        print("done evaluating")
+        if len(all_frames) > 0:
+            save_mp4(all_frames, self._vid_dir, f"eval_{eval_i}", self._fps)
+
         return {k: np.mean(np.array(v)) for k, v in accum_stats.items()}

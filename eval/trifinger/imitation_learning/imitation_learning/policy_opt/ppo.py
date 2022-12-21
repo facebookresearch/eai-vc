@@ -112,7 +112,6 @@ class PPO:
             batch_size=self.num_envs * self.num_steps // self.num_mini_batch
         )
         for _ in range(self.num_epochs):
-            print(f"update itr: {_}")
             storage_keys = storage.keys()
             data = data_gen(storage)
             # mem_all = torch.cuda.memory_allocated()/(1e6)

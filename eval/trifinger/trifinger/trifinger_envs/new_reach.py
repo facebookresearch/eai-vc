@@ -115,8 +115,14 @@ class NewReachEnv(gym.Env):
         )
 
         self.hand_kinematics = HandKinematics(self.simfinger)
+        target_positions = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        camera_up_vectors = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+        field_of_view = 33
         self.tricamera = camera.TriFingerCameras(
-            pybullet_client_id=self.simfinger._pybullet_client_id
+            pybullet_client_id=self.simfinger._pybullet_client_id,
+            target_positions=target_positions,
+            camera_up_vectors=camera_up_vectors,
+            field_of_view=field_of_view,
         )
         self.vert_markers = None
         # Basic initialization
@@ -549,9 +555,9 @@ class NewReachEnv(gym.Env):
             )
             if self.randomize_all:
                 self.goal = self.choose_goal()
-            start_to_goal = np.linalg.norm(
-                np.array(self.start_pos).flatten() - self.goal
-            )
+            start_to_goal = 0
+            for i in self.start_to_goal():
+                start_to_goal += i
 
         # visualize the goal
         # self.hide_marker_from_camera()

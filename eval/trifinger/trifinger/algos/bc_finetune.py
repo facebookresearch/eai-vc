@@ -317,13 +317,12 @@ class BCFinetune:
                 self.policy.in_dim,
                 self.policy.max_a,
                 self.algo_conf.state_type,
+                self.algo_conf.pretrained_rep,  # obj_state_type
                 downsample_time_step=self.traj_info["downsample_time_step"],
                 traj_scale=self.traj_info["scale"],
                 goal_type=self.algo_conf.goal_type,
                 object_type=self.traj_info["object_type"],
                 finger_type=self.traj_info["finger_type"],
-                min_a_per_dim=None,
-                max_a_per_dim=None,
                 enable_shadows=sim_params["enable_shadows"],
                 camera_view=sim_params["camera_view"],
                 arena_color=sim_params["arena_color"],
@@ -386,26 +385,8 @@ class BCFinetune:
                     sim_obj_pos_err = sim_traj_dict["position_error"][-1]
 
                     # Compute scaled error and reward, based on task
-                    if self.task == "move_cube":
-                        init_obj_pos_err = sim_traj_dict["position_error"][0]
-                        scaled_err = min(1, sim_obj_pos_err / init_obj_pos_err)
-                    elif self.task == "reach_cube":
-                        # Compute scaled error for reaching task for finger_to_move
-                        final_ft_pos = sim_traj_dict["ft_pos_cur"][-1]
-                        init_ft_pos = sim_traj_dict["ft_pos_cur"][0]
-                        cube_pos = sim_traj_dict["o_pos_cur"][0]
-
-                        scaled_err = d_utils.get_reach_scaled_err(
-                            list(range(self.n_fingers_to_move)),
-                            init_ft_pos,
-                            final_ft_pos,
-                            cube_pos,
-                            c_utils.CUBE_HALF_SIZE
-                            * self.traj_info["scale"],  # scale m to cm
-                        )
-                    else:
-                        raise ValueError(f"Invalid task: {self.task}")
-                    scaled_reward = 1 - scaled_err
+                    scaled_reward = sim_traj_dict["scaled_success"][-1]
+                    scaled_err = 1 - scaled_reward
 
                     # Per traj log
                     log_dict[sim_env_name][split_name][traj_label] = {

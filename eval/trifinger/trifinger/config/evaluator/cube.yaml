@@ -1,4 +1,4 @@
-_target_: imitation_learning.utils.evaluator.PretrainedEvaluator
+_target_: imitation_learning.utils.evaluator.CubeEvaluator
 rnn_hxs_dim: ${policy.recurrent_hidden_size}
 num_render: 1000
 fps: 10

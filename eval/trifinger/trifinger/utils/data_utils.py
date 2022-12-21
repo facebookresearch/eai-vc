@@ -88,6 +88,10 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
         "robot_pos": robot_pos,
     }
 
+    if "scaled_success" in data_keys:
+        scaled_success = np.array([data[i]["scaled_success"] for i in range(len(data))])
+        traj_dict["scaled_success"] = scaled_success
+
     if include_image_obs:
         image60 = np.array(
             [
