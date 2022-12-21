@@ -183,7 +183,10 @@ class ObjectNavDatasetV2(PointNavDatasetV1):
 
                         path[p_index] = ShortestPathPoint(**point)
 
-            if len(episode.reference_replay) > self.max_episode_steps:
+            if (
+                episode.reference_replay is not None
+                and len(episode.reference_replay) > self.max_episode_steps
+            ):
                 continue
 
             self.episodes.append(episode)  # type: ignore [attr-defined]

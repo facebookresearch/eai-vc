@@ -111,7 +111,6 @@ class RolloutStorage:
             "trainer mini batches ({}).".format(num_processes, num_mini_batch)
         )
         num_envs_per_batch = num_processes // num_mini_batch
-        perm = torch.randperm(num_processes)
         for start_ind in range(0, num_processes, num_envs_per_batch):
             observations_batch = defaultdict(list)
 
@@ -169,12 +168,10 @@ class RolloutStorage:
     @staticmethod
     def _flatten_helper(t: int, n: int, tensor: torch.Tensor) -> torch.Tensor:
         r"""Given a tensor of size (t, n, ..), flatten it to size (t*n, ...).
-
         Args:
             t: first dimension of tensor.
             n: second dimension of tensor.
             tensor: target tensor to be flattened.
-
         Returns:
             flattened tensor of size (t*n, ...)
         """

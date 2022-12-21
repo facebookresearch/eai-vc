@@ -1,10 +1,7 @@
 from typing import Any, Dict
 
-import numpy as np
-
 from gym import spaces
 
-from habitat import logger
 from habitat.config import Config
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry

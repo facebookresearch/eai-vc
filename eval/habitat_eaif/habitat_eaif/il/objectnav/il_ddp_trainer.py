@@ -41,9 +41,10 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 from habitat_baselines.utils.common import batch_obs, linear_decay
 from habitat_baselines.utils.env_utils import construct_envs
 
-from habitat_eaif.objectnav_il.algos.agent import DDPILAgent
-from habitat_eaif.objectnav_il.il_trainer import ILEnvTrainer
-from habitat_eaif.objectnav_il.rollout_storage import RolloutStorage
+from habitat_eaif.il.objectnav.algos.agent import DDPILAgent
+from habitat_eaif.il.objectnav.il_trainer import ILEnvTrainer
+from habitat_eaif.il.objectnav.rollout_storage import RolloutStorage
+from habitat_eaif.il.objectnav.custom_baseline_registry import custom_baseline_registry
 import habitat_eaif.utils as utils
 
 
@@ -86,7 +87,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
         model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
         model_config.freeze()
 
-        policy = baseline_registry.get_policy(self.config.IL.POLICY.name)
+        policy = custom_baseline_registry.get_policy(self.config.IL.POLICY.name)
         self.policy = policy.from_config(
             self.config, observation_space, self.envs.action_spaces[0]
         )
@@ -197,7 +198,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
             )
 
             if self.wandb_initialized == False:
-                utils.setup_wandb(self.config, train=True, project_name="objectnav_mae")
+                utils.setup_wandb(self.config, train=True)
                 self.wandb_initialized = True
 
         observations = self.envs.reset()
@@ -206,13 +207,18 @@ class ILEnvDDPTrainer(ILEnvTrainer):
 
         obs_space = self.obs_space
 
+        # To handle LSTM input
+        num_rnn_layer_multiplier = (
+            2 if self.config.MODEL.STATE_ENCODER.rnn_type == "LSTM" else 1
+        )
         rollouts = RolloutStorage(
             il_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
             self.envs.action_spaces[0],
             self.config.MODEL.STATE_ENCODER.hidden_size,
-            num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
+            num_recurrent_layers=self.config.MODEL.STATE_ENCODER.num_recurrent_layers
+            * num_rnn_layer_multiplier,
         )
         rollouts.to(self.device)
 

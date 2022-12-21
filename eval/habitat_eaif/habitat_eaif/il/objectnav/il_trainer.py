@@ -43,6 +43,8 @@ from habitat_baselines.utils.env_utils import construct_envs
 
 from habitat_eaif.il.objectnav.algos.agent import ILAgent
 from habitat_eaif.il.objectnav.rollout_storage import RolloutStorage
+from habitat_eaif.il.objectnav.custom_baseline_registry import custom_baseline_registry
+
 import habitat_eaif.utils as utils
 
 
@@ -83,7 +85,7 @@ class ILEnvTrainer(BaseRLTrainer):
         model_config.TORCH_GPU_ID = self.config.TORCH_GPU_ID
         model_config.freeze()
 
-        policy = baseline_registry.get_policy(self.config.IL.POLICY.name)
+        policy = custom_baseline_registry.get_policy(self.config.IL.POLICY.name)
         self.policy = policy.from_config(
             self.config, observation_space, self.envs.action_spaces[0]
         )
@@ -589,7 +591,7 @@ class ILEnvTrainer(BaseRLTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                (logits, test_recurrent_hidden_states, dist_entropy) = self.policy(
+                (logits, test_recurrent_hidden_states, dist_entropy,) = self.policy(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
@@ -708,13 +710,13 @@ class ILEnvTrainer(BaseRLTrainer):
 
         for k, v in aggregated_stats.items():
             logger.info(f"Average episode {k}: {v:.4f}")
+        logger.info("Checkpoint path: {}".format(checkpoint_path))
 
         step_id = int(checkpoint_index)
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = int(ckpt_dict["extra_state"]["step"])
 
         wandb.log({"average reward": aggregated_stats["reward"]}, step=step_id)
-
         metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
         if len(metrics) > 0:
             wandb.log(metrics, step=step_id)

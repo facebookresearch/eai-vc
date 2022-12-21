@@ -11,9 +11,7 @@ class RNNStateEncoder(nn.Module):
         rnn_type: str = "GRU",
     ):
         r"""An RNN for encoding the state in RL.
-
         Supports masking the hidden state during various timesteps in the forward lass
-
         Args:
             input_size: The input size of the RNN
             hidden_size: The hidden size
@@ -80,7 +78,6 @@ class RNNStateEncoder(nn.Module):
 
     def seq_forward(self, x, hidden_states, masks):
         r"""Forward for a sequence of length T
-
         Args:
             x: (T, N, -1) Tensor that has been flattened to (T * N, -1)
             hidden_states: The starting hidden state.

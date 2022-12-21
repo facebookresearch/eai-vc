@@ -1,4 +1,4 @@
-VERBOSE: True
+VERBOSE: False
 TRAINER_NAME: "mddppo"
 ENV_NAME: "SimpleRLEnv"
 SENSORS: ["RGB_SENSOR"]

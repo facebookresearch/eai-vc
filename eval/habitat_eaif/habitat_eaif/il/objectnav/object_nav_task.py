@@ -1,13 +1,9 @@
-from typing import Any, Optional, List
+from typing import Optional, List
 
 import attr
 import os
 
-from habitat.core.logging import logger
-from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask, NavigationEpisode
-
-from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.utils import not_none_validator
 
@@ -30,7 +26,6 @@ class ReplayActionSpec:
 @attr.s(auto_attribs=True, kw_only=True)
 class ObjectGoalNavEpisode(NavigationEpisode):
     r"""ObjectGoal Navigation Episode
-
     :param object_category: Category of the obect
     """
     object_category: Optional[str] = None

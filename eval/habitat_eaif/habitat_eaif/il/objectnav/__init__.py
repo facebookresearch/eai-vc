@@ -1,3 +1,4 @@
+from habitat_eaif.il.objectnav import custom_baseline_registry  # noqa
 from habitat_eaif.il.objectnav import dataset  # noqa
 from habitat_eaif.il.objectnav import il_ddp_trainer  # noqa
 from habitat_eaif.il.objectnav import il_trainer  # noqa
