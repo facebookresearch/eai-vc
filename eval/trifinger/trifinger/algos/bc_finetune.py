@@ -27,20 +27,16 @@ class BCFinetune:
         self.device = device
 
         # Get task name
-        if "task" in self.traj_info:
-            self.task = self.traj_info["task"]
-            if self.task == "reach_cube":
-                assert (
-                    self.algo_conf.goal_type == "goal_none"
-                ), f"Need to use algo.goal_type=goal_none when running {self.task} task"
-        else:
-            # For "move_cube" demo files generated before fix_cube_base flag was added
-            self.task = "move_cube"
+        self.task = self.conf.task.name
+        if self.task == "reach_cube":
+            assert (
+                self.conf.task.goal_type == "goal_none"
+            ), f"Need to use algo.goal_type=goal_none when running {self.task} task"
 
         # Make dataset and dataloader
         train_dataset = BCFinetuneDataset(
             self.traj_info["train_demo_stats"],
-            state_type=self.algo_conf.state_type,
+            state_type=self.conf.task.state_type,
             obj_state_type=self.algo_conf.pretrained_rep,
             device=self.device,
             augment_prob=self.algo_conf.image_aug_dict["augment_prob"],
@@ -62,7 +58,7 @@ class BCFinetune:
 
         test_dataset = BCFinetuneDataset(
             self.traj_info["test_demo_stats"],
-            state_type=self.algo_conf.state_type,
+            state_type=self.conf.task.state_type,
             obj_state_type=self.algo_conf.pretrained_rep,
             device=self.device,
             augment_prob=self.algo_conf.image_aug_dict["augment_prob"],
@@ -84,30 +80,33 @@ class BCFinetune:
             f"Loaded test dataset with {test_dataset.n_augmented_samples} / {len(test_dataset)} augmented samples"
         )
 
-        # Policy
-        # Set in_dim
-        if isinstance(self.algo_conf.latent_dim, int):
-            o_state_dim = self.algo_conf.latent_dim
-        else:
-            # If no latent_dim, use dim of pretrained_rep
-            o_state_dim = train_dataset.pretrained_rep_dim
+        # Encoder
+        self.encoder = EncoderModel(
+            pretrained_rep=self.algo_conf.pretrained_rep,
+            freeze_pretrained_rep=self.algo_conf.freeze_pretrained_rep,
+            rep_to_policy=self.conf.rep_to_policy,
+        ).to(self.device)
+        log.info(f"Model:\n{self.encoder}")
 
-        if self.algo_conf.state_type == "obj":
+        # Policy
+        o_state_dim = self.encoder.pretrained_rep_dim
+
+        if self.conf.task.state_type == "obj":
             state_dim = o_state_dim
-        elif self.algo_conf.state_type == "ftpos_obj":
+        elif self.conf.task.state_type == "ftpos_obj":
             state_dim = o_state_dim + train_dataset[0]["input"]["ft_state"].shape[0]
-        elif self.algo_conf.state_type == "ftpos":
+        elif self.conf.task.state_type == "ftpos":
             state_dim = train_dataset[0]["input"]["ft_state"].shape[0]
         else:
             raise NameError("Invalid state_type")
         # TODO for reach_cube task, do I want to just use ft_state of n_fingers_to_move
         # even though visual state will include those fingers as well?
 
-        if self.algo_conf.goal_type == "goal_none":
+        if self.conf.task.goal_type == "goal_none":
             in_dim = state_dim
-        elif self.algo_conf.goal_type == "goal_cond":
+        elif self.conf.task.goal_type == "goal_cond":
             in_dim = state_dim + o_state_dim
-        elif self.algo_conf.goal_type == "goal_o_pos":
+        elif self.conf.task.goal_type == "goal_o_pos":
             in_dim = state_dim + 3
         else:
             raise NameError("Invalid goal_type")
@@ -120,20 +119,13 @@ class BCFinetune:
         )
         log.info(f"Policy:\n{self.policy}")
 
-        # Encoder
-        self.encoder = EncoderModel(
-            pretrained_rep=self.algo_conf.pretrained_rep,
-            latent_dim=self.algo_conf.latent_dim,
-            freeze_pretrained_rep=self.algo_conf.freeze_pretrained_rep,
-        ).to(self.device)
-        log.info(f"Model:\n{self.encoder}")
-
-        self.optimizer = torch.optim.Adam(
+        self.optimizer = torch.optim.AdamW(
             [
                 {"params": self.encoder.parameters(), "lr": self.algo_conf.visual_lr},
                 {"params": self.policy.parameters(), "lr": self.algo_conf.lr},
             ],
             lr=self.algo_conf.lr,
+            weight_decay=self.algo_conf.adam_weight_decay,
         )
 
         self.loss_fn = torch.nn.MSELoss()
@@ -192,6 +184,12 @@ class BCFinetune:
             self.encoder.load_state_dict(ckpt_info["encoder"])
             log.info(f"Loading state from {ckpt_pth_to_load}.")
 
+        # initializing dictionary that keeps track of max values
+        # Todo - if we load from checkpoint this max dict needs to be loaded as well
+        self.max_dict = {}
+        for sim_env_name in self.sim_dict.keys():
+            self.max_dict[sim_env_name] = {"train": {}, "test": {}}
+
         # Sim rollout
         if self.run_sim:
             sim_log_dict = self.sim_rollout(
@@ -205,7 +203,7 @@ class BCFinetune:
                 all_dict = {**sim_log_dict}
                 t_utils.plot_loss(all_dict, start_epoch + 1)
 
-        for outer_i in range(start_epoch, self.algo_conf.n_outer_iter):
+        for outer_i in range(start_epoch, self.conf.task.n_outer_iter):
 
             # Update policy network
             self.policy.train()
@@ -215,16 +213,16 @@ class BCFinetune:
                 self.optimizer.zero_grad()
 
                 # First, pass img and goal img through encoder
-                if "obj" in self.algo_conf.state_type:
+                if "obj" in self.conf.task.state_type:
                     latent_state = self.encoder(batch["input"]["rgb_img_preproc"])
                     batch["input"]["o_state"] = latent_state
-                if self.algo_conf.goal_type == "goal_cond":
+                if self.conf.task.goal_type == "goal_cond":
                     latent_goal = self.encoder(batch["input"]["rgb_img_preproc_goal"])
                     batch["input"]["o_goal"] = latent_goal
 
                 # Then, make observation pass through policy
                 obs_vec = t_utils.get_bc_obs_vec_from_obs_dict(
-                    batch["input"], self.algo_conf.state_type, self.algo_conf.goal_type
+                    batch["input"], self.conf.task.state_type, self.conf.task.goal_type
                 )
                 pred_actions = self.policy(obs_vec)
 
@@ -245,10 +243,10 @@ class BCFinetune:
                     self.optimizer.zero_grad()
 
                     # First, pass img and goal img through encoder
-                    if "obj" in self.algo_conf.state_type:
+                    if "obj" in self.conf.task.state_type:
                         latent_state = self.encoder(batch["input"]["rgb_img_preproc"])
                         batch["input"]["o_state"] = latent_state
-                    if self.algo_conf.goal_type == "goal_cond":
+                    if self.conf.task.goal_type == "goal_cond":
                         latent_goal = self.encoder(
                             batch["input"]["rgb_img_preproc_goal"]
                         )
@@ -257,8 +255,8 @@ class BCFinetune:
                     # Then, make observation pass through policy
                     obs_vec = t_utils.get_bc_obs_vec_from_obs_dict(
                         batch["input"],
-                        self.algo_conf.state_type,
-                        self.algo_conf.goal_type,
+                        self.conf.task.state_type,
+                        self.conf.task.goal_type,
                     )
                     pred_actions = self.policy(obs_vec)
 
@@ -277,7 +275,7 @@ class BCFinetune:
 
             log.info(f"Epoch: {outer_i}, loss: {avg_train_loss}")
 
-            if (outer_i + 1) % self.algo_conf.n_epoch_every_log == 0:
+            if (outer_i + 1) % self.conf.task.n_epoch_every_log == 0:
                 # Sim rollout
                 if self.run_sim:
                     sim_log_dict = self.sim_rollout(
@@ -316,11 +314,11 @@ class BCFinetune:
             sim = SimNN(
                 self.policy.in_dim,
                 self.policy.max_a,
-                self.algo_conf.state_type,
+                self.conf.task.state_type,
                 self.algo_conf.pretrained_rep,  # obj_state_type
                 downsample_time_step=self.traj_info["downsample_time_step"],
                 traj_scale=self.traj_info["scale"],
-                goal_type=self.algo_conf.goal_type,
+                goal_type=self.conf.task.goal_type,
                 object_type=self.traj_info["object_type"],
                 finger_type=self.traj_info["finger_type"],
                 enable_shadows=sim_params["enable_shadows"],
@@ -417,10 +415,41 @@ class BCFinetune:
 
                 # Log avg obj pos err for each diff
                 for diff, per_diff_totals_dict in totals_dict.items():
+                    if (
+                        f"diff-{diff}_max_avg_scaled_reward"
+                        not in self.max_dict[sim_env_name][split_name].keys()
+                    ):
+                        self.max_dict[sim_env_name][split_name][
+                            f"diff-{diff}_max_avg_scaled_reward"
+                        ] = 0.0
+
                     for key, total in per_diff_totals_dict.items():
                         log_dict[sim_env_name][split_name][f"diff-{diff}_avg_{key}"] = (
                             total / plot_count_dict[diff]
                         )
+
+                    curr_avg_scaled_reward = log_dict[sim_env_name][split_name][
+                        f"diff-{diff}_avg_scaled_reward"
+                    ]
+                    if (
+                        curr_avg_scaled_reward
+                        > self.max_dict[sim_env_name][split_name][
+                            f"diff-{diff}_max_avg_scaled_reward"
+                        ]
+                    ):
+                        self.max_dict[sim_env_name][split_name][
+                            f"diff-{diff}_max_avg_scaled_reward"
+                        ] = curr_avg_scaled_reward
+                        log_dict[sim_env_name][split_name][
+                            f"diff-{diff}_max_avg_scaled_reward"
+                        ] = curr_avg_scaled_reward
+                    else:
+                        log_dict[sim_env_name][split_name][
+                            f"diff-{diff}_max_avg_scaled_reward"
+                        ] = self.max_dict[sim_env_name][split_name][
+                            f"diff-{diff}_max_avg_scaled_reward"
+                        ]
+
             sim.close()
             del sim
             # TODO this is not great; creating new envs everytime is slow.

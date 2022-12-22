@@ -1,0 +1,8 @@
+
+name: "move_cube"
+demo_path: /private/home/clairelchen/projects/demos_colored_cube/preloaded_dataset_stats/demos_dtrain-110_train-0-100_dtest-110_test-100-125_scale-100_dts-0p4.json
+state_type: ftpos_obj
+goal_type: goal_cond
+
+n_epoch_every_log: 25
+n_outer_iter: 1000

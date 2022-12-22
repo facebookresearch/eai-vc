@@ -14,21 +14,26 @@ class EncoderModel(torch.nn.Module):
     def __init__(
         self,
         pretrained_rep="r3m",
-        mlp_dim=512,
-        latent_dim=50,
         freeze_pretrained_rep=False,
+        rep_to_policy="linear_layer",
     ):
         super().__init__()
+
+        if rep_to_policy == "linear_layer" or rep_to_policy == "none":
+            use_compression_layer = False
+        else:
+            use_compression_layer = True
 
         (
             self.pretrained_rep_model,
             self.transform,
             pretrained_rep_dim,
         ) = d_utils.get_eaif_model_and_transform(
-            pretrained_rep, use_compression_layer=False
+            pretrained_rep, use_compression_layer=use_compression_layer
         )
         self.pretrained_rep = pretrained_rep
         self.pretrained_rep_dim = pretrained_rep_dim
+        self.rep_to_policy = rep_to_policy
 
         if freeze_pretrained_rep:
             for (
@@ -38,26 +43,36 @@ class EncoderModel(torch.nn.Module):
                 param.requires_grad = False
 
         # this only works for ViTs
-        # if self.pretrained_rep_model.global_pool or self.pretrained_rep_model.use_cls:
-        #     self.compression = nn.Identity()
+        output_rep_dim = 784
+        if self.rep_to_policy == "linear_layer":
+            assert (
+                self.pretrained_rep_model.classifier_feature == "global_pool"
+                or self.pretrained_rep_model.classifier_feature == "use_cls_token"
+            )
+            self.compression = nn.Sequential(
+                nn.Linear(self.pretrained_rep_dim, output_rep_dim), nn.ReLU(True)
+            )
+        elif self.rep_to_policy == "compression_layer":
+            assert self.pretrained_rep_model.classifier_feature == "reshape_embedding"
+            self.compression, _, _ = create_compression_layer(
+                pretrained_rep_dim,
+                self.pretrained_rep_model.final_spatial,
+                after_compression_flat_size=output_rep_dim,
+            )
+        elif self.rep_to_policy == "none":
+            assert (
+                self.pretrained_rep_model.classifier_feature == "global_pool"
+                or self.pretrained_rep_model.classifier_feature == "use_cls_token"
+            )
+            self.compression = nn.Identity()
+            output_rep_dim = pretrained_rep_dim
+
         # else:
-        #     self.compression, _, _ = create_compression_layer(
-        #         pretrained_rep_dim, self.pretrained_rep_model.final_spatial
-        #     )
+        # elif self.rep_to_policy == "1D_avgpool":
+        #     assert self.pretrained_rep_model.classifier_feature == "reshape_embedding"
+        #     self.compression = nn.AdaptiveAvgPool1d(output_rep_dim)
 
-        if isinstance(latent_dim, int):
-            linear_layers = [
-                nn.Linear(pretrained_rep_dim, mlp_dim),
-                nn.ELU(),
-                nn.Linear(mlp_dim, mlp_dim),
-                nn.ELU(),
-                nn.Linear(mlp_dim, latent_dim),
-            ]
-
-            self.linear_model = nn.Sequential(*linear_layers)
-        else:
-            # Don't use additional linear layers
-            self.linear_model = None
+        self.pretrained_rep_dim = output_rep_dim
 
     def encode_img(self, img):
         """
@@ -70,11 +85,12 @@ class EncoderModel(torch.nn.Module):
         return self.forward(img_preproc.to(device))[0].detach()
 
     def forward(self, input_tensor):
-
+        # if self.rep_to_policy == "1D_avgpool":
+        #     N = x.shape[0]
+        #     x = torch.einsum("ndhw->nhwd", x)
+        #     x = x.reshape(N, -1)
         x = self.pretrained_rep_model(input_tensor)
-        # x = self.compression(x)
-        if self.linear_model:
-            x = self.linear_model(x)
+        x = self.compression(x)
         return x
 
 

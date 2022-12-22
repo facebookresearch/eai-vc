@@ -1,25 +1,22 @@
 defaults:
     - algo: bc_finetune
+    - task: move_cube
     - _self_
 
-#demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/demos_d-1_train-1_test-1_scale-100_dts-0p4.json
-#demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/franzi.json
-#demo_path: /private/home/clairelchen/projects/demos_colored_cube/preloaded_dataset_stats/demos_d-1_train-100_test-10_scale-100_dts-0p4.json
-demo_path: /private/home/clairelchen/projects/demos_restruc/preloaded_dataset_stats/demos_d-1_train-100_test-20_scale-100_dts-0p4.json
 no_wandb: False
 seed: 10
 eval_envs: ["sim_env_demo"]
+# rep_to_policy can be "compression_layer", "linear_layer" or "none". "none" is replicating what we had before
+rep_to_policy: "linear_layer"
+run_name: "test"
+
 
 algo:
     lr: 1e-4
     visual_lr: 1e-4
-    #obj_state_type: "obj"
-    n_epoch_every_log: 20
+    adam_weight_decay: 0.0
     batch_size: 32
-    state_type: ftpos_obj
-    goal_type: goal_cond
-    n_outer_iter: 500
-    latent_dim: Null
+    max_demo_per_diff: 25
     freeze_pretrained_rep: true
     pretrained_rep: mae_vit_base_patch16_ego4d_210_epochs
 

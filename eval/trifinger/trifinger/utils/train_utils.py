@@ -47,9 +47,6 @@ def get_exp_dir(params_dict):
         exp_id = f"single_run_{run_date_time}"
         exp_str = exp_id
 
-    demo_path = os.path.splitext(os.path.split(params_dict["demo_path"])[1])[0]
-    algo = params_dict["algo"]["name"]
-
     return hydra_output_dir, exp_str, exp_id
 
 

@@ -2,12 +2,7 @@ name: "bc_finetune"
 lr: 1e-4
 visual_lr: 1e-4
 batch_size: 16
-state_type: "obj"
 pretrained_rep: "mae_vit_base_patch16_ego4d_210_epochs"
-goal_type: "goal_cond"
-n_outer_iter: 500
-n_epoch_every_log: 100
-latent_dim: none
 freeze_pretrained_rep: true
 run_sim: true
 max_demo_per_diff: 10

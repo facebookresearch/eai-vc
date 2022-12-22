@@ -40,7 +40,7 @@ def main(conf):
     if not os.path.exists(exp_dir):
         os.makedirs(exp_dir)
 
-    exp_id = f"{conf.algo.pretrained_rep}_freeze_{conf.algo.freeze_pretrained_rep}_seed_{conf.seed}_enc_lr_{conf.algo.visual_lr}"
+    exp_id = f"{conf.task.name}_{conf.algo.pretrained_rep}_freeze_{conf.algo.freeze_pretrained_rep}_r2p_{conf.rep_to_policy}_seed_{conf.seed}"
 
     log.info(f"Running experiment with config:\n{OmegaConf.to_yaml(conf)}\n")
     log.info(f"Saving experiment logs in {exp_dir}")
@@ -49,7 +49,7 @@ def main(conf):
     torch.save(conf, f=f"{exp_dir}/conf.pth")
 
     # Load train and test trajectories
-    with open(conf.demo_path, "r") as f:
+    with open(conf.task.demo_path, "r") as f:
         traj_info = json.load(f)
     train_traj_stats = traj_info["train_demo_stats"]
     test_traj_stats = traj_info["test_demo_stats"]
@@ -97,7 +97,7 @@ def main(conf):
             torch.save(wandb_info, wandb_info_pth)
 
         wandb.init(
-            project=conf.algo.name + "_11_14_test",
+            project=conf.algo.name + "_" + conf.run_name,
             entity="fmeier",
             id=wandb_info["id"],
             name=wandb_info["run_name"],
