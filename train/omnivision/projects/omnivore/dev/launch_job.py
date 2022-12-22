@@ -26,6 +26,7 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import fields
+from datetime import datetime
 from multiprocessing import Pool
 from pathlib import Path
 from typing import Any, List, Tuple
@@ -517,6 +518,9 @@ def get_jobs_to_run_per_config(args, config_path):
     # use eaif checkpoint folder
     if not (args.local or args.no_eaif):
         dst_base_dir = "/checkpoint/yixinlin/eaif/results/omnivision"
+
+    # add dated folder
+    dst_base_dir = os.path.join(dst_base_dir, datetime.now().strftime("%Y-%m-%d"))
 
     overall_exp_dir = os.path.join(dst_base_dir, config_path).replace(
         "${USER}", getpass.getuser()
