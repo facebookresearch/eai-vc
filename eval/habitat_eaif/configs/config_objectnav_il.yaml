@@ -11,3 +11,4 @@ defaults:
 RUN_TYPE: train
 NUM_ENVIRONMENTS: 8
 hydra.launcher.nodes: 8
+WANDB.project: habitat_objectnav_eaif
