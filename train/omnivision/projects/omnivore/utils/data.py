@@ -258,6 +258,11 @@ def load_file(filename, mmap_mode=None):
     elif file_ext == ".json":
         with g_pathmgr.open(filename, "r") as fopen:
             data = json.loads(fopen.read())
+    elif file_ext == ".txt":
+        with g_pathmgr.open(filename, "r") as fopen:
+            data = np.array(
+                fopen.read().splitlines()
+            )  # use np.ndarray for shared memory
     else:
         raise Exception(f"Reading from {file_ext} is not supported yet")
     return data
@@ -269,3 +274,124 @@ def load_file_from_list(file_list, mmap_mode=None):
             return load_file(path, mmap_mode)
             break
     raise Exception(f"None of the paths exist in {file_list}")
+
+
+# VIDEO UTILS
+
+
+def paths_to_clips(paths, every_k=None, min_num_frames=None):
+    logging.info("Converting paths to clips...")
+
+    every_k = 1 if every_k is None else every_k
+    min_num_frames = 2 if min_num_frames is None else min_num_frames
+
+    videos = {}
+    for path in paths:
+        vidname = os.path.split(path)[0]
+        if vidname not in videos:
+            videos[vidname] = []
+        videos[vidname].append(path)
+
+    clips = []
+    for k, v in videos.items():
+        frames = [i for i in range(0, len(v), every_k)]
+        if len(frames) < min_num_frames:
+            logging.warning(
+                f"Dropping vid {k} with length {len(frames)} < {min_num_frames}"
+            )
+            continue
+
+        for start in range(len(frames) - min_num_frames + 1):
+            clip = [v[f] for f in frames[start : start + min_num_frames]]
+            # HACK: compress paths by only storing the full path of the first
+            # frame and just the filename for the rest
+            clip = clip[:1] + [os.path.split(p)[1] for p in clip[1:]]
+            clips.append(clip)
+
+    clips = np.array(clips)
+
+    logging.info("Converting paths to clips... done!")
+    return clips
+
+
+class SharedMemoryVideoLoader:
+    """
+    WARN: A referenced to this object needs to be preserved till
+    the returned np array is being used. This uses collective
+    operations.
+    """
+
+    def __init__(self):
+        self.sm = None
+        self.sm_name = None
+
+    def load(
+        self, path_list: List[str], every_k: int, min_num_frames: int
+    ) -> np.ndarray:
+        """Attempts to load data from a list of paths. Each element is tried (in order)
+        until a file that exists is found. That file is then used to read the data.
+        """
+        if self.sm is not None:
+            raise RuntimeError("Cannot load multiple objects with the same loader")
+
+        path_exists, path, idx = list_of_paths_to_path(path_list)
+
+        if not path_exists:
+            raise ValueError(f"No path exists in {path_list}")
+
+        self.sm_name = (
+            "".join([x if x.isalnum() else "_" for x in path]) + f"_{getpass.getuser()}"
+        )
+
+        # we only read from local rank 0 parent process on a machine
+        # all other GPU parent processes and dataloaders read from shared memory
+        if is_local_primary() and not is_torch_dataloader_worker():
+            # this is the local rank 0 process
+            arr = paths_to_clips(load_file(path), every_k, min_num_frames)
+            assert isinstance(
+                arr, np.ndarray
+            ), f"arr is not an ndarray. found {type(arr)}"
+            logging.info(f"Moving data files to shared memory: {self.sm_name}")
+            try:
+                sm = shared_memory.SharedMemory(
+                    name=self.sm_name, create=True, size=arr.nbytes
+                )
+            except FileExistsError:
+                logging.info(
+                    "Shared memory already exists, closing it out and recreating"
+                )
+                sm_old = shared_memory.SharedMemory(name=self.sm_name, create=False)
+                sm_old.close()
+                sm_old.unlink()
+                sm = shared_memory.SharedMemory(
+                    name=self.sm_name, create=True, size=arr.nbytes
+                )
+            sm_arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=sm.buf)
+            sm_arr[:] = arr[:]
+            # barrier for all (non-dataloader) proceses to ensure the data is
+            # available on all GPUs
+            barrier()
+            broadcast_object(sm_arr.shape)  # arr_shape
+            broadcast_object(sm_arr.dtype)  # arr_type
+        else:
+            if not is_torch_dataloader_worker():
+                # parent process on a GPU which isn't local rank 0; wait for barrier
+                barrier()
+                arr_shape = broadcast_object(None)
+                arr_dtype = broadcast_object(None)
+            logging.info(f"Loading data files from shared memory: {self.sm_name}")
+            sm = shared_memory.SharedMemory(name=self.sm_name, create=False)
+            sm_arr = np.ndarray(shape=arr_shape, dtype=arr_dtype, buffer=sm.buf)
+        # need to keep a reference to the shared memory otherwise it will get
+        # garbage collected and result in a segfault
+        self.sm = sm
+        return sm_arr, idx
+
+    def __del__(self):
+        # FIXME: this doesn't seem to be working on the FAIR cluster
+        if self.sm is None:
+            return
+        self.sm.close()
+        if is_local_primary() and not is_torch_dataloader_worker():
+            logging.info(f"Unlinking shared memory: {self.sm_name}")
+            self.sm.unlink()
