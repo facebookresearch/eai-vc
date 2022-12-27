@@ -68,9 +68,9 @@ class EncoderModel(torch.nn.Module):
             output_rep_dim = pretrained_rep_dim
 
         # else:
-        # elif self.rep_to_policy == "1D_avgpool":
-        #     assert self.pretrained_rep_model.classifier_feature == "reshape_embedding"
-        #     self.compression = nn.AdaptiveAvgPool1d(output_rep_dim)
+        elif self.rep_to_policy == "1D_avgpool":
+            assert self.pretrained_rep_model.classifier_feature == "reshape_embedding"
+            self.compression = nn.AdaptiveAvgPool1d(output_rep_dim)
 
         self.pretrained_rep_dim = output_rep_dim
 
@@ -85,11 +85,11 @@ class EncoderModel(torch.nn.Module):
         return self.forward(img_preproc.to(device))[0].detach()
 
     def forward(self, input_tensor):
-        # if self.rep_to_policy == "1D_avgpool":
-        #     N = x.shape[0]
-        #     x = torch.einsum("ndhw->nhwd", x)
-        #     x = x.reshape(N, -1)
         x = self.pretrained_rep_model(input_tensor)
+        if self.rep_to_policy == "1D_avgpool":
+            N = x.shape[0]
+            x = torch.einsum("ndhw->nhwd", x)
+            x = x.reshape(N, -1)
         x = self.compression(x)
         return x
 
