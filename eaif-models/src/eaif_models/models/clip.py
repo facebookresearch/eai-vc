@@ -55,7 +55,7 @@ def load_clip_vit_checkpoint(model, checkpoint_path=None):
     state_dict = clip_model.state_dict()
     state_dict = _convert_openai_clip(state_dict, model)
 
-    if model.global_pool:
+    if model.classifier_feature == "global_pool":
         # remove layer that start with norm
         state_dict = {k: v for k, v in state_dict.items() if not k.startswith("norm")}
         # add fc_norm in the state dict from the model
