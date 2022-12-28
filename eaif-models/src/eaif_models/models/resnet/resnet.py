@@ -39,16 +39,30 @@ def resnet50_vip(use_avgpool_and_flatten=True, *args, **kwargs):
     return model
 
 
-def load_moco_checkpoint(checkpoint_path):
+def load_moco_checkpoint(checkpoint_path, moco_version="v2"):
+    assert moco_version in ["v2", "v3"], "MoCo version has to be either v2 or v3"
     checkpoint = torch.load(checkpoint_path, map_location=torch.device("cpu"))
-    state_dict = checkpoint["state_dict"]
-    for k in list(state_dict.keys()):
-        # retain only encoder_q up to before the embedding layer
-        if k.startswith("module.encoder_q") and not k.startswith("module.encoder_q.fc"):
-            # remove prefix
-            state_dict[k[len("module.encoder_q.") :]] = state_dict[k]
+    old_state_dict = checkpoint["state_dict"]
+    state_dict = {}
+    for k in list(old_state_dict.keys()):
+        if moco_version == "v2":
+            # retain only encoder_q up to before the embedding layer
+            if k.startswith("module.encoder_q") and not k.startswith(
+                "module.encoder_q.fc"
+            ):
+                # remove prefix
+                state_dict[k[len("module.encoder_q.") :]] = old_state_dict[k]
+        else:
+            # retain only base_encoder up to before the embedding layer
+            if k.startswith("module.base_encoder") and not (
+                k.startswith("module.base_encoder.head")
+                or k.startswith("module.base_encoder.fc")
+            ):
+                # remove prefix
+                updated_key = k[len("module.base_encoder.") :]
+                state_dict[updated_key] = old_state_dict[k]
         # delete renamed or unused k
-        del state_dict[k]
+        del old_state_dict[k]
     return state_dict
 
 

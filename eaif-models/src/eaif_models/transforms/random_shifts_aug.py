@@ -12,6 +12,12 @@ class RandomShiftsAug(nn.Module):
         self.pad = pad
 
     def forward(self, x):
+        if len(x.shape) == 3:
+            single_frame = True
+            x = x.unsqueeze(0)
+        else:
+            single_frame = False
+
         n, _, h, w = x.size()
         assert h == w
         padding = tuple([self.pad] * 4)
@@ -30,4 +36,6 @@ class RandomShiftsAug(nn.Module):
         shift *= 2.0 / (h + 2 * self.pad)
 
         grid = base_grid + shift
-        return F.grid_sample(x, grid, padding_mode="zeros", align_corners=False)
+        out = F.grid_sample(x, grid, padding_mode="zeros", align_corners=False)
+        out = out.squeeze(0) if single_frame else out
+        return out
