@@ -14,9 +14,18 @@ from eaif_models.utils import get_model_tag
 eaif_models_abs_path = os.path.dirname(os.path.abspath(eaif_models.__file__))
 
 
+def get_config_path(model_name):
+    cfg_path = os.path.join(eaif_models_abs_path, "conf", "model", f"{model_name}")
+    if os.path.isdir(cfg_path):
+        pytest.skip()
+    cfg_path += ".yaml"
+    return cfg_path
+
+
 @pytest.mark.parametrize("model_name", eaif_models.eaif_model_zoo)
 def test_cfg_name(model_name):
-    cfg_path = os.path.join(eaif_models_abs_path, "conf", "model", f"{model_name}.yaml")
+    cfg_path = get_config_path(model_name)
+
     model_cfg = omegaconf.OmegaConf.load(cfg_path)
     assert get_model_tag(model_cfg.metadata) == model_name
 
@@ -26,7 +35,8 @@ def test_model_loading(model_name):
     """
     Test creating the model architecture without loading the checkpoint.
     """
-    cfg_path = os.path.join(eaif_models_abs_path, "conf", "model", f"{model_name}.yaml")
+    cfg_path = get_config_path(model_name)
+
     model_cfg = omegaconf.OmegaConf.load(cfg_path)
     if "model" in model_cfg.model:
         model = hydra.utils.call(model_cfg.model.model)
@@ -48,7 +58,8 @@ def test_model_loading_with_checkpoint(model_name, nocluster):
     if nocluster:
         pytest.skip()
 
-    cfg_path = os.path.join(eaif_models_abs_path, "conf", "model", f"{model_name}.yaml")
+    cfg_path = get_config_path(model_name)
+
     model_cfg = omegaconf.OmegaConf.load(cfg_path)
     model, embedding_dim, transform, metadata = hydra.utils.call(model_cfg)
 

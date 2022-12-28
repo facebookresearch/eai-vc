@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - model: rand_resnet50_none
+  - model: rand_vit_base_none
   - wandb: eaif
 
 device: cuda

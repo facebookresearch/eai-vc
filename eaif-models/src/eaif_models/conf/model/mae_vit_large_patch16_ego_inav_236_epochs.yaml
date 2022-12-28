@@ -13,6 +13,6 @@ metadata:
   algo: mae
   model: vit_large_patch16
   data:
-    - ego_bigger
+    - ego
     - inav
   comment: 236_epochs
