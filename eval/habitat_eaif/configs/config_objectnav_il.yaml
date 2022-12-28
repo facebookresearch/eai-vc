@@ -4,11 +4,13 @@ defaults:
   - experiments@: objectnav_il
   - model: dino_resnet50_omnidata
   - model/transform: jitter_and_shift_objectnav
-  - wandb_habitat@: habitat_eaif
+  - wandb_habitat@: habitat_objectnav_eaif
   - override hydra/output: path
   - override hydra/launcher: slurm_train
 
 RUN_TYPE: train
 NUM_ENVIRONMENTS: 8
-hydra.launcher.nodes: 8
-WANDB.project: habitat_objectnav_eaif
+hydra:
+  launcher:
+    nodes: 8
+

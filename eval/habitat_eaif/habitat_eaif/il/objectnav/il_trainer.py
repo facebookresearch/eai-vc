@@ -38,6 +38,7 @@ from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
     linear_decay,
+    get_checkpoint_id,
 )
 from habitat_baselines.utils.env_utils import construct_envs
 
@@ -90,23 +91,6 @@ class ILEnvTrainer(BaseRLTrainer):
             self.config, observation_space, self.envs.action_spaces[0]
         )
         self.policy.to(self.device)
-
-        # Load pretrained state
-        if self.config.IL.BehaviorCloning.pretrained:
-            pretrained_state = torch.load(
-                self.config.IL.BehaviorCloning.pretrained_weights, map_location="cpu"
-            )
-            logger.info("Loading pretrained state")
-
-        if self.config.IL.BehaviorCloning.pretrained:
-            missing_keys = self.policy.load_state_dict(
-                {
-                    k.replace("model.", ""): v
-                    for k, v in pretrained_state["state_dict"].items()
-                },
-                strict=False,
-            )
-            logger.info("Loading checkpoint missing keys: {}".format(missing_keys))
 
         self.agent = ILAgent(
             model=self.policy,
@@ -202,6 +186,7 @@ class ILEnvTrainer(BaseRLTrainer):
         prev_actions: Tensor,
         batch: Dict[str, Tensor],
         rgb_frames: Union[List[List[Any]], List[List[ndarray]]],
+        episode_length: ndarray,
     ) -> Tuple[
         Union[VectorEnv, RLEnv, Env],
         Tensor,
@@ -210,6 +195,7 @@ class ILEnvTrainer(BaseRLTrainer):
         Tensor,
         Dict[str, Tensor],
         List[List[Any]],
+        ndarray,
     ]:
         # pausing self.envs with no new episode
         if len(envs_to_pause) > 0:
@@ -228,6 +214,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 batch[k] = v[state_index]
 
             rgb_frames = [rgb_frames[i] for i in state_index]
+            episode_length = episode_length[state_index]
 
         return (
             envs,
@@ -237,6 +224,7 @@ class ILEnvTrainer(BaseRLTrainer):
             prev_actions,
             batch,
             rgb_frames,
+            episode_length,
         )
 
     @profiling_wrapper.RangeContext("_collect_rollout_step")
@@ -350,16 +338,21 @@ class ILEnvTrainer(BaseRLTrainer):
         )
 
         if self.wandb_initialized == False:
-            utils.setup_wandb(self.config, train=True, project_name="objectnav_mae")
+            utils.setup_wandb(self.config, train=True)
             self.wandb_initialized = True
 
+        # To handle LSTM input
+        num_rnn_layer_multiplier = (
+            2 if self.config.MODEL.STATE_ENCODER.rnn_type == "LSTM" else 1
+        )
         rollouts = RolloutStorage(
             il_cfg.num_steps,
             self.envs.num_envs,
             self.obs_space,
             self.envs.action_spaces[0],
             self.config.MODEL.STATE_ENCODER.hidden_size,
-            self.config.MODEL.STATE_ENCODER.num_recurrent_layers,
+            self.config.MODEL.STATE_ENCODER.num_recurrent_layers
+            * num_rnn_layer_multiplier,
         )
         rollouts.to(self.device)
 
@@ -495,17 +488,88 @@ class ILEnvTrainer(BaseRLTrainer):
 
             self.envs.close()
 
+    def eval(self) -> None:
+        r"""Main method of trainer evaluation. Calls _eval_checkpoint() that
+        is specified in Trainer class that inherits from BaseRLTrainer
+        or BaseILTrainer
+
+        Returns:
+            None
+        """
+        utils.setup_wandb(self.config, train=False)
+
+        self.device = (
+            torch.device("cuda", self.config.TORCH_GPU_ID)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+
+        if "disk" in self.config.VIDEO_OPTION:
+            assert (
+                len(self.config.VIDEO_DIR) > 0
+            ), "Must specify a directory for storing videos on disk"
+
+        if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
+            # evaluate single checkpoint
+            proposed_index = get_checkpoint_id(self.config.EVAL_CKPT_PATH_DIR)
+
+            if proposed_index is not None:
+                ckpt_idx = proposed_index
+            else:
+                ckpt_idx = 0
+
+            self._eval_checkpoint(
+                self.config.EVAL_CKPT_PATH_DIR,
+                checkpoint_index=ckpt_idx,
+            )
+
+        else:
+            # evaluate multiple checkpoints in order
+            eval_iter_filename = os.path.join(
+                self.config.TENSORBOARD_DIR,
+                "eval_iter_" + str(self.config.EVAL.SPLIT) + ".txt",
+            )
+
+            if os.path.exists(eval_iter_filename):
+                with open(eval_iter_filename, "r") as file:
+                    prev_ckpt_ind = file.read().rstrip("\n")
+                    prev_ckpt_ind = int(prev_ckpt_ind)
+            else:
+                prev_ckpt_ind = self.config.EVAL.FIRST_CHECKPOINT - 1
+
+            while True:
+                current_ckpt = None
+                while current_ckpt is None:
+                    current_ckpt, current_ckpt_idx = utils.poll_checkpoint_folder(
+                        self.config.EVAL_CKPT_PATH_DIR,
+                        prev_ckpt_ind,
+                        self.config.EVAL.EVAL_FREQ,
+                        self.config.NUM_CHECKPOINTS,
+                    )
+                    time.sleep(2)  # sleep for 2 secs before polling again
+
+                logger.info(f"=======current_ckpt: {current_ckpt}=======")
+                prev_ckpt_ind = current_ckpt_idx
+                with open(eval_iter_filename, "w") as file:
+                    file.write(str(prev_ckpt_ind))
+
+                self._eval_checkpoint(
+                    checkpoint_path=current_ckpt,
+                    checkpoint_index=prev_ckpt_ind,
+                )
+
+                if self.config.NUM_CHECKPOINTS - 1 == prev_ckpt_ind:
+                    break
+
     def _eval_checkpoint(
         self,
         checkpoint_path: str,
-        writer: TensorboardWriter,
         checkpoint_index: int = 0,
     ) -> None:
         r"""Evaluates a single checkpoint.
 
         Args:
             checkpoint_path: path of checkpoint
-            writer: tensorboard writer object for logging to tensorboard
             checkpoint_index: index of cur checkpoint for logging
 
         Returns:
@@ -519,10 +583,6 @@ class ILEnvTrainer(BaseRLTrainer):
             config = self._setup_eval_config(ckpt_dict["config"])
         else:
             config = self.config.clone()
-
-        if self.wandb_initialized == False:
-            utils.setup_wandb(self.config, train=False, project_name="objectnav_mae")
-            self.wandb_initialized = True
 
         il_cfg = config.IL.BehaviorCloning
 
@@ -550,8 +610,12 @@ class ILEnvTrainer(BaseRLTrainer):
 
         current_episode_reward = torch.zeros(self.envs.num_envs, 1, device=self.device)
 
+        # To handle LSTM input
+        num_rnn_layer_multiplier = (
+            2 if self.config.MODEL.STATE_ENCODER.rnn_type == "LSTM" else 1
+        )
         test_recurrent_hidden_states = torch.zeros(
-            config.MODEL.STATE_ENCODER.num_recurrent_layers,
+            config.MODEL.STATE_ENCODER.num_recurrent_layers * num_rnn_layer_multiplier,
             config.NUM_PROCESSES,
             config.MODEL.STATE_ENCODER.hidden_size,
             device=self.device,
@@ -569,6 +633,7 @@ class ILEnvTrainer(BaseRLTrainer):
         rgb_frames = [
             [] for _ in range(config.NUM_PROCESSES)
         ]  # type: List[List[np.ndarray]]
+        episode_length = np.zeros(config.NUM_PROCESSES, dtype=np.int32)
         if len(config.VIDEO_OPTION) > 0:
             os.makedirs(config.VIDEO_DIR, exist_ok=True)
 
@@ -640,10 +705,13 @@ class ILEnvTrainer(BaseRLTrainer):
                     episode_stats = {}
                     episode_stats["reward"] = current_episode_reward[i].item()
                     episode_stats.update(self._extract_scalars_from_info(infos[i]))
+                    # episode_stats["episode_length"] = episode_length[i]
                     current_episode_reward[i] = 0
                     logger.info(
-                        "Success: {}, SPL: {}".format(
-                            episode_stats["success"], episode_stats["spl"]
+                        "Success: {}, SPL: {}, episode length: {}".format(
+                            episode_stats["success"],
+                            episode_stats["spl"],
+                            episode_length[i],
                         )
                     )
                     episode_meta.append(
@@ -671,17 +739,17 @@ class ILEnvTrainer(BaseRLTrainer):
                             episode_id=current_episodes[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
-                            tb_writer=writer,
                         )
 
                         rgb_frames[i] = []
+                        episode_length[i] = 0
 
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image({"rgb": batch["rgb"][i]}, infos[i])
                     rgb_frames[i].append(frame)
-
+                episode_length[i] += 1
             (
                 self.envs,
                 test_recurrent_hidden_states,
@@ -690,6 +758,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                episode_length,
             ) = self._pause_envs(
                 envs_to_pause,
                 self.envs,
@@ -699,6 +768,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 prev_actions,
                 batch,
                 rgb_frames,
+                episode_length,
             )
 
         num_episodes = len(stats_episodes)
