@@ -8,7 +8,7 @@ seed: 10
 eval_envs: ["sim_env_demo"]
 # rep_to_policy can be "compression_layer", "linear_layer" or "none". "none" is replicating what we had before
 rep_to_policy: "linear_layer"
-run_name: "test"
+run_name: "tf_bc_test"
 
 
 algo:

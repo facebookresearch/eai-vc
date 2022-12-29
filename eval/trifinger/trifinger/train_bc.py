@@ -97,8 +97,8 @@ def main(conf):
             torch.save(wandb_info, wandb_info_pth)
 
         wandb.init(
-            project=conf.algo.name + "_" + conf.run_name,
-            entity="fmeier",
+            project=conf.run_name,
+            entity="eai-foundations",
             id=wandb_info["id"],
             name=wandb_info["run_name"],
             config=wandb_info["conf_for_wandb"],
