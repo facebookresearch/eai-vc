@@ -7,8 +7,9 @@ model:
     use_cls: true
     del_head: false
 transform:
-  _target_: clip.clip._transform
-  n_px: 224
+  _target_: eaif_models.transforms.clip_transforms
+  resize_size: 224
+  output_size: 224
 metadata:
   algo: clip
   model: vit_base_patch16

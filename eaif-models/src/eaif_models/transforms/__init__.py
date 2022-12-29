@@ -38,6 +38,20 @@ def r3m_transforms(resize_size=256, output_size=224):
     )
 
 
+def clip_transforms(resize_size=256, output_size=224):
+    return T.Compose(
+        [
+            T.Resize(resize_size, interpolation=T.InterpolationMode.BICUBIC),
+            T.CenterCrop(output_size),
+            ToTensorIfNot(),
+            T.Normalize(
+                (0.48145466, 0.4578275, 0.40821073),
+                (0.26862954, 0.26130258, 0.27577711),
+            ),
+        ]
+    )
+
+
 def transform_augment(
     # Resize/crop
     resize_size=256,
