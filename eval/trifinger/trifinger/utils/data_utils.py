@@ -67,9 +67,9 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
     ft_vel_cur = np.array(
         [data[i]["policy"]["controller"]["ft_vel_cur"] for i in range(len(data))]
     )
-    ft_vel_des = np.array(
-        [data[i]["policy"]["controller"]["ft_vel_des"] for i in range(len(data))]
-    )
+    # ft_vel_des = np.array(
+    #    [data[i]["policy"]["controller"]["ft_vel_des"] for i in range(len(data))]
+    # )
 
     t = np.expand_dims(np.array([data[i]["t"] for i in range(len(data))]), 1)
 
@@ -82,7 +82,7 @@ def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
         "ft_pos_cur": scale * ft_pos_cur,
         "ft_pos_des": scale * ft_pos_des,
         "ft_vel_cur": scale * ft_vel_cur,
-        "ft_vel_des": scale * ft_vel_des,
+        # "ft_vel_des": scale * ft_vel_des,
         "position_error": scale * position_error,
         "delta_ftpos": scale * delta_ftpos,
         "robot_pos": robot_pos,
@@ -176,8 +176,8 @@ def downsample_traj_dict(
 
     every_x_steps = max(1, int(new_time_step / cur_time_step))
     num_waypoints = int(traj_dict["t"].shape[0] / every_x_steps)
-    indices_to_take = np.linspace(
-        0, traj_dict["t"].shape[0] - 1, num_waypoints, dtype=int
+    indices_to_take = (
+        np.linspace(1, traj_dict["t"].shape[0], num_waypoints + 1, dtype=int) - 1
     )
 
     new_traj_dict = {}

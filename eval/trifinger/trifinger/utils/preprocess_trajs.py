@@ -21,6 +21,14 @@ demo_dir/
             demo-*.npz     # Raw observations from simulation (list of observation dicts)
             downsample.pth # Downsampled sim trajectories (dict of lists)
             <model>.pth    # Latent-state traj; downsample.pth trajectory passed through <model>
+
+Example command to downsample demos to a desired downsample timestep (dts):
+python utils/preprocess_trajs.py --top_demo_dir /private/home/clairelchen/projects/demos_green_cube/ --dts 0.4 -v
+
+args:
+    --top_demo_dir: path to demo_dir/
+    --dts (float): downsample timestep, should be divisible by 0.004 (sim timestep)
+    -v (optional flag): if specified, will save gifs of downsampled trajectories in each demo-*/
 """
 
 SCALE = 100

@@ -68,7 +68,6 @@ class SimNN:
 
         # Set env based on task
         if self.task == "move_cube":
-            episode_steps = 1000  # TODO hardcoded
 
             self.env = MoveCubeEnv(
                 goal_pose=None,  # passing None to sample a random trajectory
@@ -89,7 +88,6 @@ class SimNN:
             )
 
         elif self.task == "reach_cube":
-            episode_steps = 500  # TODO hardcoded
 
             self.env = CubeReachEnv(
                 action_type=ActionType.TORQUE,
@@ -181,16 +179,15 @@ class SimNN:
     ):
 
         # Reset env and update policy network
-        observation = self.reset(expert_demo_dict, policy_state_dict, encoder=encoder)
-
         observation_list = []
+        observation = self.reset(expert_demo_dict, policy_state_dict, encoder=encoder)
+        observation_list.append(observation)
+
         pred_actions = []
         episode_done = False
         action_counter = 0
         expert_actions = expert_demo_dict["delta_ftpos"]
         while not episode_done:
-
-            observation_list.append(observation)
 
             # Get bc input tensor from observation
             # Scale observation by traj_scale, for bc policy
@@ -247,6 +244,7 @@ class SimNN:
             # action_counter += 1
 
             observation, reward, episode_done, info = self.env.step(pred_action)
+            observation_list.append(observation)
 
         d_utils.add_actions_to_obs(observation_list)
 
@@ -282,7 +280,7 @@ class SimNN:
                 ],
                 {
                     "pred": {
-                        "y": np.array(pred_actions)[:-1],
+                        "y": np.array(pred_actions),
                         "x": expert_demo_dict["t"][:-1],
                         "marker": "x",
                     },

@@ -114,7 +114,7 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
             torch.Tensor(demo["image_60"][-1]).permute((2, 0, 1)) / 255.0
         )  # [3, 270, 270]
 
-        for i in range(num_obs):
+        for i in range(num_obs - 1):
             # Current fingertip positions
             ft_pos_cur = demo["ft_pos_cur"][i]
 

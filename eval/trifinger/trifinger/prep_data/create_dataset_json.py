@@ -9,7 +9,22 @@ import utils.train_utils as t_utils
 from utils.preprocess_trajs import SCALE, get_dts_dir_name
 
 """
-Load train and test trajectories and save them in a .pth file
+Load train and test trajectories and save them in a .json file. Need to already have run utils/preprocess_trajs.py to generate downsampled demos for your desired dts.
+
+Example usage:
+python prep_data/create_dataset_json.py --top_demo_dir /private/home/clairelchen/projects/demos_reach_colored_cube --dts 0.02 --diff_train 110 --diff_test 110 --r_train 0-100 --r_test 100-125
+
+will generate the .json file: /private/home/clairelchen/projects/demos_reach_colored_cube/preloaded_dataset_stats/demos_dtrain-110_train-0-100_dtest-110_test-100-125_scale-100_dts-0p02.json
+
+args:
+    --top_demo_dir: path to demo_dir/
+    --dts (float): downsample timestep, should be divisible by 0.004 (sim timestep)
+    --diff_train: List of difficulties for training set
+    --r_train: List of traj id ranges for each difficulty in diff_train list
+        specified in format "min-max"
+    --diff_test: List of difficulties for est set
+    --r_test: List of traj id ranges for each difficulty in diff_test list
+        specified in format "min-max"
 """
 
 
