@@ -7,7 +7,7 @@ import pickle
 import shutil
 from functools import partial
 from multiprocessing import shared_memory
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Tuple, Union, Optional
 
 import numpy as np
 from iopath.common.file_io import g_pathmgr
@@ -145,7 +145,9 @@ class SharedMemoryNumpyLoader:
         self.sm = None
         self.sm_name = None
 
-    def load(self, path_list: List[str]) -> np.ndarray:
+    def load(
+        self, path_list: List[str], every_k_images: Optional[int] = None
+    ) -> np.ndarray:
         """Attempts to load data from a list of paths. Each element is tried (in order)
         until a file that exists is found. That file is then used to read the data.
         """
@@ -165,7 +167,7 @@ class SharedMemoryNumpyLoader:
         # all other GPU parent processes and dataloaders read from shared memory
         if is_local_primary() and not is_torch_dataloader_worker():
             # this is the local rank 0 process
-            arr = load_file(path)
+            arr = load_file(path, every_k_images=every_k_images)
             assert isinstance(
                 arr, np.ndarray
             ), f"arr is not an ndarray. found {type(arr)}"
@@ -216,7 +218,7 @@ class SharedMemoryNumpyLoader:
 
 
 # Copied from vissl.utils.io
-def load_file(filename, mmap_mode=None):
+def load_file(filename, mmap_mode=None, every_k_images=None):
     """
     Common i/o utility to handle loading data from various file formats.
     Supported:
@@ -265,6 +267,8 @@ def load_file(filename, mmap_mode=None):
             )  # use np.ndarray for shared memory
     else:
         raise Exception(f"Reading from {file_ext} is not supported yet")
+    if every_k_images is not None:
+        data = data[::every_k_images]
     return data
 
 

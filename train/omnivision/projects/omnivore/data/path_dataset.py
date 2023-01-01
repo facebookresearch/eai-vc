@@ -228,6 +228,28 @@ class ImagePathDataset(PathDataset):
             return Image.open(fopen).convert("RGB")
 
 
+class ImagePathDatasetEveryK(ImagePathDataset):
+    def __init__(self, every_k_images: int, *args, **kwargs):
+        self.every_k_images = every_k_images
+        super().__init__(*args, **kwargs)
+
+    def _load_data(self):
+        logging.info(f"Loading {self.path_file_list} with shared memory")
+        self.paths, path_file_idx = self.path_sm_loader.load(
+            self.path_file_list, every_k_images=self.every_k_images
+        )
+        if self.label_file_list is not None:
+            logging.info(f"Loading {self.label_file_list} with shared memory")
+            self.labels, label_file_idx = self.label_sm_loader.load(
+                self.label_file_list, every_k_images=self.every_k_images
+            )
+            assert (
+                label_file_idx == path_file_idx
+            ), "Label file and path file were not found at the same index"
+        self.is_initialized = True
+        self.file_idx = path_file_idx
+
+
 class ImageWithDepthPathDataset(ImagePathDataset):
     def __init__(
         self,
