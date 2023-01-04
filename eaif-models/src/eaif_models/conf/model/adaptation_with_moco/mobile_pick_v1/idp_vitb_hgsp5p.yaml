@@ -1,0 +1,19 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.vit.vit.load_contrastive_vit
+  checkpoint_path: /checkpoint/yixinlin/eaif/models/adaptation/moco_modified/rand_vitb_mobilepick_v1.pth
+  model:
+    _target_: eaif_models.models.vit.vit.vit_base_patch16
+    img_size: 224
+    use_cls: True
+    drop_path_rate: 0.0
+transform:
+  _target_: eaif_models.transforms.vit_transforms
+metadata:
+  pretrain_algo: "None"
+  adapt_algo: "moco++"
+  starting_pt: "rand_vitb"
+  pretrain_data: "None"
+  adapt_data: "MobilePick (50K frames)"
+  model: vit_base_patch16
+  comment: In-domain SSL using 50K frames from mobile pick domain
