@@ -1,0 +1,11 @@
+defaults:
+  - _self_
+  - data: base
+  - environment: base
+  - logging: base
+  - model: base
+  - optim: base
+  - hydra: base
+
+crop_min: 0.08  # minimum scale for random cropping (default: 0.08)
+
