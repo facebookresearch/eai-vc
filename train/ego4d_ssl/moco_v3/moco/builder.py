@@ -22,7 +22,9 @@ class MoCo(nn.Module):
         # build encoders
         if load_path not in [None, ""]:
             self.base_encoder = load_pretrained_model(base_encoder, load_path, mlp_dim)
-            self.momentum_encoder = load_pretrained_model(base_encoder, load_path, mlp_dim)
+            self.momentum_encoder = load_pretrained_model(
+                base_encoder, load_path, mlp_dim
+            )
         else:
             self.base_encoder = base_encoder(num_classes=mlp_dim)
             self.momentum_encoder = base_encoder(num_classes=mlp_dim)
@@ -203,23 +205,30 @@ def load_pretrained_model(
         model = load_mae_encoder(model, load_path)
     else:
         if any(["base_encoder" in k for k in old_state_dict.keys()]):
-            print("Trying to load model as | Arch = %s | Pretraining alg = MoCo-v3" % arch)
+            print(
+                "Trying to load model as | Arch = %s | Pretraining alg = MoCo-v3" % arch
+            )
             state_dict = load_moco_checkpoint(load_path, moco_version="v3")
         elif any(["module.convnet" in k for k in old_state_dict.keys()]):
             print("Trying to load model as | Arch = %s | Pretraining alg = R3M" % arch)
             from eaif_models.models.resnet.resnet import load_r3m_checkpoint
-            state_dict = load_r3m_checkpoint(checkpoint_path=load_path)           
+
+            state_dict = load_r3m_checkpoint(checkpoint_path=load_path)
         else:
-            print("Trying to load model as | Arch = %s | Pretraining alg = MoCo-v2" % arch)
+            print(
+                "Trying to load model as | Arch = %s | Pretraining alg = MoCo-v2" % arch
+            )
             state_dict = load_moco_checkpoint(load_path, moco_version="v2")
         msg = model.load_state_dict(state_dict, strict=False)
-        assert (
-            set(msg.missing_keys) == {"fc.weight", "fc.bias"} or     # resnet
-            set(msg.missing_keys) == {'head.bias', 'head.weight'}    # vit
-        )
+        assert set(msg.missing_keys) == {"fc.weight", "fc.bias"} or set(  # resnet
+            msg.missing_keys
+        ) == {
+            "head.bias",
+            "head.weight",
+        }  # vit
         # print(msg)
     return model
-    
+
 
 def load_moco_checkpoint(checkpoint_path, moco_version="v2"):
     assert moco_version in ["v2", "v3"], "MoCo version has to be either v2 or v3"
@@ -229,14 +238,17 @@ def load_moco_checkpoint(checkpoint_path, moco_version="v2"):
     for k in list(old_state_dict.keys()):
         if moco_version == "v2":
             # retain only encoder_q up to before the embedding layer
-            if k.startswith("module.encoder_q") and not k.startswith("module.encoder_q.fc"):
+            if k.startswith("module.encoder_q") and not k.startswith(
+                "module.encoder_q.fc"
+            ):
                 # remove prefix
                 state_dict[k[len("module.encoder_q.") :]] = old_state_dict[k]
         else:
             # retain only base_encoder up to before the embedding layer
             if k.startswith("module.base_encoder") and not (
-                    k.startswith("module.base_encoder.head") or k.startswith("module.base_encoder.fc")
-                ):
+                k.startswith("module.base_encoder.head")
+                or k.startswith("module.base_encoder.fc")
+            ):
                 # remove prefix
                 updated_key = k[len("module.base_encoder.") :]
                 state_dict[updated_key] = old_state_dict[k]
@@ -266,30 +278,37 @@ def load_mae_encoder(model, checkpoint_path=None):
     }
 
     msg = model.load_state_dict(state_dict, strict=False)
-    assert set(msg.missing_keys) == {'head.bias', 'head.weight'}
+    assert set(msg.missing_keys) == {"head.bias", "head.weight"}
     # print(msg)
     return model
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     # check if prior moco-v3 models can be loaded
     from functools import partial
     import torchvision
     import moco_vit
+
     model = load_pretrained_model(
-        base_encoder=partial(torchvision.models.__dict__["resnet50"], zero_init_residual=True),
+        base_encoder=partial(
+            torchvision.models.__dict__["resnet50"], zero_init_residual=True
+        ),
         load_path="/checkpoint/aravraj/moco_v3/moco_v3_rn50_try1/checkpoints/moco_v3_rn50_try1/checkpoint_0024.pth",
         dim=256,
     )
 
     model = load_pretrained_model(
-        base_encoder=partial(torchvision.models.__dict__["resnet50"], zero_init_residual=True),
+        base_encoder=partial(
+            torchvision.models.__dict__["resnet50"], zero_init_residual=True
+        ),
         load_path="/checkpoint/yixinlin/eaif/models/moco_ego4d/moco_ego4d_5m.pth",
         dim=256,
     )
 
     model = load_pretrained_model(
-        base_encoder=partial(torchvision.models.__dict__["resnet50"], zero_init_residual=True),
+        base_encoder=partial(
+            torchvision.models.__dict__["resnet50"], zero_init_residual=True
+        ),
         load_path="/checkpoint/yixinlin/eaif/models/r3m/r3m_50/model.pt",
         dim=256,
     )
@@ -299,7 +318,7 @@ if __name__=="__main__":
         load_path="/checkpoint/aravraj/moco_v3/moco-v3_vitb_adroit_IDP_try1/checkpoints/moco-v3_vitb_adroit_IDP_try1/checkpoint_0299.pth",
         dim=256,
     )
-    
+
     model = load_pretrained_model(
         base_encoder=partial(moco_vit.__dict__["vit_base"]),
         load_path="/checkpoint/yixinlin/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth",

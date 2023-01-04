@@ -253,7 +253,7 @@ def main_worker(gpu, ngpus_per_node, args):
             transforms=[
                 transforms.Compose(augmentation1),
                 transforms.Compose(augmentation2),
-            ]
+            ],
         )
     else:
         raise NotImplementedError
