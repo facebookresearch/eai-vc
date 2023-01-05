@@ -64,3 +64,57 @@ def expand_pos_embedding(
     new_pos_embed[:, :old_n_tokens, :] = old_pos_embed
     state_dict[pos_embedding_key] = new_pos_embed
     return state_dict
+
+
+def load_mae_checkpoint(
+    checkpoint_paths: List[str],
+    map_location: str = "cpu",
+    remove_cls: bool = False,
+    rename_patch_embed: bool = True,
+):
+    selected_path = None
+    for path in checkpoint_paths:
+        if g_pathmgr.exists(path):
+            selected_path = path
+            break
+
+    if selected_path is None:
+        raise ValueError(f"No checkpoint found among: {checkpoint_paths}")
+
+    with g_pathmgr.open(selected_path, "rb") as f:
+        checkpoint = torch.load(f, map_location=map_location)
+
+    ignore_keys = ["mask_token", "decoder_pos_embed"]
+    if remove_cls:
+        ignore_keys.append("cls_token")
+
+    state_dict = {}
+    for k, v in checkpoint["model"].items():
+        if k in ignore_keys:
+            continue
+
+        # patch embedding
+        if rename_patch_embed:
+            k = k.replace("patch_embed.proj", "patch_embed.proj.1")
+            if k == "patch_embed.proj.1.weight":
+                v = torch.unsqueeze(v, 2)
+
+        # position embedding
+        if remove_cls and k == "pos_embed":
+            v = v[:, 1:]
+
+        # decoder
+        k = k.replace("decoder_embed", "decoder.decoder_embed")
+        k = k.replace("decoder_blocks", "decoder.decoder_blocks")
+        k = k.replace("decoder_norm", "decoder.norm")
+        k = k.replace("decoder_pos_embed", "decoder.pos_embed")
+
+        # add trunk
+        k = "trunk." + k
+
+        # rename head
+        k = k.replace("trunk.decoder_pred", "heads.0.projector")
+
+        state_dict[k] = v
+
+    return state_dict

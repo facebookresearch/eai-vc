@@ -509,6 +509,11 @@ def get_jobs_to_run_per_config(args, config_path):
         "++launcher.experiment_log_dir": "$EXP_DIR",
     }  # TODO: Change this to Ordered Dict
 
+    if args.extra_hydra_overrides is not None:
+        for item in args.extra_hydra_overrides:
+            k, v = item.split("=")
+            hydra_overrides[k] = v
+
     EXP_DIR, LOCAL_EXP_DIR = get_exp_dir(args)
 
     dst_base_dir = EXP_DIR
@@ -520,7 +525,9 @@ def get_jobs_to_run_per_config(args, config_path):
         dst_base_dir = "/checkpoint/yixinlin/eaif/results/omnivision"
 
     # add dated folder
-    dst_base_dir = os.path.join(dst_base_dir, datetime.now().strftime("%Y-%m-%d"))
+    dst_base_dir = os.path.join(
+        dst_base_dir, datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    )
 
     overall_exp_dir = os.path.join(dst_base_dir, config_path).replace(
         "${USER}", getpass.getuser()
@@ -750,6 +757,8 @@ def main():
     )
 
     parser.add_argument("--opts", default=None, nargs="+")
+
+    parser.add_argument("--extra-hydra-overrides", default=None, nargs="+")
 
     args = parser.parse_args()
 

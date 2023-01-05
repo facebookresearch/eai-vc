@@ -1,0 +1,196 @@
+# @package _global_
+# Modified from omnivision/projects/omnivore/config/experiments/kalyanv/no_lightning/v0.1/0016_mae_vitbase_concat.yaml
+
+
+base_batchsize_per_replica: 128
+
+transforms:
+  - _target_: omnivore.data.transforms.transform_wrappers.VisionTransform
+    base_transform:
+      _target_: torchvision.transforms.Compose
+      transforms:
+        - _target_: torchvision.transforms.RandomResizedCrop
+          size: 224
+          scale: [0.2, 1.0]
+          interpolation: 3
+        - _target_: torchvision.transforms.RandomHorizontalFlip
+          p: 0.5
+        - _target_: torchvision.transforms.ToTensor
+        - _target_: torchvision.transforms.Normalize
+          mean: [0.485, 0.456, 0.406]
+          std: [0.229, 0.224, 0.225]
+  - _target_: omnivore.data.transforms.transform_wrappers.MaskingTransform
+    masking_object:
+      _target_: omnivore.data.transforms.mask_image_modeling.MaskImageModeling
+      pred_ratio: 0.75
+      pred_ratio_var: 0.0
+      pred_shape:
+        _target_: omnivore.data.transforms.mask_image_modeling.RandMasking
+      patch_size:
+        - 1
+        - ${trainer.model.model.trunk.patch_size}
+        - ${trainer.model.model.trunk.patch_size}
+
+trainer:
+  _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
+  max_epochs: 1600
+  accelerator: cuda
+  seed_value: 123
+  mode: train
+
+  data:
+    train:
+      _target_: omnivore.data.torch_dataset.TorchDataset
+      dataset:
+        _target_: omnivore.data.path_dataset.ImagePathDataset
+        path_file_list: ???
+        transforms: ${transforms}
+      shuffle: True
+      batch_size: ${base_batchsize_per_replica}
+      num_workers: 10
+      pin_memory: True
+      drop_last: True
+      collate_fn:
+        _target_: omnivore.data.api.DefaultOmnivoreCollator
+        output_key: ssv2
+      worker_init_fn: NULL
+    val: NULL
+
+  model:
+    _target_: omnivision.model.checkpoint_utils.load_state_dict_into_model
+    strict: False
+    state_dict:
+      _target_: omnivore.models.checkpoint_utils.load_mae_checkpoint
+      checkpoint_paths: ???
+      map_location: cpu
+      remove_cls: False
+      rename_patch_embed: False
+    model:
+      _target_: omnivision.model.model_wrappers.MIMOHeadWrapper
+      trunk:
+        _target_: omnivore.models.vision_transformer.VisionTransformer
+        img_size: 224
+        embed_dim: 768
+        depth: 12
+        patch_size: 16
+        classifier_feature: global_pool
+        drop_path_rate: 0.0
+        use_cls_token: True
+        attn_target:
+          _target_: omnivore.models.vision_transformer.Attention
+          _partial_: True
+          num_heads: 12
+          proj_drop: 0
+          qk_scale: NULL
+          qkv_bias: True
+          attn_drop: 0
+        learnable_pos_embed: False  # Use sinusoidal positional encoding
+        patch_embed_type: linear
+        masked_image_modeling: True
+        patch_dropping: True
+        decoder:
+          _target_: omnivore.models.vision_transformer.Decoder
+          _partial_: True
+          embed_dim: ${trainer.model.model.trunk.embed_dim}
+          decoder_depth: 8
+          decoder_embed_dim: 512
+          learnable_pos_embed: False  # Use sinusoidal positional encoding
+          attn_target:
+            _target_: omnivore.models.vision_transformer.Attention
+            _partial_: True
+            num_heads: 16
+            proj_drop: 0
+            qk_scale: NULL
+            qkv_bias: True
+            attn_drop: 0
+      heads:
+      - head:
+          _target_: omnivore.models.heads.mae_head.MAEHead
+          in_features: ${trainer.model.model.trunk.decoder.decoder_embed_dim}
+          out_features: 768
+        input_key: NULL
+        output_key: NULL
+        fork_module: ""
+      trunk_fields:
+        - input_key: NULL
+          args: ["vision"]
+          kwargs: {"mask": "mask"}
+  optim:
+    gradient_clip:
+      _target_: omnivore.optim.helpers.GradientClipper
+      max_norm: 0.02
+      norm_type: 2
+    amp:
+      enabled: True
+      amp_dtype: float16 # bfloat16 or float16
+
+    optimizer:
+      _target_: torch.optim.AdamW
+      betas: [0.9, 0.95]
+    options:
+      lr:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.CompositeParamScheduler
+            schedulers:
+              - _target_: fvcore.common.param_scheduler.LinearParamScheduler
+                start_value: 1e-6
+                end_value: 1.6e-3  # 8e-4 in orig config
+              - _target_: fvcore.common.param_scheduler.CosineParamScheduler
+                start_value: ${..0.end_value}
+                end_value: 0.0
+            lengths: [0.05, 0.95]  # warm for 40 epochs
+            interval_scaling: ['rescaled', 'fixed']
+      weight_decay:
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.05
+        - scheduler:
+            _target_: fvcore.common.param_scheduler.ConstantParamScheduler
+            value: 0.0
+          param_names:
+            - '*.bias'
+          module_cls_names: ['torch.nn.LayerNorm']
+
+  meters: NULL
+
+  loss:
+    ssv2:
+      _target_: omnivore.losses.mae_loss.MAELoss
+      norm_pix_loss: True
+      norm_pix_per_channel: True
+      patch_size: ${trainer.model.model.trunk.patch_size}
+      unnormalize_img:
+        - [0.485, 0.456, 0.406]
+        - [0.229, 0.224, 0.225]
+
+  logging:
+    tensorboard_writer:
+      _target_: omnivore.logger.make_tensorboard_logger
+      log_dir:  ${launcher.experiment_log_dir}/tensorboard
+      flush_secs: 120
+      wandb: true
+      wandb_name: ${launcher.experiment_name}
+    log_dir: ${launcher.experiment_log_dir}/logs
+    log_freq: 10
+
+  checkpoint:
+    save_dir: ${launcher.experiment_log_dir}/checkpoints
+    save_freq: 0 # 0 only last checkpoint is saved.
+
+
+launcher:
+  num_nodes: 4
+  gpus_per_node: 8
+  experiment_name: ???
+  experiment_log_dir: ???
+
+submitit:
+  name: "omnivision_omnivore"
+  timeout_hour: 72
+  cpus_per_task: 10
+  partition: "learnlab"
+  mem: "470GB"
+  constraints: "volta32gb"
+  use_cluster: True
+
+  port_range: [10000, 65000]
