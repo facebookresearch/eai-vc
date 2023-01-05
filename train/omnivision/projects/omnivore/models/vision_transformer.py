@@ -758,6 +758,8 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         to zero.
         """
         corrected_mask = mask.detach().clone()  # copy mask
+        if mask.ndim < 4:
+            return corrected_mask
 
         # get minimum number of masked patches (i.e. 1s) per timestep
         min_ones = min(m.sum() for el in corrected_mask for m in el)
