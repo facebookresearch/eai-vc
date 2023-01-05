@@ -1,0 +1,12 @@
+# run:
+#     dir: /checkpoint/${env:USER}/moco_diff_aug/${logging.name}/outputs/
+# sweep:
+#     dir: /checkpoint/${env:USER}/moco_diff_aug/${logging.name}/outputs/
+#     subdir: ID${hydra.job.id} 
+run:
+    # dir: /checkpoint/${env:USER}/moco_diff_aug/${logging.name}/outputs/
+    dir: ./outputs/${logging.name}/${now:%Y-%m-%d}_${now:%H-%M-%S}
+    # dir: /checkpoint/${env:USER}/moco_v3/${logging.name}/${now:%Y-%m-%d}_${now:%H-%M-%S}/
+sweep:
+    dir: /checkpoint/${env:USER}/moco_v3/${logging.name}/${now:%Y-%m-%d}_${now:%H-%M-%S}/outputs/
+    subdir: ID${hydra.job.id} 

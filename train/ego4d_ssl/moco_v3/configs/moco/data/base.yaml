@@ -1,0 +1,6 @@
+type: 'standard'
+frameskip: 1                                 # used only for type=picklepaths
+train_filelist: './datasets/ego4d_100k.txt'  # command line argument required for training
+val_filelist:   './datasets/ego4d_100k.txt'  # not used anywhere
+augmentations: 'all'                         # uses MoCo v2 augmentations
+imsize: 224

@@ -1,0 +1,13 @@
+optimizer: 'adamw'
+lr: 1.5e-4
+# lr: 5e-5   # LR appears to get scaled with batch size. Trying a smaller lr.
+weight_decay: 0.1
+momentum: 0.9
+batch_size: 256
+epochs: 300
+warmup_epochs: 40
+start_epoch: 0
+
+
+schedule: [120, 160]
+cos: True

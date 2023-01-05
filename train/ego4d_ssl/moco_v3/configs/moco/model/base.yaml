@@ -1,0 +1,15 @@
+arch: 'vit_small'
+stop_grad_conv1: True
+moco_dim: 256
+moco_mlp_dim: 4096
+moco_t: 0.2
+sync_bn: True
+moco_m: 0.99
+moco_m_cos: True
+load_path: ''
+
+# moco_k: 65536
+# moco_m: 0.999
+# mlp: True
+# pretrained: False
+# load_path: ''
