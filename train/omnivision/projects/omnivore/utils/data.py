@@ -289,33 +289,65 @@ def paths_to_clips(paths, every_k=None, min_num_frames=None):
     every_k = 1 if every_k is None else every_k
     min_num_frames = 2 if min_num_frames is None else min_num_frames
 
+    # save start and end index for each video in path list
     videos = {}
-    for path in paths:
+    for idx, path in enumerate(paths):
         vidname = os.path.split(path)[0]
         if vidname not in videos:
             videos[vidname] = []
-        videos[vidname].append(path)
+        else:
+            # check that indices are consecutive
+            assert videos[vidname][-1] == idx - 1
+        videos[vidname].append(idx)
 
     clips = []
     for k, v in videos.items():
+        # check number of frames in clip
         frames = [i for i in range(0, len(v), every_k)]
         if len(frames) < min_num_frames:
             logging.warning(
                 f"Dropping vid {k} with length {len(frames)} < {min_num_frames}"
             )
             continue
-
-        for start in range(len(frames) - min_num_frames + 1):
-            clip = [v[f] for f in frames[start : start + min_num_frames]]
-            # HACK: compress paths by only storing the full path of the first
-            # frame and just the filename for the rest
-            clip = clip[:1] + [os.path.split(p)[1] for p in clip[1:]]
-            clips.append(clip)
+        clips.append((v[0], v[-1]))
 
     clips = np.array(clips)
 
     logging.info("Converting paths to clips... done!")
     return clips
+
+
+def _create_shared_memory(sm_name, arr):
+    assert isinstance(arr, np.ndarray), f"arr is not an ndarray. found {type(arr)}"
+    logging.info(f"Moving data files to shared memory: {sm_name}")
+    try:
+        sm = shared_memory.SharedMemory(name=sm_name, create=True, size=arr.nbytes)
+    except FileExistsError:
+        logging.info("Shared memory already exists, closing it out and recreating")
+        sm_old = shared_memory.SharedMemory(name=sm_name, create=False)
+        sm_old.close()
+        sm_old.unlink()
+        sm = shared_memory.SharedMemory(name=sm_name, create=True, size=arr.nbytes)
+    sm_arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=sm.buf)
+    sm_arr[:] = arr[:]
+    # barrier for all (non-dataloader) process to ensure the data is
+    # available on all GPUs
+    barrier()
+    broadcast_object(sm_arr.shape)  # arr_shape
+    broadcast_object(sm_arr.dtype)  # arr_type
+    return sm, sm_arr
+
+
+def _wait_for_shared_memory(sm_name):
+    if not is_torch_dataloader_worker():
+        # parent process on a GPU which isn't local rank 0; wait for barrier
+        barrier()
+        arr_shape = broadcast_object(None)
+        arr_dtype = broadcast_object(None)
+    logging.info(f"Loading data files from shared memory: {sm_name}")
+    sm = shared_memory.SharedMemory(name=sm_name, create=False)
+    sm_arr = np.ndarray(shape=arr_shape, dtype=arr_dtype, buffer=sm.buf)
+    return sm, sm_arr
 
 
 class SharedMemoryVideoLoader:
@@ -326,76 +358,67 @@ class SharedMemoryVideoLoader:
     """
 
     def __init__(self):
-        self.sm = None
-        self.sm_name = None
+        self.paths_sm, self.paths_sm_name = None, None
+        self.clips_sm, self.clips_sm_name = None, None
 
     def load(
-        self, path_list: List[str], every_k: int, min_num_frames: int
+        self,
+        path_list: List[str],
+        every_k: int,
+        min_num_frames: int,
+        repeat_factor: int,
     ) -> np.ndarray:
         """Attempts to load data from a list of paths. Each element is tried (in order)
         until a file that exists is found. That file is then used to read the data.
         """
-        if self.sm is not None:
+        if self.paths_sm is not None or self.clips_sm is not None:
             raise RuntimeError("Cannot load multiple objects with the same loader")
 
-        path_exists, path, idx = list_of_paths_to_path(path_list)
+        path_exists, path, _ = list_of_paths_to_path(path_list)
 
         if not path_exists:
             raise ValueError(f"No path exists in {path_list}")
 
-        self.sm_name = (
+        base_sm_name = (
             "".join([x if x.isalnum() else "_" for x in path]) + f"_{getpass.getuser()}"
         )
+        self.paths_sm_name = base_sm_name + "_paths"
+        self.clips_sm_name = base_sm_name + "_clips"
 
         # we only read from local rank 0 parent process on a machine
         # all other GPU parent processes and dataloaders read from shared memory
         if is_local_primary() and not is_torch_dataloader_worker():
             # this is the local rank 0 process
-            arr = paths_to_clips(load_file(path), every_k, min_num_frames)
-            assert isinstance(
-                arr, np.ndarray
-            ), f"arr is not an ndarray. found {type(arr)}"
-            logging.info(f"Moving data files to shared memory: {self.sm_name}")
-            try:
-                sm = shared_memory.SharedMemory(
-                    name=self.sm_name, create=True, size=arr.nbytes
-                )
-            except FileExistsError:
-                logging.info(
-                    "Shared memory already exists, closing it out and recreating"
-                )
-                sm_old = shared_memory.SharedMemory(name=self.sm_name, create=False)
-                sm_old.close()
-                sm_old.unlink()
-                sm = shared_memory.SharedMemory(
-                    name=self.sm_name, create=True, size=arr.nbytes
-                )
-            sm_arr = np.ndarray(arr.shape, dtype=arr.dtype, buffer=sm.buf)
-            sm_arr[:] = arr[:]
-            # barrier for all (non-dataloader) proceses to ensure the data is
-            # available on all GPUs
-            barrier()
-            broadcast_object(sm_arr.shape)  # arr_shape
-            broadcast_object(sm_arr.dtype)  # arr_type
+            paths_arr = load_file(path)
+            clips_arr = paths_to_clips(paths_arr, every_k, min_num_frames)
+            clips_arr = np.tile(clips_arr, (repeat_factor, 1))
+
+            paths_sm, paths_sm_arr = _create_shared_memory(
+                self.paths_sm_name, paths_arr
+            )
+            clips_sm, clips_sm_arr = _create_shared_memory(
+                self.clips_sm_name, clips_arr
+            )
         else:
-            if not is_torch_dataloader_worker():
-                # parent process on a GPU which isn't local rank 0; wait for barrier
-                barrier()
-                arr_shape = broadcast_object(None)
-                arr_dtype = broadcast_object(None)
-            logging.info(f"Loading data files from shared memory: {self.sm_name}")
-            sm = shared_memory.SharedMemory(name=self.sm_name, create=False)
-            sm_arr = np.ndarray(shape=arr_shape, dtype=arr_dtype, buffer=sm.buf)
+            paths_sm, paths_sm_arr = _wait_for_shared_memory(self.paths_sm_name)
+            clips_sm, clips_sm_arr = _wait_for_shared_memory(self.clips_sm_name)
         # need to keep a reference to the shared memory otherwise it will get
         # garbage collected and result in a segfault
-        self.sm = sm
-        return sm_arr, idx
+        self.paths_sm = paths_sm
+        self.clips_sm = clips_sm
+        return paths_sm_arr, clips_sm_arr
 
     def __del__(self):
         # FIXME: this doesn't seem to be working on the FAIR cluster
-        if self.sm is None:
+        if self.paths_sm is None and self.clips_sm is None:
             return
-        self.sm.close()
-        if is_local_primary() and not is_torch_dataloader_worker():
-            logging.info(f"Unlinking shared memory: {self.sm_name}")
-            self.sm.unlink()
+        if self.paths_sm is not None:
+            self.paths_sm.close()
+            if is_local_primary() and not is_torch_dataloader_worker():
+                logging.info(f"Unlinking shared memory: {self.paths_sm_name}")
+                self.paths_sm.unlink()
+        if self.clips_sm is not None:
+            self.clips_sm.close()
+            if is_local_primary() and not is_torch_dataloader_worker():
+                logging.info(f"Unlinking shared memory: {self.clips_sm_name}")
+                self.clips_sm.unlink()

@@ -886,44 +886,51 @@ class VideoPathDatasetFromClips(Dataset):
         path_file_list: List[str],
         frames_per_vid: int = 16,
         every_k: int = 1,
+        repeat_factor: int = 1,
         randomly_reverse: bool = False,
         transforms: Optional[List[callable]] = None,
     ):
         self.path_file_list = path_file_list
         self.every_k = every_k
+        self.repeat_factor = repeat_factor
         self.frames_per_video = frames_per_vid
         self.randomly_reverse = randomly_reverse
         self.transforms = [] if transforms is None else transforms
 
-        self.file_idx = None
+        self.paths = None
         self.clips = None
 
         # used for shared memory
         self.sm_loader = SharedMemoryVideoLoader()
 
         self._load_data()
+        self.num_frames = len(self.paths)
         self.num_samples = len(self.clips)
         logging.info(
-            f"Created dataset from {self.path_file_list} of length: {self.num_samples}"
+            f"Created dataset from {self.path_file_list} of length: {self.num_samples:,} ({self.num_frames:,} frames)"
         )
 
     def _load_data(self):
         logging.info(f"Loading {self.path_file_list} with shared memory")
-        self.clips, self.file_idx = self.sm_loader.load(
+        self.paths, self.clips = self.sm_loader.load(
             self.path_file_list,
             every_k=self.every_k,
             min_num_frames=self.frames_per_video,
+            repeat_factor=self.repeat_factor,
         )
 
     def __len__(self):
         return self.num_samples
 
-    @staticmethod
-    def expand_paths(paths):
-        """HACK: undo path compression."""
-        first_path = paths[0]
-        root = os.path.split(first_path)[0]
-        return paths[:1] + [os.path.join(root, fname) for fname in paths[1:]]
+    def sample_frames(self, idx: int) -> List[str]:
+        video_start, video_stop = self.clips[idx]
+        all_frames = list(range(video_start, video_stop + 1, self.every_k))
+        all_starts = list(range(len(all_frames) - self.frames_per_video + 1))
+        clip_start = np.random.choice(all_starts)
+        frames = all_frames[clip_start : clip_start + self.frames_per_video]
+        if self.randomly_reverse and np.random.rand() > 0.5:
+            frames = list(reversed(frames))
+        return [self.paths[f] for f in frames]
 
     @staticmethod
     def images_to_clip(images):
@@ -941,20 +948,17 @@ class VideoPathDatasetFromClips(Dataset):
         with g_pathmgr.open(path, "rb") as fopen:
             return Image.open(fopen).convert("RGB")
 
-    def load_object(self, idx):
-        paths = self.clips[idx].tolist()
-        paths = self.expand_paths(paths)  # HACK
-        if self.randomly_reverse:
-            paths = list(reversed(paths))
+    def load_object(self, paths):
         images = [self.load_image(p) for p in paths]
         return self.images_to_clip(images)
 
     def try_load_object(self, idx):
         is_success = True
         try:
-            data = self.load_object(idx)
+            paths = self.sample_frames(idx)
+            data = self.load_object(paths)
         except Exception:
-            logging.warning(f"Couldn't load: {idx}.")
+            logging.warning(f"Couldn't load: {paths}.")
             logging.debug("Exception: ", exc_info=True)
             is_success = False
             data = self.default_generator()

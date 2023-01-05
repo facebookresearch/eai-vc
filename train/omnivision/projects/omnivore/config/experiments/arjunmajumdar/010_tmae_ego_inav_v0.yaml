@@ -39,7 +39,7 @@ transforms:
 
 trainer:
   _target_: omnivore.trainer.omnivision_trainer.OmnivisionTrainer
-  max_epochs: 336  # equivalent to 800 * (1341918 / 4096) MAE updates
+  max_epochs: 244  # equivalent to 800 * (1341918 / 4096) MAE updates
   accelerator: cuda
   seed_value: 123
   mode: train
@@ -49,20 +49,15 @@ trainer:
       _target_: omnivore.data.concat_dataset.ConcatDataset
       max_steps: sum
       datasets:
-      ### Ego 
-      - _target_: omnivore.data.torch_dataset.TorchDataset
+      - _target_: omnivore.data.torch_dataset.TorchDataset  # Ego4D 14M
         dataset:
-          _target_: omnivore.data.path_dataset.VideoPathDataset
+          _target_: omnivore.data.path_dataset.VideoPathDatasetFromClips
+          frames_per_vid: 4
+          every_k: 1
+          randomly_reverse: True
+          repeat_factor: 150
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_video_manifest.txt
-          clip_sampler:
-            _target_: pytorchvideo.data.clip_sampling.RandomClipSampler
-            clip_duration: 4
-          frame_sampler:
-            _target_: pytorchvideo.transforms.UniformTemporalSubsample
-            num_samples: 4
-          decoder: pyav
-          normalize_to_0_1: True
+            - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_14m_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}
@@ -76,7 +71,7 @@ trainer:
             model_fwd_kwargs:
               use_checkpoint: True  # TODO: Try False
         worker_init_fn: NULL
-      # - _target_: omnivore.data.torch_dataset.TorchDataset
+      # - _target_: omnivore.data.torch_dataset.TorchDataset  # 100DOH
       #   dataset:
       #     _target_: omnivore.data.path_dataset.VideoPathDatasetFromClips
       #     frames_per_vid: 4
@@ -97,12 +92,13 @@ trainer:
       #       model_fwd_kwargs:
       #         use_checkpoint: True  # TODO: Try False
       #   worker_init_fn: NULL
-      - _target_: omnivore.data.torch_dataset.TorchDataset
+      - _target_: omnivore.data.torch_dataset.TorchDataset  # Epic Kitchens
         dataset:
           _target_: omnivore.data.path_dataset.VideoPathDatasetFromClips
           frames_per_vid: 4
           every_k: 30
           randomly_reverse: True
+          repeat_factor: 246
           path_file_list:
             - /checkpoint/yixinlin/eaif/datasets/manifests/epic_kitchens_manifest.txt
           transforms: ${transforms}
@@ -118,12 +114,13 @@ trainer:
             model_fwd_kwargs:
               use_checkpoint: True  # TODO: Try False
         worker_init_fn: NULL
-      - _target_: omnivore.data.torch_dataset.TorchDataset
+      - _target_: omnivore.data.torch_dataset.TorchDataset  # SSv2
         dataset:
           _target_: omnivore.data.path_dataset.VideoPathDatasetFromClips
           frames_per_vid: 4
           every_k: 30
           randomly_reverse: True
+          repeat_factor: 1
           path_file_list:
             - /checkpoint/yixinlin/eaif/datasets/manifests/ssv2_manifest.txt
           transforms: ${transforms}
@@ -139,13 +136,13 @@ trainer:
             model_fwd_kwargs:
               use_checkpoint: True  # TODO: Try False
         worker_init_fn: NULL
-      ### INav
-      - _target_: omnivore.data.torch_dataset.TorchDataset
+      - _target_: omnivore.data.torch_dataset.TorchDataset  # RealEstate10k
         dataset:
           _target_: omnivore.data.path_dataset.VideoPathDatasetFromClips
           frames_per_vid: 4
           every_k: 1
           randomly_reverse: True
+          repeat_factor: 4
           path_file_list:
             - /checkpoint/yixinlin/eaif/datasets/manifests/re10k_manifest.txt
           transforms: ${transforms}
@@ -161,12 +158,13 @@ trainer:
             model_fwd_kwargs:
               use_checkpoint: True  # TODO: Try False
         worker_init_fn: NULL
-      - _target_: omnivore.data.torch_dataset.TorchDataset
+      - _target_: omnivore.data.torch_dataset.TorchDataset  # OpenHouse24k
         dataset:
           _target_: omnivore.data.path_dataset.VideoPathDatasetFromClips
           frames_per_vid: 4
           every_k: 1
           randomly_reverse: True
+          repeat_factor: 164
           path_file_list:
             - /checkpoint/yixinlin/eaif/datasets/manifests/oh24_manifest.txt
           transforms: ${transforms}
