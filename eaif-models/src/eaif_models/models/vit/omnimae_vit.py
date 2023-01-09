@@ -1020,23 +1020,24 @@ def vit_base_mae(
         classifier_feature = "reshape_embedding"
 
     # fixed parameters
-    rgb_channels = 3
-    vitb_embed_dim = 768
+    input_channels = img_size[0] if isinstance(img_size, list) else 3
     ntimes = patch_size[0] if isinstance(patch_size, list) else 1
+    vitb_embed_dim = 768
     vitb_depth = 12
+    vitb_num_heads = 12
 
     # construct model
     model = VisionTransformer(
         img_size=img_size,
         patch_size=patch_size,
-        in_chans=rgb_channels,
+        in_chans=input_channels,
         embed_dim=vitb_embed_dim,
         depth=vitb_depth,
         mlp_ratio=4,
         attn_target=partial(
             Attention,
             attn_drop=0,
-            num_heads=12,
+            num_heads=vitb_num_heads,
             proj_drop=0,
             qk_scale=False,
             qkv_bias=True,
@@ -1054,9 +1055,86 @@ def vit_base_mae(
             PadIm2Video(ntimes=ntimes, pad_type="repeat"),
             make_conv_or_linear(
                 layer=torch.nn.Conv3d(
-                    in_channels=rgb_channels,
+                    in_channels=input_channels,
                     kernel_size=patch_size,
                     out_channels=vitb_embed_dim,
+                    stride=patch_size,
+                ),
+                init_weight=partial(reshape_and_init_as_mlp),
+            ),
+        ],
+        layer_norm_eps=1e-6,
+        masked_image_modeling=False,
+        add_pos_same_dtype=False,
+        patch_dropping=False,
+        post_encoder_params=None,
+        decoder=None,
+        mask_token_embed_dim=None,
+        patch_drop_max_patches=-1,
+    )
+
+    return model
+
+
+def vit_large_mae(
+    img_size=[3, 16, 224, 224],
+    patch_size=[2, 16, 16],
+    global_pool=False,
+    use_cls=False,
+    train_cls=False,
+    patch_embed_type="generic",
+):
+    if OmegaConf.is_list(img_size):
+        img_size = OmegaConf.to_container(img_size)
+    if OmegaConf.is_list(patch_size):
+        patch_size = OmegaConf.to_container(patch_size)
+
+    if global_pool:
+        classifier_feature = "global_pool"
+    elif use_cls:
+        classifier_feature = "cls_token"
+    else:
+        classifier_feature = "reshape_embedding"
+
+    # fixed parameters
+    input_channels = img_size[0] if isinstance(img_size, list) else 3
+    ntimes = patch_size[0] if isinstance(patch_size, list) else 1
+    vitl_embed_dim = 1024
+    vitl_depth = 24
+    vitl_num_heads = 16
+
+    # construct model
+    model = VisionTransformer(
+        img_size=img_size,
+        patch_size=patch_size,
+        in_chans=input_channels,
+        embed_dim=vitl_embed_dim,
+        depth=vitl_depth,
+        mlp_ratio=4,
+        attn_target=partial(
+            Attention,
+            attn_drop=0,
+            num_heads=vitl_num_heads,
+            proj_drop=0,
+            qk_scale=False,
+            qkv_bias=True,
+        ),
+        drop_rate=0.0,
+        drop_path_rate=0.0,
+        drop_path_type="progressive",
+        classifier_feature=classifier_feature,
+        use_cls_token=train_cls,
+        learnable_pos_embed=False,
+        layer_scale_type=None,
+        layer_scale_init_value=0.1,
+        patch_embed_type=patch_embed_type,
+        patch_embed_params_list=[
+            PadIm2Video(ntimes=ntimes, pad_type="repeat"),
+            make_conv_or_linear(
+                layer=torch.nn.Conv3d(
+                    in_channels=input_channels,
+                    kernel_size=patch_size,
+                    out_channels=vitl_embed_dim,
                     stride=patch_size,
                 ),
                 init_weight=partial(reshape_and_init_as_mlp),
