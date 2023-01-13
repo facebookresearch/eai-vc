@@ -22,6 +22,7 @@ class ILAgent(nn.Module):
         num_envs: int,
         num_mini_batch: int,
         lr: Optional[float] = None,
+        encoder_lr: Optional[float] = None,
         eps: Optional[float] = None,
         max_grad_norm: Optional[float] = None,
         wd: Optional[float] = None,
@@ -36,12 +37,28 @@ class ILAgent(nn.Module):
         self.max_grad_norm = max_grad_norm
         self.num_envs = num_envs
 
+        # use different lr for visual encoder and other networks
+        visual_encoder_params, other_params = [], []
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                if (
+                    "net.visual_encoder.backbone" in name
+                    or "net.goal_visual_encoder.backbone" in name
+                ):
+                    visual_encoder_params.append(param)
+                else:
+                    other_params.append(param)
+
         self.optimizer = optim.AdamW(
-            list(filter(lambda p: p.requires_grad, model.parameters())),
+            [
+                {"params": visual_encoder_params, "lr": encoder_lr},
+                {"params": other_params, "lr": lr},
+            ],
             lr=lr,
             eps=eps,
             weight_decay=wd,
         )
+
         self.device = next(model.parameters()).device
 
     def forward(self, *x):

@@ -97,6 +97,7 @@ class ILEnvTrainer(BaseRLTrainer):
             num_envs=self.envs.num_envs,
             num_mini_batch=il_cfg.num_mini_batch,
             lr=il_cfg.lr,
+            encoder_lr=il_cfg.encoder_lr,
             eps=il_cfg.eps,
             wd=il_cfg.wd,
             max_grad_norm=il_cfg.max_grad_norm,
@@ -436,7 +437,8 @@ class ILEnvTrainer(BaseRLTrainer):
                 deltas["count"] = max(deltas["count"], 1.0)
 
                 wandb.log(
-                    {"reward": deltas["reward"] / deltas["count"]}, step=count_steps
+                    {"train/reward": deltas["reward"] / deltas["count"]},
+                    step=count_steps,
                 )
 
                 # Check to see if there are any metrics
@@ -446,11 +448,15 @@ class ILEnvTrainer(BaseRLTrainer):
                     for k, v in deltas.items()
                     if k not in {"reward", "count"}
                 }
+                # To solve a wandb related error
+                metrics = {
+                    f"train/{k}": v for k, v in metrics.items() if v >= 0 and v < 100
+                }
                 if len(metrics) > 0:
                     wandb.log(metrics, step=count_steps)
 
                 losses = [total_loss]
-                losses = {k: l for l, k in zip(losses, ["action_loss"])}
+                losses = {f"train/{k}": l for l, k in zip(losses, ["action_loss"])}
                 wandb.log(losses, step=count_steps)
 
                 # log stats
@@ -786,8 +792,8 @@ class ILEnvTrainer(BaseRLTrainer):
         if "extra_state" in ckpt_dict and "step" in ckpt_dict["extra_state"]:
             step_id = int(ckpt_dict["extra_state"]["step"])
 
-        wandb.log({"average reward": aggregated_stats["reward"]}, step=step_id)
-        metrics = {k: v for k, v in aggregated_stats.items() if k != "reward"}
+        wandb.log({"eval/average reward": aggregated_stats["reward"]}, step=step_id)
+        metrics = {f"eval/{k}": v for k, v in aggregated_stats.items() if k != "reward"}
         if len(metrics) > 0:
             wandb.log(metrics, step=step_id)
 

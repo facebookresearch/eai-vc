@@ -115,6 +115,7 @@ class ILEnvDDPTrainer(ILEnvTrainer):
             num_envs=self.envs.num_envs,
             num_mini_batch=il_cfg.num_mini_batch,
             lr=il_cfg.lr,
+            encoder_lr=il_cfg.encoder_lr,
             eps=il_cfg.eps,
             wd=il_cfg.wd,
             max_grad_norm=il_cfg.max_grad_norm,
@@ -376,7 +377,8 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                     deltas["count"] = max(deltas["count"], 1.0)
 
                     wandb.log(
-                        {"reward": deltas["reward"] / deltas["count"]}, step=count_steps
+                        {"train/reward": deltas["reward"] / deltas["count"]},
+                        step=count_steps,
                     )
 
                     # Check to see if there are any metrics
@@ -386,11 +388,17 @@ class ILEnvDDPTrainer(ILEnvTrainer):
                         for k, v in deltas.items()
                         if k not in {"reward", "count"}
                     }
+                    # To solve a wandb related error
+                    metrics = {
+                        f"train/{k}": v
+                        for k, v in metrics.items()
+                        if v >= 0 and v < 100
+                    }
                     if len(metrics) > 0:
                         wandb.log(metrics, step=count_steps)
 
                     wandb.log(
-                        {k: l for l, k in zip(losses, ["action_loss"])},
+                        {f"train/{k}": l for l, k in zip(losses, ["action_loss"])},
                         step=count_steps,
                     )
 

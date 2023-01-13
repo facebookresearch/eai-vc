@@ -25,9 +25,10 @@ EVAL:
   EVAL_FREQ: 1
   FIRST_CHECKPOINT: 10
 
-NUM_UPDATES: 16000
+NUM_UPDATES: 12000
 TOTAL_NUM_STEPS: -1.0
-NUM_CHECKPOINTS: 20
+NUM_CHECKPOINTS: -1
+CHECKPOINT_INTERVAL: 500
 
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
@@ -40,6 +41,7 @@ IL:
   distrib_backend: NCCL
   BehaviorCloning:
     lr: 0.001
+    encoder_lr: 0.0001
     eps: 1.0e-5
     wd: 1.0e-6
     clip_param: 0.2
