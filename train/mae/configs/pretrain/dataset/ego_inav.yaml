@@ -2,18 +2,18 @@
 
 # dataset arguments ** NEW **
 data_path:  # The data_path can point to multiple datasets
-  # - /checkpoint/yixinlin/eaif/datasets/manifests/imagenet_manifest.txt  # 1,431,167 frames
+  # - /checkpoint/maksymets/eaif/datasets/manifests/imagenet_manifest.txt  # 1,431,167 frames
 
   ### Ego ###
-  # - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_manifest.txt  # 4,874,498 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_full_manifest.txt  # 59,072,000 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/100DOH_manifest.txt  # 99,899 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/epic_kitchens_manifest.txt  # 19,965,439 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/ssv2_manifest.txt  # 25,209,271 frames
+  # - /checkpoint/maksymets/eaif/datasets/manifests/ego4d_manifest.txt  # 4,874,498 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/ego4d_full_manifest.txt  # 59,072,000 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/100DOH_manifest.txt  # 99,899 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/epic_kitchens_manifest.txt  # 19,965,439 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/ssv2_manifest.txt  # 25,209,271 frames
 
   ### INav
-  - /checkpoint/yixinlin/eaif/datasets/manifests/re10k_manifest.txt  # 303,087 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/oh24_manifest.txt  # 499,442 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/re10k_manifest.txt  # 303,087 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/oh24_manifest.txt  # 499,442 frames
 # sample_size:
 #   - 100
 #   - 100

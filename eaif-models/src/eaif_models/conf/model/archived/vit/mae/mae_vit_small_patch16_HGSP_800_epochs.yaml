@@ -1,7 +1,7 @@
 _target_: eaif_models.models.load_model
 model:
   _target_: eaif_models.models.vit.vit.load_mae_encoder
-  checkpoint_path: /checkpoint/yixinlin/eaif/models/mae_habitat/mae_vit_small_patch16_HGSP_800_epochs.pth
+  checkpoint_path: /checkpoint/maksymets/eaif/models/mae_habitat/mae_vit_small_patch16_HGSP_800_epochs.pth
   model:
     _target_: eaif_models.models.vit.vit.vit_small_patch16
     img_size: 224

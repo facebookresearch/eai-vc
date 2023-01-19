@@ -24,7 +24,7 @@ warmup_epochs: 40               # epochs to warmup LR
 
 # Dataset parameters
 # data_path: ["/datasets01/imagenet_full_size/061417/"]                 # The data_path can point to multiple datasets
-data_path: ["/checkpoint/yixinlin/eaif/datasets/ego4d"]
+data_path: ["/checkpoint/maksymets/eaif/datasets/ego4d"]
 output_dir: "./output_dir"      # path where to save, empty for no saving
 device: cuda                    # device to use for training / testing
 seed: 0

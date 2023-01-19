@@ -4,11 +4,11 @@
 # PYTHONPATH=. python main_moco.py environment.slurm=True \
 #     logging.wandb_project="habitat_adapt_rep" logging.name="moco-v3_vitb_mobile_pick_adapt_try1" \
 #     model.arch=vit_base environment.ngpu=8 environment.world_size=1 optim.batch_size=400 \
-#     data.train_filelist="/checkpoint/yixinlin/eaif/datasets/habitat_rearrangement/mobile_pick_trajectories/manifest.txt" \
-#     model.load_path="/checkpoint/yixinlin/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth"
+#     data.train_filelist="/checkpoint/maksymets/eaif/datasets/habitat_rearrangement/mobile_pick_trajectories/manifest.txt" \
+#     model.load_path="/checkpoint/maksymets/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth"
 
 # train from scratch
 PYTHONPATH=. python main_moco.py environment.slurm=True \
     logging.wandb_project="habitat_adapt_rep" logging.name="moco-v3_vitb_mobile_pick_IDP_try1" \
     model.arch=vit_base environment.ngpu=8 environment.world_size=1 optim.batch_size=400 \
-    data.train_filelist="/checkpoint/yixinlin/eaif/datasets/habitat_rearrangement/mobile_pick_trajectories/manifest.txt"
+    data.train_filelist="/checkpoint/maksymets/eaif/datasets/habitat_rearrangement/mobile_pick_trajectories/manifest.txt"

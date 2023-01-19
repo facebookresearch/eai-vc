@@ -301,7 +301,7 @@ if __name__ == "__main__":
         base_encoder=partial(
             torchvision.models.__dict__["resnet50"], zero_init_residual=True
         ),
-        load_path="/checkpoint/yixinlin/eaif/models/moco_ego4d/moco_ego4d_5m.pth",
+        load_path="/checkpoint/maksymets/eaif/models/moco_ego4d/moco_ego4d_5m.pth",
         dim=256,
     )
 
@@ -309,7 +309,7 @@ if __name__ == "__main__":
         base_encoder=partial(
             torchvision.models.__dict__["resnet50"], zero_init_residual=True
         ),
-        load_path="/checkpoint/yixinlin/eaif/models/r3m/r3m_50/model.pt",
+        load_path="/checkpoint/maksymets/eaif/models/r3m/r3m_50/model.pt",
         dim=256,
     )
 
@@ -321,6 +321,6 @@ if __name__ == "__main__":
 
     model = load_pretrained_model(
         base_encoder=partial(moco_vit.__dict__["vit_base"]),
-        load_path="/checkpoint/yixinlin/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth",
+        load_path="/checkpoint/maksymets/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth",
         dim=256,
     )

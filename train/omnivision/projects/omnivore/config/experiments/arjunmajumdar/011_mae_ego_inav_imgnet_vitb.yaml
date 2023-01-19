@@ -48,7 +48,7 @@ trainer:
           _target_: omnivore.data.path_dataset.ImagePathDatasetEveryK
           every_k_images: 1
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/imagenet_train_manifest.txt
+            - /checkpoint/maksymets/eaif/datasets/manifests/imagenet_train_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}
@@ -64,7 +64,7 @@ trainer:
           _target_: omnivore.data.path_dataset.ImagePathDatasetEveryK
           every_k_images: 1
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_2_8m_manifest.txt
+            - /checkpoint/maksymets/eaif/datasets/manifests/ego4d_2_8m_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}
@@ -80,7 +80,7 @@ trainer:
           _target_: omnivore.data.path_dataset.ImagePathDatasetEveryK
           every_k_images: 1
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/100DOH_manifest.txt
+            - /checkpoint/maksymets/eaif/datasets/manifests/100DOH_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}
@@ -96,7 +96,7 @@ trainer:
           _target_: omnivore.data.path_dataset.ImagePathDatasetEveryK
           every_k_images: 60
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/epic_kitchens_manifest.txt
+            - /checkpoint/maksymets/eaif/datasets/manifests/epic_kitchens_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}
@@ -112,7 +112,7 @@ trainer:
           _target_: omnivore.data.path_dataset.ImagePathDatasetEveryK
           every_k_images: 80
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/ssv2_manifest.txt
+            - /checkpoint/maksymets/eaif/datasets/manifests/ssv2_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}
@@ -128,7 +128,7 @@ trainer:
           _target_: omnivore.data.path_dataset.ImagePathDatasetEveryK
           every_k_images: 1
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/re10k_manifest.txt
+            - /checkpoint/maksymets/eaif/datasets/manifests/re10k_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}
@@ -144,7 +144,7 @@ trainer:
           _target_: omnivore.data.path_dataset.ImagePathDatasetEveryK
           every_k_images: 1
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/manifests/oh24_manifest.txt
+            - /checkpoint/maksymets/eaif/datasets/manifests/oh24_manifest.txt
           transforms: ${transforms}
         shuffle: True
         batch_size: ${base_batchsize_per_replica}

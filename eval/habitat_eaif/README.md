@@ -26,7 +26,7 @@ Otherwise, follow the instructions on [habitat-lab](https://github.com/facebookr
    ```
 
 ### ObjectNav
-1. For our ObjectNav RL experiments we will be using the HM3DSem v0.2 scene dataset and the corresponding HM3DSem v0.2 ObjectNav episode dataset. Currently the data is available in `/checkpoint/yixinlin/eaif/datasets/habitat_task_dataset/datasets/objectnav/hm3d/v0.2/` on the FAIR cluster. The data is automatically added to the `habitat_eaif` folder when you run the `symlink.sh` file.
+1. For our ObjectNav RL experiments we will be using the HM3DSem v0.2 scene dataset and the corresponding HM3DSem v0.2 ObjectNav episode dataset. Currently the data is available in `/checkpoint/maksymets/eaif/datasets/habitat_task_dataset/datasets/objectnav/hm3d/v0.2/` on the FAIR cluster. The data is automatically added to the `habitat_eaif` folder when you run the `symlink.sh` file.
 
 1. To start a training run with the `dino_resnet50_omnidata` model use the following command: 
    ```
@@ -39,7 +39,7 @@ Otherwise, follow the instructions on [habitat-lab](https://github.com/facebookr
    ```
 
 ### ObjectNav
-1. For our ObjectNav RL experiments we will be using the HM3DSem v0.2 scene dataset and the corresponding HM3DSem v0.2 ObjectNav episode dataset. Currently the data is available in `/checkpoint/yixinlin/eaif/datasets/habitat_task_dataset/datasets/objectnav/hm3d/v0.2/` on the FAIR cluster. The data is automatically added to the `habitat_eaif` folder when you run the `symlink.sh` file.
+1. For our ObjectNav RL experiments we will be using the HM3DSem v0.2 scene dataset and the corresponding HM3DSem v0.2 ObjectNav episode dataset. Currently the data is available in `/checkpoint/maksymets/eaif/datasets/habitat_task_dataset/datasets/objectnav/hm3d/v0.2/` on the FAIR cluster. The data is automatically added to the `habitat_eaif` folder when you run the `symlink.sh` file.
 
 1. To start a training run with the `dino_resnet50_omnidata` model use the following command: 
    ```

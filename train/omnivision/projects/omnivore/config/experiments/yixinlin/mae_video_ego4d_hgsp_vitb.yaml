@@ -70,7 +70,7 @@ trainer:
           _target_: omnivore.data.path_dataset.VideoPathDatasetFromImages
           frames_per_vid: 16
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/hm3d+gibson.npy
+            - /checkpoint/maksymets/eaif/datasets/hm3d+gibson.npy
           transforms:
             - _target_: torchvision.transforms.Compose
               transforms:
@@ -117,7 +117,7 @@ trainer:
         dataset:
           _target_: omnivore.data.path_dataset.VideoPathDatasetFromImages
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/ego4d.npy
+            - /checkpoint/maksymets/eaif/datasets/ego4d.npy
           transforms:
             - _target_: torchvision.transforms.Compose
               transforms:

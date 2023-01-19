@@ -3,10 +3,10 @@
 # dataset arguments ** NEW **
 data_path:  # The data_path can point to multiple datasets
   ### Ego ###
-  - /checkpoint/yixinlin/eaif/datasets/manifests/ego4d_42m_manifest.txt  # 418,578,043 frames subsampled at 2 fps
-  - /checkpoint/yixinlin/eaif/datasets/manifests/100DOH_manifest.txt  # 99,899 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/epic_kitchens_manifest.txt  # 19,965,439 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/ssv2_manifest.txt  # 25,209,271 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/ego4d_42m_manifest.txt  # 418,578,043 frames subsampled at 2 fps
+  - /checkpoint/maksymets/eaif/datasets/manifests/100DOH_manifest.txt  # 99,899 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/epic_kitchens_manifest.txt  # 19,965,439 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/ssv2_manifest.txt  # 25,209,271 frames
 
 every_k:
 ### Ego (50,992,643 frames total) ###

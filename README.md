@@ -26,7 +26,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) to get started contributing code.
 
 ## Shared resources
 
-**Shared directory**: On FAIR Cluster, we have 20TB allocated to the shared directory `/checkpoint/yixinlin/eaif/`, which includes shared (processed) datasets, third-party libraries, model run results, experiments/sandbox.
+**Shared directory**: On FAIR Cluster, we have 20TB allocated to the shared directory `/checkpoint/maksymets/eaif/`, which includes shared (processed) datasets, third-party libraries, model run results, experiments/sandbox.
 Please feel free to use it as the shared directory for this project.
 
 The directory is owned by the group `eaif`.

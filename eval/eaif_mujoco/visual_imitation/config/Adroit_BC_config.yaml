@@ -9,7 +9,7 @@ pixel_based       :   True                    # pixel based (True) or state base
 embedding         :   ???                     # choice of embedding network
 camera            :   vil_camera              # choice of camera to use for image generation
 device            :   cuda
-data_dir          :   /checkpoint/yixinlin/eaif/datasets/adroit-expert-v0.1/
+data_dir          :   /checkpoint/maksymets/eaif/datasets/adroit-expert-v0.1/
 data_parallel     :   True
 
 # experiment and evaluation

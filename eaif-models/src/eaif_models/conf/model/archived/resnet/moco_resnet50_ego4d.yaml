@@ -3,7 +3,7 @@ model:
   _target_: eaif_models.models.resnet.resnet.resnet50
 checkpoint_dict:
   _target_: eaif_models.models.resnet.resnet.load_moco_checkpoint
-  checkpoint_path: /checkpoint/yixinlin/eaif/models/moco_ego4d/moco_ego4d_5m.pth
+  checkpoint_path: /checkpoint/maksymets/eaif/models/moco_ego4d/moco_ego4d_5m.pth
 transform:
   _target_: eaif_models.transforms.resnet_transforms
 metadata:

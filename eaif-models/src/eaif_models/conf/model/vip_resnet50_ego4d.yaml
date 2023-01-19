@@ -3,7 +3,7 @@ model:
   _target_: eaif_models.models.resnet.resnet.resnet50_vip
 checkpoint_dict:
   _target_: eaif_models.models.resnet.resnet.load_vip_checkpoint
-  checkpoint_path: /checkpoint/yixinlin/eaif/models/vip/resnet50/model.pt
+  checkpoint_path: /checkpoint/maksymets/eaif/models/vip/resnet50/model.pt
 transform:
   _target_: eaif_models.transforms.r3m_transforms
 metadata:

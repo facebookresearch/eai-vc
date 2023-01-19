@@ -11,7 +11,7 @@ SCRATCH_TMAE_CONFIG_FILE="config/experiments/arjunmajumdar/adaptation/000_tmae_s
 ADAPT_MAE_CONFIG_FILE="config/experiments/arjunmajumdar/adaptation/003_mae_adapt_v0.yaml"
 ADAPT_TMAE_CONFIG_FILE="config/experiments/arjunmajumdar/adaptation/001_tmae_adapt_v0.yaml"
 
-STARTING_POINT="/checkpoint/yixinlin/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth"
+STARTING_POINT="/checkpoint/maksymets/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth"
 
 # =================================
 # Jan 4th overnight runs
@@ -19,7 +19,7 @@ STARTING_POINT="/checkpoint/yixinlin/eaif/models/scaling_hypothesis_mae/mae_vit_
 
 # Gibson
 REPEAT_FACTOR=51
-PATH_FILE_LIST="/checkpoint/yixinlin/eaif/datasets/manifests/gibson_manifest.txt"
+PATH_FILE_LIST="/checkpoint/maksymets/eaif/datasets/manifests/gibson_manifest.txt"
 
 # MAE from pretrained checkpoint
 ./dev/launch_job.py \

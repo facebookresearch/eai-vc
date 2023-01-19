@@ -3,8 +3,8 @@
 # dataset arguments ** NEW **
 data_path:  # The data_path can point to multiple datasets
   ### INav
-  - /checkpoint/yixinlin/eaif/datasets/manifests/re10k_manifest.txt  # 303,087 frames
-  - /checkpoint/yixinlin/eaif/datasets/manifests/oh24_manifest.txt  # 499,442 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/re10k_manifest.txt  # 303,087 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/oh24_manifest.txt  # 499,442 frames
 
 every_k:
   ### INav (802,529 frames total) ###

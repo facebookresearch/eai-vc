@@ -6,13 +6,13 @@
 TMAE_CONFIG_FILE="config/experiments/arjunmajumdar/adaptation/001_tmae_adapt_v0.yaml"
 MAE_CONFIG_FILE="config/experiments/arjunmajumdar/adaptation/003_mae_adapt_v0.yaml"
 
-CHECKPOINT_PATHS="/checkpoint/yixinlin/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth"
+CHECKPOINT_PATHS="/checkpoint/maksymets/eaif/models/scaling_hypothesis_mae/mae_vit_base_ego_inav_233_epochs.pth"
 
 # -----------------
 # gibson
 # -----------------
 REPEAT_FACTOR=51
-PATH_FILE_LIST="/checkpoint/yixinlin/eaif/datasets/manifests/gibson_manifest.txt"
+PATH_FILE_LIST="/checkpoint/maksymets/eaif/datasets/manifests/gibson_manifest.txt"
 
 # tmae
 ./dev/launch_job.py \

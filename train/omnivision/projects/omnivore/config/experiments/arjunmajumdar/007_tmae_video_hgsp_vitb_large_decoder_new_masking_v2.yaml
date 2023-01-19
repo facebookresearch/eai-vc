@@ -25,7 +25,7 @@ trainer:
           every_k: 1
           randomly_reverse: True
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/hm3d+gibson.npy
+            - /checkpoint/maksymets/eaif/datasets/hm3d+gibson.npy
             - /srv/flash1/amajumdar36/image-datasets/hm3d+gibson/v1/train/path_file_list.npy
           transforms:
             - _target_: torchvision.transforms.Compose

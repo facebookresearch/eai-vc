@@ -122,7 +122,7 @@ if __name__ == "__main__":
         root=[
             # "data/datasets/hm3d+gibson/v1/train",
             # "data/datasets/real-estate-10k-frames-v0",
-            "/checkpoint/yixinlin/eaif/datasets/ego4d"
+            "/checkpoint/maksymets/eaif/datasets/ego4d"
         ],
         transform=Compose(
             [

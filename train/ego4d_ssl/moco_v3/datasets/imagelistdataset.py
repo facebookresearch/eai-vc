@@ -85,7 +85,7 @@ if __name__ == "__main__":
     batch_size, num_workers = 16, 16
 
     ego4d_dataset = ImageListDataset(
-        list_fname="/checkpoint/yixinlin/eaif/datasets/ego4d.npy",
+        list_fname="/checkpoint/maksymets/eaif/datasets/ego4d.npy",
         base_transform1=[RandomHorizontalFlip(), ToTensor()],
         base_transform2=[RandomHorizontalFlip(), ToTensor()],
         max_len=1600,
@@ -106,7 +106,7 @@ if __name__ == "__main__":
     )
 
     hm3d_dataset = ImageListDataset(
-        list_fname="/checkpoint/yixinlin/eaif/datasets/hm3d+gibson.npy",
+        list_fname="/checkpoint/maksymets/eaif/datasets/hm3d+gibson.npy",
         base_transform1=[RandomHorizontalFlip(), ToTensor()],
         base_transform2=[RandomHorizontalFlip(), ToTensor()],
         max_len=1600,

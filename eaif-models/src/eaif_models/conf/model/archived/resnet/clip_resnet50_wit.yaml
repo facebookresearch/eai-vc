@@ -8,7 +8,7 @@ model:
   width: 64
 checkpoint_dict:
   _target_: eaif_models.models.resnet.resnet.load_clip_resnet50_checkpoint
-  checkpoint_path: /checkpoint/yixinlin/eaif/models/clip/RN50.pt
+  checkpoint_path: /checkpoint/maksymets/eaif/models/clip/RN50.pt
 transform:
   _target_: clip.clip._transform
   n_px: 224

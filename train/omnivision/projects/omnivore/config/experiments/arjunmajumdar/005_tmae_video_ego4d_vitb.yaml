@@ -25,7 +25,7 @@ trainer:
           every_k: 30
           randomly_reverse: True
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/ego4d.npy
+            - /checkpoint/maksymets/eaif/datasets/ego4d.npy
           transforms:
             - _target_: torchvision.transforms.Compose
               transforms:

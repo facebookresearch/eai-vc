@@ -52,7 +52,7 @@ trainer:
         dataset:
           _target_: omnivore.data.path_dataset.ImagePathDataset
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/ego4d.npy
+            - /checkpoint/maksymets/eaif/datasets/ego4d.npy
           transforms: ${transforms}
         shuffle: True
         batch_size: ${scratch.batch_size}
@@ -67,7 +67,7 @@ trainer:
         dataset:
           _target_: omnivore.data.path_dataset.ImagePathDataset
           path_file_list:
-            - /checkpoint/yixinlin/eaif/datasets/hm3d+gibson.npy
+            - /checkpoint/maksymets/eaif/datasets/hm3d+gibson.npy
           transforms: ${transforms}
         shuffle: True
         batch_size: ${scratch.batch_size}

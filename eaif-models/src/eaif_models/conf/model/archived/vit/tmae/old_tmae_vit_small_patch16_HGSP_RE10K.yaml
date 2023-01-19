@@ -1,7 +1,7 @@
 _target_: eaif_models.models.load_model
 model:
   _target_: eaif_models.models.vit.vit.load_mae_encoder
-  checkpoint_path: /checkpoint/yixinlin/eaif/models/tmae_habitat/tmae_small_decoder_large_offset_4_RE10k_HGSP_random_views.pth
+  checkpoint_path: /checkpoint/maksymets/eaif/models/tmae_habitat/tmae_small_decoder_large_offset_4_RE10k_HGSP_random_views.pth
   model:
     _target_: eaif_models.models.vit.vit.vit_small_patch16
     img_size: 224

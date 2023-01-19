@@ -9,6 +9,6 @@ python eval/cifar_lin_probe/run_cifar_lin_probe.py -m +hydra/launcher=submitit_s
   model=$(python -m eaif_models)
 ```
 
-This should launch 6 experiments in parallel and would take about 10 minutes to complete after launching. The results will be stored in `/checkpoint/yixinlin/eaif/results/${hydra.job.name}/${oc.env:USER}` as specified in the hydra config. The final results should look something like below.
+This should launch 6 experiments in parallel and would take about 10 minutes to complete after launching. The results will be stored in `/checkpoint/maksymets/eaif/results/${hydra.job.name}/${oc.env:USER}` as specified in the hydra config. The final results should look something like below.
 
 ![](assets/cifar_lin_probe_results.png)

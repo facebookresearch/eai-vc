@@ -191,8 +191,8 @@ python submitit_pretrain.py \
     warmup_epochs=40 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/hm3d+gibson/v1/train] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -207,8 +207,8 @@ python submitit_pretrain.py \
     warmup_epochs=40 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/hm3d+gibson/v1/train] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -223,8 +223,8 @@ python submitit_pretrain.py \
     warmup_epochs=40 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/yixinlin/eaif/datasets/ego4d] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/maksymets/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -239,8 +239,8 @@ python submitit_pretrain.py \
     warmup_epochs=40 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/yixinlin/eaif/datasets/ego4d] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/maksymets/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -255,8 +255,8 @@ python submitit_pretrain.py \
     warmup_epochs=40 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/ego4d] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -271,8 +271,8 @@ python submitit_pretrain.py \
     warmup_epochs=40 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/ego4d] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=1 \
     partition=learnlab \
     use_volta32=True
@@ -288,8 +288,8 @@ python submitit_pretrain.py \
     warmup_epochs=8 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/yixinlin/eaif/datasets/ego4d] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/maksymets/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -305,8 +305,8 @@ python submitit_pretrain.py \
     warmup_epochs=10 \
     blr=1.5e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/ego4d] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -323,7 +323,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_inav_subset \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -340,7 +340,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_inav \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -357,7 +357,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_inav_subset \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=4 \
     partition=learnlab \
     use_volta32=True
@@ -374,7 +374,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_inav \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=4 \
     partition=learnlab \
     use_volta32=True
@@ -390,7 +390,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_mvp_freq_inav \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -406,7 +406,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_mvp_freq_inav \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=4 \
     partition=learnlab \
     use_volta32=True
@@ -423,7 +423,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_mvp_freq_inav \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=4 \
     partition=learnlab \
     use_volta32=True
@@ -440,7 +440,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_mvp_freq_inav \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -457,7 +457,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=inav \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -474,7 +474,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego3_5m \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -491,7 +491,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego3_5m \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=4 \
     partition=learnlab \
     use_volta32=True
@@ -508,7 +508,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_inav_imgnet \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=2 \
     partition=learnlab \
     use_volta32=True
@@ -525,7 +525,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego_inav_imgnet \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=4 \
     partition=learnlab \
     use_volta32=True
@@ -543,7 +543,7 @@ python submitit_pretrain.py \
     blr=1.5e-4 \
     weight_decay=0.05 \
     dataset=ego51m \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     nodes=4 \
     partition=learnlab \
     use_volta32=True

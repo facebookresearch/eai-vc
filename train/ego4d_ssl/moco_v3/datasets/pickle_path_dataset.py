@@ -121,7 +121,7 @@ if __name__ == "__main__":
     batch_size, num_workers = 64, 32
 
     dataset = PicklePathsDataset(
-        root_dir="/checkpoint/yixinlin/eaif/datasets/metaworld-expert-v0.1/",
+        root_dir="/checkpoint/maksymets/eaif/datasets/metaworld-expert-v0.1/",
         # image_key="images",
         frameskip=5,
         transforms=torchvision.transforms.Compose(
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     )
 
     dataset = PicklePathsDataset(
-        root_dir="/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train/",
+        root_dir="/checkpoint/maksymets/eaif/datasets/hm3d+gibson/v1/train/",
         frameskip=5,
         transforms=torchvision.transforms.Compose(
             [

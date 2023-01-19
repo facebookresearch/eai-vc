@@ -377,7 +377,7 @@ python submitit_pretrain.py \
     randomize_views=True \
     blr=1.0e-4 \
     weight_decay=0.05 \
-    data_path=[/checkpoint/yixinlin/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/yixinlin/eaif/datasets/ego4d] \
-    output_dir=/checkpoint/yixinlin/eaif/results/mae_training/ \
+    data_path=[/checkpoint/maksymets/eaif/datasets/hm3d+gibson/v1/train,/checkpoint/maksymets/eaif/datasets/ego4d] \
+    output_dir=/checkpoint/maksymets/eaif/results/mae_training/ \
     partition=learnlab \
     use_volta32=True

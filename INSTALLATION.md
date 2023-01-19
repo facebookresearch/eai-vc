@@ -28,7 +28,7 @@ Setup Mujoco/mj_envs/mjrl:
 
 ```bash
 # If you don't have Mujoco yet: copy Mujoco files, keys
-cp -r /checkpoint/yixinlin/eaif/libraries/mujoco/. ~/.mujoco
+cp -r /checkpoint/maksymets/eaif/libraries/mujoco/. ~/.mujoco
 
 # Install mujoco-py (GPU-compiled)
 pip install -e ./third_party/mujoco-py
