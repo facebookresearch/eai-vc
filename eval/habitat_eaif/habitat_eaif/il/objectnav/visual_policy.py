@@ -17,6 +17,7 @@ from habitat_eaif.visual_encoder import VisualEncoder
 
 from habitat_eaif.il.objectnav.rnn_state_encoder import RNNStateEncoder
 from habitat_eaif.il.objectnav.policy import ILPolicy
+from habitat_eaif.models.freeze_batchnorm import convert_frozen_batchnorm
 
 
 class ObjectNavILNet(Net):
@@ -109,6 +110,8 @@ class ObjectNavILNet(Net):
         if rgb_config.freeze_backbone:
             for p in self.visual_encoder.backbone.parameters():
                 p.requires_grad = False
+            if rgb_config.freeze_batchnorm:
+                self.visual_encoder = convert_frozen_batchnorm(self.visual_encoder)
 
         self.state_encoder = RNNStateEncoder(
             input_size=rnn_input_size,

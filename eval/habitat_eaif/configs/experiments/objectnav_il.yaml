@@ -67,9 +67,10 @@ MODEL:
     model_type: "VisualEncoder"
     image_size: 256
     hidden_size: 512
-    use_augmentations: True
-    use_augmentations_test_time: True
-    freeze_backbone: False
+    use_augmentations: False
+    use_augmentations_test_time: False
+    freeze_batchnorm: True
+    freeze_backbone: True
     global_pool: False
     use_cls: False
   STATE_ENCODER:

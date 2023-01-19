@@ -11,6 +11,7 @@ from torch import nn as nn
 
 from habitat_eaif.rl.imagenav.sensors import ImageGoalRotationSensor
 from habitat_eaif.visual_encoder import VisualEncoder
+from habitat_eaif.models.freeze_batchnorm import convert_frozen_batchnorm
 
 
 class EAINet(Net):
@@ -27,6 +28,7 @@ class EAINet(Net):
         use_augmentations_test_time: bool,
         run_type: str,
         freeze_backbone: bool,
+        freeze_batchnorm: bool,
         global_pool: bool,
         use_cls: bool,
     ):
@@ -106,6 +108,12 @@ class EAINet(Net):
             if has_goal_encoder:
                 for p in self.goal_visual_encoder.backbone.parameters():
                     p.requires_grad = False
+            if freeze_batchnorm:
+                self.visual_encoder = convert_frozen_batchnorm(self.visual_encoder)
+                if has_goal_encoder:
+                    self.goal_visual_encoder = convert_frozen_batchnorm(
+                        self.goal_visual_encoder
+                    )
 
         # save configuration
         self._hidden_size = hidden_size
@@ -202,6 +210,7 @@ class EAIPolicy(Policy):
         use_augmentations_test_time: bool = False,
         run_type: str = "train",
         freeze_backbone: bool = False,
+        freeze_batchnorm: bool = False,
         global_pool: bool = False,
         use_cls: bool = False,
         **kwargs
@@ -219,6 +228,7 @@ class EAIPolicy(Policy):
                 use_augmentations_test_time=use_augmentations_test_time,
                 run_type=run_type,
                 freeze_backbone=freeze_backbone,
+                freeze_batchnorm=freeze_batchnorm,
                 global_pool=global_pool,
                 use_cls=use_cls,
             ),
@@ -239,6 +249,7 @@ class EAIPolicy(Policy):
             use_augmentations_test_time=config.RL.POLICY.use_augmentations_test_time,
             run_type=config.RUN_TYPE,
             freeze_backbone=config.RL.POLICY.freeze_backbone,
+            freeze_batchnorm=config.RL.POLICY.freeze_batchnorm,
             global_pool=config.RL.POLICY.global_pool,
             use_cls=config.RL.POLICY.use_cls,
         )

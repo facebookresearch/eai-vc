@@ -36,6 +36,7 @@ RL:
     num_recurrent_layers: 2
     use_augmentations: True
     use_augmentations_test_time: True
+    freeze_batchnorm: True
     freeze_backbone: False
     global_pool: False
     use_cls: False

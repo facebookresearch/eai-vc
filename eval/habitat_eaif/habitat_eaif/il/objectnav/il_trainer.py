@@ -515,9 +515,12 @@ class ILEnvTrainer(BaseRLTrainer):
                 len(self.config.VIDEO_DIR) > 0
             ), "Must specify a directory for storing videos on disk"
 
-        if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
+        ckpt_path = os.path.join(
+            self.config.CHECKPOINT_FOLDER, self.config.EVAL_CKPT_PATH_DIR
+        )
+        if os.path.isfile(ckpt_path):
             # evaluate single checkpoint
-            proposed_index = get_checkpoint_id(self.config.EVAL_CKPT_PATH_DIR)
+            proposed_index = get_checkpoint_id(ckpt_path)
 
             if proposed_index is not None:
                 ckpt_idx = proposed_index
@@ -525,7 +528,7 @@ class ILEnvTrainer(BaseRLTrainer):
                 ckpt_idx = 0
 
             self._eval_checkpoint(
-                self.config.EVAL_CKPT_PATH_DIR,
+                ckpt_path,
                 checkpoint_index=ckpt_idx,
             )
 

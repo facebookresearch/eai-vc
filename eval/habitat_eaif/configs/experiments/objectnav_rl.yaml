@@ -38,9 +38,10 @@ RL:
     hidden_size: 512
     rnn_type: "LSTM"
     num_recurrent_layers: 2
-    use_augmentations: True
-    use_augmentations_test_time: True
-    freeze_backbone: False
+    use_augmentations: False
+    use_augmentations_test_time: False
+    freeze_batchnorm: True
+    freeze_backbone: True
     global_pool: False
     use_cls: False
 
