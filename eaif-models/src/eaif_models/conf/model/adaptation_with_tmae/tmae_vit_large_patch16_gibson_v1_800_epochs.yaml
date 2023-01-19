@@ -1,0 +1,25 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.vit.omnimae_vit.load_omnimae_encoder
+  model:
+    _target_: eaif_models.models.vit.omnimae_vit.vit_large_mae
+    img_size: [3, 1, 224, 224]
+    patch_size: [1, 16, 16]
+    global_pool: False
+    use_cls: False
+    train_cls: True
+    patch_embed_type: tmae
+  train_time_dim: 4
+  checkpoint_path: /checkpoint/yixinlin/eaif/results/omnivision/2023-01-12-19-17-31/config/experiments/arjunmajumdar/adaptation/004_tmae_adapt_v1.yaml/0/checkpoints/checkpoint_800.pt
+transform:
+  _target_: eaif_models.transforms.vit_transforms
+metadata:
+  algo: tmae
+  model: vit_large_patch16
+  data:
+    - ego
+    - imagenet
+    - inav
+    - gibson
+  starting_point: /checkpoint/yixinlin/eaif/models/scaling_hypothesis_mae/mae_vit_large_ego_imagenet_inav_182_epochs.pth
+  comment: adaptation_experiment_v1
