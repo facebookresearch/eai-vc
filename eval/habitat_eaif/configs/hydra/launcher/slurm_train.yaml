@@ -2,7 +2,7 @@ defaults:
     - submitit_slurm
 
 cpus_per_task: 10
-gpus_per_task: 1
+gpus_per_node: 8
 tasks_per_node: 8
 mem_per_gpu: 5120
 nodes: 4
