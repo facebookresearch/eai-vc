@@ -57,7 +57,6 @@ class DecoderModel(torch.nn.Module):
         self.model = nn.Sequential(*layers)
 
     def forward(self, input_tensor):
-
         return self.model(input_tensor)
 
     def save_gif(self, pred_imgs, save_str):

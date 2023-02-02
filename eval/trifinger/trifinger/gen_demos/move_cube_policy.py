@@ -91,7 +91,6 @@ class MoveCubePolicy:
         self.ft_pos_targets_per_mode = []  # List of fingertip position targets per mode
 
     def reset(self, observation):
-
         # mode and trajectory initializations
         self.mode = Mode.INIT
         self.prev_mode = None
@@ -308,7 +307,6 @@ class MoveCubePolicy:
         return ft_pos
 
     def get_observation(self):
-
         obs = {
             "policy": {
                 "controller": self.controller.get_observation(),

@@ -41,7 +41,6 @@ class CustomPinocchioUtils(Kinematics):
         ]
 
     def get_hand_lin_jacobian(self, q):
-
         J = np.zeros((9, 9))
 
         for f_id in range(3):

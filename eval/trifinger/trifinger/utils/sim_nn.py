@@ -68,7 +68,6 @@ class SimNN:
 
         # Set env based on task
         if self.task == "move_cube":
-
             self.env = MoveCubeEnv(
                 goal_pose=None,  # passing None to sample a random trajectory
                 action_type=ActionType.TORQUE,
@@ -88,7 +87,6 @@ class SimNN:
             )
 
         elif self.task == "reach_cube":
-
             self.env = CubeReachEnv(
                 action_type=ActionType.TORQUE,
                 step_size=step_size,
@@ -115,7 +113,6 @@ class SimNN:
         del self.policy
 
     def reset(self, expert_demo_dict, policy_state_dict, encoder=None):
-
         # Update policy weights
         self.policy.load_state_dict(policy_state_dict)
 
@@ -177,7 +174,6 @@ class SimNN:
         encoder=None,
         epoch=-1,
     ):
-
         # Reset env and update policy network
         observation_list = []
         observation = self.reset(expert_demo_dict, policy_state_dict, encoder=encoder)
@@ -188,7 +184,6 @@ class SimNN:
         action_counter = 0
         expert_actions = expert_demo_dict["delta_ftpos"]
         while not episode_done:
-
             # Get bc input tensor from observation
             # Scale observation by traj_scale, for bc policy
             q_cur = observation["robot_position"]
@@ -295,7 +290,6 @@ class SimNN:
         return traj_dict
 
     def load_policy(self, in_dim, max_a):
-
         # Load unscaled policy
         policy = DeterministicPolicy(
             in_dim=in_dim,

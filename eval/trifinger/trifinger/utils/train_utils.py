@@ -60,7 +60,6 @@ def plot_loss(loss_dict, outer_i=None):
 
 
 def find_most_recent_ckpt(ckpts_dir):
-
     start_epoch = 0
 
     files_in_ckpts_dir = os.listdir(ckpts_dir)
@@ -198,7 +197,6 @@ def get_traj_list(demo_stats_list, obj_state_type):
 
 
 def get_traj_range(traj_list, key, traj_stats=None):
-
     max_val = -np.inf
     min_val = np.inf
 

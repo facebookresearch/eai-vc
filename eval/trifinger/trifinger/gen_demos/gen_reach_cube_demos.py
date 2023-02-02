@@ -26,9 +26,7 @@ ALL_MODES = DIFFICULTY_CHOICES + ALL_RAND
 
 
 def main(args):
-
     for mode in args.modes:
-
         if mode not in ALL_MODES:
             print(f"Mode {mode} not valid. Skipping")
             continue
@@ -66,7 +64,6 @@ def main(args):
 
 
 def get_log_paths(args, mode):
-
     log_dir = os.path.join(args.demo_dir, f"difficulty-{mode}")
 
     if not os.path.exists(log_dir):
@@ -86,7 +83,6 @@ def get_log_paths(args, mode):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--modes",

@@ -91,7 +91,6 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
         self.pretrained_rep_dim = pretrained_rep_dim
 
     def add_new_traj(self, demo_dir):
-
         # Read data from demo_dir
 
         downsample_data_path = os.path.join(demo_dir, "downsample.pth")
@@ -130,7 +129,6 @@ class BCFinetuneDataset(torch.utils.data.Dataset):
             )  # [3, 270, 270]
 
             for j in range(self.times_to_use_demo):
-
                 # Augment images
                 if np.random.rand() < self.augment_prob:
                     img = self.rand_augment_transforms(orig_img)

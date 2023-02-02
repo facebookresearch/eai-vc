@@ -88,7 +88,6 @@ def get_cfg(hydra_overrides, hydrafied_config_name):
 def launch_one_job_prod(
     args, cfg, exp_dir, hydra_overrides, hydrafied_config_name, cfg_names, exp_name=None
 ):
-
     if exp_name is None:
         exp_name = cfg_names["exp"]
 
@@ -138,7 +137,6 @@ def launch_one_job_prod(
 def launch_one_job_local(
     args, cfg, exp_dir, hydra_overrides, hydrafied_config_name, cfg_names, exp_name=None
 ):
-
     if exp_name is None:
         exp_name = cfg_names["exp"]
 
@@ -290,7 +288,6 @@ def launch_one_job_slurm(
 def launch_one_job_oss_local(
     args, cfg, exp_dir, hydra_overrides, hydrafied_config_name, cfg_names, exp_name=None
 ):
-
     if exp_name is None:
         exp_name = cfg_names["exp"]
 
@@ -361,7 +358,6 @@ def check_if_already_done(args, exp_dir):
 def launch_one_job(
     args, cfg, exp_dir, hydra_overrides, hydrafied_config_name, cfg_names, exp_name=None
 ):
-
     if check_if_already_done(args, exp_dir):
         exit(0)
 

@@ -285,7 +285,6 @@ class MaskedAutoencoderViT(nn.Module):
         return d
 
     def forward_vip_loss(self, x, gamma=0.98, epsilon=1e-6, num_negatives=3):
-
         e0 = x[:, 0]  # initial, o_0
         eg = x[:, 1]  # final, o_g
         es0_vip = x[:, 2]  # o_t

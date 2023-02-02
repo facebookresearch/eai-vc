@@ -27,7 +27,6 @@ class ILAgent(nn.Module):
         max_grad_norm: Optional[float] = None,
         wd: Optional[float] = None,
     ) -> None:
-
         super().__init__()
 
         self.model = model
@@ -152,6 +151,7 @@ class DecentralizedDistributedMixin:
                                    forward pass, otherwise the gradient reduction
                                    will not work correctly.
         """
+
         # NB: Used to hide the hooks from the nn.Module,
         # so they don't show up in the state_dict
         class Guard:

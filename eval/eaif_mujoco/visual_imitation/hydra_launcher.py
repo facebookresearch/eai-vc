@@ -11,12 +11,12 @@ os.environ["MUJOCO_GL"] = "egl"
 
 cwd = os.getcwd()
 
+
 # ===============================================================================
 # Process Inputs and configure job
 # ===============================================================================
 @hydra.main(config_path="config", config_name="DMC_BC_config", version_base="1.1")
 def configure_jobs(config: dict) -> None:
-
     print("========================================")
     print("Job Configuration")
     print("========================================")

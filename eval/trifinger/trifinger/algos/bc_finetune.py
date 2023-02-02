@@ -20,7 +20,6 @@ log = logging.getLogger(__name__)
 
 class BCFinetune:
     def __init__(self, conf, traj_info, device):
-
         self.conf = conf
         self.algo_conf = conf.algo
         self.traj_info = traj_info
@@ -166,7 +165,6 @@ class BCFinetune:
             self.sim_dict[env_name] = all_sim_dict[env_name]
 
     def train(self, model_data_dir=None, no_wandb=False):
-
         # Make logging directories
         ckpts_dir = os.path.join(model_data_dir, "ckpts")
         sim_dir = os.path.join(model_data_dir, "sim")
@@ -204,7 +202,6 @@ class BCFinetune:
                 t_utils.plot_loss(all_dict, start_epoch + 1)
 
         for outer_i in range(start_epoch, self.conf.task.n_outer_iter):
-
             # Update policy network
             self.policy.train()
             self.encoder.train()

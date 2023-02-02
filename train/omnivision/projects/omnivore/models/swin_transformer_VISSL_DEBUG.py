@@ -188,7 +188,6 @@ class WindowAttention3D(nn.Module):
         log_space_coords=False,  # v1 = False, v2 = True
         relative_bias_mlp_hidden_dim=512,  # used only in v2
     ):
-
         super().__init__()
         self.dim = dim
         self.window_size = window_size  # Wd, Wh, Ww
@@ -343,7 +342,6 @@ class WindowAttention3D(nn.Module):
         return x
 
     def extra_repr(self) -> str:
-
         named_modules = set()
         for p in self.named_modules():
             named_modules.update([p[0]])

@@ -32,7 +32,6 @@ class PolicyValueNet(nn.Module):
         self.value_head = nn.Linear(512, 1)
 
     def forward(self, state, goal):
-
         output, h = self.rnn(state)
         x = h[0]
 
@@ -75,7 +74,6 @@ class ValueClassifier(nn.Module):
         self.fc4 = nn.Linear(512, 1)
 
     def forward(self, state, goal):
-
         output, h = self.rnn(state)
         x = h[0]
 

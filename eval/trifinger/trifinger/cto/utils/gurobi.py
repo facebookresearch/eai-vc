@@ -10,7 +10,6 @@ def sum(vars):
 
 
 def abs_diff_binary(x, y):
-
     result = MVar(x.model, shape=x.shape, vtype=x.vtype)
     model = x.model
     for m in range(x.nrows):
@@ -130,7 +129,6 @@ class MVar(object):
     def __eq__(self, rhs):
         constr = []
         if hasattr(rhs, "__len__"):
-
             if rhs.shape == self.shape:
                 for m in range(self.nrows):
                     for n in range(self.ncols):
@@ -159,7 +157,6 @@ class MVar(object):
     def __le__(self, rhs):
         constr = []
         if hasattr(rhs, "__len__"):
-
             if rhs.shape == self.shape:
                 for m in range(self.nrows):
                     for n in range(self.ncols):
@@ -191,7 +188,6 @@ class MVar(object):
     def __lt__(self, rhs):
         constr = []
         if hasattr(rhs, "__len__"):
-
             if rhs.shape == self.shape:
                 for m in range(self.nrows):
                     for n in range(self.ncols):
@@ -349,7 +345,6 @@ class MVar(object):
         return self * a
 
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
-
         a, b = inputs
         if ufunc.__name__ == "matmul" and method == "__call__":
             return b.__rmatmul__(a)

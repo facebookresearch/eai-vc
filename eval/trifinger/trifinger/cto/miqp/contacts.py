@@ -141,7 +141,6 @@ def contact_transition(curr_mode, prev_mode, mode_idx, params):
 def environment_contact(
     location, orientation, params, type="sticking", sliding_direction=None
 ):
-
     # environment contact has fixed location (in the body frame) and can have sliding friction
     constr = []
     force = MVar(params.grb_model, (3, 1))

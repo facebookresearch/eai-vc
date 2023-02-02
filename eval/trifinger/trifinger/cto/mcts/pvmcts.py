@@ -172,7 +172,6 @@ class PolicyValueMCTS(object):
         return action
 
     def simulate(self, state):
-
         if self.is_terminal(state):
             return self.compute_reward(state)
 
@@ -227,7 +226,6 @@ class PolicyValueMCTS(object):
         return v
 
     def get_state_info(self, state):
-
         N = self.search_tree.nodes[str(state)]["N"]
         Q = self.search_tree.nodes[str(state)]["Q"]
         P = self.search_tree.nodes[str(state)]["P"]
@@ -318,7 +316,6 @@ class PolicyValueMCTS(object):
         return states, values, action_probs, goals
 
     def uct(self, state, action, eps=1e-6):
-
         N, Q, P = self.get_state_info(state)
         Nsa = N[str(action)]
         Nsum = sum(N.values())
@@ -331,7 +328,6 @@ class PolicyValueMCTS(object):
         return U
 
     def compute_reward(self, state):
-
         if str(state) in self.reached_nodes_reward.keys():
             reward = self.reached_nodes_reward[str(state)]
             if self.verbose:

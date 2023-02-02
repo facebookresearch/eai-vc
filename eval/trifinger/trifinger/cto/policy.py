@@ -15,7 +15,6 @@ class OpenLoopPolicy:
         x_des=None,
         f_des=None,
     ):
-
         self.action_space = action_space
         self.time_step = time_step
         self.finger = finger
@@ -63,7 +62,6 @@ class OpenLoopPolicy:
         return ft_pos
 
     def get_observation(self):
-
         obs = {
             "policy": {
                 "controller": self.controller.get_observation(),

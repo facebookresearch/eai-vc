@@ -106,7 +106,6 @@ def set_default_parameters(
     if len(constraints) == 0:
         default_params = set(all_parameter_names)
     else:
-
         default_params = all_parameter_names - set.union(*constraints)
     default_count = 0
     for scheduler_cfg in scheduler_cfgs:

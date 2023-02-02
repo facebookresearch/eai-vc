@@ -291,7 +291,6 @@ def default_img_generator():
 
 class AirstoreImageDataset(AIRStoreDataset):
     def _map_item(self, sample):
-
         try:
             image = Image.open(io.BytesIO(sample[self._data_column]))
             if image.mode != "RGB":
@@ -335,7 +334,6 @@ class AirstoreImageTextDataset(AIRStoreDataset):
         self._text_column = text_column
 
     def _map_item(self, sample):
-
         try:
             image = Image.open(io.BytesIO(sample[self._data_column]))
             if image.mode != "RGB":
@@ -383,7 +381,6 @@ class AirstoreImageTextHashtagDataset(AIRStoreDataset):
         self._hash_column = hash_column
 
     def _map_item(self, sample):
-
         try:
             image = Image.open(io.BytesIO(sample[self._data_column]))
             if image.mode != "RGB":

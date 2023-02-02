@@ -25,7 +25,6 @@ def rollout_from_init_states(
     horizon=1e6,
     debug=False,
 ) -> list:
-
     assert isinstance(env, GymEnv)
     assert isinstance(init_states, list)
 

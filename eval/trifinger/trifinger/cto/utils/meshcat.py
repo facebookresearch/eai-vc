@@ -13,7 +13,6 @@ class Arrow(object):
         length_scale=1,
         color=0xFF22DD,
     ):
-
         self.vis = meshcat_vis[name]
         self.cone = self.vis["cone"]
         self.line = self.vis["line"]

@@ -25,7 +25,6 @@ class MPPO(PPO):
         use_clipped_value_loss: bool = True,
         use_normalized_advantage: bool = True,
     ) -> None:
-
         super().__init__(
             actor_critic=actor_critic,
             clip_param=clip_param,

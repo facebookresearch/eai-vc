@@ -82,7 +82,6 @@ class ReachCubePolicy:
         self.t = 0
 
     def reset(self, observation):
-
         # mode and trajectory initializations
         self.mode = Mode.INIT
         self.prev_mode = None
@@ -243,7 +242,6 @@ class ReachCubePolicy:
         return ft_pos
 
     def get_observation(self):
-
         obs = {
             "policy": {
                 "controller": self.controller.get_observation(),

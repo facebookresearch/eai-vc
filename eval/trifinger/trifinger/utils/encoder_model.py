@@ -126,7 +126,6 @@ class EncDecModel(torch.nn.Module):
         )
 
     def forward(self, input_tensor):
-
         x = self.encoder_model(input_tensor)  # [B, latent_dim]
         x = self.decoder_model(x)  # [B, 3, 64, 64]
         return x

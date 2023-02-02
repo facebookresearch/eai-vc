@@ -20,6 +20,7 @@ DEPTH_OPS = [
     "Identity",
 ]
 
+
 # Copied from torchvision file:
 # https://github.com/pytorch/vision/blob/eb2fb25304dd3180c092231bbe83cd88d25f7cb3/torchvision/transforms/autoaugment.py
 def _apply_op(

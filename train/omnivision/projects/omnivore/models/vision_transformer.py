@@ -37,6 +37,7 @@ to_2tuple = _ntuple(2)
 
 def get_sinusoid_encoding_table(n_position, d_hid):
     """Sinusoid position encoding table"""
+
     # TODO: make it with torch instead of numpy
     def get_position_angle_vec(position):
         return [
@@ -319,8 +320,10 @@ class PatchEmbedGeneric(nn.Module):
 
 
 class PatchEmbedTMAE(nn.Module):
-    def __init__(self, proj_stem, input_size):
+    def __init__(self, proj_stem, img_size, use_cls):
         super().__init__()
+
+        self.use_cls = use_cls
 
         if len(proj_stem) > 1:
             self.proj = nn.Sequential(*proj_stem)
@@ -330,15 +333,15 @@ class PatchEmbedTMAE(nn.Module):
             self.proj = proj_stem[0]
 
         # get the num_patches
-        assert isinstance(input_size, list) and (
-            len(input_size) == 3 or len(input_size) == 4
+        assert isinstance(img_size, list) and (
+            len(img_size) == 3 or len(img_size) == 4
         ), "Need the full CxHxW or CxTxHxW input size"
         with torch.no_grad():
             dummy_img = torch.zeros(
                 [
                     1,
                 ]
-                + input_size
+                + img_size
             )
             proj_output_shape = list(self.proj(dummy_img).shape)  # B C (T) H W
             self.patches_layout = tuple([1] + proj_output_shape[-2:])
@@ -353,11 +356,20 @@ class PatchEmbedTMAE(nn.Module):
         # B(T) C H W -> B(T) HW C
         return x.flatten(2).transpose(1, 2)
 
-    @staticmethod
-    def reshape_for_decoder(x, T):
+    def reshape_for_decoder(self, x, T):
         _, HW, C = x.shape
-        # BT HW C -> B THW C
-        return x.reshape([-1, T, HW, C]).flatten(1, 2)
+        if not self.use_cls:
+            # BT HW C -> B THW C
+            return x.reshape([-1, T, HW, C]).flatten(1, 2)
+
+        # BT HW+1 C -> B T HW+1 C
+        x = x.reshape([-1, T, HW, C])
+        # B T HW+1 C -> B T C
+        cls_tokens = x[:, :, :1, :].flatten(1, 2)
+        # B T HW+1 C -> B THW C
+        other_tokens = x[:, :, 1:, :].flatten(1, 2)
+        # B (T + THW) C
+        return torch.cat([cls_tokens, other_tokens], dim=1)
 
     def forward(self, x):
         return self.proj(x)
@@ -399,7 +411,7 @@ class Decoder(nn.Module):
         self.layer_norm_eps = layer_norm_eps
         self.patches_layout = patches_layout
         self.first_patch_idx = first_patch_idx
-        assert first_patch_idx == 0 or first_patch_idx == 1
+        # assert first_patch_idx == 0 or first_patch_idx == 1
         self.share_pos_embed = share_pos_embed
         self.build_pos_embedding(
             share_pos_embed=share_pos_embed,
@@ -622,15 +634,13 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             )
 
         elif patch_embed_type == "generic":
-
             self.patch_embed = PatchEmbedGeneric(
                 patch_embed_params_list, img_size=img_size
             )
 
         elif patch_embed_type == "tmae":
-
             self.patch_embed = PatchEmbedTMAE(
-                patch_embed_params_list, input_size=img_size
+                patch_embed_params_list, img_size=img_size, use_cls=use_cls_token
             )
 
         num_patches = self.patch_embed.num_patches
@@ -643,6 +653,10 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             self.cls_token = None
             self.first_patch_idx = 0
             total_num_patches = num_patches
+
+        self.decoder_first_patch_idx = self.first_patch_idx
+        if use_cls_token and patch_embed_type == "tmae":
+            self.decoder_first_patch_idx = img_size[1]
 
         if learnable_pos_embed:
             self.pos_embed = nn.Parameter(torch.zeros(1, total_num_patches, embed_dim))
@@ -697,7 +711,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         if decoder is not None:
             self.decoder = wrap_fsdp_if_enabled(
                 decoder(
-                    first_patch_idx=self.first_patch_idx,
+                    first_patch_idx=self.decoder_first_patch_idx,
                     patches_layout=self.patch_embed.dec_patches_layout,
                     embed_dim=mask_token_embed_dim,
                     fsdp_settings=fsdp_settings,
@@ -833,7 +847,7 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
 
         if self.cls_token is not None:
             class_tokens = self.cls_token.expand(
-                B, -1, -1
+                x.shape[0], -1, -1
             )  # stole class_tokens impl from Phil Wang, thanks
             x = torch.cat((class_tokens, x), dim=1)
 
@@ -900,9 +914,6 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             else:
                 x = blk(x)
 
-        # reshape for decoding
-        x = self.patch_embed.reshape_for_decoder(x, T)
-
         if self.classifier_feature == "cls_token" and (
             mask is None or self.decoder is None
         ):
@@ -930,10 +941,12 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             x = self.insert_masks(x, corrected_mask)
             # the mask is used to assign all masked patches to the masked_token
             x = self.apply_mask(x, mask, use_first_patch_idx=True)
-            if self.first_patch_idx == 0:
+            # reshape for decoding
+            x = self.patch_embed.reshape_for_decoder(x, T)
+            if self.decoder_first_patch_idx == 0:
                 cls_token = None
             else:
-                cls_token = x[:, self.first_patch_idx]
+                cls_token = x[:, self.decoder_first_patch_idx]
             x = self.decoder(
                 x,
                 orig_input_shape,
@@ -946,9 +959,11 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
             # can't be concatenated together and have to be returned as a tuple
 
             if isinstance(x, list):
-                decoder_patch_features = [el[:, self.first_patch_idx :] for el in x]
+                decoder_patch_features = [
+                    el[:, self.decoder_first_patch_idx :] for el in x
+                ]
             else:
-                decoder_patch_features = x[:, self.first_patch_idx :]
+                decoder_patch_features = x[:, self.decoder_first_patch_idx :]
 
             # FSDP with attach a backward hook to any inputs, we do not desire this
             # for the class token so we wrap it to prevent FSDP from latching to
@@ -1070,9 +1085,9 @@ class VisionTransformer(nn.Module, metaclass=FSDPWrapMetaclass):
         input_shape=None,
         first_patch_idx=1,
     ):
-        assert (
-            first_patch_idx == 0 or first_patch_idx == 1
-        ), "there is 1 CLS token or none"
+        # assert (
+        #     first_patch_idx == 0 or first_patch_idx == 1
+        # ), "there is 1 CLS token or none"
         N = pos_embed.shape[1] - first_patch_idx  # since it's 1 if cls_token exists
         if npatch_per_img == N:
             return pos_embed

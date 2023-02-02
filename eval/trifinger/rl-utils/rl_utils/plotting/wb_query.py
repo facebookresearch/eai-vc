@@ -178,7 +178,6 @@ def query(
 def query_s(
     query_str: str, proj_cfg: DictConfig, verbose=True, use_cached: bool = False
 ):
-
     select_s, filter_s = query_str.split(" WHERE ")
     select_fields = select_s.replace(" ", "").split(",")
 

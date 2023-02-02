@@ -276,7 +276,6 @@ def plot_traj(title, save_path, d_list, data_dicts, plot_timestamp=None):
             plt.title(d)
 
         for label, data in data_dicts.items():
-
             num_steps = data["y"].shape[0]
 
             if "x" in data:
@@ -316,7 +315,6 @@ def encode_img(model, transform, img):
 
 
 def resize_img(img, new_dim=64):
-
     resize = T.Compose(
         [T.Resize(new_dim, interpolation=T.InterpolationMode.BICUBIC), T.ToTensor()]
     )
@@ -326,7 +324,6 @@ def resize_img(img, new_dim=64):
 
 
 def save_gif(images, save_str, duration=None):
-
     frames = []
     for i, img in enumerate(images):
         # img = resize_img(img).detach().numpy().transpose(1,2,0) * 255.
@@ -364,7 +361,6 @@ def add_actions_to_obs(observation_list):
 
 def get_eaif_model_and_transform(model_name, device="cpu", use_compression_layer=True):
     if model_name in eaif_models.eaif_model_zoo:  # model_name in EAIF_MODEL_NAMES:
-
         # Load model, as done in eaif-models/tests/test_model_loading.py
         cfg_path = os.path.join(
             eaif_models_abs_path,
@@ -404,12 +400,10 @@ def get_per_finger_ftpos_err(pred_ftpos, gt_ftpos, fnum=3):
 def get_reach_scaled_err(
     finger_to_move_list, init_ft_pos, cur_ft_pos, cube_pos, cube_half_size
 ):
-
     """Given list of finger ids to move, compute average scaled error"""
 
     total_scaled_err = 0
     for finger_to_move in finger_to_move_list:
-
         cur_ft_pos_i = cur_ft_pos[3 * finger_to_move : 3 * finger_to_move + 3]
         cur_dist_to_obj = max(
             np.linalg.norm(cur_ft_pos_i - cube_pos) - cube_half_size, 0

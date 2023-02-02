@@ -108,7 +108,6 @@ def is_dist_avail_and_initialized():
 
 
 def get_amp_type(amp_type: str):
-
     assert amp_type in ["bfloat16", "float16"], "Invalid Amp type."
 
     if amp_type == "bfloat16":
@@ -276,7 +275,6 @@ class ProgressMeter(object):
 
 
 def get_resume_checkpoint(checkpoint_save_dir):
-
     if not g_pathmgr.isdir(checkpoint_save_dir):
         return None
     ckpt_file = os.path.join(checkpoint_save_dir, "checkpoint.pt")

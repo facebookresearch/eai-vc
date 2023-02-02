@@ -296,7 +296,6 @@ class TDMPC:
 
         consistency_loss, reward_loss, value_loss, priority_loss = 0, 0, 0, 0
         for t in range(self.cfg.horizon):
-
             # Predictions
             Q1, Q2 = self.model.Q(
                 z.detach() if self.cfg.detach_rewval else z, action[t]

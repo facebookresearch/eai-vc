@@ -169,7 +169,6 @@ class ILEnvTrainer(BaseRLTrainer):
     def _extract_scalars_from_infos(
         cls, infos: List[Dict[str, Any]]
     ) -> Dict[str, List[float]]:
-
         results = defaultdict(list)
         for i in range(len(infos)):
             for k, v in cls._extract_scalars_from_info(infos[i]).items():
@@ -665,7 +664,11 @@ class ILEnvTrainer(BaseRLTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                (logits, test_recurrent_hidden_states, dist_entropy,) = self.policy(
+                (
+                    logits,
+                    test_recurrent_hidden_states,
+                    dist_entropy,
+                ) = self.policy(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,

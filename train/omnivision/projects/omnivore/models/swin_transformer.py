@@ -176,7 +176,6 @@ class WindowAttention3D(nn.Module):
         attn_drop=0.0,
         proj_drop=0.0,
     ):
-
         super().__init__()
         self.dim = dim
         self.window_size = window_size  # Wd, Wh, Ww

@@ -20,7 +20,6 @@ class TriFingerAndCube(SimCubeEnvNYU):
         visualization=True,
         finger_type="trifingernyu",
     ):
-
         super().__init__(
             time_step=dt,
             init_difficulty=init_difficulty,

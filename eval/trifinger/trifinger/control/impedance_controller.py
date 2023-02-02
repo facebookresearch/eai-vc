@@ -20,7 +20,6 @@ class ImpedanceController:
         kv=[5] * 9,
         Nf=3,
     ):
-
         self.kp = kp
         self.kv = kv
         self.max_x_err = max_x_err

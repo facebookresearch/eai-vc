@@ -332,7 +332,6 @@ class PretrainedEvaluator(Evaluator):
 
         obs = obs["pixels"]
         while sum(num_evals) != 0:
-
             td = TensorDict(
                 source={"pixels": obs, "hxs": rnn_hxs, "mask": eval_masks},
                 batch_size=[self._num_envs],
@@ -355,7 +354,6 @@ class PretrainedEvaluator(Evaluator):
                 if done[env_i]:
                     total_evaluated += 1
                     if num_evals[env_i] > 0:
-
                         # self._flush_trajectory_to_save(env_i, num_evals[env_i])
                         # for k in self._info_keys:
                         #     v = td[k][env_i]

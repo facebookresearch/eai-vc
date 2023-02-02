@@ -14,7 +14,6 @@ from imitation_learning.policy_opt.policy import Policy
 
 @hydra.main(config_path="config/meta_irl", config_name="trifinger")
 def main(cfg) -> Dict[str, float]:
-
     num_envs = 1
     cfg.num_envs = 1
 

@@ -188,7 +188,6 @@ def main(cfg: dict):
 
     # Encode dataset
     for episode in tqdm(dataset.episodes):
-
         # Compute features
         features = encode(episode.obs, cfg).cpu()
 

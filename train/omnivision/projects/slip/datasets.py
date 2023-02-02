@@ -44,7 +44,6 @@ class ChunkedCLIPCollator(Callable):
         self._wrapper_dataclass = Sample
 
     def __call__(self, batch_in):
-
         images = []
         captions = []
 
@@ -59,7 +58,6 @@ class ChunkedCLIPCollator(Callable):
 
 
 def yfcc_loader(root, index, cache=None):
-
     index = format(index, "0>8d")
     repo = index[:2]
     z = index[2:5]
@@ -92,7 +90,6 @@ class YFCCDatasetCLIPChunked(torch.utils.data.Dataset):
         return 229523  # 14689580(dataset_size) / 64(chunk size)
 
     def __getitem__(self, i):
-
         try:
             with g_pathmgr.open(os.path.join(self.root, f"{i}.pkl"), "rb") as f:
                 chunk = pickle.load(f)
@@ -135,7 +132,6 @@ class YFCCDatasetCLIPIndividual(torch.utils.data.Dataset):
         return 14689580
 
     def __getitem__(self, i):
-
         with g_pathmgr.open(os.path.join(self.meta_data_root, f"{i}.pkl"), "rb") as f:
             sample = pickle.load(f)
 
@@ -315,7 +311,6 @@ class CMD224DatasetChunked(torch.utils.data.Dataset):
         return 55695156
 
     def __getitem__(self, i):
-
         in_chunk_idx = i % self.chunk_size
         chunk_id = i - in_chunk_idx
 

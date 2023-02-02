@@ -435,7 +435,6 @@ class SimCubeEnv(BaseCubeEnv):
         self.vert_markers = None
 
     def sample_init_robot_position(self):
-
         q0_range = [-0.15, 0.15]
         q1_range = [0.8, 1.15]
         q2_range = [-1.35, -1.65]

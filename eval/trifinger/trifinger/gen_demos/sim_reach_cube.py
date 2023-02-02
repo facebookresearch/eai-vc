@@ -54,7 +54,6 @@ def main(args):
     )
 
     for i in range(num_episodes):
-
         final_scaled_err = np.inf
 
         while final_scaled_err > final_scaled_err_thresh:

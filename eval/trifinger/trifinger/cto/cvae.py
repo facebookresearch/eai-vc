@@ -11,7 +11,6 @@ class VAE(nn.Module):
         conditional=False,
         cond_size=0,
     ):
-
         super().__init__()
 
         if conditional:
@@ -27,7 +26,6 @@ class VAE(nn.Module):
         self.decoder = Decoder(decoder_layer_sizes, latent_size, conditional, cond_size)
 
     def forward(self, x, c=None):
-
         means, log_var = self.encoder(x, c)
         z = self.reparameterize(means, log_var)
         recon_x = self.decoder(z, c)
@@ -35,14 +33,12 @@ class VAE(nn.Module):
         return recon_x, means, log_var, z
 
     def reparameterize(self, mu, log_var):
-
         std = torch.exp(0.5 * log_var)
         eps = torch.randn_like(std)
 
         return mu + eps * std
 
     def inference(self, z, c=None):
-
         recon_x = self.decoder(z, c)
 
         return recon_x
@@ -50,7 +46,6 @@ class VAE(nn.Module):
 
 class Encoder(nn.Module):
     def __init__(self, layer_sizes, latent_size, conditional, cond_size):
-
         super().__init__()
 
         self.conditional = conditional
@@ -69,7 +64,6 @@ class Encoder(nn.Module):
         self.linear_log_var = nn.Linear(layer_sizes[-1], latent_size)
 
     def forward(self, x, c=None):
-
         if self.conditional:
             x = torch.cat((x, c), dim=-1)
 
@@ -83,7 +77,6 @@ class Encoder(nn.Module):
 
 class Decoder(nn.Module):
     def __init__(self, layer_sizes, latent_size, conditional, cond_size):
-
         super().__init__()
 
         self.MLP = nn.Sequential()
@@ -104,7 +97,6 @@ class Decoder(nn.Module):
                 self.MLP.add_module(name="A{:d}".format(i), module=nn.ReLU())
 
     def forward(self, z, c):
-
         if self.conditional:
             z = torch.cat((z, c), dim=-1)
 

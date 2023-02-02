@@ -26,9 +26,7 @@ ALL_MODES = DIFFICULTY_CHOICES + ALL_RAND + RERUN_NEW_ENV
 
 
 def main(args):
-
     for mode in args.modes:
-
         if mode not in ALL_MODES:
             print(f"Mode {mode} not valid. Skipping")
             continue
@@ -77,7 +75,6 @@ def main(args):
 
 
 def get_log_paths(args, mode):
-
     if mode in RERUN_NEW_ENV:
         log_dir = os.path.join(args.demo_dir, args.env_name)
 
@@ -105,7 +102,6 @@ def get_log_paths(args, mode):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--modes",

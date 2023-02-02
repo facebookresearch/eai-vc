@@ -341,7 +341,6 @@ def execute_command_file(run_cmd, args, proj_cfg):
         else:
             raise ValueError("Running multiple jobs. You must specify tmux session id")
     else:
-
         if args.run_single:
             cmds = DELIM.join(cmds)
             cmds = [cmds]

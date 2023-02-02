@@ -68,7 +68,6 @@ class VisualEncoder(nn.Module):
             "vit" in backbone_config.metadata.model
             or "beit" in backbone_config.metadata.model
         ):
-
             assert (
                 global_pool and use_cls
             ) is False, "Both global_pool and use_cls config param cant be 'True'"

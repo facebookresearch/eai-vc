@@ -4,6 +4,7 @@ import torch
 
 from omnivision.meters.accuracy_meter import AccuracyMeter
 
+
 # modified from vissl/meters/accuracy_list_meter_avg_pooled.py
 class AvgPooledAccuracyListMeter(AccuracyMeter):
     def update(

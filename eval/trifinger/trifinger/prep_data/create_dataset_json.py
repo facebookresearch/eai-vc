@@ -122,7 +122,6 @@ def save_traj_stats(traj_load_info, dts, save_path=None):
 
 
 def main(args):
-
     save_dir = os.path.join(args.top_demo_dir, "preloaded_dataset_stats")
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -170,7 +169,6 @@ def main(args):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser()
 
     # Required for specifying training and test trajectories

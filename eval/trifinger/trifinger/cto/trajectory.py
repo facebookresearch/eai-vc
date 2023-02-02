@@ -196,7 +196,6 @@ def get_wrench(traj, params):
 
 
 def get_environment_contacts(traj, params):
-
     """
     Define environment contacts
     s: world frame
@@ -319,7 +318,6 @@ def get_end_effector_regions(traj, params):
 
 
 def integrate_trajectory(pose_start, idx_start, idx_end, force, torque, params):
-
     traj_length = idx_end - idx_start
     q = np.zeros((traj_length, 7))
     dq = np.zeros((traj_length, 6))

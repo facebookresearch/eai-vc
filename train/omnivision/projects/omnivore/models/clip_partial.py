@@ -225,7 +225,6 @@ class CLIP_PartialVision(nn.Module):
         return mask
 
     def encode_image(self, image, use_checkpoint=False):
-
         # Convert single frame videos to images
         #  B, C, T, H, W - >  B, C, H, W
         if self.convert_vid_to_image:
@@ -298,7 +297,6 @@ class CLIP_PartialVision(nn.Module):
             return x
 
     def forward(self, image, text, use_checkpoint=False):
-
         assert (
             not use_checkpoint
         ), "Using activation is not supported in this CLIP model."

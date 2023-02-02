@@ -323,7 +323,12 @@ class ModifiedPPOTrainer(PPOTrainer):
             current_episodes = self.envs.current_episodes()
 
             with torch.no_grad():
-                (_, actions, _, test_recurrent_hidden_states,) = self.actor_critic.act(
+                (
+                    _,
+                    actions,
+                    _,
+                    test_recurrent_hidden_states,
+                ) = self.actor_critic.act(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,

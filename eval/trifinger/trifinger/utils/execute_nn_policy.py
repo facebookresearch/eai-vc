@@ -142,7 +142,6 @@ class ExecuteNNPolicy:
         # print("Rel goal: ", self.o_goal_pos_rel)
 
     def load_policy(self, in_dim, max_a, min_a_per_dim=None, max_a_per_dim=None):
-
         if min_a_per_dim is None or max_a_per_dim is None:
             # Load unscaled policy
             policy = DeterministicPolicy(
@@ -290,7 +289,6 @@ class ExecuteNNPolicy:
         return ft_pos
 
     def get_observation(self):
-
         obs = {
             "policy": {
                 "controller": self.controller.get_observation(),

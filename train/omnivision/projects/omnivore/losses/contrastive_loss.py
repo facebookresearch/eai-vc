@@ -89,7 +89,6 @@ class ContrastiveLossLegacy(CLIPLoss):
         learnable_temperature: bool = False,
         max_temperature_multiplier: float = 100,
     ):
-
         super().__init__(all_gather_fn=all_gather_batch)
         logit_scale_data = torch.ones([], dtype=torch.float32) * np.log(1 / temperature)
         if learnable_temperature:

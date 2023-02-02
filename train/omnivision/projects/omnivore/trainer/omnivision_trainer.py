@@ -370,7 +370,6 @@ class OmnivisionTrainer(object):
         )
 
         if distributed_conf.comms_dtype is not None:  # noqa
-
             from torch.distributed.algorithms import ddp_comm_hooks
 
             amp_type = get_amp_type(distributed_conf.comms_dtype)
@@ -551,7 +550,6 @@ class OmnivisionTrainer(object):
     def run_train(self):
         # loop
         while self.epoch < self.max_epochs:
-
             dataloader = self.train_dataset.get_loader(epoch=int(self.epoch))
             outs = self.train_epoch(dataloader)
             self.logger.log_dict(outs, self.epoch)  # Logged only on rank 0
@@ -630,7 +628,6 @@ class OmnivisionTrainer(object):
         )
 
         for data_iter, batch in enumerate(val_loader):
-
             if data_iter > limit_val_batches:
                 break
 
@@ -737,7 +734,6 @@ class OmnivisionTrainer(object):
         )
 
         for data_iter, batch in enumerate(train_loader):
-
             if data_iter > limit_train_batches:
                 break
 

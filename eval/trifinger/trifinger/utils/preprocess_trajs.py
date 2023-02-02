@@ -85,7 +85,6 @@ def get_demo_pth_list(top_demo_dir):
 
 
 def save_downsampled_traj_dict(demo_pth, dts):
-
     demo_dir = os.path.dirname(demo_pth)
     dts_dir = os.path.join(demo_dir, get_dts_dir_name(dts))
     if not os.path.exists(dts_dir):
@@ -111,7 +110,6 @@ def save_downsampled_traj_dict(demo_pth, dts):
 
 
 def save_rgb_gif(demo_pth, dts, cam_name="image_60"):
-
     demo_dir = os.path.dirname(demo_pth)
     dts_dir = os.path.join(demo_dir, get_dts_dir_name(dts))
     if not os.path.exists(dts_dir):
@@ -135,7 +133,6 @@ def save_rgb_gif(demo_pth, dts, cam_name="image_60"):
 
 
 def save_encoded_imgs(demo_pth, model, transform, model_name, dts, cam_name="image_60"):
-
     file_name = f"{model_name}.pth"
     demo_dir = os.path.dirname(demo_pth)
     dts_dir = os.path.join(demo_dir, get_dts_dir_name(dts))
@@ -165,7 +162,6 @@ def save_encoded_imgs(demo_pth, model, transform, model_name, dts, cam_name="ima
 
 
 def main(args):
-
     if torch.cuda.is_available():
         device = "cuda"
     else:
@@ -185,7 +181,6 @@ def main(args):
             save_rgb_gif(demo_pth, args.dts)
 
     for model_name in args.models:
-
         model, transform, _ = get_model_and_transform(model_name, device=device)
         model.eval()
 
@@ -203,7 +198,6 @@ def get_model_and_transform(model_name, device="cpu"):
 
     ## Custom / finetuned models
     elif model_name in CUSTOM_MODEL_NAMES:
-
         custom_model_ckpt = CUSTOM_MODEL_NAMES[model_name]
         ckpt_info = torch.load(custom_model_ckpt)
 
@@ -233,7 +227,6 @@ def get_model_and_transform(model_name, device="cpu"):
             latent_dim = conf.algo.latent_dim
 
         elif model_prefix == "bc":
-
             conf = ckpt_info["conf"]
 
             _, transform, embedding_dim = d_utils.get_eaif_model_and_transform(
@@ -259,7 +252,6 @@ def get_model_and_transform(model_name, device="cpu"):
 
 
 def get_custom_model_conf(model_name):
-
     if model_name in CUSTOM_MODEL_NAMES:
         custom_model_ckpt = CUSTOM_MODEL_NAMES[model_name]
         ckpt_info = torch.load(custom_model_ckpt)
@@ -282,7 +274,6 @@ def get_dts_dir_name(downsample_time_step):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser()
 
     # Required for specifying training and test trajectories

@@ -70,7 +70,6 @@ def train(cfg: dict):
     L = logger.Logger(work_dir, cfg)
     episode_idx, start_time = 0, time.time()
     for step in range(0, cfg.train_steps + cfg.episode_length, cfg.episode_length):
-
         # Collect trajectory
         obs = env.reset()
         state = env.state if cfg.get("include_state", False) else None

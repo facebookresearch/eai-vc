@@ -199,12 +199,10 @@ def render(cfg: dict):
     metrics = []
     print(colored("Saving to dir:", "yellow"), save_dir)
     for iteration in tqdm(range(cfg.train_iter + 1)):
-
         # Update model
         common_metrics = renderer.update(buffer)
 
         if iteration % cfg.eval_freq == 0:
-
             # Evaluate (training set)
             train_mse = eval_encode_decode(
                 buffer, fp=save_dir / f"train_{iteration}.png"

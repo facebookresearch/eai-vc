@@ -12,7 +12,7 @@ setup(
     description="Omnivision trainer",
     python_requires=">=3.8",
     install_requires=[
-        "hydra-core",
+        "hydra-core>=1.2.0",
         "submitit>=1.4.4",
         "pytorchvideo>=0.1.5",
         "fvcore",

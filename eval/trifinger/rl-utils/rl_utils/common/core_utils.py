@@ -175,7 +175,7 @@ class StackHelper:
             self.stacked_obs[:, : -self.input_dim] = self.stacked_obs[
                 :, self.input_dim :
             ].clone()
-            for (i, new) in enumerate(dones):
+            for i, new in enumerate(dones):
                 if new:
                     self.stacked_obs[i] = 0
             self.stacked_obs[:, -self.input_dim :] = obs

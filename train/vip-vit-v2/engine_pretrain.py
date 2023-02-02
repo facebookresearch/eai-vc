@@ -43,7 +43,6 @@ def train_one_epoch(
     for data_iter_step, (samples, extra_samples, _) in enumerate(
         metric_logger.log_every(data_loader, print_freq, header)
     ):
-
         # we use a per iteration (instead of per epoch) lr scheduler
         if data_iter_step % accum_iter == 0:
             lr_sched.adjust_learning_rate(

@@ -114,12 +114,10 @@ def train_offline(cfg: dict):
 
     # Run training
     for iteration in range(common_metrics["iteration"], cfg.train_iter + 1):
-
         # Update model
         train_metrics = agent.update(buffer, int(1e6))
 
         if iteration % cfg.eval_freq == 0:
-
             # Evaluate agent
             mean_reward, rewards, mean_succ, succs = evaluate(
                 env, agent, cfg, iteration, L.video

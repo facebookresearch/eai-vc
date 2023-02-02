@@ -11,7 +11,6 @@ class ImpedanceController:
         self.frame_id = frame_id
 
     def compute_torque(self, q, dq, x_ref, dx_ref, f_ref):
-
         oriented_jacobian = self.compute_oriented_jacobian(q)
         Jov = oriented_jacobian[:3]
 

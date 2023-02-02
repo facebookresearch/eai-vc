@@ -298,12 +298,10 @@ class MultiTDMPC:
         total_loss = 0
         zs = {task_id: [batched_z.detach()] for task_id in range(self.cfg.num_tasks)}
         for task_id in range(self.cfg.num_tasks):
-
             # Iterate over time steps
             z = batched_z[task_id]
             consistency_loss, reward_loss, value_loss, priority_loss = 0, 0, 0, 0
             for t in range(self.cfg.horizon):
-
                 # Predictions
                 Q1, Q2 = self.model.Q(z, action[task_id, t], task_id)
                 z, reward_pred = self.model.next(z, action[task_id, t], task_id)

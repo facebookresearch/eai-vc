@@ -20,7 +20,6 @@ CONFIG_FOLDER = Path(__file__).parent / "configs_checkpoint"
 
 class TestCheckpointLoaderConf(unittest.TestCase):
     def test_simple_model(self):
-
         num_layers = 4
         model = SimpleNet(2, num_layers, 1.0)
         model_ckpt = SimpleNet(2, num_layers, 0.0)
@@ -53,7 +52,6 @@ class TestCheckpointLoaderConf(unittest.TestCase):
             )
 
     def test_include_filter_model(self):
-
         num_layers = 4
         model = SimpleNet(2, num_layers, 1.0)
         model_ckpt = SimpleNet(2, num_layers, 0.0)
@@ -111,7 +109,6 @@ class TestCheckpointLoaderConf(unittest.TestCase):
             )
 
     def test_exclude_filter_model(self):
-
         num_layers = 4
         model = SimpleNet(2, num_layers, 1.0)
         model_ckpt = SimpleNet(2, num_layers, 0.0)
@@ -169,7 +166,6 @@ class TestCheckpointLoaderConf(unittest.TestCase):
             )
 
     def test_include_exclude_filter_model(self):
-
         num_layers = 4
         model = SimpleNet(2, num_layers, 1.0)
         model_ckpt = SimpleNet(2, num_layers, 0.0)
@@ -231,7 +227,6 @@ class TestCheckpointLoaderConf(unittest.TestCase):
             )
 
     def test_remap_with_repeat_filter_and_exclude_model(self):
-
         num_layers = 4
         ref_val = 1.0
         model = SimpleNet(2, num_layers, ref_val)
@@ -301,7 +296,6 @@ class TestCheckpointLoaderConf(unittest.TestCase):
             )
 
     def test_ckpt_with_remap_model(self):
-
         num_layers = 4
 
         class BaseModule(nn.Module):

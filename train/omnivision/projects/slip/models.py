@@ -162,7 +162,6 @@ class CLIPTextEncoder(nn.Module):
         return mask
 
     def forward(self, text):
-
         x = self.token_embedding(text)  # [batch_size, n_ctx, d_model]
         x = x + self.positional_embedding
         x = x.permute(1, 0, 2)  # NLD -> LND
@@ -202,7 +201,6 @@ class CLIPRobertaTextEncoder(nn.Module):
             self.transformer.eval()
 
     def forward(self, text):
-
         if self.freeze_transformer:
             context = torch.no_grad()
         else:
@@ -379,7 +377,6 @@ class CLIP(nn.Module):
         return mask
 
     def encode_image(self, image, use_checkpoint=False):
-
         # Convert single frame videos to images
         #  B, C, T, H, W - >  B, C, H, W
         if self.convert_vid_to_image:
@@ -449,7 +446,6 @@ class CLIP(nn.Module):
             return x
 
     def forward(self, image, text, use_checkpoint=False):
-
         if image is None:
             return self.encode_text(text)
         elif text is None:
@@ -1434,7 +1430,6 @@ def _make_default_omnivore_vit_cfg():
 
 
 def SLIP_OMNIVORE_VITS16(**kwargs):
-
     from omnivore_vit import VisionTransformer
 
     vision_model = VisionTransformer(
@@ -1458,7 +1453,6 @@ def SLIP_OMNIVORE_VITS16(**kwargs):
 
 
 def create_timm_finetuneModel_from_ckpt(arch, ckpt_path, num_classes=1000):
-
     linear_keyword = "head"
 
     print("=> loading checkpoint '{}'".format(ckpt_path))

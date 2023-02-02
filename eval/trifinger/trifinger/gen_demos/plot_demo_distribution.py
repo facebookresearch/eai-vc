@@ -8,7 +8,6 @@ import utils.train_utils as t_utils
 
 
 def main(args):
-
     # Load train and test trajectories
     with open(args.data_path, "r") as f:
         traj_info = json.load(f)
@@ -30,7 +29,6 @@ def main(args):
         goal_pos_list = []
         r += 1
         for demo in traj_info[f"{split}_demos"]:
-
             init_obj_pos = demo["o_pos_cur"][0, :]
             goal_obj_pos = demo["o_pos_cur"][-1, :]
 
@@ -68,7 +66,6 @@ def main(args):
 
 
 def parse_args():
-
     parser = argparse.ArgumentParser()
 
     # Required for specifying training and test trajectories

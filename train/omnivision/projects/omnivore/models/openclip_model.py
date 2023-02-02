@@ -615,7 +615,6 @@ class CLIP(nn.Module):
         return next(self.visual.parameters()).dtype
 
     def encode_image(self, image, use_checkpoint=False):
-
         return self.visual(image, use_checkpoint=use_checkpoint)
 
     def encode_text(self, text, use_checkpoint=False):

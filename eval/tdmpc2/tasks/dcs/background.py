@@ -178,7 +178,6 @@ class DistractingBackgroundEnv(control.Environment):
         seed=None,
         shuffle_buffer_size=None,
     ):
-
         if not 0 <= video_alpha <= 1:
             raise ValueError("`video_alpha` must be in the range [0, 1]")
 
@@ -258,7 +257,6 @@ class DistractingBackgroundEnv(control.Environment):
         ].astype(np.float32)
 
         if self._video_paths:
-
             if self._shuffle_buffer_size:
                 # Shuffle images from all videos together to get background frames.
                 file_names = [
@@ -295,7 +293,6 @@ class DistractingBackgroundEnv(control.Environment):
                 texturized_images.append(new_texture)
 
         else:
-
             self._current_img_index = 0
             texturized_images = [sky_texture]
 

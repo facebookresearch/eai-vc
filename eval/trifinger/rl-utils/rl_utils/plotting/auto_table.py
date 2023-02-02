@@ -139,7 +139,6 @@ def plot_table(
             if col_k not in row_y:
                 row_str.append("-")
             else:
-
                 val = row_y.loc[col_k]
                 std = row_std.loc[col_k]
                 if val == missing_fill_value:

@@ -23,7 +23,6 @@ Main script to launch imitation learning training
 
 @hydra.main(version_base=None, config_path="config", config_name="bc_default")
 def main(conf):
-
     random.seed(conf.seed)
     np.random.seed(conf.seed)
     torch.manual_seed(conf.seed)

@@ -9,7 +9,6 @@ from cto.constraints import sliding_friction
 def environment_contact(
     location, orientation, params, type="sticking", sliding_direction=None
 ):
-
     # environment contact has fixed location (in the body frame) and can have sliding friction
     constr = []
     force = cp.Variable(3)
@@ -73,7 +72,6 @@ def fixed_force_contact(force, surface, params):
 
 
 def fixed_location_contact(location, surface, params):
-
     constr = []
     location_skew = cp.Parameter((3, 3), value=skew_symetrify(location))
 

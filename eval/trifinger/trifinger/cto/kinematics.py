@@ -44,7 +44,6 @@ def inverse_kinematics_3d(
     threshold=0.02,
     q_null=None,
 ):
-
     if q_init is None:
         q = np.zeros(pin_robot.nv)
     else:

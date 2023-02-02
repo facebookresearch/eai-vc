@@ -13,6 +13,7 @@ import torch.nn as nn
 from timm.models.layers import to_2tuple, trunc_normal_
 from torch.cuda.amp import autocast
 
+
 # override the timm package to relax the input shape constraint.
 class PatchEmbed(nn.Module):
     def __init__(self, img_size=224, patch_size=16, in_chans=3, embed_dim=768):
@@ -59,7 +60,6 @@ class ASTModel(nn.Module):
         model_size="base384",
         verbose=True,
     ):
-
         super(ASTModel, self).__init__()
         assert (
             timm.__version__ == "0.4.5"

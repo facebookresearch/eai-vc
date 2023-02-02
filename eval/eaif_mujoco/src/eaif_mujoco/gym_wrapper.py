@@ -90,7 +90,6 @@ class FrozenEmbeddingWrapper(gym.ObservationWrapper):
         *args,
         **kwargs
     ):
-
         gym.ObservationWrapper.__init__(self, env)
 
         self.embedding_buffer = (
@@ -202,7 +201,6 @@ def env_constructor(
     *args,
     **kwargs
 ) -> GymEnv:
-
     # construct basic gym environment
     assert env_name in ENV_TO_SUITE.keys()
     suite = ENV_TO_SUITE[env_name]

@@ -5,7 +5,6 @@ import numpy as np
 
 
 def plot_actions(pred_actions, gt_actions, n_updates, save_dir):
-
     assert pred_actions.shape == gt_actions.shape
     action_len, action_dim = pred_actions.shape
 

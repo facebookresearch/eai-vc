@@ -634,7 +634,6 @@ class CubeReachEnv(gym.Env):
         return torch.FloatTensor(goal_pos_list[idx] / 100.0)
 
     def sample_init_robot_position(self):
-
         q0_range = [-0.15, 0.15]
         q1_range = [0.8, 1.15]
         q2_range = [-1.35, -1.65]
@@ -711,7 +710,6 @@ class CubeReachEnv(gym.Env):
         return [seed]
 
     def _create_observation(self, t):
-
         robot_observation = self.platform.get_robot_observation(t)
         ftip_pos = self.hand_kinematics.get_ft_pos(robot_observation.position)
         scaled_success = self.scaled_success(ftip_pos)

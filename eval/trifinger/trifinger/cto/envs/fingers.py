@@ -27,7 +27,6 @@ class FingerDoubleAndObject(BulletEnv):
         dt=0.001,
         box_type="box",
     ):
-
         super().__init__(server, dt)
 
         # friction coeff

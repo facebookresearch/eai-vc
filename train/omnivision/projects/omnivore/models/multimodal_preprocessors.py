@@ -127,7 +127,6 @@ class RGBDTPreprocessor(VerboseNNModule):
 
     @torch.no_grad()
     def init_parameters(self, init_param_style):
-
         if init_param_style == "openclip":
             # OpenCLIP style initialization
             scale = self.embed_dim**-0.5

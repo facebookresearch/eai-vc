@@ -14,7 +14,6 @@ from omnivore.train_utils import (
 
 @hydra.main(config_path="config", config_name=None)
 def main(cfg) -> None:
-
     makedir(cfg.launcher.experiment_log_dir)
     _, rank = get_machine_local_and_dist_rank()
     if rank is None or rank == 0:

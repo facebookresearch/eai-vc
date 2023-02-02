@@ -800,7 +800,6 @@ class MoveCubeEnv(BaseCubeEnv):
         self.start_dist = 1000
 
     def sample_init_robot_position(self):
-
         q0_range = [-0.15, 0.15]
         q1_range = [0.8, 1.15]
         q2_range = [-1.35, -1.65]

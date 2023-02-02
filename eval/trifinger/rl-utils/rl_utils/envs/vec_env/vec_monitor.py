@@ -21,7 +21,7 @@ class VecMonitor(VecEnvWrapper):
         self.eprets += rews
         self.eplens += 1
         newinfos = []
-        for (i, (done, ret, eplen, info)) in enumerate(
+        for i, (done, ret, eplen, info) in enumerate(
             zip(dones, self.eprets, self.eplens, infos)
         ):
             info = info.copy()

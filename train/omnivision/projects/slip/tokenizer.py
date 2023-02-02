@@ -167,7 +167,6 @@ class SimpleTokenizer(object):
         return text
 
     def __call__(self, texts, context_length=None):
-
         if not context_length:
             context_length = self.context_length
 

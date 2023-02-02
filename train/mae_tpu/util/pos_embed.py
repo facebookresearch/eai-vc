@@ -11,6 +11,7 @@ import numpy as np
 
 import torch
 
+
 # --------------------------------------------------------
 # 2D sine-cosine position embedding
 # References:

@@ -147,7 +147,6 @@ class VerboseNNModule(nn.Module):
         return st
 
     def extra_repr(self) -> str:
-
         named_modules = set()
         for p in self.named_modules():
             named_modules.update([p[0]])

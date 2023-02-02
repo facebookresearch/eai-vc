@@ -21,7 +21,6 @@ from rl_utils.common import set_seed
 
 def init_weights(m, gain=1):
     if isinstance(m, nn.Linear):
-
         torch.nn.init.orthogonal_(m.weight, gain=gain)
         m.bias.data.fill_(0.0)
 
@@ -95,7 +94,6 @@ class Policy(nn.Module):
         std_init=0.0,
         squash_mean=False,
     ):
-
         super().__init__()
 
         self.num_envs = num_envs

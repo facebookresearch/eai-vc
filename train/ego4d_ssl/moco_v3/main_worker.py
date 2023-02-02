@@ -274,7 +274,6 @@ def main_worker(gpu, ngpus_per_node, args):
     )
 
     for epoch in range(args.optim.start_epoch, args.optim.epochs):
-
         if args.environment.distributed:
             train_sampler.set_epoch(epoch)
 

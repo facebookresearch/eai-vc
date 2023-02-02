@@ -141,7 +141,6 @@ class MetaIRL(nn.Module):
             policy,
             policy_opt,
         ) as (dpolicy, diffopt):
-
             # Fill in the rewards with the predicted rewards.
             rollouts.rewards = self.get_reward(rollouts)
 

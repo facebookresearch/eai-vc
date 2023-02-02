@@ -39,7 +39,6 @@ class TrifingerEvaluator(Evaluator):
         accum_stats = defaultdict(list)
 
         for n in range(5):
-
             act_data = policy.act(obs, rnn_hxs, eval_masks, deterministic=True)
             next_obs, rewards, done, infos = self._envs.step(
                 act_data["action"].detach()

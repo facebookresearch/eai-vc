@@ -16,7 +16,6 @@ from .model_wrappers import MIMOHeadWrapper
 def _unix_pattern_to_parameter_names(
     constraints: List[str], all_parameter_names: Set[str]
 ) -> Union[None, Set[str]]:
-
     parameter_names = []
     for param_name in constraints:
         matching_parameters = set(fnmatch.filter(all_parameter_names, param_name))
@@ -423,7 +422,6 @@ def init_model_from_consolidated_weights(
     all_layers = model.state_dict()
 
     for layername in all_layers.keys():
-
         if layername in state_dict:
             param = state_dict[layername]
             if not isinstance(param, torch.Tensor):
@@ -464,7 +462,6 @@ def init_model_from_consolidated_weights(
 def build_trunk_from_vissl_config(
     config_file_path, in_project_dir=False, model_keys=None
 ):
-
     """
     Only support generic vissl model building
 
@@ -504,7 +501,6 @@ def build_vit_trunk_from_vissl_config(
     drop_path=None,
     ignore_no_layers=False,
 ):
-
     """
     Builds ViT model only from vissl config while doing so,
     appropriately loads checkpoint using vissl's checkpoint loader.

@@ -32,6 +32,7 @@ to_2tuple = _ntuple(2)
 
 def get_sinusoid_encoding_table(n_position, d_hid):
     """Sinusoid position encoding table"""
+
     # TODO: make it with torch instead of numpy
     def get_position_angle_vec(position):
         return [

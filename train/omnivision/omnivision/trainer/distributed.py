@@ -6,7 +6,6 @@ import torch.distributed as dist
 
 
 def init_ranks(pl_trainer):
-
     assert torch.distributed.is_available() and torch.distributed.is_initialized()
 
     if os.environ.get("LOCAL_RANK") is not None:

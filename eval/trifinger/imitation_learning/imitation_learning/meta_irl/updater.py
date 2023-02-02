@@ -136,9 +136,7 @@ class MetaIRL(nn.Module):
             policy,
             policy_opt,
         ) as (dpolicy, diffopt):
-
             for inner_i in range(self.n_inner_iters):
-
                 obs, actions, next_obs = extract_transition_batch(rollouts)
                 rewards = self.reward(obs, actions, next_obs)
 
