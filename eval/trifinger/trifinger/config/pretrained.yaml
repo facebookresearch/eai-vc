@@ -11,6 +11,7 @@ slurm_name: ""
 job_dir: ""
 job_id: 0
 wandb_id: ""
+augment: False
 env_settings: {}
 sample_goals: False
 start_radius: 0.0
@@ -26,7 +27,7 @@ num_envs: 4
 device: ???
 only_eval: False
 seed: 12345
-num_eval_episodes: 10
+num_eval_episodes: 100
 num_env_steps: 2.5e6
 visual_observation: True
 recurrent_hidden_state_size: 128
@@ -35,7 +36,7 @@ info_keys: ["value_preds","reward","a_min","a_max","a_std"]
 
 # Intervals
 log_interval: 1
-eval_interval: 20
+eval_interval: 100
 save_interval: 100
 
 # Saving / Loading

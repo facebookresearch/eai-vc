@@ -25,8 +25,7 @@ except ImportError:
 import control.cube_utils as c_utils
 
 
-# REACH_EPISODE_LENGTH = 500
-REACH_EPISODE_LENGTH = 1000
+REACH_EPISODE_LENGTH = 500
 
 
 class NewReachEnv(gym.Env):

@@ -179,7 +179,7 @@ class Evaluator:
             next_obs, done = td["next"]["observation"], td["done"]
 
             rnn_hxs = td["recurrent_hidden_states"]
-            if total_evaluated < num_render:
+            if save_vid and total_evaluated < num_render:
                 frames = self._envs.render(mode="eval")
                 all_frames.append(frames[0])
 
@@ -302,14 +302,18 @@ class PretrainedEvaluator(Evaluator):
         )
 
     def evaluate(
-        self, policy: BasePolicy, num_episodes: int, eval_i: int
+        self,
+        policy: BasePolicy,
+        num_episodes: int,
+        eval_i: int,
+        save_vid=False,
     ) -> Dict[str, float]:
         if isinstance(policy, nn.Module):
             device = next(policy.parameters()).device
         else:
             device = torch.device("cpu")
 
-        obs = self._envs.reset()
+        obs = self._envs.reset(eval_mode=True)
 
         rnn_hxs = torch.zeros(self._num_envs, self._rnn_hxs_dim).to(device)
         eval_masks = torch.zeros(self._num_envs, 1, device=device)
@@ -414,12 +418,12 @@ class PretrainedEvaluator(Evaluator):
                 )
 
                 td.set("reset_workers", td["done"])
-                reset_td = self._envs.reset(tensordict=td)
+                reset_td = self._envs.reset(tensordict=td, eval_mode=True)
                 next_obs = reset_td["pixels"]
 
             obs = next_obs
 
-        if len(all_frames) > 0:
+        if save_vid and len(all_frames) > 0:
             save_mp4(all_frames, self._vid_dir, f"eval_{eval_i}", self._fps)
 
         if self._should_save_trajs:
@@ -468,8 +472,14 @@ class CubeEvaluator(Evaluator):
             **kwargs,
         )
 
+        self.max_scaled_success = 0
+
     def evaluate(
-        self, policy: BasePolicy, num_episodes: int, eval_i: int
+        self,
+        policy: BasePolicy,
+        num_episodes: int,
+        eval_i: int,
+        save_vid=False,
     ) -> Dict[str, float]:
         if isinstance(policy, nn.Module):
             device = next(policy.parameters()).device
@@ -496,9 +506,9 @@ class CubeEvaluator(Evaluator):
             num_render = num_episodes
         else:
             num_render = self._num_render
+        num_render = 100
 
         obs = obs["pixels"]
-        print("cube_evaluator")
         while sum(num_evals) != 0:
             td = TensorDict(
                 source={"pixels": obs, "hxs": rnn_hxs, "mask": eval_masks},
@@ -512,8 +522,8 @@ class CubeEvaluator(Evaluator):
             next_obs = td["next"]["pixels"]
             done = td["done"]
             rnn_hxs = td["recurrent_hidden_states"]
+
             if total_evaluated < num_render:
-                # TODO try catch for other envs
                 frames = self._envs.render(mode="eval")
                 all_frames.append(frames[0])
 
@@ -531,14 +541,21 @@ class CubeEvaluator(Evaluator):
                 accum_stats["scaled_success"].append(
                     td["next"]["scaled_success"].detach().mean().item()
                 )
+
+                accum_stats["scaled_success_reach"].append(
+                    td["next"]["scaled_success_reach"].detach().mean().item()
+                )
+                scaled_success = td["next"]["scaled_success"].detach().mean().item()
+                if scaled_success > self.max_scaled_success:
+                    self.max_scaled_success = scaled_success
+                accum_stats["max_scaled_success"] = self.max_scaled_success
+
                 td.set("reset_workers", td["done"])
                 reset_td = self._envs.reset(tensordict=td, eval_mode=True)
                 next_obs = reset_td["pixels"]
 
             obs = next_obs
-
-        print("done evaluating")
-        if len(all_frames) > 0:
+        if save_vid and len(all_frames) > 0:
             save_mp4(all_frames, self._vid_dir, f"eval_{eval_i}", self._fps)
 
         return {k: np.mean(np.array(v)) for k, v in accum_stats.items()}

@@ -32,6 +32,7 @@ class BaseCubeEnv(gym.Env):
         step_size: int = 100,
         difficulty: int = 1,
         visual_observation: bool = False,
+        seq_eval: bool = True,
     ):
         """Initialize.
 
@@ -146,6 +147,11 @@ class BaseCubeEnv(gym.Env):
             ),
         )
 
+        observation_state_space = gym.spaces.Box(
+            low=np.ones(23) * -10,
+            high=np.ones(23) * 10,
+        )
+
         self.robot_torque_space = gym.spaces.Box(
             low=trifingerpro_limits.robot_torque.low,
             high=trifingerpro_limits.robot_torque.high,
@@ -180,7 +186,6 @@ class BaseCubeEnv(gym.Env):
             {
                 "t": gym.spaces.Discrete(MOVE_CUBE_EPISODE + 1),
                 "state_obs": observation_state_space,
-                "action": self.action_space,
             }
         )
         if self.visual_observation:
@@ -195,7 +200,7 @@ class BaseCubeEnv(gym.Env):
                     "t": gym.spaces.Discrete(MOVE_CUBE_EPISODE + 1),
                     "state_obs": observation_state_space,
                     "scaled_success": self.success_space,
-                    "action": self.action_space,
+                    "scaled_success_reach": self.success_space,
                     "pixels": self.image_observation_space,
                 }
             )
@@ -204,6 +209,10 @@ class BaseCubeEnv(gym.Env):
 
         self.eval_start_list = self.get_eval_start_list()
         self.eval_goal_list = self.get_eval_goal_list()
+        self.eval_start_count = 0
+        self.eval_count = 0
+        # goes through hardcoded eval goal values in order rather than randomly choosing
+        self.sequential_eval = seq_eval
 
     def get_start_list(self):
         return [
@@ -479,6 +488,7 @@ class BaseCubeEnv(gym.Env):
 
     def compute_reward(
         self,
+        fingertip_pos,
         achieved_goal,
         desired_goal,
         info: dict,
@@ -507,12 +517,30 @@ class BaseCubeEnv(gym.Env):
         xy_dist = np.linalg.norm(desired_goal[:2] - achieved_goal[:2])
         scaled_dist = xy_dist / (2 * arena_radius)
         start_scaled_dist = xy_dist / self.start_dist
-        return -1 * scaled_dist + (1 - start_scaled_dist)
-        # return -task.evaluate_state(
-        #     task.Pose(desired_goal[:3], desired_goal[3:]),  # expects pos + orientation
-        #     task.Pose(achieved_goal[:3], achieved_goal[3:]),
-        #     info["difficulty"],
-        # )
+        reward = 0
+        # additional reward the closer the fingertips are to the cube
+        ftip_dist_to_cube = 0
+        for i in range(3):
+            ftip_dist_to_cube += np.linalg.norm(
+                fingertip_pos[(3 * i) : (3 * i) + 3] - achieved_goal[0:3]
+            )
+        if ftip_dist_to_cube < 0.15:
+            reward += 50.0
+            for i in range(3):
+                ftip_dist_to_target = np.linalg.norm(
+                    fingertip_pos[(3 * i) : (3 * i) + 3] - desired_goal[0:3]
+                )
+            cube_dist_to_target = np.linalg.norm(achieved_goal[0:3] - desired_goal[0:3])
+            reward += -200 * cube_dist_to_target + -10 * ftip_dist_to_target
+
+        reward += -100 * (ftip_dist_to_cube) + 50
+        self.prev_finger_dist = ftip_dist_to_cube
+
+        if xy_dist < 0.07:
+            reward += 10
+        if xy_dist < 0.04:
+            reward += 20
+        return reward
 
     def step(self, action):
         """Run one timestep of the environment's dynamics.
@@ -564,7 +592,6 @@ class BaseCubeEnv(gym.Env):
         return self.goal[:3]
 
     def render(self, mode="human"):
-        # TODO implement "human" and "ansi" modes
         camera_observation = None
         cam_imgs = self.platform.get_camera_observation(self.step_count)
         if mode == "rgb_array":
@@ -590,37 +617,19 @@ class BaseCubeEnv(gym.Env):
             success = 0
         return success
 
-    def _create_observation(self, t, action):
+    def get_success_reach(self, curr, goal):
+        dist = 0
+        for i in range(3):
+            dist += np.linalg.norm(curr[(3 * i) : (3 * i) + 3] - goal[0:3])
+        success = 1 - (dist / self.start_finger_dist)
+        if success < 0:
+            success = 0
+        return success
+
+    def _create_observation(self, t):
         robot_observation = self.platform.get_robot_observation(t)
         camera_observation = self.platform.get_camera_observation(t)
         object_observation = camera_observation.filtered_object_pose
-
-        position_error = np.linalg.norm(object_observation.position - self._goal_pos())
-
-        # From trifinger_simulation tasks/move_cube/__init__.py evaluate_state()
-        goal_rot = Rotation.from_quat(self._goal_orientation())
-        actual_rot = Rotation.from_quat(object_observation.orientation)
-        error_rot = goal_rot.inv() * actual_rot
-        orientation_error = error_rot.magnitude()
-
-        # Get cube vertices
-        obj_pose = {
-            "position": object_observation.position,
-            "orientation": object_observation.orientation,
-        }
-        observation = {
-            "t": t,
-            "state_obs": np.concatenate(
-                (
-                    robot_observation.position,
-                    object_observation.position,
-                    object_observation.orientation,
-                    self.goal,
-                ),
-                axis=0,
-            ),
-            "action": action,
-        }
 
         if self.visual_observation:
             observation = {
@@ -638,10 +647,41 @@ class BaseCubeEnv(gym.Env):
                 "scaled_success": self.get_success(
                     object_observation.position, self.goal[0:3]
                 ),
-                "action": action,
+                "scaled_success_reach": self.get_success_reach(
+                    self.hand_kinematics.get_ft_pos(robot_observation.position),
+                    object_observation.position,
+                ),
+            }
+        else:
+            observation = {
+                "t": t,
+                "state_obs": np.concatenate(
+                    (
+                        robot_observation.position,
+                        object_observation.position,
+                        object_observation.orientation,
+                        self.goal,
+                    ),
+                    axis=0,
+                ),
             }
 
         if not self.run_rl_policy:
+            position_error = np.linalg.norm(
+                object_observation.position - self._goal_pos()
+            )
+            # Get cube vertices
+            obj_pose = {
+                "position": object_observation.position,
+                "orientation": object_observation.orientation,
+            }
+
+            # From trifinger_simulation tasks/move_cube/__init__.py evaluate_state()
+            goal_rot = Rotation.from_quat(self._goal_orientation())
+            actual_rot = Rotation.from_quat(object_observation.orientation)
+            error_rot = goal_rot.inv() * actual_rot
+            orientation_error = error_rot.magnitude()
+
             # Add new observation fields
             ft_pos_cur = self.hand_kinematics.get_ft_pos(robot_observation.position)
             v_wf_dict = c_utils.get_vertices_wf(obj_pose)
@@ -703,13 +743,13 @@ class MoveCubeEnv(BaseCubeEnv):
     def __init__(
         self,
         goal_pose: dict = None,
-        action_type: ActionType = ActionType.POSITION,
-        step_size: int = 50,
+        action_type: ActionType = ActionType.TORQUE,
+        step_size: int = 100,
         difficulty: int = 1,
         visualization: bool = False,
         no_collisions: bool = False,
         enable_cameras: bool = False,
-        finger_type: str = "trifingerpro",
+        finger_type: str = "trifinger_meta",
         camera_delay_steps: int = 90,
         time_step: float = 0.004,
         object_type: ObjectType = ObjectType.COLORED_CUBE,
@@ -773,7 +813,19 @@ class MoveCubeEnv(BaseCubeEnv):
         if self.random_q_init:
             self.initial_robot_position = self.sample_init_robot_position()
         else:
-            self.initial_robot_position = self.q_nominal
+            self.initial_robot_position = np.array(
+                [
+                    -0.0809731,
+                    1.1499023,
+                    -1.50172085,
+                    -0.08046894,
+                    1.14986721,
+                    -1.50067745,
+                    -0.07987084,
+                    1.14964149,
+                    -1.50124104,
+                ]
+            )
 
         self.platform = trifinger_simulation.TriFingerPlatform(
             visualization=self.visualization,
@@ -790,6 +842,20 @@ class MoveCubeEnv(BaseCubeEnv):
         )
 
         self.hand_kinematics = HandKinematics(self.platform.simfinger)
+
+        # Make camera for RL training
+        if self.run_rl_policy:
+            target_positions = [[0, 0, 0], [0, 0, 0], [0, 0, 0]]
+            camera_up_vectors = [[0, 0, 1], [0, 0, 1], [0, 0, 1]]
+            field_of_view = 33
+            self.tricamera = camera.TriFingerCameras(
+                pybullet_client_id=self.platform.simfinger._pybullet_client_id,
+                target_positions=target_positions,
+                camera_up_vectors=camera_up_vectors,
+                field_of_view=field_of_view,
+            )
+        else:
+            self.tricamera = None
 
         # visualize the cube vertices
         if self.visualization and not self.enable_cameras:
@@ -841,18 +907,12 @@ class MoveCubeEnv(BaseCubeEnv):
               step() calls will return undefined results.
             - info (dict): info dictionary containing the current time index.
         """
-        if self.platform is None:
-            raise RuntimeError("Call `reset()` before starting to step.")
-        # TODO figure out a better way for this
-        initial_action = np.copy(action)
-        action = np.clip(action, self.action_space.low, self.action_space.high)
+        if self.run_rl_policy:
+            action = torch.tensor(action) / 50.0
+            action = np.clip(action, -0.02, 0.02)
+
         if not self.action_space.contains(np.array(action, dtype=np.float32)):
             raise ValueError("Given action is not contained in the action space.")
-
-        # TODO move scaling and clipping elsewhere?
-        if self.run_rl_policy:
-            action = action / 50.0
-            action = np.clip(action, -0.02, 0.02)
 
         num_steps = self.step_size
         # ensure episode length is not exceeded due to step_size
@@ -886,7 +946,6 @@ class MoveCubeEnv(BaseCubeEnv):
             torque = np.clip(
                 torque, self.robot_torque_space.low, self.robot_torque_space.high
             )
-
             # Send action to robot
             robot_action = self._gym_action_to_robot_action(torque)
             t = self.platform.append_desired_action(robot_action)
@@ -904,8 +963,7 @@ class MoveCubeEnv(BaseCubeEnv):
             # should match exactly the one computed during replay (with the
             # above it will differ slightly).
             # self.info["time_index"] = t
-
-            observation = self._create_observation(self.info["time_index"], action)
+        observation = self._create_observation(self.info["time_index"])
 
         # Update plan with action
         self.x_des_plan += action
@@ -913,6 +971,7 @@ class MoveCubeEnv(BaseCubeEnv):
         # Compute reward
         reward = 0
         reward += self.compute_reward(
+            self.hand_kinematics.get_ft_pos(observation["state_obs"][:9]),
             observation["state_obs"][9:16],
             observation["state_obs"][16:],
             self.info,
@@ -931,19 +990,32 @@ class MoveCubeEnv(BaseCubeEnv):
     def choose_start_from_demos(self, eval=False):
         start_pos_list = self.train_start_list
         if eval:
+            self.eval_start_count += 1
+            if self.eval_start_count == len(self.eval_start_list):
+                self.eval_start_count = 0
             start_pos_list = self.eval_start_list
         else:
             start_pos_list = self.train_start_list
-        idx = np.random.randint(0, len(start_pos_list))
+
+        if self.sequential_eval and eval:
+            idx = self.eval_start_count
+        else:
+            idx = np.random.randint(0, len(start_pos_list))
         return start_pos_list[idx] / 100.0
 
     def choose_goal_from_demos(self, eval=False):
         if eval:
+            self.eval_count += 1
+            if self.eval_count == len(self.eval_goal_list):
+                self.eval_count = 0
             goal_pos_list = self.eval_goal_list
         else:
             goal_pos_list = self.train_goal_list
 
-        idx = np.random.randint(0, len(goal_pos_list))
+        if self.sequential_eval and eval:
+            idx = self.eval_count
+        else:
+            idx = np.random.randint(0, len(goal_pos_list))
         return goal_pos_list[idx] / 100.0
 
     def reset(
@@ -969,12 +1041,12 @@ class MoveCubeEnv(BaseCubeEnv):
                     0,
                     task._CUBE_WIDTH / 2,
                 ]
+            if self.run_rl_policy:
+                initial_object_pose.position = self.choose_start_from_demos(
+                    eval=eval_mode
+                )
         else:
             initial_object_pose = task.Pose.from_dict(init_pose_dict)
-
-        if self.run_rl_policy:
-            # TODO for now just use hardcoded demo start pos
-            initial_object_pose.position = self.choose_start_from_demos(eval=eval_mode)
 
         if init_robot_position is None:
             if self.random_q_init:
@@ -1002,16 +1074,21 @@ class MoveCubeEnv(BaseCubeEnv):
             else:
                 pose = task.sample_goal(self.difficulty)
                 self.goal = np.append(pose.position, pose.orientation)
+            if self.run_rl_policy:
+                self.goal[0:3] = self.choose_goal_from_demos(eval=eval_mode)
         else:
             pose = goal_pose_dict
             self.goal = np.append(pose["position"], pose["orientation"])
 
-        if self.run_rl_policy:
-            # TODO
-            self.goal[0:3] = self.choose_goal_from_demos(eval=eval_mode)
-
         # visualize the goal
         if self.visualization and not self.enable_cameras:
+            self.goal_marker = trifinger_simulation.visual_objects.CubeMarker(
+                width=task._CUBE_WIDTH,
+                position=self._goal_pos(),
+                orientation=self._goal_orientation(),
+                pybullet_client_id=self.platform.simfinger._pybullet_client_id,
+            )
+        if self.run_rl_policy:
             self.goal_marker = trifinger_simulation.visual_objects.CubeMarker(
                 width=task._CUBE_WIDTH,
                 position=self._goal_pos(),
@@ -1032,15 +1109,25 @@ class MoveCubeEnv(BaseCubeEnv):
                 self.vert_markers.set_state(positions)
 
         # Reset state for policy execution
-        self.x_des_plan = self._get_fingertip_pos(0)  # TODO
+
+        self.x_des_plan = torch.FloatTensor(
+            self.hand_kinematics.get_ft_pos(init_robot_position).copy()
+        )
 
         self.info = {"time_index": -1, "goal": self.goal, "difficulty": self.difficulty}
 
         self.step_count = 0
 
         self.start_dist = np.linalg.norm(initial_object_pose.position - self.goal[0:3])
+        self.start_finger_dist = 0
+        for i in range(3):
+            self.start_finger_dist += np.linalg.norm(
+                self.x_des_plan[(3 * i) : (3 * i) + 3]
+                - initial_object_pose.position[0:3]
+            )
+        self.prev_finger_dist = self.start_finger_dist
 
-        new_obs = self._create_observation(0, self._initial_action)
+        new_obs = self._create_observation(0)
 
         return new_obs
 

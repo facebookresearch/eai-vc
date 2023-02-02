@@ -14,7 +14,7 @@ from omegaconf import OmegaConf
 from imitation_learning.utils.logging import Logger
 
 from imitation_learning.utils import flatten_info_dict_reader
-from imitation_learning.utils.evaluator import PretrainedEvaluator, CubeEvaluator
+from imitation_learning.utils.evaluator import CubeEvaluator
 from tensordict import TensorDict
 from torchrl.envs import (
     ParallelEnv,
@@ -26,14 +26,11 @@ from torchrl.envs import (
     CenterCrop,
 )
 
-from eaif_models.transforms.random_shifts_aug import RandomShiftsAug
-
 try:
     from torchrl.envs.utils import step_tensordict as step_tensordict
 except ImportError:
     from torchrl.envs.utils import step_mdp as step_tensordict
 from torchrl.envs.libs.gym import GymWrapper
-import trifinger_envs
 from PIL import Image
 import trifinger_envs
 import torchvision.transforms as T
@@ -46,6 +43,7 @@ import argparse
 import os
 import uuid
 import submitit
+from trifinger_envs.cube_env import ActionType
 
 
 def get_shared_folder() -> Path:
@@ -55,18 +53,6 @@ def get_shared_folder() -> Path:
         p.mkdir(exist_ok=True)
         return p
     raise RuntimeError("No shared folder available")
-
-
-def compute_ftip_dists(obs):
-    ftip_dists = []
-    num_fingers = 3
-    for i in range(num_fingers):
-        ftip_dists.append(
-            torch.norm(
-                obs[:, 3 * i : 3 + (3 * i)] - obs[:, 9 + 3 * i : 12 + (3 * i)], dim=1
-            )
-        )
-    return ftip_dists
 
 
 def create_trifinger_env(env_name, seed, env_kwargs, sample_radius, sample_goals):
@@ -83,6 +69,24 @@ def create_trifinger_env(env_name, seed, env_kwargs, sample_radius, sample_goals
         env_kwargs["sample_radius"] = sample_radius
         env_kwargs["randomize_all"] = sample_goals
         env = trifinger_envs.cube_reach.CubeReachEnv(**env_kwargs)
+    elif env_name == "MoveCube-v0":
+        # env_kwargs["sample_radius"] = sample_radius
+        # env_kwargs["randomize_all"] = sample_goals
+        vis_obs = env_kwargs["visual_observation"]
+        env_kwargs = {}
+        env_kwargs["visual_observation"] = vis_obs
+        env_kwargs["random_q_init"] = False
+        env_kwargs["action_type"] = ActionType.TORQUE
+        env = trifinger_envs.gym_cube_env.MoveCubeEnv(**env_kwargs)
+    elif env_name == "NewMoveCube-v0":
+        # env_kwargs["sample_radius"] = sample_radius
+        # env_kwargs["randomize_all"] = sample_goals
+        vis_obs = env_kwargs["visual_observation"]
+        env_kwargs = {}
+        env_kwargs["visual_observation"] = vis_obs
+        env_kwargs["random_q_init"] = False
+        env_kwargs["action_type"] = ActionType.TORQUE
+        env = trifinger_envs.new_push.NewMoveCubeEnv(**env_kwargs)
     env.seed(seed)
     gym_env = GymWrapper(env, device="cuda:0")
     tensordict = gym_env.reset()
@@ -98,15 +102,6 @@ class TrifingerEval(object):
     def __call__(self, seed=None):
         if seed is not None:
             self.cfg.seed = seed
-
-        j = os.getenv("SLURM_JOB_ID")
-        print("SLURM JOB ID=%s", j)
-        self.cfg.job_dir = os.path.join(self.cfg.job_dir, j)
-        Path(self.cfg.job_dir).mkdir(exist_ok=True)
-        self.cfg.logger.log_dir = os.path.join(self.cfg.job_dir, "data/logs")
-        self.cfg.logger.vid_dir = os.path.join(self.cfg.job_dir, "data/vids")
-        self.cfg.logger.save_dir = os.path.join(self.cfg.job_dir, "data/checkpoints")
-
         cfg = self.cfg
 
         wandb.require("service")
@@ -168,41 +163,6 @@ class TrifingerEval(object):
             ),
         )
         parallel_envs.to(device)
-
-        if cfg.augment:
-            resize_size = (256,)
-            output_size = (224,)
-            shift_pad = 10
-            jitter_brightness = 0.3
-            jitter_contrast = 0.3
-            jitter_saturation = 0.3
-            jitter_hue = 0.03
-            jitter_prob = 1.0
-
-            transforms = [
-                ToTensorIfNot(),
-                T.Resize(resize_size),
-                T.CenterCrop(output_size),
-            ]
-
-            transforms.append(
-                T.RandomApply(
-                    [
-                        T.ColorJitter(
-                            jitter_brightness,
-                            jitter_contrast,
-                            jitter_saturation,
-                            jitter_hue,
-                        )
-                    ],
-                    p=jitter_prob,
-                )
-            )
-
-            transforms.append(RandomShiftsAug(shift_pad))
-
-            transforms = T.Compose(transforms)
-
         envs = TransformedEnv(
             parallel_envs,
             Compose(
@@ -237,12 +197,13 @@ class TrifingerEval(object):
         evaluator = hydra_instantiate(
             self.cfg.evaluator,
             envs=envs,
-            num_render=self.cfg.num_eval_episodes,
+            num_render=1000,  # self.cfg.num_eval_episodes,
             vid_dir=logger.vid_path,
             updater=updater,
             logger=logger,
             device=device,
         )
+
         start_update = 0
         self.eval_info = {"run_name": logger.run_name}
 
@@ -259,21 +220,18 @@ class TrifingerEval(object):
 
         if self.cfg.only_eval:
             with torch.inference_mode():
-                eval_result = evaluator.evaluate(
-                    policy, self.cfg.num_eval_episodes, 0, True
-                )
-                logger.collect_infos(eval_result, "eval.", no_rolling_window=True)
-                self.eval_info.update(eval_result)
+                eval_result = evaluator.evaluate(policy, self.cfg.num_eval_episodes, 0)
+                logger.collect_infos(eval_result, "eval/", no_rolling_window=True)
+                eval_info.update(eval_result)
                 logger.interval_log(0, 0)
                 logger.close()
 
-            return self.eval_info
+            return eval_info
 
         num_steps = self.cfg.num_steps
         print("Resetting envs ....")
         td = envs.reset()
         max_env_step_idx = (envs.max_episode_len()[0] / envs.step_size()[0]) - 1
-
         storage_td = TensorDict(
             {}, batch_size=[self.cfg.num_envs, num_steps], device=device
         )
@@ -288,81 +246,36 @@ class TrifingerEval(object):
                 envs.step(td)
                 storage_td[:, step_idx] = td
                 if env_steps >= max_env_step_idx:
-                    completed_td = td["ftip_dist"].detach()
-
-                    ftip_distances = torch.norm(
-                        completed_td[:, :9] - completed_td[:, 9:], dim=1
-                    )
-
-                    per_finger_dists = compute_ftip_dists(completed_td)
-                    avg_ftip_dist = 0
-                    for f in per_finger_dists:
-                        avg_ftip_dist += f
-                    avg_ftip_dist = avg_ftip_dist / 3
-                    logger.collect_info(
-                        "avg_ftip_dist",
-                        avg_ftip_dist.mean().item(),
-                        no_rolling_window=True,
-                    )
-                    logger.collect_info(
-                        "ftip0_dist",
-                        per_finger_dists[0].mean().item(),
-                        no_rolling_window=True,
-                    )
-                    logger.collect_info(
-                        "ftip1_dist",
-                        per_finger_dists[1].mean().item(),
-                        no_rolling_window=True,
-                    )
-                    logger.collect_info(
-                        "ftip2_dist",
-                        per_finger_dists[2].mean().item(),
-                        no_rolling_window=True,
-                    )
                     # scaled_success = compute_success(completed_td,td["total_dist"].detach())
                     logger.collect_info(
-                        "scaled_success",
+                        "train/scaled_success",
                         td["scaled_success"].detach().mean().item(),
                         no_rolling_window=True,
                     )
+                    logger.collect_info(
+                        "train/scaled_success_reach",
+                        td["scaled_success_reach"].detach().mean().item(),
+                        no_rolling_window=True,
+                    )
 
-                    logger.collect_info("epoch", update_i, no_rolling_window=True)
-
+                    logger.collect_info("train/epoch", update_i, no_rolling_window=True)
                     scaled_success = td["scaled_success"].detach().mean().item()
                     if scaled_success > self.max_scaled_success:
                         self.max_scaled_success = scaled_success
                     logger.collect_info(
-                        "max_scaled_success",
+                        "train/max_scaled_success",
                         self.max_scaled_success,
                         no_rolling_window=True,
                     )
 
                     # success_rate = percentage done and w/ distance less than X / all storage_td
-                    success_rate = (
-                        avg_ftip_dist < 0.02 * td["done"].T
-                    ).sum() / avg_ftip_dist.shape[0]
-                    logger.collect_info(
-                        "success_total_size",
-                        ftip_distances.shape[0],
-                        no_rolling_window=True,
-                    )
-                    logger.collect_info(
-                        "success_rate",
-                        success_rate.mean().item(),
-                        no_rolling_window=True,
-                    )
-                    logger.collect_info(
-                        "fingertip_dist",
-                        ftip_distances.mean().item(),
-                        no_rolling_window=True,
-                    )
                     for k in self.cfg.info_keys:
                         logger.collect_info(
                             k, td[k].cpu().numpy(), no_rolling_window=True
                         )
 
                     td.set("reset_workers", td["done"])
-                    envs.reset(tensordict=td)
+                    envs.reset()
                     td["next"]["pixels"] = td["pixels"]
                     logger.collect_env_step_info(td, self.cfg.info_keys)
                     env_steps = -1
@@ -376,6 +289,11 @@ class TrifingerEval(object):
             if cfg.eval_interval != -1 and (
                 update_i % cfg.eval_interval == 0 or is_last_update
             ):
+                logger.collect_info(
+                    "train/lr",
+                    updater.opt.state_dict()["param_groups"][0]["lr"],
+                    no_rolling_window=True,
+                )
                 with torch.inference_mode():
                     eval_result = evaluator.evaluate(
                         policy,
@@ -383,16 +301,18 @@ class TrifingerEval(object):
                         update_i,
                         (update_i % (cfg.eval_interval * 10) == 0),
                     )
-                logger.collect_infos(eval_result, "eval.", no_rolling_window=True)
+                logger.collect_infos(eval_result, "eval/", no_rolling_window=True)
                 self.eval_info.update(eval_result)
 
             if self.cfg.log_interval != -1 and (
-                update_i % self.cfg.log_interval == 0 or is_last_update or update_i == 0
+                update_i % self.cfg.log_interval == 0 or is_last_update
             ):
                 logger.interval_log((update_i + 1), steps_per_update * (update_i + 1))
 
             if cfg.save_interval != -1 and (
-                (update_i + 1) % cfg.save_interval == 0 or is_last_update
+                (update_i + 1) % cfg.save_interval == 0
+                or is_last_update
+                or update_i == 0
             ):
                 save_name = osp.join(logger.save_path, f"ckpt.{update_i}.pth")
                 ckpt_name = osp.join(logger.save_path, f"ckpt.pth")
@@ -410,18 +330,6 @@ class TrifingerEval(object):
 
         logger.close()
         return self.eval_info
-
-    def checkpoint(self):
-        import os
-        import submitit
-
-        print("Entered checkpoint method")
-        print(self.cfg)
-        self.cfg.load_checkpoint = self.eval_info["last_ckpt"]
-        self.cfg.resume_training = True
-        print("Requeuing ", self.cfg)
-        empty_trainer = type(self)(self.cfg)
-        return submitit.helpers.DelayedSubmission(empty_trainer)
 
     def checkpoint(self, *args, **kwargs):
         import os
@@ -442,14 +350,11 @@ class TrifingerEval(object):
 def main(cfg):
     if cfg.job_dir == "":
         shared_folder = get_shared_folder()
-
-        cfg.job_dir = shared_folder
+        cfg.job_dir = shared_folder / "%j"
 
     print("cfg job dir:")
     print(cfg.job_dir)
-    executor = submitit.AutoExecutor(
-        folder=cfg.job_dir / "%j", slurm_max_num_timeout=30
-    )
+    executor = submitit.AutoExecutor(folder=cfg.job_dir, slurm_max_num_timeout=10)
 
     executor.update_parameters(name=cfg.slurm_name)
 
@@ -474,6 +379,7 @@ def main(cfg):
 
     executor.update_parameters(slurm_array_parallelism=3)
     s = [1, 2, 3]
+    # s = [199, 2431, 378]
     teval = TrifingerEval(cfg)
 
     jobs = executor.map_array(teval, s)

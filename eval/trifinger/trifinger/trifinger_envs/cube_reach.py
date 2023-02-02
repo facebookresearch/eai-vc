@@ -40,7 +40,7 @@ class CubeReachEnv(gym.Env):
         fixed_goal: bool = True,
         visual_observation: bool = False,
         action_type: ActionType = ActionType.TORQUE,
-        step_size: int = 50,
+        step_size: int = 100,
         visualization: bool = False,
         enable_cameras: bool = True,
         camera_id: int = 0,
@@ -55,7 +55,9 @@ class CubeReachEnv(gym.Env):
         enable_shadows: bool = False,
         camera_view: str = "default",
         arena_color: str = "default",
+        random_q_init: bool = False,
         run_rl_policy: bool = True,
+        seq_eval: bool = True,
     ):
         """Initialize.
 
@@ -106,6 +108,8 @@ class CubeReachEnv(gym.Env):
 
         # initialize simulation
         self.q_nominal = np.array([-0.08, 1.15, -1.5] * 3)
+        self.random_q_init = random_q_init
+        self.initial_robot_position = self.q_nominal
 
         self.platform = trifinger_simulation.TriFingerPlatform(
             visualization=self.visualization,
@@ -139,7 +143,6 @@ class CubeReachEnv(gym.Env):
 
         # Basic initialization
         # ====================
-
         self.visual_observation = visual_observation
         self.action_type = action_type
         self.dense_reward_weights = np.zeros(2)
@@ -247,6 +250,9 @@ class CubeReachEnv(gym.Env):
         # )
 
         self.eval_goal_list = self.get_eval_goal_list()
+        self.eval_count = 0
+        # goes through hardcoded eval goal values in order rather than randomly choosing
+        self.sequential_eval = seq_eval
         self.train_goal_list = self.get_train_goal_list()
 
         # Finger ids to move
@@ -428,20 +434,17 @@ class CubeReachEnv(gym.Env):
             ftpos (np.array): current fingertip positions [9,]
         """
 
-        cube_pos = self.goal.clone().detach().cpu().numpy()
-        cube_half_size = task._CUBE_WIDTH / 2
-        init_ft_pos = self.start_pos
-
         scaled_err = d_utils.get_reach_scaled_err(
             self.finger_to_move_list,
-            init_ft_pos,
+            self.start_pos,
             cur_ft_pos,
-            cube_pos,
-            cube_half_size,
+            self.goal.clone().detach().cpu().numpy(),
+            task._CUBE_WIDTH / 2,
         )
 
         success = 1 - scaled_err
-
+        if success < 0:
+            success = 0
         return success
 
     def compute_reward(
@@ -562,8 +565,7 @@ class CubeReachEnv(gym.Env):
             # above it will differ slightly).
             # self.info["time_index"] = t
 
-            observation = self._create_observation(self.info["time_index"])
-
+        observation = self._create_observation(self.info["time_index"])
         # Update plan with action
         self.x_des_plan += three_finger_action
 
@@ -626,11 +628,18 @@ class CubeReachEnv(gym.Env):
 
     def choose_goal_from_demos(self, eval=False):
         if eval:
+            self.eval_count += 1
+            if self.eval_count == len(self.eval_goal_list):
+                self.eval_count = 0
+
             goal_pos_list = self.eval_goal_list
         else:
             goal_pos_list = self.train_goal_list
 
-        idx = np.random.randint(0, len(goal_pos_list))
+        if self.sequential_eval and eval:
+            idx = self.eval_count
+        else:
+            idx = np.random.randint(0, len(goal_pos_list))
         return torch.FloatTensor(goal_pos_list[idx] / 100.0)
 
     def sample_init_robot_position(self):
@@ -667,7 +676,10 @@ class CubeReachEnv(gym.Env):
             initial_object_pose.position = self.choose_goal_from_demos(eval_mode)
 
         if init_robot_position is None:
-            init_robot_position = self.sample_init_robot_position()
+            if self.random_q_init:
+                init_robot_position = self.sample_init_robot_position()
+            else:
+                init_robot_position = self.initial_robot_position
 
         self.platform.reset(
             initial_object_pose=initial_object_pose,

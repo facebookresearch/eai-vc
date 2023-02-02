@@ -190,7 +190,7 @@ def main(cfg) -> Dict[str, float]:
     num_steps = cfg.num_steps
     print("Resetting envs ....")
     td = envs.reset()
-    max_env_step_idx = envs.max_episode_len()[0] / envs.step_size()[0]
+    max_env_step_idx = envs.max_episode_len()[0] / envs.step_size()[0] - 1
 
     storage_td = TensorDict({}, batch_size=[cfg.num_envs, num_steps], device=device)
     print("Beginning updates ....")
