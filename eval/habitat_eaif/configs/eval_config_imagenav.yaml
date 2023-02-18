@@ -1,0 +1,12 @@
+defaults:
+  - _self_
+  - tasks@: imagenav
+  - experiments@: imagenav_rl
+  - model: dino_resnet50_omnidata
+  - model/transform: jitter_and_shift
+  - wandb_habitat@: habitat_eaif
+  - override hydra/output: path
+  - override hydra/launcher: slurm_eval
+
+RUN_TYPE: eval
+NUM_ENVIRONMENTS: 14

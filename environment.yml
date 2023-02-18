@@ -50,6 +50,7 @@ dependencies:
   - wandb>=0.13
   - wheel
   - yacs
+  - yt_dlp
   - pip
   - pip:
     - hydra-submitit-launcher

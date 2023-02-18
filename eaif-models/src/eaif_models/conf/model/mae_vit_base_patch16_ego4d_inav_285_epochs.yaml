@@ -1,0 +1,18 @@
+_target_: eaif_models.models.load_model
+model:
+  _target_: eaif_models.models.vit.vit.load_mae_encoder
+  checkpoint_path: /checkpoint/maksymets/eaif/results/mae_training/mae_vit_base_ego4d_inav_285_epochs/checkpoint-284.pth
+  model:
+    _target_: eaif_models.models.vit.vit.vit_base_patch16
+    img_size: 224
+    use_cls: True
+    drop_path_rate: 0.0
+transform:
+  _target_: eaif_models.transforms.vit_transforms
+metadata:
+  algo: mae
+  model: vit_base_patch16
+  data:
+    - ego4d
+    - inav
+  comment: 285_epochs

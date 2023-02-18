@@ -1,0 +1,13 @@
+# @package _global_
+
+# dataset arguments ** NEW **
+data_path:  # The data_path can point to multiple datasets
+  ### Ego ###
+  - /checkpoint/maksymets/eaif/datasets/manifests/ego4d_2_8m_manifest.txt  # 418,578,043 frames subsampled at 0.2 fps
+
+every_k:
+### Ego (2,790,520 frames total) ###
+  - 1   # Ego4D full already subsampled with 2,790,520 frames
+
+dataset_type: path_dataset_with_manifest        # choices [dataset_with_txt_files, omnidataset, path_dataset, path_dataset_with_manifest],
+dataset_size: 2_8m

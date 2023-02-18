@@ -9,8 +9,8 @@ defaults:
   - override hydra/launcher: slurm_train
 
 RUN_TYPE: train
-NUM_ENVIRONMENTS: 8
+NUM_ENVIRONMENTS: 16
 hydra:
   launcher:
-    nodes: 8
+    nodes: 4
 

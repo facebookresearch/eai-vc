@@ -1,0 +1,40 @@
+# @package _global_
+
+# dataset arguments ** NEW **
+data_path:  # The data_path can point to multiple datasets
+  - /checkpoint/maksymets/eaif/datasets/manifests/imagenet_train_manifest.txt  # 1,281,167 frames
+
+  ### Ego ###
+  - /checkpoint/maksymets/eaif/datasets/manifests/ego4d_2_8m_manifest.txt  # 418,578,043 frames subsampled at 0.2 fps
+  - /checkpoint/maksymets/eaif/datasets/manifests/100DOH_manifest.txt  # 99,899 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/epic_kitchens_manifest.txt  # 19,965,439 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/ssv2_manifest.txt  # 25,209,271 frames
+
+  ### INav
+  - /checkpoint/maksymets/eaif/datasets/manifests/re10k_manifest.txt  # 303,087 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/oh24_manifest.txt  # 499,442 frames
+
+  ### Scale
+  - /checkpoint/maksymets/eaif/datasets/manifests/HT100M_18_5m_manifest.txt  # 18,461,872 frames
+  - /checkpoint/maksymets/eaif/datasets/manifests/K700_1_1m_manifest.txt     #  1,079,073 frames
+
+every_k:
+### ImageNet 1,281,167 ###
+  - 1
+ 
+### Ego (3,538,291 frames total) ###
+  - 1   # Ego4D full already subsampled with 2,790,520 frames
+  - 1   # 100DOH with 99,899 frames
+  - 60  # Epic Kitchens with 332,757 frames
+  - 80  # SSV2 with 315,115 frames
+
+  ### INav (802,529 frames total) ###
+  - 1  # RE10K with 303,087 frames
+  - 1  # OH24 with 499,442 frames
+
+  ### Scale (19,540,945 frames total) ###
+  - 1  # HT100M with 18,461,872 frames
+  - 1  # K700 with 1,079,073 frames
+
+dataset_type: path_dataset_with_manifest        # choices [dataset_with_txt_files, omnidataset, path_dataset, path_dataset_with_manifest],
+dataset_size: 21_1m                             # 25,162,932 frames
