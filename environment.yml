@@ -50,7 +50,6 @@ dependencies:
   - wandb>=0.13
   - wheel
   - yacs
-  - yt_dlp
   - pip
   - pip:
     - hydra-submitit-launcher
@@ -62,3 +61,4 @@ dependencies:
     - functorch
     - torchrl
     - classy_vision==0.6.0
+    - yt_dlp==2023.2.17
