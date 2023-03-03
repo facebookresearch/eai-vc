@@ -1,0 +1,24 @@
+# @package _global_
+
+# Even when using the frozenStartSensor proprioceptive sensors and the non-Noisy arm controller
+# immply that the agent can use dead reckoning to determine the position of the goal.
+
+habitat:
+  gym:
+    obs_keys:
+      - robot_head_rgb
+      - frozen_obj_start_sensor
+      - joint
+      - is_holding
+      - relative_resting_position
+  
+  task:
+    lab_sensors:
+      frozen_target_start_sensor:
+        type: "FrozenTargetStartSensor"
+      joint_sensor:
+        type: "JointSensor"
+      is_holding_sensor:
+        type: "IsHoldingSensor"
+      relative_resting_pos_sensor:
+        type: "RelativeRestingPositionSensor"

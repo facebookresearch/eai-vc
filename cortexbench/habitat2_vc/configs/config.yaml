@@ -1,0 +1,12 @@
+defaults:
+  - _self_
+  - experiments@: rl_skill
+  - tasks@: pick
+  - model: vc1_vitb
+  - model/transform: jitter_and_shift
+  - wandb_habitat@: habitat2
+  - tasks/sensors: fixed_goal_sensor
+  - override hydra/output: path
+  - override hydra/launcher: slurm_train_base
+
+RUN_TYPE: train

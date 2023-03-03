@@ -1,0 +1,13 @@
+# CortexBench Datasets
+
+We have the following datasets available, to be used with the downstream evaluation tasks. They may be downloaded automatically when the user starts training using a model, or they may be also found by directly downloading from these links
+
+| **Benchmark** | **Description** | **Download Link** |
+|---------------|-----------------|--------------------|
+| [MobilePick](./habitat2_vc) | The MobilePick benchmark dataset includes data for a rearrangement task. | `python -m habitat_sim.utils.datasets_download --uids rearrange_task_assets --data-path data/` |
+| [ImageNav](./habitat_vc#imagenav) | The ImageNav benchmark uses Gibson scene datasets. The training and validation episode datasets for ImageNav can be downloaded from this link. | [Gibson dataset](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#gibson-and-3dscenegraph-datasets), [Training and Validation dataset](https://dl.fbaipublicfiles.com/habitat/data/datasets/pointnav/gibson/v1/pointnav_gibson_v1.zip) |
+| [ObjectNav](./habitat_vc#objectnav) | The ObjectNav benchmark uses the HM3DSem v0.1 scene dataset and the corresponding HM3DSem v0.1 ObjectNav episode dataset. The training and validation datasets for the ObjectNav task can be downloaded from the provided links. | [Scene dataset](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#downloading-hm3d-with-the-download-utility), [Training dataset](https://habitat-on-web.s3.amazonaws.com/pirlnav_release/objectnav_hm3d_hd.zip), [Validation dataset](https://dl.fbaipublicfiles.com/habitat/data/datasets/objectnav/hm3d/v1/objectnav_hm3d_v1.zip) |
+| [Adroit](./mujoco_vc#adroit-benchmark) | The Adroit benchmark dataset. | [Adroit dataset](https://dl.fbaipublicfiles.com/eai-vc/adroit-expert-v1.0.zip) |
+| [Metaworld](./mujoco_vc#metaworld-benchmark) | The Metaworld benchmark dataset. | [Metaworld dataset](https://dl.fbaipublicfiles.com/eai-vc/mujoco_vil_datasets/metaworld-expert-v1.0.zip) |
+| [DMControl](./mujoco_vc#deepmind-control-benchmark) | The DeepMind Control benchmark dataset. | [DMC dataset](https://dl.fbaipublicfiles.com/eai-vc/mujoco_vil_datasets/dmc-expert-v1.0.zip) |
+| [Trifinger](./trifinger_vc) | The Trifinger benchmark includes demonstrations for the reach and move tasks. The dataset can be downloaded from the provided link. | [Trifinger dataset](https://dl.fbaipublicfiles.com/eai-vc/trifinger_demos.zip) |

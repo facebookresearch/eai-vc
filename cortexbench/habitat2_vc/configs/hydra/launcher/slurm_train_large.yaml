@@ -1,0 +1,24 @@
+defaults:
+    - submitit_slurm
+
+nodes: 8
+tasks_per_node: 8
+gpus_per_node: 8
+cpus_per_task: 10
+
+timeout_min: 2160
+signal_delay_s: 120
+
+partition: learnlab,learnfair
+constraint: volta32gb
+mem_per_cpu: 3G
+
+name: ${hydra.job.name}
+_target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+submitit_folder: ${hydra.sweep.dir}/.submitit/%j
+
+setup: 
+  - MAIN_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+  - export MAIN_ADDR
+  - set -x
+    

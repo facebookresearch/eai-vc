@@ -1,0 +1,12 @@
+_target_: vc_models.transforms.transform_augment
+resize_size: 256
+output_size: 256
+jitter: true
+jitter_prob: 1.0
+jitter_brightness: 0.4
+jitter_contrast: 0.4
+jitter_saturation: 0.4
+jitter_hue: 0.4
+shift: true
+shift_pad: 16
+randomize_environments: False

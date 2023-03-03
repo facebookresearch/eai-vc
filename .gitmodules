@@ -1,0 +1,24 @@
+[submodule "third_party/mjrl"]
+	path = third_party/mjrl
+	url = https://github.com/aravindr93/mjrl.git
+[submodule "third_party/mj_envs"]
+	path = third_party/mj_envs
+	url = https://github.com/vikashplus/mj_envs.git
+[submodule "third_party/trifinger_simulation"]
+	path = third_party/trifinger_simulation
+	url = https://github.com/ClaireLC/trifinger_simulation.git
+[submodule "third_party/mujoco-py"]
+	path = third_party/mujoco-py
+	url = https://github.com/aravindr93/mujoco-py.git
+[submodule "third_party/habitat-lab"]
+	path = third_party/habitat-lab
+	url = https://github.com/1heart/habitat-lab.git
+[submodule "third_party/dmc2gym"]
+	path = third_party/dmc2gym
+	url = https://github.com/aravindr93/dmc2gym.git
+[submodule "third_party/metaworld"]
+	path = third_party/metaworld
+	url = https://github.com/suraj-nair-1/metaworld.git
+[submodule "third_party/habitat2"]
+	path = third_party/habitat2
+	url = https://github.com/mathfac/habitat-lab

@@ -1,0 +1,23 @@
+# python
+__pycache__/
+*.egg-info/
+
+# jupyter
+.ipynb_checkpoints
+
+# development
+*.vscode
+
+# data directory
+goal_images/
+data/
+results
+# misc
+.DS_Store
+
+# wandb
+wandb/
+wandb_habitat/
+
+# tensorboard
+tb/

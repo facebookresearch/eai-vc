@@ -1,0 +1,14 @@
+_target_: imitation_learning.policy_opt.policy.Policy
+hidden_size: 512
+recurrent_hidden_size: 512
+
+is_recurrent: False
+obs_shape: ${obs_shape}
+action_dim: ${action_dim}
+action_is_discrete: ${action_is_discrete}
+encoder_model: ${model}
+encoder_key: "pixels"
+finetune: True
+device: ${device}
+std_init: -2.0
+num_envs: ${num_envs}

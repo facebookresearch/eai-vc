@@ -1,0 +1,9 @@
+
+name: "reach_cube"
+demo_path: assets/bc_demos/demos_dtrain-110_train-0-100_dtest-110_test-100-125_scale-100_dts-0p4.json
+state_type: ftpos_obj
+goal_type: goal_none
+goal_visualization: True #unused
+
+n_epoch_every_log: 5
+n_outer_iter: 100

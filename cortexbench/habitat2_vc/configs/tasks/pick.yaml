@@ -1,0 +1,32 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: pick
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgb_head_agent
+
+habitat:
+  environment:
+    max_episode_steps: 350
+  
+  task:
+    spawn_max_dists_to_obj: 2.0
+    base_angle_noise: 0.75
+    base_noise: .25
+
+    measurements:
+      force_terminate:
+        max_accum_force: 5_000.0
+
+      pick_reward:
+        type: "RearrangePickReward"
+        dist_reward: 2.0
+        pick_reward: 4.0
+        drop_pen: 1.0
+        wrong_pick_pen: 2.0
+        use_diff: True
+        drop_obj_should_end: True
+        wrong_pick_should_end: True
+        constraint_violate_pen: 1.0
+        force_pen: 0.0001
+        max_force_pen: 1.0
+        force_end_pen: 2.0

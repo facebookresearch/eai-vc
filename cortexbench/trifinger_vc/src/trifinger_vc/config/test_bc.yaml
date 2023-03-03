@@ -1,0 +1,40 @@
+defaults:
+    - algo: bc_finetune
+    - task: reach_cube
+    - _self_
+
+no_wandb: True
+seed: 10
+eval_envs: ["sim_env_demo"]
+# rep_to_policy can be "linear_layer" or "none"
+rep_to_policy: "linear_layer"
+run_name: "tf_bc_test"
+
+
+algo:
+    lr: 1e-4
+    visual_lr: 1e-4
+    adam_weight_decay: 0.0
+    batch_size: 32
+    max_demo_per_diff: 25
+    freeze_pretrained_rep: true
+    pretrained_rep: vc1_vitb
+
+    image_aug_dict: {
+      augment_prob: 0.0, 
+      times_to_use_demo: 1, 
+      jitter_brightness: 0.3,
+      jitter_contrast: 0.3,
+      jitter_saturation: 0.3, 
+      jitter_hue: 0.03,
+      shift_pad: 10,
+    }
+
+run_id: ${hydra:job.num}
+exp_dir_to_resume: null
+
+
+hydra:
+    sweep:
+        dir: multirun/${now:%Y-%m-%d}/exp_bc_finetune_${now:%Y-%m-%d}-${now:%H-%M-%S}
+        subdir: ${hydra.job.num}

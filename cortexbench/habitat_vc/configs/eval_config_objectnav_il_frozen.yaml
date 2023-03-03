@@ -1,0 +1,21 @@
+defaults:
+  - tasks@: objectnav_hm3d_il
+  - experiments@: objectnav_il
+  - model: vc1_vitl
+  - model/transform: jitter_and_shift_objectnav
+  - wandb_habitat@: habitat_objectnav_vc
+  - override hydra/output: path
+  - override hydra/launcher: slurm_eval
+  - _self_
+
+RUN_TYPE: eval
+NUM_ENVIRONMENTS: 20
+NUM_PROCESSES: 20
+TASK_CONFIG:
+  TASK:
+    TYPE: ObjectNav-v1
+    SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
+  DATASET:
+    TYPE: ObjectNav-v1 
+    SPLIT: val 
+    DATA_PATH: "data/datasets/objectnav/hm3d/v3/val/val.json.gz"

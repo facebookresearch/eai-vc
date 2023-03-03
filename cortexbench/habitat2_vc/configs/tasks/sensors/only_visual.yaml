@@ -1,0 +1,22 @@
+# @package _global_
+
+# This configuration removes proprioceptive sensors and add a Noisy arm controller
+# so that the agent cannot use dead reckoning to solve the task. It needs to learn 
+# visual odometry
+
+habitat:
+  gym:
+    obs_keys:
+      - robot_head_rgb
+      - is_holding
+  
+  task:
+    actions:
+      arm_action:
+        arm_controller: NoisyArmRelPosAction  
+
+    lab_sensors:
+      frozen_target_start_sensor:
+        type: "FrozenTargetStartSensor"
+      is_holding_sensor:
+        type: "IsHoldingSensor"

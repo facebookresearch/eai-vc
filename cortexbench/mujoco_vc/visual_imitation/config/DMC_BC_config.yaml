@@ -1,0 +1,58 @@
+defaults:
+    - wandb: cortexbench
+    - override hydra/launcher: local
+
+# general inputs
+env               :   ???                     # name of environment (e.g. dmc_walker_walk-v1)
+algorithm         :   BC
+pixel_based       :   True                    # pixel based (True) or state based (False) experiment
+embedding         :   ???                     # choice of embedding network
+camera            :   0                       # choice of camera to use for image generation
+device            :   cuda
+data_dir          :   data/datasets/dmc-expert-v1.0/
+data_parallel     :   True
+
+# experiment and evaluation
+seed              :   12345                   # global seed for the experiment
+epochs            :   100                     # number of outer epochs
+eval_frequency    :   5                       # frequency of epochs for evaluation and logging
+save_frequency    :   10                      # frequency of epochs for saving policies
+eval_num_traj     :   10                      # number of rollouts to eval
+num_cpu           :   1                       # for rolling out paths when evaluating
+num_demos         :   100                     # path to demo file auto-inferred from other inputs
+exp_notes         :   Access DMC envs using the dmc2gym package. Experts trained with DDPG from URLB.
+
+# environment related kwargs
+env_kwargs:
+    env_name      :   ${env}
+    suite         :   dmc
+    device        :   ${device}               # device to use for representation network (policy clamped to CPU for now)
+    image_width   :   256
+    image_height  :   256
+    camera_name   :   ${camera}
+    embedding_name :  ${embedding}
+    pixel_based   :   ${pixel_based}
+    render_gpu_id :   0
+    seed          :   ${seed}
+    history_window :  3
+    add_proprio   :   False
+    proprio_key   :   None
+
+# BC agent setup
+bc_kwargs:
+    hidden_sizes  :   (256, 256, 256)
+    nonlinearity  :   relu
+    loss_type     :   'MSE'
+    batch_size    :   256
+    lr            :   1e-3
+    dropout       :   0
+
+# logging
+job_name          :   dmc_cortex_vil
+wandb:
+    project       :   ???
+    entity        :   ???
+
+hydra:
+    job:
+        name: dmc_cortex_vil

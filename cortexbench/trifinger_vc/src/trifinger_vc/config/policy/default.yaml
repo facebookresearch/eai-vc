@@ -1,0 +1,10 @@
+_target_: imitation_learning.policy_opt.policy.Policy
+hidden_size: 512
+recurrent_hidden_size: 512
+
+is_recurrent: False
+obs_shape: ${obs_shape}
+action_dim: ${action_dim}
+action_is_discrete: ${action_is_discrete}
+std_init: -1.0
+num_envs: ${num_envs}

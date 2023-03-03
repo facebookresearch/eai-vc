@@ -1,0 +1,81 @@
+VERBOSE: False
+TRAINER_NAME: "ddp-il-trainer"
+ENV_NAME: "SimpleRLEnv"
+
+VIDEO_OPTION: []
+VIDEO_DIR: ${hydra:sweep.dir}/video
+TENSORBOARD_DIR: ${hydra:sweep.dir}/logs
+EVAL_CKPT_PATH_DIR: ${hydra:sweep.dir}/checkpoints
+CHECKPOINT_FOLDER: ${hydra:sweep.dir}/checkpoints
+LOG_DIR: ${hydra:sweep.dir}/logs
+LOG_FILE: ${hydra:sweep.dir}/train.log
+
+NUM_PROCESSES: 4
+LOG_INTERVAL: 100
+LOG_METRICS: True
+SENSORS: ['RGB_SENSOR']
+EVAL_SAVE_RESULTS: True
+EVAL_SAVE_RESULTS_INTERVAL: 50
+TEST_EPISODE_COUNT: -1
+SHOW_TOP_DOWN_MAP: False
+
+EVAL:
+  SPLIT: "val"
+  meta_file: ${hydra:sweep.dir}/logs/evaluation_meta.json
+  EVAL_FREQ: 1
+  FIRST_CHECKPOINT: 10
+
+NUM_UPDATES: 12000
+TOTAL_NUM_STEPS: -1.0
+NUM_CHECKPOINTS: -1
+CHECKPOINT_INTERVAL: 500
+
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+
+
+IL:
+  POLICY:
+    name: "ObjectNavILPolicy"
+  USE_IW: True
+  distrib_backend: NCCL
+  BehaviorCloning:
+    lr: 0.001
+    encoder_lr: 0.0001
+    eps: 1.0e-5
+    wd: 1.0e-6
+    clip_param: 0.2
+    num_mini_batch: 2
+    max_grad_norm: 0.2
+    num_steps: 64
+    use_linear_clip_decay: False
+    use_linear_lr_decay: True
+    reward_window_size: 50
+    sync_frac: 0.6
+
+    pretrained: False
+    pretrained_weights: "None"
+
+RL:
+  SUCCESS_REWARD: 2.5
+  SLACK_REWARD: -1e-3
+
+  REWARD_MEASURE: "distance_to_goal"
+
+MODEL:
+  RGB_ENCODER:
+    model_type: "VisualEncoder"
+    image_size: 256
+    hidden_size: 512
+    use_augmentations: False
+    use_augmentations_test_time: False
+    freeze_batchnorm: True
+    freeze_backbone: True
+    global_pool: False
+    use_cls: False
+  STATE_ENCODER:
+    hidden_size: 2048
+    rnn_type: LSTM
+    num_recurrent_layers: 2
+  SEQ2SEQ:
+    use_prev_action: True

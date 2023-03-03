@@ -1,0 +1,11 @@
+defaults:
+  - tasks@: imagenav
+  - experiments@: imagenav_rl
+  - model: vc1_vitl
+  - model/transform: jitter_and_shift
+  - wandb_habitat@: habitat_vc
+  - override hydra/output: path
+  - override hydra/launcher: slurm_train
+  - _self_
+
+RUN_TYPE: train

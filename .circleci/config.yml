@@ -1,0 +1,333 @@
+#
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# This source code is licensed under the CC-BY-NC license found in the
+# LICENSE file in the root directory of this source tree.
+#
+
+version: 2.1
+
+commands:
+  initialize:
+    steps:
+      - run:
+          name: Initialize Git submodules
+          command: |
+            git submodule update --init --recursive
+      - run:
+          name: Delete extraneous circleci environment file
+          # This is extremely important for some esoteric $PATH issues involving mrp, Python subprocess, and /bin/bash
+          command: rm -rf ~/.circlerc
+      - run:
+          name: Install Miniconda3
+          command: |
+            if [ ! -d ~/miniconda3 ]; then
+              wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+              /bin/bash ~/miniconda.sh -b -p ~/miniconda3
+              rm ~/miniconda.sh
+            fi
+            sudo ln -s ~/miniconda3/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+            echo ". ~/miniconda3/etc/profile.d/conda.sh" >> ~/.bashrc
+            echo "conda activate base" >> ~/.bashrc
+      - run:
+          name: Install mamba
+          command: |
+            . ~/miniconda3/bin/activate
+            conda install -y -c conda-forge mamba -n base
+      - run:
+          name: Create conda environment
+          command: |
+            . ~/miniconda3/bin/activate
+            [ -d ~/miniconda3/envs/eai-vc ] || mamba env create -f environment.yml
+
+jobs:
+  load-models:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.small
+    steps:
+      - checkout
+      - initialize
+      - restore_cache:
+          key: vc1_models
+      - run:
+          name: Install vc_models
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            pip install -e ./vc_models
+      - run:
+          name: Run pytest
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            pytest vc_models/tests/test_model_loading.py --nocluster
+            if [ ! -d "/home/circleci/project/vc_models/src/model_ckpts/" ]
+            then
+                echo "VC-1 models does not exist, downloading..."
+                python -c "from vc_models.models.vit import model_utils; model,embd_size,model_transforms,model_info = model_utils.load_model(model_utils.VC1_BASE_NAME)"
+                python -c "from vc_models.models.vit import model_utils; model,embd_size,model_transforms,model_info = model_utils.load_model(model_utils.VC1_LARGE_NAME)"  
+            fi            
+          
+      - save_cache:
+          key: vc1_models
+          paths:
+            - "/home/circleci/project/vc_models/src/model_ckpts/"
+
+
+  mujoco_vc:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.medium
+    steps:
+      - checkout
+      - initialize
+      - restore_cache:
+          key: deps9-mujoco200          
+      - run:
+          name: Download and install Mujoco binaries
+          command: |
+            if [ ! -d "/home/circleci/.mujoco/" ]
+            then
+                echo "Mujoco does not exist, downloading..."
+
+                mkdir -p /home/circleci/.mujoco/
+                cd /home/circleci/.mujoco/
+
+                echo "Getting Mujoco key..."
+                curl https://www.roboti.us/file/mjkey.txt > mjkey.txt
+
+                echo "Getting Mujoco 200 binaries..."
+                curl https://www.roboti.us/download/mujoco200_linux.zip > mujoco200_linux.zip
+                unzip mujoco200_linux.zip
+                mv ./mujoco200_linux ./mujoco200
+                rm mujoco200_linux.zip
+            fi
+      - save_cache:
+          key: deps9-mujoco200
+          paths:
+            - "/home/circleci/.mujoco/"
+      - run:
+          name: Install vc_models
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            pip install -e ./vc_models
+      - run:
+          name: Install Mujoco dependencies
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+
+            pip install -e ./third_party/mujoco-py
+            pip install -e ./third_party/mj_envs
+            pip install -e ./third_party/mjrl
+            pip install -e ./third_party/dmc2gym
+      - run:
+          name: Install required apt packages
+          command: |
+            sudo apt update
+            sudo apt install -y xvfb libglew-dev
+      - run:
+          name: Run pytest
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+
+            pip install -e ./cortexbench/mujoco_vc            
+
+            Xvfb :100 -screen 0 1024x768x24 &
+            export DISPLAY=:100
+            export LD_LIBRARY_PATH=/home/circleci/.mujoco/mujoco200/bin:$LD_LIBRARY_PATH
+
+            DISPLAY=:100 pytest cortexbench/mujoco_vc/tests --nocluster
+
+            sudo pkill Xvfb
+      - restore_cache:
+          key: datasets-vil-adroitv3
+      - run:
+          name: Download Visual Imitation Learning datasets for Mujoco
+          command: |
+            if [ ! -d "/home/circleci/project/cortexbench/mujoco_vc/visual_imitation/data/datasets/" ]
+            then
+                echo "Mujoco datasets does not exist, downloading..."
+
+                mkdir -p /home/circleci/project/cortexbench/mujoco_vc/visual_imitation/data/datasets
+
+                cd /home/circleci/project/cortexbench/mujoco_vc/visual_imitation/data/datasets
+
+                echo "Getting Adroit dataset..."
+                wget https://dl.fbaipublicfiles.com/eai-vc/adroit-expert-v1.0.zip
+                unzip adroit-expert-v1.0.zip
+                rm adroit-expert-v1.0.zip
+                          
+            fi
+      - save_cache:
+          key: datasets-vil-adroitv3
+          paths:
+            - "/home/project/cortexbench/mujoco_vc/visual_imitation/data/datasets/"
+      - restore_cache:
+          key: vc1_models            
+      - run:
+          name: Run Mujoco training and evaluation
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            export LD_LIBRARY_PATH=/home/circleci/.mujoco/mujoco200/bin:$LD_LIBRARY_PATH
+
+            cd cortexbench/mujoco_vc/visual_imitation/
+
+            # Adroit
+            python hydra_launcher.py --config-name Adroit_BC_config.yaml \
+                wandb.project=adroit_test wandb.entity=cortexbench \
+                env=pen-v0 seed=100 embedding=vc1_vitl hydra.job.chdir=False epochs=1   
+
+  habitat_vc:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.medium
+    steps:
+      - checkout
+      - initialize
+      - run:
+          name: Install required apt packages
+          command: |
+            sudo apt update
+            sudo apt install freeglut3-dev
+      - run:
+          name: Install vc_models
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            pip install -e ./vc_models
+      - run:
+          name: Install Habitat-lab
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            cd ./third_party/habitat-lab
+            pip install -r requirements.txt
+            python setup.py develop --all
+      - run:
+          name: Install Habitat VC library
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+
+            pip install -e ./cortexbench/habitat_vc
+      - restore_cache:
+          key: vc1_models 
+      - run:
+          name: Run pytest
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+
+            pytest cortexbench/habitat_vc/tests --nocluster
+
+  habitat_rearrange:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.medium
+    steps:
+      - checkout
+      - initialize
+      - run:
+          name: Install required apt packages
+          command: |
+            sudo apt update
+            sudo apt install freeglut3-dev
+
+            conda create -n habitat_rearrange python=3.8 cmake=3.14.0 -y
+            conda activate habitat_rearrange
+            conda install habitat-sim withbullet headless -c conda-forge -c aihabitat -y
+            cd ./cortexbench/habitat2_vc/
+            pip install -r requirements.txt  
+      - restore_cache:
+          key: datasets-habitat_rearrange            
+      - run:
+          name: Install Modules Dependencies
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate habitat_rearrange
+            git submodule update --init --recursive
+            pip install -e ./vc_models
+            pip install -e ./third_party/habitat2/habitat-lab
+            pip install -e ./third_party/habitat2/habitat-baselines
+
+            if [ ! -d "/home/project/data/replica_cad/" ]
+            then
+                echo "Rearrange task assets datasets does not exist, downloading..."
+
+                python -m habitat_sim.utils.datasets_download --uids rearrange_task_assets --data-path data/
+                curl -o data/default.physics_config.json https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/data/default.physics_config.json       
+            fi
+
+      - save_cache:
+          key: datasets-habitat_rearrange
+          paths:
+            - "/home/project/data/"
+
+      - restore_cache:
+          key: vc1_models 
+
+      - run:
+          name: Run training and evaluation
+          no_output_timeout: 30m
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate habitat_rearrange
+            cd cortexbench/habitat2_vc/
+            ln -s ../../data data
+            # python run_rearrangement_vc.py model=vc1_vitb habitat_baselines.total_num_steps=100 WANDB.run_name=habitat_rearrange WANDB.entity=cortexbench habitat_baselines.num_environments=2 hydra.run.dir=./ hydra.sweep.dir=./
+
+  trifinger_vc:
+    machine:
+      image: ubuntu-2004-cuda-11.4:202110-01
+    resource_class: gpu.nvidia.medium
+    steps:
+      - checkout
+      - initialize
+      - run:
+          name: Install trifinger
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            pip install -e ./vc_models
+            pip install -e ./third_party/trifinger_simulation 
+            pip install -e ./cortexbench/trifinger_vc
+      - restore_cache:
+          key: vc1_models
+      - restore_cache:
+          key: datasets-trifinger
+      - run:
+          name: Run pytest
+          no_output_timeout: 30m
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            cd cortexbench/trifinger_vc
+            python -m unittest tests/test_tf.py    
+      - save_cache:
+          key: datasets-trifinger
+          paths:
+            - "/home/project/cortexbench/trifinger_vc/assets/bc_demos"              
+      - run:
+          name: Run Trifinger training
+          no_output_timeout: 30m
+          command: |
+            . ~/miniconda3/bin/activate
+            conda activate eai-vc
+            pip install -e ./vc_models
+            pip install -e ./third_party/trifinger_simulation
+            pip install -e ./cortexbench/trifinger_vc
+            cd cortexbench/trifinger_vc
+            python bc_experiments/train_bc.py seed=0 algo.pretrained_rep=vc1_vitb algo.freeze_pretrained_rep=true rep_to_policy=none task=reach_cube task.n_outer_iter=1 no_wandb=True run_name=test-load-vc1
+
+workflows:
+  build:
+    jobs:
+      - load-models
+      - mujoco_vc
+      - habitat_vc
+      - habitat_rearrange
+      - trifinger_vc

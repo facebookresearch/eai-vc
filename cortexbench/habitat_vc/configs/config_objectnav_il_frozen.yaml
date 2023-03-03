@@ -1,0 +1,16 @@
+defaults:
+  - tasks@: objectnav_hm3d_il
+  - experiments@: objectnav_il
+  - model: vc1_vitl
+  - model/transform: jitter_and_shift_objectnav
+  - wandb_habitat@: habitat_objectnav_vc
+  - override hydra/output: path
+  - override hydra/launcher: slurm_train
+  - _self_
+
+RUN_TYPE: train
+NUM_ENVIRONMENTS: 16
+hydra:
+  launcher:
+    nodes: 4
+
