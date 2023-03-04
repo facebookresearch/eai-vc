@@ -25,19 +25,11 @@ def setup_wandb(config, train):
         file_name = "wandb_id.txt"
         run_name = config.WANDB.name + "_" + str(config.TASK_CONFIG.SEED)
     else:
-        file_name = "wandb_id_eval_" + str(config.EVAL.SPLIT) + ".txt"
-        ckpt_str = "_"
-        if os.path.isfile(config.EVAL_CKPT_PATH_DIR):
-            ckpt_str = (
-                "_" + config.EVAL_CKPT_PATH_DIR.split("/")[-1].split(".")[1] + "_"
-            )
-        run_name = (
-            config.WANDB.name
-            + "_"
-            + str(config.EVAL.SPLIT)
-            + ckpt_str
-            + str(config.TASK_CONFIG.SEED)
-        )
+        ckpt_str = ""
+        if ".pth" in config.EVAL_CKPT_PATH_DIR:
+            ckpt_str = "_" + config.EVAL_CKPT_PATH_DIR.split("/")[-1].split(".")[1]
+        file_name = "wandb_id_eval_" + str(str(config.EVAL.SPLIT)) + ckpt_str + ".txt"
+        run_name = config.WANDB.name + "_" + str(config.EVAL.SPLIT)
 
     wandb_filepath = os.path.join(config.TENSORBOARD_DIR, file_name)
 
