@@ -164,6 +164,32 @@ class BCFinetune:
         for env_name in conf.eval_envs:
             self.sim_dict[env_name] = all_sim_dict[env_name]
 
+    def train_one_epoch(self):
+        total_train_loss = 0.0
+        for i_batch, batch in enumerate(self.train_dataloader):
+            self.optimizer.zero_grad()
+
+            # First, pass img and goal img through encoder
+            if "obj" in self.conf.task.state_type:
+                latent_state = self.encoder(batch["input"]["rgb_img_preproc"])
+                batch["input"]["o_state"] = latent_state
+            if self.conf.task.goal_type == "goal_cond":
+                latent_goal = self.encoder(batch["input"]["rgb_img_preproc_goal"])
+                batch["input"]["o_goal"] = latent_goal
+
+            # Then, make observation pass through policy
+            obs_vec = t_utils.get_bc_obs_vec_from_obs_dict(
+                batch["input"], self.conf.task.state_type, self.conf.task.goal_type
+            )
+            pred_actions = self.policy(obs_vec)
+
+            loss = self.loss_fn(pred_actions, batch["output"]["action"])
+            loss.backward()
+            self.optimizer.step()
+
+            total_train_loss += loss.item()
+        return total_train_loss
+
     def train(self, model_data_dir=None, no_wandb=False):
         # Make logging directories
         ckpts_dir = os.path.join(model_data_dir, "ckpts")
@@ -205,31 +231,9 @@ class BCFinetune:
             # Update policy network
             self.policy.train()
             self.encoder.train()
-            total_train_loss = 0.0
-            for i_batch, batch in enumerate(self.train_dataloader):
-                self.optimizer.zero_grad()
+            total_train_loss = self.train_one_epoch()
 
-                # First, pass img and goal img through encoder
-                if "obj" in self.conf.task.state_type:
-                    latent_state = self.encoder(batch["input"]["rgb_img_preproc"])
-                    batch["input"]["o_state"] = latent_state
-                if self.conf.task.goal_type == "goal_cond":
-                    latent_goal = self.encoder(batch["input"]["rgb_img_preproc_goal"])
-                    batch["input"]["o_goal"] = latent_goal
-
-                # Then, make observation pass through policy
-                obs_vec = t_utils.get_bc_obs_vec_from_obs_dict(
-                    batch["input"], self.conf.task.state_type, self.conf.task.goal_type
-                )
-                pred_actions = self.policy(obs_vec)
-
-                loss = self.loss_fn(pred_actions, batch["output"]["action"])
-                loss.backward()
-                self.optimizer.step()
-
-                total_train_loss += loss.item()
-
-            avg_train_loss = total_train_loss / (i_batch + 1)
+            avg_train_loss = total_train_loss / (len(self.train_dataloader))
 
             # Test
             self.policy.eval()
@@ -261,7 +265,7 @@ class BCFinetune:
 
                     total_test_loss += loss.item()
 
-            avg_test_loss = total_test_loss / (i_batch + 1)
+            avg_test_loss = total_test_loss / (len(self.train_dataloader))
 
             loss_dict = {
                 "train_loss": avg_train_loss,

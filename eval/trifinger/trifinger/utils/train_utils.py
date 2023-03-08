@@ -5,9 +5,10 @@ import wandb
 import torch
 import numpy as np
 
+from utils.data_utils import EAIF_MODEL_NAMES
+
 from utils.preprocess_trajs import (
     MODEL_NAMES,
-    EAIF_MODEL_NAMES,
     CUSTOM_MODEL_NAMES,
     CUSTOM_MODEL_DECODERS,
     CUSTOM_MODEL_PREFIXES,
