@@ -1,0 +1,658 @@
+{
+    "train_demo_stats": [
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0000/dts-0p4",
+            "diff": 110,
+            "id": 0
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0001/dts-0p4",
+            "diff": 110,
+            "id": 1
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0002/dts-0p4",
+            "diff": 110,
+            "id": 2
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0003/dts-0p4",
+            "diff": 110,
+            "id": 3
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0004/dts-0p4",
+            "diff": 110,
+            "id": 4
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0005/dts-0p4",
+            "diff": 110,
+            "id": 5
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0006/dts-0p4",
+            "diff": 110,
+            "id": 6
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0007/dts-0p4",
+            "diff": 110,
+            "id": 7
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0008/dts-0p4",
+            "diff": 110,
+            "id": 8
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0009/dts-0p4",
+            "diff": 110,
+            "id": 9
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0010/dts-0p4",
+            "diff": 110,
+            "id": 10
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0011/dts-0p4",
+            "diff": 110,
+            "id": 11
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0012/dts-0p4",
+            "diff": 110,
+            "id": 12
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0013/dts-0p4",
+            "diff": 110,
+            "id": 13
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0014/dts-0p4",
+            "diff": 110,
+            "id": 14
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0015/dts-0p4",
+            "diff": 110,
+            "id": 15
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0016/dts-0p4",
+            "diff": 110,
+            "id": 16
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0017/dts-0p4",
+            "diff": 110,
+            "id": 17
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0018/dts-0p4",
+            "diff": 110,
+            "id": 18
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0019/dts-0p4",
+            "diff": 110,
+            "id": 19
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0020/dts-0p4",
+            "diff": 110,
+            "id": 20
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0021/dts-0p4",
+            "diff": 110,
+            "id": 21
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0022/dts-0p4",
+            "diff": 110,
+            "id": 22
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0023/dts-0p4",
+            "diff": 110,
+            "id": 23
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0024/dts-0p4",
+            "diff": 110,
+            "id": 24
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0025/dts-0p4",
+            "diff": 110,
+            "id": 25
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0026/dts-0p4",
+            "diff": 110,
+            "id": 26
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0027/dts-0p4",
+            "diff": 110,
+            "id": 27
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0028/dts-0p4",
+            "diff": 110,
+            "id": 28
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0029/dts-0p4",
+            "diff": 110,
+            "id": 29
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0030/dts-0p4",
+            "diff": 110,
+            "id": 30
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0031/dts-0p4",
+            "diff": 110,
+            "id": 31
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0032/dts-0p4",
+            "diff": 110,
+            "id": 32
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0033/dts-0p4",
+            "diff": 110,
+            "id": 33
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0034/dts-0p4",
+            "diff": 110,
+            "id": 34
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0035/dts-0p4",
+            "diff": 110,
+            "id": 35
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0036/dts-0p4",
+            "diff": 110,
+            "id": 36
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0037/dts-0p4",
+            "diff": 110,
+            "id": 37
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0038/dts-0p4",
+            "diff": 110,
+            "id": 38
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0039/dts-0p4",
+            "diff": 110,
+            "id": 39
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0040/dts-0p4",
+            "diff": 110,
+            "id": 40
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0041/dts-0p4",
+            "diff": 110,
+            "id": 41
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0042/dts-0p4",
+            "diff": 110,
+            "id": 42
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0043/dts-0p4",
+            "diff": 110,
+            "id": 43
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0044/dts-0p4",
+            "diff": 110,
+            "id": 44
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0045/dts-0p4",
+            "diff": 110,
+            "id": 45
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0046/dts-0p4",
+            "diff": 110,
+            "id": 46
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0047/dts-0p4",
+            "diff": 110,
+            "id": 47
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0048/dts-0p4",
+            "diff": 110,
+            "id": 48
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0049/dts-0p4",
+            "diff": 110,
+            "id": 49
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0050/dts-0p4",
+            "diff": 110,
+            "id": 50
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0051/dts-0p4",
+            "diff": 110,
+            "id": 51
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0052/dts-0p4",
+            "diff": 110,
+            "id": 52
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0053/dts-0p4",
+            "diff": 110,
+            "id": 53
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0054/dts-0p4",
+            "diff": 110,
+            "id": 54
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0055/dts-0p4",
+            "diff": 110,
+            "id": 55
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0056/dts-0p4",
+            "diff": 110,
+            "id": 56
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0057/dts-0p4",
+            "diff": 110,
+            "id": 57
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0058/dts-0p4",
+            "diff": 110,
+            "id": 58
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0059/dts-0p4",
+            "diff": 110,
+            "id": 59
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0060/dts-0p4",
+            "diff": 110,
+            "id": 60
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0061/dts-0p4",
+            "diff": 110,
+            "id": 61
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0062/dts-0p4",
+            "diff": 110,
+            "id": 62
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0063/dts-0p4",
+            "diff": 110,
+            "id": 63
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0064/dts-0p4",
+            "diff": 110,
+            "id": 64
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0065/dts-0p4",
+            "diff": 110,
+            "id": 65
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0066/dts-0p4",
+            "diff": 110,
+            "id": 66
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0067/dts-0p4",
+            "diff": 110,
+            "id": 67
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0068/dts-0p4",
+            "diff": 110,
+            "id": 68
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0069/dts-0p4",
+            "diff": 110,
+            "id": 69
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0070/dts-0p4",
+            "diff": 110,
+            "id": 70
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0071/dts-0p4",
+            "diff": 110,
+            "id": 71
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0072/dts-0p4",
+            "diff": 110,
+            "id": 72
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0073/dts-0p4",
+            "diff": 110,
+            "id": 73
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0074/dts-0p4",
+            "diff": 110,
+            "id": 74
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0075/dts-0p4",
+            "diff": 110,
+            "id": 75
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0076/dts-0p4",
+            "diff": 110,
+            "id": 76
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0077/dts-0p4",
+            "diff": 110,
+            "id": 77
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0078/dts-0p4",
+            "diff": 110,
+            "id": 78
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0079/dts-0p4",
+            "diff": 110,
+            "id": 79
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0080/dts-0p4",
+            "diff": 110,
+            "id": 80
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0081/dts-0p4",
+            "diff": 110,
+            "id": 81
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0082/dts-0p4",
+            "diff": 110,
+            "id": 82
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0083/dts-0p4",
+            "diff": 110,
+            "id": 83
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0084/dts-0p4",
+            "diff": 110,
+            "id": 84
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0085/dts-0p4",
+            "diff": 110,
+            "id": 85
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0086/dts-0p4",
+            "diff": 110,
+            "id": 86
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0087/dts-0p4",
+            "diff": 110,
+            "id": 87
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0088/dts-0p4",
+            "diff": 110,
+            "id": 88
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0089/dts-0p4",
+            "diff": 110,
+            "id": 89
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0090/dts-0p4",
+            "diff": 110,
+            "id": 90
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0091/dts-0p4",
+            "diff": 110,
+            "id": 91
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0092/dts-0p4",
+            "diff": 110,
+            "id": 92
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0093/dts-0p4",
+            "diff": 110,
+            "id": 93
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0094/dts-0p4",
+            "diff": 110,
+            "id": 94
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0095/dts-0p4",
+            "diff": 110,
+            "id": 95
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0096/dts-0p4",
+            "diff": 110,
+            "id": 96
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0097/dts-0p4",
+            "diff": 110,
+            "id": 97
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0098/dts-0p4",
+            "diff": 110,
+            "id": 98
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0099/dts-0p4",
+            "diff": 110,
+            "id": 99
+        }
+    ],
+    "test_demo_stats": [
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0100/dts-0p4",
+            "diff": 110,
+            "id": 100
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0101/dts-0p4",
+            "diff": 110,
+            "id": 101
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0102/dts-0p4",
+            "diff": 110,
+            "id": 102
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0103/dts-0p4",
+            "diff": 110,
+            "id": 103
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0104/dts-0p4",
+            "diff": 110,
+            "id": 104
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0105/dts-0p4",
+            "diff": 110,
+            "id": 105
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0106/dts-0p4",
+            "diff": 110,
+            "id": 106
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0107/dts-0p4",
+            "diff": 110,
+            "id": 107
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0108/dts-0p4",
+            "diff": 110,
+            "id": 108
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0109/dts-0p4",
+            "diff": 110,
+            "id": 109
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0110/dts-0p4",
+            "diff": 110,
+            "id": 110
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0111/dts-0p4",
+            "diff": 110,
+            "id": 111
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0112/dts-0p4",
+            "diff": 110,
+            "id": 112
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0113/dts-0p4",
+            "diff": 110,
+            "id": 113
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0114/dts-0p4",
+            "diff": 110,
+            "id": 114
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0115/dts-0p4",
+            "diff": 110,
+            "id": 115
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0116/dts-0p4",
+            "diff": 110,
+            "id": 116
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0117/dts-0p4",
+            "diff": 110,
+            "id": 117
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0118/dts-0p4",
+            "diff": 110,
+            "id": 118
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0119/dts-0p4",
+            "diff": 110,
+            "id": 119
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0120/dts-0p4",
+            "diff": 110,
+            "id": 120
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0121/dts-0p4",
+            "diff": 110,
+            "id": 121
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0122/dts-0p4",
+            "diff": 110,
+            "id": 122
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0123/dts-0p4",
+            "diff": 110,
+            "id": 123
+        },
+        {
+            "path": "/checkpoint/ssilwal/trifinger_bc/trifinger_demos/demos_colored_cube/difficulty-110/demo-0124/dts-0p4",
+            "diff": 110,
+            "id": 124
+        }
+    ],
+    "downsample_time_step": 0.4,
+    "scale": 100,
+    "max_a": 8.0,
+    "min_a_per_dim": [
+        -1.9447270629332583,
+        -6.796642539523326,
+        -1.2361920991175763,
+        -7.327386882681279,
+        -3.350966988549753,
+        -1.2361920991175759,
+        -1.944727062933258,
+        -2.0281091599677334,
+        -1.2361920991175763
+    ],
+    "max_a_per_dim": [
+        4.697017240469686,
+        1.7758842059938837,
+        0.01530992530905273,
+        2.0300691605650236,
+        4.170524230639526,
+        0.013977885273879664,
+        5.737912246139141,
+        6.7430001198026,
+        0.014701317479766995
+    ],
+    "object_type": "colored_cube",
+    "finger_type": "trifinger_meta"
+}

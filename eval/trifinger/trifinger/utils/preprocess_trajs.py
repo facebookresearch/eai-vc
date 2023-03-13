@@ -34,8 +34,6 @@ args:
 SCALE = 100
 DOWNSAMPLE_FILE_NAME = "downsample.pth"
 
-EAIF_MODEL_NAMES = eaif_models.eaif_model_zoo
-
 # Dict with custom_model_name: path_to_ckpt
 # Model names must start with a prefix from CUSTOM_MODEL_PREFIXES
 CUSTOM_MODEL_NAMES = {
@@ -62,7 +60,7 @@ CUSTOM_MODEL_PREFIXES = [
     "bc",  # bc_finetune models
 ]
 
-MODEL_NAMES = EAIF_MODEL_NAMES + list(CUSTOM_MODEL_NAMES.keys())
+MODEL_NAMES = list(d_utils.EAIF_MODEL_NAMES.keys()) + list(CUSTOM_MODEL_NAMES.keys())
 
 
 def get_demo_pth_list(top_demo_dir):
@@ -191,7 +189,7 @@ def main(args):
 
 def get_model_and_transform(model_name, device="cpu"):
     ## Pretrained EAIF models
-    if model_name in EAIF_MODEL_NAMES:
+    if model_name in d_utils.EAIF_MODEL_NAMES.keys():
         model, transform, latent_dim = d_utils.get_eaif_model_and_transform(
             model_name, device=device
         )

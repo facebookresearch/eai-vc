@@ -60,10 +60,6 @@ class EncoderModel(torch.nn.Module):
                 after_compression_flat_size=output_rep_dim,
             )
         elif self.rep_to_policy == "none":
-            assert (
-                self.pretrained_rep_model.classifier_feature == "global_pool"
-                or self.pretrained_rep_model.classifier_feature == "use_cls_token"
-            )
             self.compression = nn.Identity()
             output_rep_dim = pretrained_rep_dim
 

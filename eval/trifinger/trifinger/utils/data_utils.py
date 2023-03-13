@@ -14,7 +14,26 @@ import eaif_models
 
 eaif_models_abs_path = os.path.dirname(os.path.abspath(eaif_models.__file__))
 
+
 NON_TRAJ_KEYS = ["ft_pos_targets_per_mode"]
+
+
+# assumes directory contains nested directories or .yaml model files
+def find_models(root_path):
+    models = {}
+    for f in os.listdir(root_path):
+        if os.path.isdir(os.path.join(root_path, f)):
+            temp_d = find_models(os.path.join(root_path, f))
+            temp_d.update(models)
+            models = temp_d
+        elif f.endswith(".yaml"):
+            models[f.split(".")[0]] = os.path.join(root_path, f)
+    return models
+
+
+EAIF_MODEL_NAMES = find_models(
+    os.path.join(eaif_models.eaif_models_dir_path, "conf/model")
+)
 
 
 def get_traj_dict_from_obs_list(data, scale=1, include_image_obs=True):
@@ -359,15 +378,10 @@ def add_actions_to_obs(observation_list):
     observation_list[-1]["action"] = action_dict
 
 
-def get_eaif_model_and_transform(model_name, device="cpu", use_compression_layer=True):
-    if model_name in eaif_models.eaif_model_zoo:  # model_name in EAIF_MODEL_NAMES:
+def get_eaif_model_and_transform(model_name, device="cpu", use_compression_layer=False):
+    if model_name in EAIF_MODEL_NAMES:
         # Load model, as done in eaif-models/tests/test_model_loading.py
-        cfg_path = os.path.join(
-            eaif_models_abs_path,
-            "conf",
-            "model",
-            f"{model_name}.yaml",
-        )
+        cfg_path = EAIF_MODEL_NAMES[model_name]
         main_model_cfg = omegaconf.OmegaConf.load(cfg_path)
 
         if use_compression_layer:

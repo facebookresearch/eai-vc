@@ -1,0 +1,9 @@
+defaults:
+    - submitit_slurm
+
+partition: learnfair
+cpus_per_task: 8
+gpus_per_node: 1
+constraint: volta32gb
+timeout_min: 1440
+array_parallelism: 30
