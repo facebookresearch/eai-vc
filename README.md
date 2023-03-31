@@ -36,7 +36,7 @@ To install our visual cortex models and CortexBench, please follow the instructi
 
 ## Load VC-1 
 
-To use the VC-1 model, you can install the `vc_models` module with pip. Then, you can load the model with code such as the following or follow [our tutorial](.tutorial/tutorial_vc.ipynb):
+To use the VC-1 model, you can install the `vc_models` module with pip. Then, you can load the model with code such as the following or follow [our tutorial](./tutorial/tutorial_vc.ipynb):
 ```python
 import vc_models
 from vc_models.models.vit import model_utils

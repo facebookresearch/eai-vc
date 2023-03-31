@@ -5,7 +5,6 @@ Last updated: 2023-03-28
 Version: 1.0
 
 - This doc: https://github.com/facebookresearch/eai-vc/blob/main/MODEL_CARD.md
-- Model Page: https://github.com/facebookresearch/eai-foundations/tree/public#load-vc-1-and-use-as-a-backbone-or-visual-encoder
 - Other Links:
   [VC-1 Website](https://eai-vc.github.io/),
   [VC-1 Blogpost](https://ai.facebook.com/blog/robots-learning-video-simulation-artificial-visual-cortex-vc-1),
