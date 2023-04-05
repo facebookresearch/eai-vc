@@ -1,5 +1,5 @@
 # Visual Cortex and CortexBench
-[Website](https://eai-vc.github.io/) | [Blog post](https://ai.facebook.com/blog/robots-learning-video-simulation-artificial-visual-cortex-vc-1) | [Paper](https://ai.facebook.com/research/publications/where-are-we-in-the-search-for-an-artificial-visual-cortex-for-embodied-intelligence/)
+[Website](https://eai-vc.github.io/) | [Blog post](https://ai.facebook.com/blog/robots-learning-video-simulation-artificial-visual-cortex-vc-1) | [Paper](https://arxiv.org/abs/2303.18240)
 
 <p align="center">
   <img src="res/img/vc1_teaser.gif" alt="Visual Cortex and CortexBench" width="600">
@@ -75,14 +75,16 @@ To load your own encoder model and run it across all benchmarks, follow these st
 If you would like to contribute to Visual Cortex and CortexBench, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Citing Visual Cortex
-If you use Visual Cortex in your research, please cite [the following paper](https://ai.facebook.com/research/publications/where-are-we-in-the-search-for-an-artificial-visual-cortex-for-embodied-intelligence/):
+If you use Visual Cortex in your research, please cite [the following paper](https://arxiv.org/abs/2303.18240):
 
 ```bibtex
-@inproceedings{majumdar2023vc1,
-  title     =     {Where are we in the search for an Artificial Visual Cortex for Embodied Intelligence?},
-  author    =     {Arjun Majumdar and Karmesh Yadav and Sergio Arnaud and Yecheng Jason Ma and Claire Chen and Sneha Silwal and Aryan Jain and Vincent-Pierre Berges and Pieter Abbeel and Jitendra Malik and Dhruv Batra and Yixin Lin and Oleksandr Maksymets and Aravind Rajeswaran and Franziska Meier},
-  publisher =     {arXiv},
-  year      =     {2023}
+@inproceedings{vc2023,
+      title={Where are we in the search for an Artificial Visual Cortex for Embodied Intelligence?}, 
+      author={Arjun Majumdar and Karmesh Yadav and Sergio Arnaud and Yecheng Jason Ma and Claire Chen and Sneha Silwal and Aryan Jain and Vincent-Pierre Berges and Pieter Abbeel and Jitendra Malik and Dhruv Batra and Yixin Lin and Oleksandr Maksymets and Aravind Rajeswaran and Franziska Meier},
+      year={2023},
+      eprint={2303.18240},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
 
