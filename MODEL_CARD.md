@@ -8,7 +8,7 @@ Version: 1.0
 - Other Links:
   [VC-1 Website](https://eai-vc.github.io/),
   [VC-1 Blogpost](https://ai.facebook.com/blog/robots-learning-video-simulation-artificial-visual-cortex-vc-1),
-  [VC-1 Paper](https://ai.facebook.com/research/publications/where-are-we-in-the-search-for-an-artificial-visual-cortex-for-embodied-intelligence/),
+  [VC-1 Paper](https://arxiv.org/abs/2303.18240),
   [VC-1 Demo](https://github.com/facebookresearch/eai-vc/blob/main/tutorial/tutorial_vc.ipynb)
 
 The VC-1 model is a vision transformer (ViT) pre-trained on over 4,000 hours of egocentric videos from 7 different sources, together with ImageNet. The model is trained using Masked Auto-Encoding (MAE) and is available in two sizes: ViT-B and ViT-L. The model is intended for use for EmbodiedAI tasks, such as object manipulation and indoor navigation.
@@ -42,11 +42,13 @@ The VC-1 model is a vision transformer (ViT) pre-trained on over 4,000 hours of 
 If you use this model, please cite:
 
 ```bibtex
-@inproceedings{majumdar2023vc1,
-  title     =     {Where are we in the search for an Artificial Visual Cortex for Embodied Intelligence?},
-  author    =     {Arjun Majumdar and Karmesh Yadav and Sergio Arnaud and Yecheng Jason Ma and Claire Chen and Sneha Silwal and Aryan Jain and Vincent-Pierre Berges and Pieter Abbeel and Jitendra Malik and Dhruv Batra and Yixin Lin and Oleksandr Maksymets and Aravind Rajeswaran and Franziska Meier},
-  publisher =     {arXiv},
-  year      =     {2023}
+@inproceedings{vc2023,
+      title={Where are we in the search for an Artificial Visual Cortex for Embodied Intelligence?}, 
+      author={Arjun Majumdar and Karmesh Yadav and Sergio Arnaud and Yecheng Jason Ma and Claire Chen and Sneha Silwal and Aryan Jain and Vincent-Pierre Berges and Pieter Abbeel and Jitendra Malik and Dhruv Batra and Yixin Lin and Oleksandr Maksymets and Aravind Rajeswaran and Franziska Meier},
+      year={2023},
+      eprint={2303.18240},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
 
