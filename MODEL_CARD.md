@@ -20,14 +20,14 @@ The VC-1 model is a vision transformer (ViT) pre-trained on over 4,000 hours of 
 - Model Name: VC-1 (Vision Transformer-based model)
 - Architecture:
   - Patch size: 16x16
-  - Embedding dimension: 768
-  - Number of layers: 12
-  - Number of heads: 12
+  - Embedding dimension: 1024
+  - Number of layers: 24
+  - Number of heads: 16
   - MLP ratio: 4
   - QKV bias: True
   - Layer normalization: eps=1e-6
 - Inputs: Images presented in 224x224x3.
-- Outputs: 768x1 embedding.
+- Outputs: 1024x1 embedding.
 - Image Size: 224
 - Use of Classification Token: True
 - Dropout Rate: 0.0
@@ -43,7 +43,7 @@ If you use this model, please cite:
 
 ```bibtex
 @inproceedings{vc2023,
-      title={Where are we in the search for an Artificial Visual Cortex for Embodied Intelligence?}, 
+      title={Where are we in the search for an Artificial Visual Cortex for Embodied Intelligence?},
       author={Arjun Majumdar and Karmesh Yadav and Sergio Arnaud and Yecheng Jason Ma and Claire Chen and Sneha Silwal and Aryan Jain and Vincent-Pierre Berges and Pieter Abbeel and Jitendra Malik and Dhruv Batra and Yixin Lin and Oleksandr Maksymets and Aravind Rajeswaran and Franziska Meier},
       year={2023},
       eprint={2303.18240},
@@ -146,10 +146,10 @@ The performance of the models on the CortexBench:
 
 ## Limitations
 
-The VC-1 model has been evaluated on a limited set of benchmarks and may not perform as well on other tasks. While we have focused on masked auto-encoders as the pre-training objective and ViT as the architecture in our study, there may be other SSL algorithms that exhibit different scaling behaviors or superior performance on the proposed datasets in our benchmark. 
+The VC-1 model has been evaluated on a limited set of benchmarks and may not perform as well on other tasks. While we have focused on masked auto-encoders as the pre-training objective and ViT as the architecture in our study, there may be other SSL algorithms that exhibit different scaling behaviors or superior performance on the proposed datasets in our benchmark.
 
 Additionally, the VC-1 model is computationally expensive to train and may not be practical for all use cases. The large size of the model may also pose challenges for deployment on resource-constrained devices.
 
-It is important to note that although we utilize real-world images and videos for pre-training our visual representation models (PVRs), the evaluation benchmarks used in this study serve as proxies for actual robotic tasks. Therefore, the performance of the PVR models on real robots may differ from the rankings established in this study. Further research is necessary to fully evaluate the effectiveness of these models in real-world scenarios. 
+It is important to note that although we utilize real-world images and videos for pre-training our visual representation models (PVRs), the evaluation benchmarks used in this study serve as proxies for actual robotic tasks. Therefore, the performance of the PVR models on real robots may differ from the rankings established in this study. Further research is necessary to fully evaluate the effectiveness of these models in real-world scenarios.
 
 Finally, while we have made efforts to ensure fairness and avoid bias in our benchmark selection, it is possible that certain demographics or use cases may not be adequately represented in our evaluation tasks. Future work could explore additional benchmarks that address a wider range of scenarios and demographics.
