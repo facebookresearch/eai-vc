@@ -44,10 +44,9 @@ class VisualEncoder(nn.Module):
 
         if "resnet" in backbone_config.metadata.model:
             with open_dict(backbone_config):
-
                 # In the case of the VIP, the fc layer is part of the model
                 # so we don't use the compression layer but the fc layer + avgpool
-                if 'vip' in backbone_config.metadata.algo:
+                if "vip" in backbone_config.metadata.algo:
                     backbone_config.model.use_avgpool_and_flatten = True
                 else:
                     backbone_config.model.use_avgpool_and_flatten = False
@@ -80,7 +79,6 @@ class VisualEncoder(nn.Module):
             "vit" in backbone_config.metadata.model
             or "beit" in backbone_config.metadata.model
         ):
-
             assert (
                 global_pool and use_cls
             ) is False, "Both global_pool and use_cls config param cant be 'True'"
@@ -131,20 +129,17 @@ class VisualEncoder(nn.Module):
     def forward(
         self, x: torch.Tensor, number_of_envs: int
     ) -> torch.Tensor:  # type: ignore
-
         # convert channels-last to channels-first
-        x = (
-            x.permute(0, 3, 1, 2).float() / 255
-        )  
-        
+        x = x.permute(0, 3, 1, 2).float() / 255
+
         # Apply visual transforms
         x = self.visual_transform(x)
 
         # If the transformations have normalization, do not apply running mean and var
-        if 'Normalize' not in str(self.visual_transform):
+        if "Normalize" not in str(self.visual_transform):
             x = self.running_mean_and_var(x)
-        
-        # For resnets, make sure that the model is is in eval mode and 
+
+        # For resnets, make sure that the model is is in eval mode and
         # that the gradients are not computed
         if self.is_resnet and self.freeze_backbone:
             self.backbone.eval()
