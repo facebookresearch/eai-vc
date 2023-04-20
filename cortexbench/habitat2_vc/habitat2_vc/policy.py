@@ -15,7 +15,7 @@ from torch import nn as nn
 from omegaconf import DictConfig
 
 from habitat_baselines.utils.common import get_num_actions
-from habitat_vc.visual_encoder import VisualEncoder
+from habitat2_vc.visual_encoder import VisualEncoder
 
 
 class EAINet(Net):
@@ -34,7 +34,7 @@ class EAINet(Net):
         freeze_backbone: bool,
         freeze_batchnorm: bool,
         global_pool: bool,
-        use_cls: bool
+        use_cls: bool,
     ):
         super().__init__()
 
@@ -54,7 +54,7 @@ class EAINet(Net):
                 global_pool=global_pool,
                 use_cls=use_cls,
                 use_augmentations=use_augmentations,
-                freeze_backbone=freeze_backbone
+                freeze_backbone=freeze_backbone,
             )
 
             self.visual_fc = nn.Sequential(
@@ -69,7 +69,9 @@ class EAINet(Net):
                 for p in self.visual_encoder.backbone.parameters():
                     p.requires_grad = False
                 if freeze_batchnorm:
-                    self.visual_encoder.backbone = convert_frozen_batchnorm(self.visual_encoder.backbone)
+                    self.visual_encoder.backbone = convert_frozen_batchnorm(
+                        self.visual_encoder.backbone
+                    )
 
             rnn_input_size += hidden_size
 
@@ -200,7 +202,7 @@ class EAIPolicy(NetPolicy):
                 freeze_backbone=freeze_backbone,
                 freeze_batchnorm=freeze_batchnorm,
                 global_pool=global_pool,
-                use_cls=use_cls
+                use_cls=use_cls,
             ),
             action_space=action_space,
             policy_config=policy_config,

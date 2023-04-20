@@ -21,7 +21,7 @@ from habitat_baselines.config.default_structured_configs import (
 from habitat.config.default_structured_configs import HabitatConfigPlugin
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.ddp_utils import rank0_only
-from habitat_vc.policy import EAIPolicy  # noqa: F401
+from habitat2_vc.policy import EAIPolicy  # noqa: F401
 
 
 def get_random_seed():
@@ -69,10 +69,8 @@ def setup_experiment(config: DictConfig):
         os.makedirs(config.habitat_baselines.video_dir, exist_ok=True)
 
     # Create the symlink to the data folder
-    data_path = hydra.utils.to_absolute_path(
-        config.habitat.dataset.data_path
-    )
-    base_data_path = data_path.split('data/')[0] + 'data/'
+    data_path = hydra.utils.to_absolute_path(config.habitat.dataset.data_path)
+    base_data_path = data_path.split("data/")[0] + "data/"
 
     subprocess.call(
         [
