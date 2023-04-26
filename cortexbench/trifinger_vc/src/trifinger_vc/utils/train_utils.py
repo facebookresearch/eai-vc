@@ -87,7 +87,7 @@ def configure_wandb(exp_name, exp_dir,conf):
 
     wandb.init(
         project=conf.run_name,
-        entity="cortexbench",
+        entity=conf.wb_entity,
         id=wandb_info["id"],
         name=wandb_info["run_name"],
         config=wandb_info["conf_for_wandb"],
