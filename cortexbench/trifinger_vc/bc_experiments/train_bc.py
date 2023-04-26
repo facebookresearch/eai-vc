@@ -54,7 +54,7 @@ def main(conf):
 
     pretrained_rep = conf.algo.pretrained_rep
 
-    demo_root_dir = os.path.dirname(conf.task.demo_path)
+    demo_root_dir = os.path.join(os.path.dirname(conf.task.demo_path),os.pardir)
     # Get traj lists (read from demo files) and add to traj_info
     traj_info["train_demos"] = t_utils.get_traj_list(demo_root_dir, train_traj_stats, "pos")
     traj_info["test_demos"] = t_utils.get_traj_list(demo_root_dir, test_traj_stats, "pos")
