@@ -5,4 +5,4 @@ WANDB:
   run_name: habitat_rearrange
   name    : ${model.metadata.algo}_${model.metadata.model}_${model.metadata.data}_${model.metadata.comment}_${WANDB.run_name}
   group   : ${habitat.gym.auto_name}
-  entity  : ???
+  entity  : cortexbench
