@@ -26,6 +26,13 @@ class BCFinetune:
 
         # Get task name
         self.task = self.conf.task.name
+        
+        if(self.task == "reach_cube"):
+            fingers_to_move = 1
+        elif (self.task == "move_cube"):
+            fingers_to_move = 3
+        else:
+            fingers_to_move = 0
 
         # Make dataset and dataloader
         train_dataset = BCFinetuneDataset(
@@ -40,8 +47,7 @@ class BCFinetune:
             jitter_saturation=self.algo_conf.image_aug_dict["jitter_saturation"],
             jitter_hue=self.algo_conf.image_aug_dict["jitter_hue"],
             shift_pad=self.algo_conf.image_aug_dict["shift_pad"],
-            # Get first digit of diff
-            fingers_to_move=int(str(self.traj_info["train_demo_stats"][0]["diff"])[0])  
+            fingers_to_move=fingers_to_move
         )
         self.train_dataloader = torch.utils.data.DataLoader(
             train_dataset, batch_size=self.algo_conf.batch_size, shuffle=True
@@ -63,8 +69,7 @@ class BCFinetune:
             jitter_saturation=self.algo_conf.image_aug_dict["jitter_saturation"],
             jitter_hue=self.algo_conf.image_aug_dict["jitter_hue"],
             shift_pad=self.algo_conf.image_aug_dict["shift_pad"],
-            # Get first digit of diff
-            fingers_to_move=int(str(self.traj_info["train_demo_stats"][0]["diff"])[0])  
+            fingers_to_move=fingers_to_move
         )
         self.test_dataloader = torch.utils.data.DataLoader(
             test_dataset, batch_size=self.algo_conf.batch_size, shuffle=True
@@ -149,10 +154,10 @@ class BCFinetune:
             if "obj" in self.conf.task.state_type:
                 latent_state = self.encoder(batch["input"]["rgb_img_preproc"])
                 batch["input"]["o_state"] = latent_state
+
             if self.conf.task.goal_type == "goal_cond":
                 latent_goal = self.encoder(batch["input"]["rgb_img_preproc_goal"])
                 batch["input"]["o_goal"] = latent_goal
-
             # Then, make observation pass through policy
             obs_vec = t_utils.get_bc_obs_vec_from_obs_dict(
                 batch["input"], self.conf.task.state_type, self.conf.task.goal_type
@@ -228,6 +233,10 @@ class BCFinetune:
 
                     # First, pass img and goal img through encoder
                     batch["input"][self.state_type_key] = self.get_latent_rep(batch["input"])
+                    if self.conf.task.goal_type == "goal_cond":
+                        latent_goal = self.encoder(batch["input"]["rgb_img_preproc_goal"])
+                        batch["input"]["o_goal"] = latent_goal
+
                     # Then, make observation pass through policy
                     obs_vec = t_utils.get_bc_obs_vec_from_obs_dict(
                         batch["input"],

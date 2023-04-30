@@ -5,6 +5,10 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+  - eigenpy=2.9.2
+  - libglib=2.76.1
+  - glib=2.76.1
+  - glib-tools=2.76.1
   - black
   - click
   - cloudpickle
