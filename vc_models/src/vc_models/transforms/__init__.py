@@ -95,9 +95,11 @@ def transform_augment(
 
     if shift:
         transforms.append(RandomShiftsAug(shift_pad))
-    
+
     if normalize:
-        transforms.append(T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]))
+        transforms.append(
+            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        )
 
     transforms = T.Compose(transforms)
 
