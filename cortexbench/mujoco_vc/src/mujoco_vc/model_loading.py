@@ -4,7 +4,7 @@
 # This source code is licensed under the CC-BY-NC license found in the
 # LICENSE file in the root directory of this source tree.
 
-from vc_models import vc_models_dir_path
+import vc_models
 from omegaconf import OmegaConf
 from PIL import Image
 import os
@@ -20,7 +20,7 @@ def load_pretrained_model(embedding_name, input_type=np.ndarray, *args, **kwargs
     """
     Load the pretrained model based on the config corresponding to the embedding_name
     """
-
+    vc_models_dir_path = os.path.dirname(vc_models.__file__)
     config_path = os.path.join(
         vc_models_dir_path, "conf/model", embedding_name + ".yaml"
     )

@@ -18,8 +18,8 @@ We're releasing CortexBench and our first Visual Cortex model: VC-1. CortexBench
 
 ## Open-Sourced Models
 We're open-sourcing two visual cortex models ([model cards](./MODEL_CARD.md)):
-* VC-1 (ViT-L): Our best model, uses a ViT-L backbone, also known simply as `VC-1` | [Download](https://dl.fbaipublicfiles.com/eai-vc/vc1_vitl.pth)
-* VC-1-base (VIT-B): pre-trained on the same data as VC-1 but with a smaller backbone (ViT-B) | [Download](https://dl.fbaipublicfiles.com/eai-vc/vc1_vitb.pth)
+* VC-1 (ViT-L): Our best model, uses a ViT-L backbone, also known simply as `VC-1` | [Download](https://huggingface.co/facebook/vc1-large/resolve/main/pytorch_model.bin)
+* VC-1-base (VIT-B): pre-trained on the same data as VC-1 but with a smaller backbone (ViT-B) | [Download](https://huggingface.co/facebook/vc1-base/resolve/main/pytorch_model.bin)
 
 ## Installation
 
