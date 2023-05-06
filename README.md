@@ -2,8 +2,7 @@
 [Website](https://eai-vc.github.io/) | [Blog post](https://ai.facebook.com/blog/robots-learning-video-simulation-artificial-visual-cortex-vc-1) | [Paper](https://arxiv.org/abs/2303.18240)
 
 <p align="center">
-  <img src="res/img/vc1_teaser.gif" alt="Visual Cortex and CortexBench" width="600">
-
+  <img src="https://eai-vc.github.io/assets/images/vc1_teaser.gif" alt="Visual Cortex and CortexBench" width="600">
   <br />
   <br />
   <a href="https://opensource.fb.com/support-ukraine"><img alt="Support Ukraine" src="https://img.shields.io/badge/Support-Ukraine-FFD500?style=flat&labelColor=005BBB" /></a>
@@ -19,30 +18,29 @@ We're releasing CortexBench and our first Visual Cortex model: VC-1. CortexBench
 
 ## Open-Sourced Models
 We're open-sourcing two visual cortex models ([model cards](./MODEL_CARD.md)):
-* VC-1 (ViT-L): Our best model, uses a ViT-L backbone, also known simply as `VC-1` | [Download](https://dl.fbaipublicfiles.com/eai-vc/vc1_vitl.pth)
-* VC-1-base (VIT-B): pre-trained on the same data as VC-1 but with a smaller backbone (ViT-B) | [Download](https://dl.fbaipublicfiles.com/eai-vc/vc1_vitb.pth)
+* VC-1 (ViT-L): Our best model, uses a ViT-L backbone, also known simply as `VC-1` | [Download](https://huggingface.co/facebook/vc1-large/resolve/main/pytorch_model.bin)
+* VC-1-base (VIT-B): pre-trained on the same data as VC-1 but with a smaller backbone (ViT-B) | [Download](https://huggingface.co/facebook/vc1-base/resolve/main/pytorch_model.bin)
 
 ## Installation
 
-To install our visual cortex models and CortexBench, please follow the instructions in [INSTALLATION.md](INSTALLATION.md).
+To install our visual cortex models and CortexBench, please follow the instructions in [INSTALLATION.md](./INSTALLATION.md).
 
 ## Directory structure
 
 - `vc_models`: contains config files for visual cortex models, the model loading code and, as well as some project utilities.
-    - See [README](./vc-models/README.md) for more details.
+    - See [README](./vc_models/README.md) for more details.
 - `cortexbench`: embodied AI downstream tasks to evaluate pre-trained representations.
 - `third_party`: Third party submodules which aren't expected to change often.
 - `data`: Gitignored directory, needs to be created by the user. Is used by some downstream tasks to find (symlinks to) datasets, models, etc.
 
-## Load VC-1 
+## Load VC-1
 
 To use the VC-1 model, you can install the `vc_models` module with pip. Then, you can load the model with code such as the following or follow [our tutorial](./tutorial/tutorial_vc.ipynb):
 ```python
 import vc_models
-from vc_models.models.vit import model_utils
 
-model,embd_size,model_transforms,model_info = model_utils.load_model(model_utils.VC1_LARGE_NAME)
-# To use the smaller VC-1-base model use model_utils.VC1_BASE_NAME.
+model,embd_size,model_transforms,model_info = vc_models.load_model(vc_models.VC1_LARGE_NAME)
+# To use the smaller VC-1-base model use vc_models.VC1_BASE_NAME.
 
 # The img loaded should be Bx3x250x250
 img = your_function_here ...
@@ -59,7 +57,7 @@ To reproduce the results with the VC-1 model, please follow the README instructi
 
 ## Load Your Own Encoder Model and Run Across All Benchmarks
 To load your own encoder model and run it across all benchmarks, follow these steps:
-1. Create a configuration for your model `<your_model>.yaml` in  [the model configs folder](vc_models/src/vc_models/conf/model/) of the `vc_models` module.
+1. Create a configuration for your model `<your_model>.yaml` in  [the model configs folder](./vc_models/src/vc_models/conf/model/) of the `vc_models` module.
 1. In the config, you can specify the custom methods (as `_target_` field) for loading your encoder model.
 1. Then, you can load the model as follows:
     ```python
@@ -72,7 +70,7 @@ To load your own encoder model and run it across all benchmarks, follow these st
 
 ## Contributing
 
-If you would like to contribute to Visual Cortex and CortexBench, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+If you would like to contribute to Visual Cortex and CortexBench, please see [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Citing Visual Cortex
 If you use Visual Cortex in your research, please cite [the following paper](https://arxiv.org/abs/2303.18240):
@@ -89,7 +87,7 @@ If you use Visual Cortex in your research, please cite [the following paper](htt
 ```
 
 ## License
-The majority of Visual Cortex and CortexBench code is licensed under CC-BY-NC (see the [LICENSE file](/LICENSE) for details), however portions of the project are available under separate license terms: trifinger_simulation is licensed under the BSD 3.0 license; mj_envs, mjrl are licensed under the Apache 2.0 license; Habitat Lab, dmc2gym, mujoco-py are licensed under the MIT license.
+The majority of Visual Cortex and CortexBench code is licensed under CC-BY-NC (see the [LICENSE file](./LICENSE) for details), however portions of the project are available under separate license terms: trifinger_simulation is licensed under the BSD 3.0 license; mj_envs, mjrl are licensed under the Apache 2.0 license; Habitat Lab, dmc2gym, mujoco-py are licensed under the MIT license.
 
 The trained policies models and the task datasets are considered data derived from the correspondent scene datasets.
 

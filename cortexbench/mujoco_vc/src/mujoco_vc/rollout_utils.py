@@ -99,7 +99,7 @@ if __name__ == "__main__":
     # DMC test
     data_paths = pickle.load(
         open(
-            "/checkpoint/maksymets/vc/datasets/dmc-expert-v0.1/dmc_reacher_easy-v1.pickle",
+            "/checkpoint/maksymets/eaif/datasets/dmc-expert-v0.1/dmc_reacher_easy-v1.pickle",
             "rb",
         )
     )
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     # Adroit test
     data_paths = pickle.load(
         open(
-            "/checkpoint/maksymets/vc/datasets/adroit-expert-v0.1/pen-v0.pickle", "rb"
+            "/checkpoint/maksymets/eaif/datasets/adroit-expert-v0.1/pen-v0.pickle", "rb"
         )
     )
     e = env_constructor(

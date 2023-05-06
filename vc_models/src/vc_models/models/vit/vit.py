@@ -14,7 +14,8 @@ from functools import partial
 import timm.models.vision_transformer
 import torch
 import torch.nn as nn
-from vc_models.models.vit import model_utils
+import vc_models
+from vc_models import download_model_if_needed
 from timm.models.vision_transformer import resize_pos_embed
 
 
@@ -222,15 +223,24 @@ def vit_huge_patch14(**kwargs):
 
 
 def load_mae_encoder(model, checkpoint_path=None):
+    """
+    Load a model from a checkpoint. If checkpoint_path is None, return the model as is. Specifically, this function
+    will load the model weights from the checkpoint into the model, and filter out keys of the decoder.
+
+    Args:
+        model: the model to load the checkpoint into
+        checkpoint_path: the path to the checkpoint. If None, return the model as is. Specifying a relative path will
+            search for the checkpoint in the model directory, otherwise the path should be absolute. And the checkpoint
+            should be a .pth file.
+
+    Returns:
+        the model with the checkpoint loaded
+    """
     if checkpoint_path is None:
         return model
     else:
-        model_utils.download_model_if_needed(checkpoint_path)
+        checkpoint_path = download_model_if_needed(checkpoint_path)
 
-    if not os.path.isabs(checkpoint_path):
-        model_base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),'..','..','..')
-        checkpoint_path = os.path.join(model_base_dir,checkpoint_path)
-        
     state_dict = torch.load(checkpoint_path, map_location="cpu")["model"]
     if state_dict["pos_embed"].shape != model.pos_embed.shape:
         state_dict["pos_embed"] = resize_pos_embed(
