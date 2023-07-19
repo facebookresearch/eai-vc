@@ -1,7 +1,7 @@
 _target_: vc_models.models.load_model
 model:
   _target_: vc_models.models.vit.vit.load_mae_encoder
-  checkpoint_path: model_ckpts/vc1_vitb.pth
+  checkpoint_path: vc_models/vc1_vitb.pth
   model:
     _target_: vc_models.models.vit.vit.vit_base_patch16
     img_size: 224

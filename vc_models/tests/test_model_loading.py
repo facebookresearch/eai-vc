@@ -15,7 +15,6 @@ import PIL
 
 import vc_models
 from vc_models.utils import get_model_tag
-from vc_models.models.vit import model_utils as vit_model_utils
 
 
 vc_models_abs_path = os.path.dirname(os.path.abspath(vc_models.__file__))
@@ -36,10 +35,10 @@ def test_cfg_name(model_name):
     model_cfg = omegaconf.OmegaConf.load(cfg_path)
     model_tag = get_model_tag(model_cfg.metadata)
 
-    if model_name == vit_model_utils.VC1_LARGE_NAME:
-        assert model_tag == 'mae_vit_large_patch16_ego_imagenet_inav_182_epochs'
-    elif model_name == vit_model_utils.VC1_BASE_NAME:
-        assert model_tag == 'mae_vit_base_patch16_ego_imagenet_inav_182_epochs'
+    if model_name == vc_models.VC1_LARGE_NAME:
+        assert model_tag == "mae_vit_large_patch16_ego_imagenet_inav_182_epochs"
+    elif model_name == vc_models.VC1_BASE_NAME:
+        assert model_tag == "mae_vit_base_patch16_ego_imagenet_inav_182_epochs"
     else:
         assert model_tag == model_name
 

@@ -1,4 +1,4 @@
-# EAI Foundation Models
+# Visual Cortex Models
 
 This package contains a minimal-dependency set of model loading code. Model definitions are defined under `src/vc_models/models`, with configurations (including reference checkpoint filepaths) under `src/vc_models/conf`.
 
